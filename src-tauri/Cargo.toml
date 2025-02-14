@@ -19,7 +19,8 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
-tauri-plugin-opener = "2"
+tauri-plugin-http = "2"
+
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde-inline-default = "0.2.0"
@@ -28,13 +29,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "time", "local-time"] }
 tracing-appender = "0.2.3"
 
-reqwest = { version = "0.12.5", features = ["json"] }
-
 anyhow = "1.0"
-
-uuid = "1.8.0"
-
-lazy_static = "1.4.0"
 
 time = "0.3.21"
 chrono = { version = "0.4.38", features = ["serde"] }

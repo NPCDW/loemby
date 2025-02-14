@@ -74,7 +74,11 @@ pub fn get_current_dir() -> PathBuf {
 
 #[allow(dead_code)]
 pub fn get_exe_dir() -> PathBuf {
-    std::env::current_exe().unwrap_or_else(|e| {
-        panic!("Failed to get exe path: {:?}", e);
-    }).parent().unwrap().to_path_buf()
+    std::env::current_exe()
+        .unwrap_or_else(|e| {
+            panic!("Failed to get exe path: {:?}", e);
+        })
+        .parent()
+        .unwrap()
+        .to_path_buf()
 }
