@@ -55,6 +55,7 @@ pub async fn get_config_command(state: State<'_, AppState>) -> Result<Config, ()
 pub fn get_config(app: &tauri::App) -> anyhow::Result<Config> {
     let config_path = app.path().resolve("loemby/config/app-config.json", tauri::path::BaseDirectory::AppLocalData)?;
     if !config_path.exists() {
+        file_util::mkdir(config_path.parent().unwrap())?;
         let resource_path = app.path().resolve("resources/config/app-config.default.json", tauri::path::BaseDirectory::Resource)?;
         file_util::copy(&resource_path, &config_path)?;
     }
