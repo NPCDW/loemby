@@ -1,0 +1,15 @@
+$:
+  vscode:
+    - docker:
+        build: .ide/Dockerfile
+      services:
+        - vscode
+        - docker
+      # 开发环境启动后会执行的任务
+      stages:
+        - name: install dep
+          script: pnpm i
+      # 开发环境销毁前会执行该任务
+      endStages:
+        - name: end stage
+          script: echo "end stage"

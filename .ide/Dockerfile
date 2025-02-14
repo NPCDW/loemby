@@ -10,7 +10,6 @@ ENV PATH="${node_root_dir}/bin:${PATH}"
 RUN npm install -g pnpm
 
 RUN curl -fsSL https://code-server.dev/install.sh | sh
-RUN code-server --install-extension MS-CEINTL.vscode-language-pack-zh-hans
 RUN code-server --install-extension rust-lang.rust-analyzer
 RUN code-server --install-extension tamasfe.even-better-toml
 RUN code-server --install-extension fill-labs.dependi
