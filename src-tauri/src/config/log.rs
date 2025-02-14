@@ -6,7 +6,7 @@ use tracing_subscriber::{filter::LevelFilter, Layer, prelude::*, fmt::time::Offs
 
 pub fn init(app: &tauri::App, log_level: &str) {
     let dir = app.path().resolve("loemby/logs/", tauri::path::BaseDirectory::AppLocalData).unwrap();
-    let file_appender = tracing_appender::rolling::never(dir.join("logs"), "loemby.log");
+    let file_appender = tracing_appender::rolling::never(dir, "loemby.log");
     let local_time = OffsetTime::new(
         UtcOffset::from_hms(8, 0, 0).unwrap(),
         time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]").unwrap(),
