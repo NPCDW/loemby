@@ -63,8 +63,10 @@ pub fn get_config(app: &tauri::App) -> anyhow::Result<Config> {
 }
 
 #[tauri::command]
-pub fn save_config(state: tauri::State<AppState>, config: Config) {
+pub async fn save_config(state: tauri::State<'_, AppState>, config: Config) -> Result<(), ()> {
     let config_path = state.app.path().resolve("loemby/config/app-config.json", tauri::path::BaseDirectory::AppLocalData).unwrap();
+    { *state.app_config.write().await = config.clone(); }
     let content = serde_json::to_string(&config).unwrap();
-    file_util::write_file(config_path, &content)
+    file_util::write_file(config_path, &content);
+    Ok(())
 }
