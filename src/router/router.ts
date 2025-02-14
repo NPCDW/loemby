@@ -5,11 +5,11 @@ import Search from '../page/Search.vue'
 const routes = [
     { path: '/', redirect: '/nav/search' },
     {
-        path: '/window',
+        path: '/nav',
         component: NavMenu,
         children: [
             {
-                path: 'result',
+                path: 'search',
                 component: Search,
             },
         ],

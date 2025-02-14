@@ -5,9 +5,7 @@ import Components from 'unplugin-vue-components/vite'
 import Icons from 'unplugin-icons/vite'
 import IconsResolver from 'unplugin-icons/resolver'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-
-// @ts-expect-error process is a nodejs global
-const host = process.env.TAURI_DEV_HOST;
+import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -42,14 +40,7 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
-    hmr: host
-      ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
-      : undefined,
+    host: "0.0.0.0",
     watch: {
       // 3. tell vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
@@ -59,8 +50,11 @@ export default defineConfig(async () => ({
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
   build: {
     // Tauri 在 Windows 上使用 Chromium，在 macOS 和 Linux 上使用 WebKit
-    target: process.env.TAURI_ENV_PLATFORM == 'windows' ? 'chrome130' : 'safari13',
-    // 在 debug 构建中生成 sourcemap
-    sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    target: 'chrome130',
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+      },
+    },
   },
 }));

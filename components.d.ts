@@ -7,6 +7,18 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ElIcon: typeof import('element-plus/es')['ElIcon']
+    ElMenu: typeof import('element-plus/es')['ElMenu']
+    ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
+    IEpAdd: typeof import('~icons/ep/add')['default']
+    IEpAim: typeof import('~icons/ep/aim')['default']
+    IEpCheck: typeof import('~icons/ep/check')['default']
+    IEpLoading: typeof import('~icons/ep/loading')['default']
+    IEpPlus: typeof import('~icons/ep/plus')['default']
+    IEpSearch: typeof import('~icons/ep/search')['default']
+    IEpSuccessFilled: typeof import('~icons/ep/success-filled')['default']
+    IEpWarning: typeof import('~icons/ep/warning')['default']
+    IEpWarningFilled: typeof import('~icons/ep/warning-filled')['default']
     NavMenu: typeof import('./src/components/NavMenu.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
