@@ -12,7 +12,6 @@ use config::{
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![get_config_command, save_config])
         .setup(|app| {
             let config = config::app_config::get_config(app);

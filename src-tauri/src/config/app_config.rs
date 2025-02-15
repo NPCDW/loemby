@@ -36,6 +36,8 @@ pub struct EmbyServer {
     pub client_version: Option<String>,
 
     pub proxy_id: Option<String>,
+
+    pub disabled: bool,
 }
 
 #[serde_inline_default]
