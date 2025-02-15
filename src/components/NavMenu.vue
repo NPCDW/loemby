@@ -22,29 +22,34 @@
         </div>
     </div>
   <el-dialog v-model="dialogAddEmbyServerVisible" title="Emby Server" width="800">
-    <el-steps style="max-width: 600px" :active="2" align-center>
-        <el-step title="服务器地址">
-            <el-input v-model="tmpEmbyServerConfig.base_url" style="width: 240px" placeholder="Please input" />
-            <el-button :loading="addEmbyServerAddrLoading" @click="addEmbyServerAddr">下一步</el-button>
-        </el-step>
+    <el-steps style="max-width: 600px" :active="stepActive" align-center>
+        <el-step title="服务器地址" />
         <el-step title="用户名密码">
-            <el-input v-model="tmpEmbyServerConfig.server_name" style="width: 240px" placeholder="Please input" />
-            <el-input v-model="tmpEmbyServerConfig.username" style="width: 240px" placeholder="Please input" />
-            <el-input v-model="tmpEmbyServerConfig.password" style="width: 240px" placeholder="Please input" />
-            <el-button>下一步</el-button>
         </el-step>
         <el-step title="完成">
-            <el-result
-                icon="success"
-                title="Success Tip"
-                sub-title="Please follow the instructions"
-            >
-                <template #extra>
-                <el-button type="primary">Back</el-button>
-                </template>
-            </el-result>
         </el-step>
     </el-steps>
+    <div v-if="stepActive == 1">
+        <el-input v-model="tmpEmbyServerConfig.base_url" style="width: 240px" placeholder="Please input" />
+        <el-button :loading="addEmbyServerAddrLoading" @click="addEmbyServerAddr">下一步</el-button>
+    </div>
+    <div v-if="stepActive == 2">
+        <el-input v-model="tmpEmbyServerConfig.server_name" style="width: 240px" placeholder="Please input" />
+        <el-input v-model="tmpEmbyServerConfig.username" style="width: 240px" placeholder="Please input" />
+        <el-input v-model="tmpEmbyServerConfig.password" style="width: 240px" placeholder="Please input" />
+        <el-button>下一步</el-button>
+    </div>
+    <div v-if="stepActive == 3">
+        <el-result
+            icon="success"
+            title="Success Tip"
+            sub-title="Please follow the instructions"
+        >
+            <template #extra>
+            <el-button type="primary">Back</el-button>
+            </template>
+        </el-result>
+    </div>
   </el-dialog>
 </template>
 
@@ -67,6 +72,7 @@ useConfig().get_config().then(config => {
     embyServers.value = config?.emby_server
 })
 
+const stepActive = ref(1)
 const dialogAddEmbyServerVisible = ref(false)
 const tmpEmbyServerConfig = ref<EmbyServerConfig>({})
 function addEmbyServer() {
@@ -91,6 +97,8 @@ function addEmbyServerAddr() {
         }
         let json: {ServerName: string, Id: string} = await response.json();
         tmpEmbyServerConfig.value!.server_name = json['ServerName']
+        tmpEmbyServerConfig.value!.server_id = json['Id']
+        stepActive.value = 2
     }).catch(e => {
         ElMessage.error({
             message: e
