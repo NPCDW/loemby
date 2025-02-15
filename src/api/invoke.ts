@@ -1,8 +1,7 @@
 import { Config } from "../store/config";
+import { invoke } from '@tauri-apps/api/core';
 
-const invoke = window.__TAURI__.core.invoke;
-
-async function getConfig() {
+async function getConfig(): Promise<Config> {
     return invoke('get_config_command');
 }
 

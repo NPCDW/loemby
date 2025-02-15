@@ -24,13 +24,13 @@
   <el-dialog v-model="dialogAddEmbyServerVisible" title="Emby Server" width="800">
     <el-steps style="max-width: 600px" :active="2" align-center>
         <el-step title="服务器地址">
-            <el-inputt v-model="tmpEmbyServerConfig?.base_url" style="width: 240px" placeholder="Please input" />
+            <el-input v-model="tmpEmbyServerConfig.base_url" style="width: 240px" placeholder="Please input" />
             <el-button :loading="addEmbyServerAddrLoading" @click="addEmbyServerAddr">下一步</el-button>
         </el-step>
         <el-step title="用户名密码">
-            <el-inputt v-model="tmpEmbyServerConfig?.server_name" style="width: 240px" placeholder="Please input" />
-            <el-inputt v-model="tmpEmbyServerConfig?.username" style="width: 240px" placeholder="Please input" />
-            <el-inputt v-model="tmpEmbyServerConfig?.password" style="width: 240px" placeholder="Please input" />
+            <el-input v-model="tmpEmbyServerConfig.server_name" style="width: 240px" placeholder="Please input" />
+            <el-input v-model="tmpEmbyServerConfig.username" style="width: 240px" placeholder="Please input" />
+            <el-input v-model="tmpEmbyServerConfig.password" style="width: 240px" placeholder="Please input" />
             <el-button>下一步</el-button>
         </el-step>
         <el-step title="完成">
@@ -68,12 +68,10 @@ useConfig().get_config().then(config => {
 })
 
 const dialogAddEmbyServerVisible = ref(false)
-const tmpEmbyServerConfig = ref<EmbyServerConfig>()
+const tmpEmbyServerConfig = ref<EmbyServerConfig>({})
 function addEmbyServer() {
     dialogAddEmbyServerVisible.value = true
     tmpEmbyServerConfig.value = {
-        id: '',
-        base_url: '',
         disabled: true
     }
 }

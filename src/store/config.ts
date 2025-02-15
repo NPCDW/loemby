@@ -4,7 +4,7 @@ import { defineStore } from 'pinia'
 import { ref } from "vue";
 
 export const useConfig = defineStore('config', () => {
-    const config = ref<Config>()
+    const config = ref<Config>({})
 
     async function get_config() {
         config.value = await invoke.getConfig();
@@ -20,17 +20,17 @@ export const useConfig = defineStore('config', () => {
 })
 
 interface ProxyServerConfig {
-    id: string,
-    proxy_type: string,
-    addr: string,
+    id?: string,
+    proxy_type?: string,
+    addr?: string,
     username?: string,
     password?: string,
 }
 
 export interface EmbyServerConfig {
-    id: string,
+    id?: string,
 
-    base_url: string,
+    base_url?: string,
     username?: string,
     password?: string,
 
@@ -46,14 +46,14 @@ export interface EmbyServerConfig {
 
     proxy_id?: string,
 
-    disabled: boolean,
+    disabled?: boolean,
     // 前端状态字段
     request_status?: boolean,
     request_fail?: boolean,
 }
 
 export interface Config {
-    log_level: string,
-    emby_server: EmbyServerConfig[],
-    proxy_server: ProxyServerConfig[],
+    log_level?: string,
+    emby_server?: EmbyServerConfig[],
+    proxy_server?: ProxyServerConfig[],
 }
