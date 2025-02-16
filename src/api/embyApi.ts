@@ -1,91 +1,110 @@
 import { fetch } from '@tauri-apps/plugin-http';
-import { generateGuid } from '../util/uuid'
-import { getOsInfo } from '../util/os'
+import { EmbyServerConfig } from '../store/config';
 
-const client = "loemby";
-const version = "0.1.0";
-const user_agent = client + "/" + version;
-
-async function getServerInfo(base_url: string) {
-    return fetch(base_url + '/System/Info/Public', {
+async function getServerInfo(embyServer: EmbyServerConfig) {
+    if (!embyServer.base_url) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + '/System/Info/Public', {
         method: 'GET',
         headers: {
-            'User-Agent': user_agent,
+            'User-Agent': embyServer.user_agent!,
         }
     });
 }
 
-async function authenticateByName(base_url: string, username: string, password: string) {
-    return fetch(base_url + '/System/Info/Public', {
+async function authenticateByName(embyServer: EmbyServerConfig) {
+    if (!embyServer.base_url || !embyServer.username) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + '/System/Info/Public', {
         method: 'POST',
         headers: {
-            'User-Agent': user_agent,
+            'User-Agent': embyServer.user_agent!,
             'Content-Type': 'application/json',
-            'X-Emby-Authorization': `Emby Client="${client}", Device="${getOsInfo().name}", DeviceId="${generateGuid()}", Version="${version}"`,
+            'X-Emby-Authorization': `Emby Client="${embyServer.client}", Device="${embyServer.device}", DeviceId="${embyServer.device_id}", Version="${embyServer.client_version}"`,
         },
         body: JSON.stringify({
-            "Username": username,
-            "Pw": password
+            "Username": embyServer.username,
+            "Pw": !embyServer.password ? null : embyServer.password
         })
     });
 }
 
-async function logout(base_url: string, token: string) {
-    return fetch(base_url + '/System/Info/Public', {
+async function logout(embyServer: EmbyServerConfig) {
+    if (!embyServer.base_url || !embyServer.auth_token) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + '/System/Info/Public', {
         method: 'POST',
         headers: {
-            'User-Agent': user_agent,
-            'X-Emby-Token': token,
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
         }
     });
 }
 
-async function search(base_url: string, token: string, user_id: string, search_str: string) {
-    return fetch(base_url + `/Users/${user_id}/Items?SearchTerm=${encodeURIComponent(search_str)}&IncludeItemTypes=Movie,Series&Recursive=true`, {
+async function search(embyServer: EmbyServerConfig, search_str: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !search_str) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/Items?SearchTerm=${encodeURIComponent(search_str)}&IncludeItemTypes=Movie,Series&Recursive=true`, {
         method: 'GET',
         headers: {
-            'User-Agent': user_agent,
-            'X-Emby-Token': token,
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
         }
     });
 }
 
-async function items(base_url: string, token: string, user_id: string, item_id: string) {
-    return fetch(base_url + `/Users/${user_id}/Items/${item_id}`, {
+async function items(embyServer: EmbyServerConfig, item_id: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/Items/${item_id}`, {
         method: 'GET',
         headers: {
-            'User-Agent': user_agent,
-            'X-Emby-Token': token,
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
         }
     });
 }
 
-async function seasons(base_url: string, token: string, item_id: string) {
-    return fetch(base_url + `/Shows/${item_id}/Seasons`, {
+async function seasons(embyServer: EmbyServerConfig, item_id: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !item_id) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Shows/${item_id}/Seasons`, {
         method: 'GET',
         headers: {
-            'User-Agent': user_agent,
-            'X-Emby-Token': token,
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
         }
     });
 }
 
-async function episodes(base_url: string, token: string, item_id: string) {
-    return fetch(base_url + `/Shows/${item_id}/Episodes`, {
+async function episodes(embyServer: EmbyServerConfig, item_id: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !item_id) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Shows/${item_id}/Episodes`, {
         method: 'GET',
         headers: {
-            'User-Agent': user_agent,
-            'X-Emby-Token': token,
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
         }
     });
 }
 
-async function playbackInfo(base_url: string, token: string, user_id: string, item_id: string) {
-    return fetch(base_url + `/Items/${item_id}/PlaybackInfo?UserId=${user_id}`, {
+async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Items/${item_id}/PlaybackInfo?UserId=${embyServer.user_id}`, {
         method: 'GET',
         headers: {
-            'User-Agent': user_agent,
-            'X-Emby-Token': token,
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
         }
     });
 }

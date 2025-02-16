@@ -16,7 +16,26 @@ export const useConfig = defineStore('config', () => {
         await invoke.saveConfig({ config: config.value! });
     }
 
-    return { get_config, save_config }
+    async function addEmbyServer(tmp: EmbyServerConfig) {
+        let value = _.cloneDeep(tmp);
+        if (!config.value.emby_server) {
+            config.value.emby_server = []
+            config.value.emby_server.push(value)
+            await save_config(config.value)
+        } else {
+            for (let index = 0; index < config.value.emby_server.length; index++) {
+                if (config.value.emby_server[index].id === value.id) {
+                    config.value.emby_server.splice(index, 1, value)
+                    await save_config(config.value)
+                    return
+                }
+            }
+            config.value.emby_server.push(value)
+            await save_config(config.value)
+        }
+    }
+
+    return { get_config, save_config, addEmbyServer }
 })
 
 interface ProxyServerConfig {
@@ -43,6 +62,7 @@ export interface EmbyServerConfig {
     device?: string,
     device_id?: string,
     client_version?: string,
+    user_agent?: string,
 
     proxy_id?: string,
 

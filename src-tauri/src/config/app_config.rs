@@ -34,6 +34,7 @@ pub struct EmbyServer {
     pub device: Option<String>,
     pub device_id: Option<String>,
     pub client_version: Option<String>,
+    pub user_agent: Option<String>,
 
     pub proxy_id: Option<String>,
 

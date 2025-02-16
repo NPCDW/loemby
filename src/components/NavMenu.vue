@@ -37,16 +37,16 @@
         <el-input v-model="tmpEmbyServerConfig.server_name" style="width: 240px" placeholder="Please input" />
         <el-input v-model="tmpEmbyServerConfig.username" style="width: 240px" placeholder="Please input" />
         <el-input v-model="tmpEmbyServerConfig.password" style="width: 240px" placeholder="Please input" />
-        <el-button>下一步</el-button>
+        <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerPrevStep">上一步</el-button>
+        <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerAuth">下一步</el-button>
     </div>
     <div v-if="stepActive == 3">
         <el-result
             icon="success"
-            title="Success Tip"
-            sub-title="Please follow the instructions"
+            title="Success"
         >
             <template #extra>
-            <el-button type="primary">Back</el-button>
+                <el-button type="primary" @click="dialogAddEmbyServerVisible = false">完成</el-button>
             </template>
         </el-result>
     </div>
@@ -59,6 +59,8 @@ import { useRoute } from 'vue-router'
 import { useConfig, EmbyServerConfig } from '../store/config'
 import embyApi from '../api/embyApi'
 import { ElMessage } from "element-plus";
+import { generateGuid } from "../util/uuid";
+import { getOsInfo } from '../util/os'
 
 const active = ref("");
 const route = useRoute();
@@ -72,23 +74,33 @@ useConfig().get_config().then(config => {
     embyServers.value = config?.emby_server
 })
 
-const stepActive = ref(1)
 const dialogAddEmbyServerVisible = ref(false)
 const tmpEmbyServerConfig = ref<EmbyServerConfig>({})
 function addEmbyServer() {
     dialogAddEmbyServerVisible.value = true
+    const client = "loemby";
+    const client_version = "0.1.0";
+    const user_agent = client + "/" + client_version;
     tmpEmbyServerConfig.value = {
-        disabled: true
+        id: generateGuid(),
+        disabled: true,
+        user_agent: user_agent,
+        client: client,
+        client_version: client_version,
+        device: getOsInfo().name,
+        device_id: generateGuid(),
     }
 }
 
+const stepActive = ref(1)
 const addEmbyServerAddrLoading = ref(false)
-function addEmbyServerAddr() {
+async function addEmbyServerAddr() {
     addEmbyServerAddrLoading.value = true
     if (!tmpEmbyServerConfig || !tmpEmbyServerConfig.value?.base_url) {
         return
     }
-    embyApi.getServerInfo(tmpEmbyServerConfig.value.base_url).then(async response => {
+    await useConfig().addEmbyServer(tmpEmbyServerConfig.value);
+    embyApi.getServerInfo(tmpEmbyServerConfig.value).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
@@ -98,12 +110,43 @@ function addEmbyServerAddr() {
         let json: {ServerName: string, Id: string} = await response.json();
         tmpEmbyServerConfig.value!.server_name = json['ServerName']
         tmpEmbyServerConfig.value!.server_id = json['Id']
-        stepActive.value = 2
+        await useConfig().addEmbyServer(tmpEmbyServerConfig.value);
+        stepActive.value = stepActive.value + 1;
     }).catch(e => {
         ElMessage.error({
             message: e
         })
-    })
+    }).finally(() => addEmbyServerAddrLoading.value = false)
+}
+const addEmbyServerAuthLoading = ref(false)
+function addEmbyServerPrevStep() {
+    addEmbyServerAuthLoading.value = true
+    stepActive.value = stepActive.value - 1;
+    addEmbyServerAuthLoading.value = false
+}
+async function addEmbyServerAuth() {
+    addEmbyServerAuthLoading.value = true
+    if (!tmpEmbyServerConfig || !tmpEmbyServerConfig.value?.username) {
+        return
+    }
+    await useConfig().addEmbyServer(tmpEmbyServerConfig.value);
+    embyApi.authenticateByName(tmpEmbyServerConfig.value).then(async response => {
+        if (response.status != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status + ' ' + response.statusText
+            })
+            return
+        }
+        let json: {User: {Id: string}, AccessToken: string} = await response.json();
+        tmpEmbyServerConfig.value!.auth_token = json['AccessToken']
+        tmpEmbyServerConfig.value!.user_id = json["User"]['Id']
+        await useConfig().addEmbyServer(tmpEmbyServerConfig.value);
+        stepActive.value = stepActive.value + 1;
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => addEmbyServerAuthLoading.value = false)
 }
 </script>
 
