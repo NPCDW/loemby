@@ -17,7 +17,7 @@ async function authenticateByName(embyServer: EmbyServerConfig) {
     if (!embyServer.base_url || !embyServer.username) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + '/System/Info/Public', {
+    return fetch(embyServer.base_url + '/Users/AuthenticateByName', {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -35,7 +35,7 @@ async function logout(embyServer: EmbyServerConfig) {
     if (!embyServer.base_url || !embyServer.auth_token) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + '/System/Info/Public', {
+    return fetch(embyServer.base_url + '/Sessions/Logout', {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
