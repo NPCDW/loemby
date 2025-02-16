@@ -14,6 +14,19 @@
                     <el-icon v-else-if="embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
                     <el-icon v-else style="color: #67C23A;"><i-ep-SuccessFilled /></el-icon>
                     {{ embyServer.server_name }}
+                    <el-dropdown trigger="click">
+                        <span class="el-dropdown-link">
+                            <el-icon style="color: #F56C6C;"><i-ep-MoreFilled /></el-icon>
+                        </span>
+                        <template #dropdown>
+                            <el-dropdown-menu>
+                                <el-dropdown-item @click="editEmbyServer(embyServer)">编辑</el-dropdown-item>
+                                <el-dropdown-item @click="enabledEmbyServer(embyServer)" v-text="embyServer.disabled ? '启用' : '禁用'"></el-dropdown-item>
+                                <el-dropdown-item @click="logoutEmbyServer(embyServer)">退出登录</el-dropdown-item>
+                                <el-dropdown-item @click="delEmbyServer(embyServer)">删除</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </template>
+                    </el-dropdown>
                 </el-menu-item>
             </el-menu>
         </div>
@@ -58,7 +71,7 @@ import { ref, watchEffect } from "vue";
 import { useRoute } from 'vue-router'
 import { useConfig, EmbyServerConfig } from '../store/config'
 import embyApi from '../api/embyApi'
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { generateGuid } from "../util/uuid";
 import { getOsInfo } from '../util/os'
 
@@ -91,6 +104,43 @@ function addEmbyServer() {
         device_id: generateGuid(),
     }
 }
+function editEmbyServer(embyServer: EmbyServerConfig) {
+    dialogAddEmbyServerVisible.value = true
+    tmpEmbyServerConfig.value = embyServer
+}
+async function enabledEmbyServer(embyServer: EmbyServerConfig) {
+    embyServer.disabled = !embyServer.disabled
+    await useConfig().saveEmbyServer(embyServer)
+}
+function logoutEmbyServer(embyServer: EmbyServerConfig) {
+  ElMessageBox.confirm(
+    `确认退出登录服务器 ${embyServer.server_name} 吗`,
+    'Warning',
+    {
+      confirmButtonText: 'OK',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    }
+  ).then(async () => {
+    await embyApi.logout(embyServer)
+    embyServer.disabled = true
+    embyServer.auth_token = ''
+    await useConfig().saveEmbyServer(embyServer)
+    })
+}
+function delEmbyServer(embyServer: EmbyServerConfig) {
+  ElMessageBox.confirm(
+    `确认删除服务器 ${embyServer.server_name} 吗`,
+    'Warning',
+    {
+      confirmButtonText: 'OK',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    }
+  ).then(() => {
+        useConfig().delEmbyServer(embyServer.id!)
+    })
+}
 
 const stepActive = ref(1)
 const addEmbyServerAddrLoading = ref(false)
@@ -99,7 +149,7 @@ async function addEmbyServerAddr() {
     if (!tmpEmbyServerConfig || !tmpEmbyServerConfig.value?.base_url) {
         return
     }
-    await useConfig().addEmbyServer(tmpEmbyServerConfig.value);
+    await useConfig().saveEmbyServer(tmpEmbyServerConfig.value);
     embyApi.getServerInfo(tmpEmbyServerConfig.value).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
@@ -110,7 +160,7 @@ async function addEmbyServerAddr() {
         let json: {ServerName: string, Id: string} = await response.json();
         tmpEmbyServerConfig.value!.server_name = json['ServerName']
         tmpEmbyServerConfig.value!.server_id = json['Id']
-        await useConfig().addEmbyServer(tmpEmbyServerConfig.value);
+        await useConfig().saveEmbyServer(tmpEmbyServerConfig.value);
         stepActive.value = stepActive.value + 1;
     }).catch(e => {
         ElMessage.error({
@@ -129,7 +179,7 @@ async function addEmbyServerAuth() {
     if (!tmpEmbyServerConfig || !tmpEmbyServerConfig.value?.username) {
         return
     }
-    await useConfig().addEmbyServer(tmpEmbyServerConfig.value);
+    await useConfig().saveEmbyServer(tmpEmbyServerConfig.value);
     embyApi.authenticateByName(tmpEmbyServerConfig.value).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
@@ -140,7 +190,7 @@ async function addEmbyServerAuth() {
         let json: {User: {Id: string}, AccessToken: string} = await response.json();
         tmpEmbyServerConfig.value!.auth_token = json['AccessToken']
         tmpEmbyServerConfig.value!.user_id = json["User"]['Id']
-        await useConfig().addEmbyServer(tmpEmbyServerConfig.value);
+        await useConfig().saveEmbyServer(tmpEmbyServerConfig.value);
         stepActive.value = stepActive.value + 1;
     }).catch(e => {
         ElMessage.error({

@@ -44,11 +44,11 @@ async function logout(embyServer: EmbyServerConfig) {
     });
 }
 
-async function search(embyServer: EmbyServerConfig, search_str: string) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !search_str) {
+async function search(embyServer: EmbyServerConfig, search_str: string, startIndex: number, limit: number) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !search_str || !startIndex || !limit) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/Items?SearchTerm=${encodeURIComponent(search_str)}&IncludeItemTypes=Movie,Series&Recursive=true`, {
+    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/Items?SearchTerm=${encodeURIComponent(search_str)}&IncludeItemTypes=Movie,Series&Recursive=true&Fields=MediaStreams,ProductionYear&StartIndex=${startIndex}&Limit=${limit}`, {
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -74,7 +74,7 @@ async function seasons(embyServer: EmbyServerConfig, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !item_id) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Shows/${item_id}/Seasons`, {
+    return fetch(embyServer.base_url + `/Shows/${item_id}/Seasons?Fields=ProductionYear`, {
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -83,11 +83,11 @@ async function seasons(embyServer: EmbyServerConfig, item_id: string) {
     });
 }
 
-async function episodes(embyServer: EmbyServerConfig, item_id: string) {
+async function episodes(embyServer: EmbyServerConfig, item_id: string, seasonId: string, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !item_id) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Shows/${item_id}/Episodes`, {
+    return fetch(embyServer.base_url + `/Shows/${item_id}/Episodes?StartIndex=${startIndex}&Limit=${limit}&SeasonId=${seasonId}&Fields=MediaStreams`, {
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
