@@ -1,6 +1,6 @@
 <template>
     <div>
-        <el-input v-model="search_str">
+        <el-input v-model="search_str" @keyup.enter="search">
             <template #append>
                 <el-button @click="search"><el-icon><i-ep-Search /></el-icon></el-button>
             </template>
@@ -15,10 +15,10 @@
                 </v-card-title>
 
                 <v-card-subtitle v-if="rootItem.Type == 'Series'">
-                    {{ rootItem.ProductionYear }} 总集数：{{ rootItem.UserData.PlayCount + rootItem.UserData.UnplayedItemCount }}
+                    {{ rootItem.ProductionYear + '-' + rootItem.EndDate.substring(0, 4) }} 总集数：{{ rootItem.UserData.PlayCount + rootItem.UserData.UnplayedItemCount }}
                 </v-card-subtitle>
                 <v-card-subtitle v-else>
-                    {{ rootItem.ProductionYear }} 大小：{{ rootItem.MediaSources[0].Size }}
+                    {{ rootItem.ProductionYear }} 最大媒体流：{{ formatBytes(maxMediaSources(rootItem.MediaSources)) }}
                 </v-card-subtitle>
 
                 <v-card-actions>
@@ -74,6 +74,7 @@ interface SearchResult {
         Name: string,
         Id: string,
         ProductionYear: number,
+        EndDate: string,
         Type: string,
         MediaSources: {
             Size: number,
@@ -97,6 +98,7 @@ async function handleRootSearchPageChange(val: number, embyServer: EmbyServerCon
 }
 async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: number, pageSize: number) {
     let search_result = {server: embyServer, currentPage: currentPage, pageSize: pageSize, showSeasons: false, result: {} as SearchResult}
+    console.log('search', embyServer, search_str.value, (currentPage - 1) * pageSize, pageSize)
     return embyApi.search(embyServer, search_str.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
@@ -113,4 +115,26 @@ async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: numbe
         })
     })
 }
+
+
+const maxMediaSources = (mediaSources: {Size: number}[]) => {
+    let max = 0
+    for (let mediaSource of mediaSources) {
+        if (mediaSource.Size > max) {
+            max = mediaSource.Size
+        }
+    }
+    return max
+}
+const formatBytes = (size: number) => {
+  const units: string[] = ['KB', 'MB', 'GB', 'TB'];
+  for (let index = 0; index < units.length; index++) {
+    size /= 1024;
+    if (size < 1024) {
+      return size.toFixed(2) + " " + units[index];
+    }
+  }
+  return size.toFixed(2) + units[units.length - 1]
+}
+
 </script>

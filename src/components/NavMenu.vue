@@ -110,9 +110,11 @@ async function saveEmbyServer(tmp: EmbyServerConfig) {
 }
 
 
+const stepActive = ref(1)
 const dialogAddEmbyServerVisible = ref(false)
 const tmpEmbyServerConfig = ref<EmbyServerConfig>({})
 function addEmbyServer() {
+    stepActive.value = 1;
     dialogAddEmbyServerVisible.value = true
     const client = "loemby";
     const client_version = "0.1.0";
@@ -173,7 +175,6 @@ function delEmbyServer(tmp: EmbyServerConfig) {
     })
 }
 
-const stepActive = ref(1)
 const addEmbyServerAddrLoading = ref(false)
 async function addEmbyServerAddr() {
     addEmbyServerAddrLoading.value = true
@@ -243,10 +244,7 @@ async function login(embyServerConfig: EmbyServerConfig) {
     await saveEmbyServer(embyServerConfig);
     return embyApi.authenticateByName(embyServerConfig).then(async response => {
         if (response.status != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
-            })
-            return
+            return Promise.reject('response status' + response.status + ' ' + response.statusText)
         }
         let json: {User: {Id: string}, AccessToken: string} = await response.json();
         embyServerConfig.auth_token = json['AccessToken']
