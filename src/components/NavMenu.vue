@@ -83,6 +83,7 @@ import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox } from "element-plus";
 import { generateGuid } from "../util/uuid";
 import { getOsInfo } from '../util/os'
+import _ from "lodash";
 
 const active = ref("");
 const route = useRoute();
@@ -116,7 +117,7 @@ function addEmbyServer() {
 const dialogEditEmbyServerVisible = ref(false)
 function editEmbyServer(embyServer: EmbyServerConfig) {
     dialogEditEmbyServerVisible.value = true
-    tmpEmbyServerConfig.value = embyServer
+    tmpEmbyServerConfig.value = _.clone(embyServer)
 }
 async function enabledEmbyServer(embyServer: EmbyServerConfig) {
     embyServer.disabled = !embyServer.disabled
