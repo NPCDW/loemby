@@ -71,10 +71,10 @@ async function items(embyServer: EmbyServerConfig, item_id: string) {
 }
 
 async function seasons(embyServer: EmbyServerConfig, item_id: string) {
-    if (!embyServer.base_url || !embyServer.auth_token || !item_id) {
+    if (!embyServer.base_url || !embyServer.auth_token || !item_id || !embyServer.user_id) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Shows/${item_id}/Seasons?Fields=ProductionYear`, {
+    return fetch(embyServer.base_url + `/Shows/${item_id}/Seasons?Fields=ProductionYear&UserId=${embyServer.user_id}`, {
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -87,7 +87,7 @@ async function episodes(embyServer: EmbyServerConfig, item_id: string, seasonId:
     if (!embyServer.base_url || !embyServer.auth_token || !item_id || !seasonId || startIndex < 0 || !limit) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Shows/${item_id}/Episodes?StartIndex=${startIndex}&Limit=${limit}&SeasonId=${seasonId}&Fields=MediaStreams`, {
+    return fetch(embyServer.base_url + `/Shows/${item_id}/Episodes?StartIndex=${startIndex}&Limit=${limit}&SeasonId=${seasonId}&Fields=MediaStreams&UserId=${embyServer.user_id}`, {
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
