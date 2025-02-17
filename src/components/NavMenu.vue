@@ -92,10 +92,23 @@ watchEffect(() => {
     console.log(active.value)
 })
 
-const embyServers = ref<EmbyServerConfig[]>()
+const embyServers = ref<EmbyServerConfig[]>([])
 useConfig().get_config().then(config => {
-    embyServers.value = config?.emby_server
+    embyServers.value = config?.emby_server ? config.emby_server : []
 })
+async function saveEmbyServer(tmp: EmbyServerConfig) {
+    let value = _.cloneDeep(tmp);
+    for (let index = 0; index < embyServers.value.length; index++) {
+        if (embyServers.value[index].id === value.id) {
+            embyServers.value[index] = value
+            await useConfig().saveEmbyServer(embyServers.value)
+            return
+        }
+    }
+    embyServers.value.push(value)
+    await useConfig().saveEmbyServer(embyServers.value)
+}
+
 
 const dialogAddEmbyServerVisible = ref(false)
 const tmpEmbyServerConfig = ref<EmbyServerConfig>({})
@@ -121,7 +134,7 @@ function editEmbyServer(embyServer: EmbyServerConfig) {
 }
 async function enabledEmbyServer(embyServer: EmbyServerConfig) {
     embyServer.disabled = !embyServer.disabled
-    await useConfig().saveEmbyServer(embyServer)
+    await saveEmbyServer(embyServer)
 }
 function logoutEmbyServer(embyServer: EmbyServerConfig) {
   ElMessageBox.confirm(
@@ -136,20 +149,26 @@ function logoutEmbyServer(embyServer: EmbyServerConfig) {
     await embyApi.logout(embyServer)
     embyServer.disabled = true
     embyServer.auth_token = ''
-    await useConfig().saveEmbyServer(embyServer)
+    await saveEmbyServer(embyServer)
     })
 }
-function delEmbyServer(embyServer: EmbyServerConfig) {
+function delEmbyServer(tmp: EmbyServerConfig) {
   ElMessageBox.confirm(
-    `确认删除服务器「${embyServer.server_name}」吗`,
+    `确认删除服务器「${tmp.server_name}」吗`,
     'Warning',
     {
       confirmButtonText: 'OK',
       cancelButtonText: 'Cancel',
       type: 'warning',
     }
-  ).then(() => {
-        useConfig().delEmbyServer(embyServer.id!)
+  ).then(async () => {
+        for (let index = 0; index < embyServers.value.length; index++) {
+            if (embyServers.value[index].id === tmp.id) {
+                embyServers.value.splice(index, 1)
+                await useConfig().saveEmbyServer(embyServers.value)
+                return
+            }
+        }
     })
 }
 
@@ -160,7 +179,7 @@ async function addEmbyServerAddr() {
     if (!tmpEmbyServerConfig || !tmpEmbyServerConfig.value?.base_url) {
         return
     }
-    await useConfig().saveEmbyServer(tmpEmbyServerConfig.value);
+    await saveEmbyServer(tmpEmbyServerConfig.value);
     embyApi.getServerInfo(tmpEmbyServerConfig.value).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
@@ -171,7 +190,7 @@ async function addEmbyServerAddr() {
         let json: {ServerName: string, Id: string} = await response.json();
         tmpEmbyServerConfig.value!.server_name = json['ServerName']
         tmpEmbyServerConfig.value!.server_id = json['Id']
-        await useConfig().saveEmbyServer(tmpEmbyServerConfig.value);
+        await saveEmbyServer(tmpEmbyServerConfig.value);
         stepActive.value = stepActive.value + 1;
     }).catch(e => {
         ElMessage.error({
@@ -220,7 +239,7 @@ async function reLogin(embyServerConfig: EmbyServerConfig) {
     })
 }
 async function login(embyServerConfig: EmbyServerConfig) {
-    await useConfig().saveEmbyServer(embyServerConfig);
+    await saveEmbyServer(embyServerConfig);
     return embyApi.authenticateByName(embyServerConfig).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
@@ -232,11 +251,11 @@ async function login(embyServerConfig: EmbyServerConfig) {
         embyServerConfig.auth_token = json['AccessToken']
         embyServerConfig.user_id = json["User"]['Id']
         embyServerConfig.disabled = false
-        await useConfig().saveEmbyServer(embyServerConfig);
+        await saveEmbyServer(embyServerConfig);
     })
 }
 async function saveEditEmbyServer() {
-    await useConfig().saveEmbyServer(tmpEmbyServerConfig.value!);
+    await saveEmbyServer(tmpEmbyServerConfig.value!);
     dialogEditEmbyServerVisible.value = false
 }
 </script>

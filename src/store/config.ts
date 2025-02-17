@@ -16,23 +16,9 @@ export const useConfig = defineStore('config', () => {
         await invoke.saveConfig({ config: config.value! });
     }
 
-    async function saveEmbyServer(tmp: EmbyServerConfig) {
-        let value = _.cloneDeep(tmp);
-        if (!config.value.emby_server) {
-            config.value.emby_server = []
-            config.value.emby_server.push(value)
-            await save_config(config.value)
-        } else {
-            for (let index = 0; index < config.value.emby_server.length; index++) {
-                if (config.value.emby_server[index].id === value.id) {
-                    config.value.emby_server.splice(index, 1, value)
-                    await save_config(config.value)
-                    return
-                }
-            }
-            config.value.emby_server.push(value)
-            await save_config(config.value)
-        }
+    async function saveEmbyServer(embyServers: EmbyServerConfig[]) {
+        config.value.emby_server = _.cloneDeep(embyServers);
+        await save_config(config.value)
     }
 
     async function delEmbyServer(id: string) {
