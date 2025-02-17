@@ -119,6 +119,7 @@ function addEmbyServer() {
     const user_agent = client + "/" + client_version;
     tmpEmbyServerConfig.value = {
         id: generateGuid(),
+        server_name: '未完成',
         disabled: true,
         user_agent: user_agent,
         client: client,
