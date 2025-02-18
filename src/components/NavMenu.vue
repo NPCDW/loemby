@@ -35,23 +35,43 @@
         </div>
     </div>
   <el-dialog v-model="dialogAddEmbyServerVisible" title="Emby Server" width="800">
-    <el-steps style="max-width: 600px" :active="stepActive" align-center>
+    <el-steps :active="stepActive" align-center>
         <el-step title="服务器地址" />
         <el-step title="用户名密码">
         </el-step>
         <el-step title="完成">
         </el-step>
     </el-steps>
-    <div v-if="stepActive == 1">
-        <el-input v-model="tmpEmbyServerConfig.base_url" style="width: 240px" placeholder="Please input" />
-        <el-button :loading="addEmbyServerAddrLoading" @click="addEmbyServerAddr" type="primary">下一步</el-button>
+    <div v-if="stepActive == 1" style="width: 60%; margin: 25px auto;">
+        <el-form label-position="top">
+            <el-form-item label="服务器地址">
+                <el-input v-model="tmpEmbyServerConfig.base_url" placeholder="Please input" />
+            </el-form-item>
+            <el-form-item>
+                <div style="width: 100%; display: flex; justify-content: end;">
+                    <el-button :loading="addEmbyServerAddrLoading" @click="addEmbyServerAddr" type="primary">下一步</el-button>
+                </div>
+            </el-form-item>
+        </el-form>
     </div>
-    <div v-if="stepActive == 2">
-        <el-input v-model="tmpEmbyServerConfig.server_name" style="width: 240px" placeholder="Please input" />
-        <el-input v-model="tmpEmbyServerConfig.username" style="width: 240px" placeholder="Please input" />
-        <el-input v-model="tmpEmbyServerConfig.password" style="width: 240px" placeholder="Please input" show-password />
-        <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerPrevStep">上一步</el-button>
-        <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerAuth" type="primary">下一步</el-button>
+    <div v-if="stepActive == 2" style="width: 60%; margin: 25px auto;">
+        <el-form label-position="top">
+            <el-form-item label="服务器名称">
+                <el-input v-model="tmpEmbyServerConfig.server_name" placeholder="Please input" />
+            </el-form-item>
+            <el-form-item label="用户名">
+                <el-input v-model="tmpEmbyServerConfig.username" placeholder="Please input" />
+            </el-form-item>
+            <el-form-item label="密码">
+                <el-input v-model="tmpEmbyServerConfig.password" placeholder="Please input" show-password />
+            </el-form-item>
+            <el-form-item>
+                <div style="width: 100%; display: flex; justify-content: space-between;">
+                    <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerPrevStep">上一步</el-button>
+                    <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerAuth" type="primary">下一步</el-button>
+                </div>
+            </el-form-item>
+        </el-form>
     </div>
     <div v-if="stepActive == 3">
         <el-result

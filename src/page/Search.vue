@@ -41,7 +41,7 @@
                             :class="{ active: dialogSeasons?.Id === seasonsItem.Id }"
                             @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)"
                         >
-                            <h3>{{ seasonsItem.Name }}</h3>
+                            <h3>{{ seasonsItem.IndexNumber + '. ' + seasonsItem.Name }}</h3>
                             <p>{{ seasonsItem.ProductionYear }} 未播放：{{ seasonsItem.UserData.UnplayedItemCount }}</p>
                         </div>
                     </el-scrollbar>
@@ -49,7 +49,7 @@
                 <div class="note-content">
                     <el-scrollbar>
                         <div v-for="episodesItem in dialogEpisodesList" class="note-item">
-                            <p>{{ episodesItem.Name }}</p>
+                            <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
                             <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ formatBytes(maxMediaSources(episodesItem.MediaSources)) }}</p>
                         </div>
                         <el-pagination
@@ -116,6 +116,7 @@ interface SeasonsItems {
     Name: string,
     Id: string,
     ProductionYear: number,
+    IndexNumber: number,
     UserData: {
         UnplayedItemCount: number,
         PlayCount: number
@@ -126,6 +127,7 @@ interface EpisodesItems {
     Name: string,
     Id: string,
     PremiereDate: string,
+    IndexNumber: number,
     MediaSources: {
         Size: number,
         Name: string
@@ -186,6 +188,8 @@ async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
 }
 async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seasons: SeasonsItems, currentPage: number, pageSize: number) {
     dialogEpisodesList.value = []
+    dialogEpisodesCurrentPage.value = currentPage
+    dialogEpisodesPageSize.value = pageSize
     dialogSeasons.value = seasons
     if (!episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id]) {
         episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id] = {total: 0}
