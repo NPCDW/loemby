@@ -44,14 +44,14 @@
     </el-steps>
     <div v-if="stepActive == 1">
         <el-input v-model="tmpEmbyServerConfig.base_url" style="width: 240px" placeholder="Please input" />
-        <el-button :loading="addEmbyServerAddrLoading" @click="addEmbyServerAddr">下一步</el-button>
+        <el-button :loading="addEmbyServerAddrLoading" @click="addEmbyServerAddr" type="primary">下一步</el-button>
     </div>
     <div v-if="stepActive == 2">
         <el-input v-model="tmpEmbyServerConfig.server_name" style="width: 240px" placeholder="Please input" />
         <el-input v-model="tmpEmbyServerConfig.username" style="width: 240px" placeholder="Please input" />
-        <el-input v-model="tmpEmbyServerConfig.password" style="width: 240px" placeholder="Please input" />
+        <el-input v-model="tmpEmbyServerConfig.password" style="width: 240px" placeholder="Please input" show-password />
         <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerPrevStep">上一步</el-button>
-        <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerAuth">下一步</el-button>
+        <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerAuth" type="primary">下一步</el-button>
     </div>
     <div v-if="stepActive == 3">
         <el-result
