@@ -6,21 +6,25 @@
             </template>
         </el-input>
         
-        <el-collapse v-model="embyServerKeys">
-            <el-collapse-item :title="val.server.server_name" :name="rootKey" v-for="(val, rootKey) in root_search_result">
-                <el-card style="max-width: 360px" v-for="rootItem in val.result.Items">
-                    <p>{{ rootItem.Name }}</p>
-                    <p v-if="rootItem.Type == 'Series'">
-                        {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
-                        总集数：{{ rootItem.UserData.PlayCount + rootItem.UserData.UnplayedItemCount }}
-                    </p>
-                    <p v-else>
-                        {{ rootItem.ProductionYear }} 最大媒体流：{{ formatBytes(maxMediaSources(rootItem.MediaSources)) }}
-                    </p>
-                    <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(val.server, rootItem)" type="primary" plain>剧集</el-button>
-                </el-card>
-            </el-collapse-item>
-        </el-collapse>
+        <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
+            <el-collapse v-model="embyServerKeys">
+                <el-collapse-item :title="val.server.server_name" :name="rootKey" v-for="(val, rootKey) in root_search_result">
+                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                        <el-card style="width: 300px; margin: 5px;" v-for="rootItem in val.result.Items">
+                            <p>{{ rootItem.Name }}</p>
+                            <p v-if="rootItem.Type == 'Series'">
+                                {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
+                                总集数：{{ rootItem.UserData.PlayCount + rootItem.UserData.UnplayedItemCount }}
+                            </p>
+                            <p v-else>
+                                {{ rootItem.ProductionYear }} 最大媒体流：{{ formatBytes(maxMediaSources(rootItem.MediaSources)) }}
+                            </p>
+                            <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(val.server, rootItem)" type="primary" plain>剧集</el-button>
+                        </el-card>
+                    </div>
+                </el-collapse-item>
+            </el-collapse>
+        </el-scrollbar>
 
         <el-dialog
             v-model="dialogSeriesVisible"
@@ -50,11 +54,11 @@
                         </div>
                         <el-pagination
                             v-if="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons?.Id]"
-                            v-model:current-page="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons!.Id].currentPage"
-                            v-model:page-size="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons!.Id].pageSize"
+                            v-model:current-page="dialogEpisodesCurrentPage"
+                            v-model:page-size="dialogEpisodesPageSize"
                             layout="total, prev, pager, next, jumper"
                             :total="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons!.Id].total"
-                            @current-change="handleEpisodesPageChange(episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons!.Id].currentPage, dialogEmbyServer!, dialogSeries!.Id, dialogSeasons!)"
+                            @current-change="handleEpisodesPageChange(dialogEpisodesCurrentPage, dialogEmbyServer!, dialogSeries!.Id, dialogSeasons!)"
                             hide-on-single-page
                         />
                     </el-scrollbar>
@@ -76,7 +80,7 @@ const embyServerKeys = ref<string[]>([])
 
 const root_search_result = ref<{[key: string]: {server: EmbyServerConfig, currentPage: number, pageSize: number, result: EmbyPageList<SearchItems>}}>({})
 const seasons_result = ref<{[key: string]: EmbyPageList<SeasonsItems>}>({})
-const episodes_result = ref<{[key: string]: {currentPage: number, pageSize: number, total: number, [key: number]: EpisodesItems[]}}>({})
+const episodes_result = ref<{[key: string]: {total: number, [key: number]: EpisodesItems[]}}>({})
 
 const dialogSeriesVisible = ref(false)
 const dialogEmbyServer = ref<EmbyServerConfig>()
@@ -84,6 +88,8 @@ const dialogSeries = ref<SearchItems>()
 const dialogSeasons = ref<SeasonsItems>()
 const dialogSeasonsList = ref<SeasonsItems[]>([])
 const dialogEpisodesList = ref<EpisodesItems[]>([])
+const dialogEpisodesCurrentPage = ref(1)
+const dialogEpisodesPageSize = ref(10)
 
 interface EmbyPageList<T> {
     TotalRecordCount: number,
@@ -127,11 +133,11 @@ interface EpisodesItems {
 }
 
 async function search() {
+    embyServerKeys.value = []
     let config = await useConfig().get_config();
     for (let embyServer of config.emby_server!) {
         singleEmbySearch(embyServer, 1, 30)
     }
-    embyServerKeys.value = config.emby_server!.map(embyServer => embyServer.id!)
 }
 async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: number, pageSize: number) {
     return embyApi.search(embyServer, search_str.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
@@ -143,6 +149,9 @@ async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: numbe
         }
         let json: EmbyPageList<SearchItems> = await response.json();
         root_search_result.value[embyServer.id!] = {server: embyServer, currentPage, pageSize, result: json}
+        if (json.Items.length > 0) {
+            embyServerKeys.value.push(embyServer.id!)
+        }
     }).catch(e => {
         ElMessage.error({
             message: e
@@ -150,6 +159,8 @@ async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: numbe
     })
 }
 async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
+    dialogSeasonsList.value = []
+    dialogEpisodesList.value = []
     dialogEmbyServer.value = embyServer
     dialogSeries.value = series
     dialogSeriesVisible.value = true
@@ -174,9 +185,10 @@ async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
     })
 }
 async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seasons: SeasonsItems, currentPage: number, pageSize: number) {
+    dialogEpisodesList.value = []
     dialogSeasons.value = seasons
     if (!episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id]) {
-        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id] = {currentPage: currentPage, pageSize: pageSize, total: 0}
+        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id] = {total: 0}
     }
     if (episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id][currentPage]) {
         dialogEpisodesList.value = episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id][currentPage]
@@ -190,7 +202,8 @@ async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seas
             return
         }
         let json: EmbyPageList<EpisodesItems> = await response.json();
-        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id] = {currentPage, pageSize, total: json.TotalRecordCount, [currentPage]: json.Items}
+        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id].total = json.TotalRecordCount
+        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id][currentPage]= json.Items
         dialogEpisodesList.value = json.Items
     }).catch(e => {
         ElMessage.error({
@@ -199,7 +212,7 @@ async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seas
     })
 }
 async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfig, series_id: string, seasons: SeasonsItems) {
-    await getEpisodes(embyServer, series_id, seasons, val, 10)
+    await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
 }
 
 const maxMediaSources = (mediaSources: {Size: number}[]) => {

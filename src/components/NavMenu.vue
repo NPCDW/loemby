@@ -9,15 +9,14 @@
                     <el-icon><i-ep-Plus /></el-icon>添加服务器
                 </el-menu-item>
                 <el-menu-item v-if="embyServers" v-for="embyServer in embyServers">
-                    <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
-                    <el-icon v-else-if="embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
-                    <el-icon v-else-if="embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
-                    <el-icon v-else style="color: #67C23A;"><i-ep-SuccessFilled /></el-icon>
-                    {{ embyServer.server_name }}
-                    <el-dropdown trigger="click">
-                        <span class="el-dropdown-link">
-                            <el-icon style="color: #F56C6C;"><i-ep-MoreFilled /></el-icon>
-                        </span>
+                    <el-dropdown trigger="contextmenu">
+                        <div>
+                            <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
+                            <el-icon v-else-if="embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
+                            <el-icon v-else-if="embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
+                            <el-icon v-else style="color: #67C23A;"><i-ep-SuccessFilled /></el-icon>
+                            {{ embyServer.server_name }}
+                        </div>
                         <template #dropdown>
                             <el-dropdown-menu>
                                 <el-dropdown-item @click="reLogin(embyServer)">重新登录</el-dropdown-item>
