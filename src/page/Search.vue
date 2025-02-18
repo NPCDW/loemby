@@ -1,12 +1,12 @@
 <template>
     <div>
-        <el-input v-model="search_str" @keyup.enter="search" style="margin: 10px;">
+        <el-input v-model="search_str" @keyup.enter="search" style="padding: 10px;">
             <template #append>
                 <el-button @click="search"><el-icon><i-ep-Search /></el-icon></el-button>
             </template>
         </el-input>
         
-        <el-collapse>
+        <el-collapse v-model="embyServerKeys">
             <el-collapse-item :title="val.server.server_name" :name="rootKey" v-for="(val, rootKey) in root_search_result">
                 <el-card style="max-width: 360px" v-for="rootItem in val.result.Items">
                     <p>{{ rootItem.Name }}</p>
@@ -24,11 +24,10 @@
 
         <el-dialog
             v-model="dialogSeriesVisible"
-            :title="dialogSeries!.Name"
-            tab-position="left"
-            width="500"
+            :title="dialogSeries?.Name"
+            width="800"
         >
-            <el-tabs type="border-card" class="demo-tabs">
+            <el-tabs type="border-card" class="demo-tabs" tab-position="left">
                 <el-tab-pane v-for="seasonsItem in dialogSeasonsList">
                     <template #label>
                         <div @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)">
@@ -63,6 +62,8 @@ import { ElMessage } from 'element-plus'
 import { formatBytes } from '../util/str_util'
 
 const search_str = ref('')
+const embyServerKeys = ref<string[]>([])
+
 const root_search_result = ref<{[key: string]: {server: EmbyServerConfig, currentPage: number, pageSize: number, result: EmbyPageList<SearchItems>}}>({})
 const seasons_result = ref<{[key: string]: EmbyPageList<SeasonsItems>}>({})
 const episodes_result = ref<{[key: string]: {currentPage: number, pageSize: number, total: number, [key: number]: EpisodesItems[]}}>({})
@@ -120,6 +121,7 @@ async function search() {
     for (let embyServer of config.emby_server!) {
         singleEmbySearch(embyServer, 1, 30)
     }
+    embyServerKeys.value = config.emby_server!.map(embyServer => embyServer.id!)
 }
 async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: number, pageSize: number) {
     return embyApi.search(embyServer, search_str.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
@@ -138,8 +140,9 @@ async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: numbe
     })
 }
 async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
-    dialogSeriesVisible.value = true
+    dialogEmbyServer.value = embyServer
     dialogSeries.value = series
+    dialogSeriesVisible.value = true
     if (seasons_result.value[embyServer.id! + '|' + series.Id]) {
         dialogSeasonsList.value = seasons_result.value[embyServer.id! + '|' + series.Id].Items
         return

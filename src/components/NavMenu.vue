@@ -31,7 +31,7 @@
                 </el-menu-item>
             </el-menu>
         </div>
-        <div style="flex: auto; height: 100vh;">
+        <div style="flex: auto; height: 100vh; width: 100%;">
             <router-view></router-view>
         </div>
     </div>
