@@ -27,29 +27,39 @@
             :title="dialogSeries?.Name"
             width="800"
         >
-            <el-tabs type="border-card" class="demo-tabs" tab-position="left">
-                <el-tab-pane v-for="seasonsItem in dialogSeasonsList">
-                    <template #label>
-                        <div @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)">
-                            <p>{{ seasonsItem.Name }}</p>
+            <div class="note-container">
+                <div class="note-sidebar">
+                    <el-scrollbar>
+                        <div
+                             v-for="seasonsItem in dialogSeasonsList"
+                            :key="seasonsItem.Id"
+                            class="note-item"
+                            :class="{ active: dialogSeasons?.Id === seasonsItem.Id }"
+                            @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)"
+                        >
+                            <h3>{{ seasonsItem.Name }}</h3>
                             <p>{{ seasonsItem.ProductionYear }} 总集数：{{ seasonsItem.UserData.PlayCount + seasonsItem.UserData.UnplayedItemCount }}</p>
                         </div>
-                    </template>
-                    <div v-for="episodesItem in dialogEpisodesList">
-                        <p>{{ episodesItem.Name }}</p>
-                        <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ formatBytes(maxMediaSources(episodesItem.MediaSources)) }}</p>
-                    </div>
-                    <el-pagination
-                        v-if="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id]"
-                        v-model:current-page="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id].currentPage"
-                        v-model:page-size="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id].pageSize"
-                        layout="total, prev, pager, next, jumper"
-                        :total="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id].total"
-                        @current-change="handleEpisodesPageChange(episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id].currentPage, dialogEmbyServer!, dialogSeries!.Id, seasonsItem)"
-                        hide-on-single-page
-                    />
-                </el-tab-pane>
-            </el-tabs>
+                    </el-scrollbar>
+                </div>
+                <div class="note-content">
+                    <el-scrollbar>
+                        <div v-for="episodesItem in dialogEpisodesList" class="note-item">
+                            <p>{{ episodesItem.Name }}</p>
+                            <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ formatBytes(maxMediaSources(episodesItem.MediaSources)) }}</p>
+                        </div>
+                        <el-pagination
+                            v-if="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons?.Id]"
+                            v-model:current-page="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons!.Id].currentPage"
+                            v-model:page-size="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons!.Id].pageSize"
+                            layout="total, prev, pager, next, jumper"
+                            :total="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons!.Id].total"
+                            @current-change="handleEpisodesPageChange(episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons!.Id].currentPage, dialogEmbyServer!, dialogSeries!.Id, dialogSeasons!)"
+                            hide-on-single-page
+                        />
+                    </el-scrollbar>
+                </div>
+            </div>
         </el-dialog>
     </div>
 </template>
@@ -202,3 +212,44 @@ const maxMediaSources = (mediaSources: {Size: number}[]) => {
     return max
 }
 </script>
+
+<style scoped>
+.note-container {
+  display: flex;
+  height: 500px;
+}
+
+.note-sidebar {
+  width: 30%;
+  border-right: 1px solid #18222C;
+  padding-right: 20px;
+  overflow-y: auto;
+}
+
+.note-item {
+  padding: 3px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #18222C;
+}
+
+.note-item:hover {
+  background-color: #18222C;
+}
+
+.note-item.active {
+  color: #409EFF;
+}
+
+.note-content {
+  width: 70%;
+  padding-left: 20px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+.el-scrollbar {
+  height: 100%;
+}
+</style>
