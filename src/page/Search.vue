@@ -1,96 +1,57 @@
 <template>
     <div>
-        <el-input v-model="search_str" @keyup.enter="search">
+        <el-input v-model="search_str" @keyup.enter="search" style="margin: 10px;">
             <template #append>
                 <el-button @click="search"><el-icon><i-ep-Search /></el-icon></el-button>
             </template>
         </el-input>
-        <div v-for="(val, rootKey) in root_search_result">
-            <div>{{ val.server.server_name }}</div>
-            <v-card class="mx-auto" max-width="344" v-for="rootItem in val.result.Items">
-                <!-- <v-img height="200px" src="https://cdn.vuetifyjs.com/images/cards/sunshine.jpg" cover></v-img> -->
+        
+        <el-collapse>
+            <el-collapse-item :title="val.server.server_name" :name="rootKey" v-for="(val, rootKey) in root_search_result">
+                <el-card style="max-width: 360px" v-for="rootItem in val.result.Items">
+                    <p>{{ rootItem.Name }}</p>
+                    <p v-if="rootItem.Type == 'Series'">
+                        {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
+                        总集数：{{ rootItem.UserData.PlayCount + rootItem.UserData.UnplayedItemCount }}
+                    </p>
+                    <p v-else>
+                        {{ rootItem.ProductionYear }} 最大媒体流：{{ formatBytes(maxMediaSources(rootItem.MediaSources)) }}
+                    </p>
+                    <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(val.server, rootItem)" type="primary" plain>剧集</el-button>
+                </el-card>
+            </el-collapse-item>
+        </el-collapse>
 
-                <v-card-title>
-                    {{ rootItem.Name }}
-                </v-card-title>
-
-                <v-card-subtitle v-if="rootItem.Type == 'Series'">
-                    {{ rootItem.ProductionYear + (rootItem.EndDate ? '-' + rootItem.EndDate.substring(0, 4) : '') }} 总集数：{{ rootItem.UserData.PlayCount + rootItem.UserData.UnplayedItemCount }}
-                </v-card-subtitle>
-                <v-card-subtitle v-else>
-                    {{ rootItem.ProductionYear }} 最大媒体流：{{ formatBytes(maxMediaSources(rootItem.MediaSources)) }}
-                </v-card-subtitle>
-
-                <v-card-actions v-if="rootItem.Type == 'Series'">
-                    <v-btn color="orange-lighten-2" text="Explore"></v-btn>
-
-                    <v-spacer></v-spacer>
-
-                    <v-btn @click="showSeasons[rootItem.Id] = !showSeasons[rootItem.Id]">
-                        <el-icon v-if="showSeasons[rootItem.Id]"><i-ep-ArrowUpBold /></el-icon>
-                        <el-icon v-else @click="getSeasons(val.server, rootItem.Id)"><i-ep-ArrowDownBold /></el-icon>
-                    </v-btn>
-                </v-card-actions>
-
-                <v-expand-transition>
-                    <div v-show="showSeasons[rootItem.Id]" v-if="seasons_result[rootKey + '|' + rootItem.Id]">
-                        <v-divider></v-divider>
-
-                        <v-card class="mx-auto" max-width="344" v-for="seasonsItem in seasons_result[rootKey + '|' + rootItem.Id].Items">
-                            <!-- <v-img height="200px" src="https://cdn.vuetifyjs.com/images/cards/sunshine.jpg" cover></v-img> -->
-
-                            <v-card-title>
-                                {{ seasonsItem.Name }}
-                            </v-card-title>
-
-                            <v-card-subtitle>
-                                {{ seasonsItem.ProductionYear }} 总集数：{{ seasonsItem.UserData.PlayCount + seasonsItem.UserData.UnplayedItemCount }}
-                            </v-card-subtitle>
-
-                            <v-card-actions>
-                                <v-btn color="orange-lighten-2" text="Explore"></v-btn>
-
-                                <v-spacer></v-spacer>
-
-                                <v-btn @click="showEpisodes[seasonsItem.Id] = !showEpisodes[seasonsItem.Id]">
-                                    <el-icon v-if="showEpisodes[seasonsItem.Id]"><i-ep-ArrowUpBold /></el-icon>
-                                    <el-icon v-else @click="getEpisodes(val.server, rootItem.Id, seasonsItem.Id, 1, 10)"><i-ep-ArrowDownBold /></el-icon>
-                                </v-btn>
-                            </v-card-actions>
-
-                            <v-expand-transition>
-                                <div v-show="showEpisodes[seasonsItem.Id]">
-                                    <v-divider></v-divider>
-
-                                    <v-card class="mx-auto" max-width="344"
-                                        v-if="episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id] && episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id][episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id].currentPage]"
-                                        v-for="episodesItem in episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id][episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id].currentPage]">
-                                        <!-- <v-img height="200px" src="https://cdn.vuetifyjs.com/images/cards/sunshine.jpg" cover></v-img> -->
-
-                                        <v-card-title>
-                                            {{ episodesItem.Name }}
-                                        </v-card-title>
-
-                                        <v-card-subtitle>
-                                            {{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ formatBytes(maxMediaSources(episodesItem.MediaSources)) }}
-                                        </v-card-subtitle>
-                                    </v-card>
-                                    <el-pagination
-                                        v-if="episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id]"
-                                        v-model:current-page="episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id].currentPage"
-                                        v-model:page-size="episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id].pageSize"
-                                        layout="total, prev, pager, next, jumper"
-                                        :total="episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id].total"
-                                        @current-change="handleEpisodesPageChange(episodes_result[rootKey + '|' + rootItem.Id + '|' + seasonsItem.Id].currentPage, val.server, rootItem.Id, seasonsItem.Id)"
-                                        hide-on-single-page
-                                    />
-                                </div>
-                            </v-expand-transition>
-                        </v-card>
+        <el-dialog
+            v-model="dialogSeriesVisible"
+            :title="dialogSeries!.Name"
+            tab-position="left"
+            width="500"
+        >
+            <el-tabs type="border-card" class="demo-tabs">
+                <el-tab-pane v-for="seasonsItem in dialogSeasonsList">
+                    <template #label>
+                        <div @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)">
+                            <p>{{ seasonsItem.Name }}</p>
+                            <p>{{ seasonsItem.ProductionYear }} 总集数：{{ seasonsItem.UserData.PlayCount + seasonsItem.UserData.UnplayedItemCount }}</p>
+                        </div>
+                    </template>
+                    <div v-for="episodesItem in dialogEpisodesList">
+                        <p>{{ episodesItem.Name }}</p>
+                        <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ formatBytes(maxMediaSources(episodesItem.MediaSources)) }}</p>
                     </div>
-                </v-expand-transition>
-            </v-card>
-        </div>
+                    <el-pagination
+                        v-if="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id]"
+                        v-model:current-page="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id].currentPage"
+                        v-model:page-size="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id].pageSize"
+                        layout="total, prev, pager, next, jumper"
+                        :total="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id].total"
+                        @current-change="handleEpisodesPageChange(episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + seasonsItem.Id].currentPage, dialogEmbyServer!, dialogSeries!.Id, seasonsItem)"
+                        hide-on-single-page
+                    />
+                </el-tab-pane>
+            </el-tabs>
+        </el-dialog>
     </div>
 </template>
 
@@ -99,16 +60,26 @@ import { ref } from 'vue'
 import { useConfig, EmbyServerConfig } from '../store/config'
 import embyApi from '../api/embyApi'
 import { ElMessage } from 'element-plus'
+import { formatBytes } from '../util/str_util'
 
 const search_str = ref('')
-const root_search_result = ref<{[key: string]: {server: EmbyServerConfig, currentPage: number, pageSize: number, result: SearchResult}}>({})
-const seasons_result = ref<{[key: string]: SeasonsResult}>({})
-const episodes_result = ref<{[key: string]: {currentPage: number, pageSize: number, total: number, [key: number]: EpisodesResultItems[]}}>({})
+const root_search_result = ref<{[key: string]: {server: EmbyServerConfig, currentPage: number, pageSize: number, result: EmbyPageList<SearchItems>}}>({})
+const seasons_result = ref<{[key: string]: EmbyPageList<SeasonsItems>}>({})
+const episodes_result = ref<{[key: string]: {currentPage: number, pageSize: number, total: number, [key: number]: EpisodesItems[]}}>({})
 
-const showSeasons = ref<{[key: string]: boolean}>({})
-const showEpisodes = ref<{[key: string]: boolean}>({})
+const dialogSeriesVisible = ref(false)
+const dialogEmbyServer = ref<EmbyServerConfig>()
+const dialogSeries = ref<SearchItems>()
+const dialogSeasons = ref<SeasonsItems>()
+const dialogSeasonsList = ref<SeasonsItems[]>([])
+const dialogEpisodesList = ref<EpisodesItems[]>([])
 
-interface SearchResultItems {
+interface EmbyPageList<T> {
+    TotalRecordCount: number,
+    Items: T[]
+}
+
+interface SearchItems {
     Name: string,
     Id: string,
     ProductionYear: number,
@@ -123,25 +94,18 @@ interface SearchResultItems {
         PlayCount: number
     }
 }
-interface SearchResult {
-    TotalRecordCount: number,
-    Items: SearchResultItems[]
+
+interface SeasonsItems {
+    Name: string,
+    Id: string,
+    ProductionYear: number,
+    UserData: {
+        UnplayedItemCount: number,
+        PlayCount: number
+    }
 }
 
-interface SeasonsResult {
-    TotalRecordCount: number,
-    Items: {
-        Name: string,
-        Id: string,
-        ProductionYear: number,
-        UserData: {
-            UnplayedItemCount: number,
-            PlayCount: number
-        }
-    }[]
-}
-
-interface EpisodesResultItems {
+interface EpisodesItems {
     Name: string,
     Id: string,
     PremiereDate: string,
@@ -149,10 +113,6 @@ interface EpisodesResultItems {
         Size: number,
         Name: string
     }[],
-}
-interface EpisodesResult {
-    TotalRecordCount: number,
-    Items: EpisodesResultItems[]
 }
 
 async function search() {
@@ -162,7 +122,6 @@ async function search() {
     }
 }
 async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: number, pageSize: number) {
-    let search_result = {server: embyServer, currentPage: currentPage, pageSize: pageSize, result: {} as SearchResult}
     return embyApi.search(embyServer, search_str.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
@@ -170,63 +129,65 @@ async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: numbe
             })
             return
         }
-        let json: SearchResult = await response.json();
-        search_result.result = json
-        root_search_result.value[embyServer.id!] = search_result
+        let json: EmbyPageList<SearchItems> = await response.json();
+        root_search_result.value[embyServer.id!] = {server: embyServer, currentPage, pageSize, result: json}
     }).catch(e => {
         ElMessage.error({
             message: e
         })
     })
 }
-async function getSeasons(embyServer: EmbyServerConfig, series_id: string) {
-    if (seasons_result.value[embyServer.id! + '|' + series_id]) {
+async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
+    dialogSeriesVisible.value = true
+    dialogSeries.value = series
+    if (seasons_result.value[embyServer.id! + '|' + series.Id]) {
+        dialogSeasonsList.value = seasons_result.value[embyServer.id! + '|' + series.Id].Items
         return
     }
-    embyApi.seasons(embyServer, series_id).then(async response => {
+    return embyApi.seasons(embyServer, series.Id).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
             })
             return
         }
-        let json: SeasonsResult = await response.json();
-        seasons_result.value[embyServer.id! + '|' + series_id] = json
+        let json: EmbyPageList<SeasonsItems> = await response.json();
+        seasons_result.value[embyServer.id! + '|' + series.Id] = json
+        dialogSeasonsList.value = json.Items
     }).catch(e => {
         ElMessage.error({
             message: e
         })
     })
 }
-async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seasons_id: string, currentPage: number, pageSize: number) {
-    if (!episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons_id]) {
-        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons_id] = {currentPage: currentPage, pageSize: pageSize, total: 0}
+async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seasons: SeasonsItems, currentPage: number, pageSize: number) {
+    dialogSeasons.value = seasons
+    if (!episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id]) {
+        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id] = {currentPage: currentPage, pageSize: pageSize, total: 0}
     }
-    if (episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons_id][currentPage]) {
+    if (episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id][currentPage]) {
+        dialogEpisodesList.value = episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id][currentPage]
         return
     }
-    return embyApi.episodes(embyServer, series_id, seasons_id, (currentPage - 1) * pageSize, pageSize).then(async response => {
+    return embyApi.episodes(embyServer, series_id, seasons.Id, (currentPage - 1) * pageSize, pageSize).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
             })
             return
         }
-        let json: EpisodesResult = await response.json();
-        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons_id].currentPage = currentPage
-        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons_id].pageSize = pageSize
-        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons_id].total = json.TotalRecordCount
-        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons_id][currentPage] = json.Items
+        let json: EmbyPageList<EpisodesItems> = await response.json();
+        episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id] = {currentPage, pageSize, total: json.TotalRecordCount, [currentPage]: json.Items}
+        dialogEpisodesList.value = json.Items
     }).catch(e => {
         ElMessage.error({
             message: e
         })
     })
 }
-async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfig, series_id: string, seasons_id: string) {
-    await getEpisodes(embyServer, series_id, seasons_id, val, 10)
+async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfig, series_id: string, seasons: SeasonsItems) {
+    await getEpisodes(embyServer, series_id, seasons, val, 10)
 }
-
 
 const maxMediaSources = (mediaSources: {Size: number}[]) => {
     let max = 0
@@ -237,15 +198,4 @@ const maxMediaSources = (mediaSources: {Size: number}[]) => {
     }
     return max
 }
-const formatBytes = (size: number) => {
-  const units: string[] = ['KB', 'MB', 'GB', 'TB'];
-  for (let index = 0; index < units.length; index++) {
-    size /= 1024;
-    if (size < 1024) {
-      return size.toFixed(2) + " " + units[index];
-    }
-  }
-  return size.toFixed(2) + units[units.length - 1]
-}
-
 </script>

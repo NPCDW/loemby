@@ -31,7 +31,7 @@
                 </el-menu-item>
             </el-menu>
         </div>
-        <div style="flex: auto;">
+        <div style="flex: auto; height: 100vh;">
             <router-view></router-view>
         </div>
     </div>
@@ -81,8 +81,8 @@ import { useRoute } from 'vue-router'
 import { useConfig, EmbyServerConfig } from '../store/config'
 import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox } from "element-plus";
-import { generateGuid } from "../util/uuid";
-import { getOsInfo } from '../util/os'
+import { generateGuid } from "../util/uuid_util";
+import { getOsInfo } from '../util/os_util'
 import _ from "lodash";
 
 const active = ref("");

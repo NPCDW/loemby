@@ -1,6 +1,5 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import vuetify from 'vite-plugin-vuetify'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import Icons from 'unplugin-icons/vite'
@@ -12,7 +11,6 @@ import { resolve } from 'path'
 export default defineConfig(async () => ({
   plugins: [
     vue(),
-    vuetify({ autoImport: true }),
     AutoImport({
         resolvers: [
             ElementPlusResolver(),
