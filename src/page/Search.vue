@@ -14,7 +14,7 @@
                             <p>{{ rootItem.Name }}</p>
                             <p v-if="rootItem.Type == 'Series'">
                                 {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
-                                总集数：{{ rootItem.UserData.PlayCount + rootItem.UserData.UnplayedItemCount }}
+                                未播放：{{ rootItem.UserData.UnplayedItemCount }}
                             </p>
                             <p v-else>
                                 {{ rootItem.ProductionYear }} 最大媒体流：{{ formatBytes(maxMediaSources(rootItem.MediaSources)) }}
@@ -42,7 +42,7 @@
                             @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)"
                         >
                             <h3>{{ seasonsItem.Name }}</h3>
-                            <p>{{ seasonsItem.ProductionYear }} 总集数：{{ seasonsItem.UserData.PlayCount + seasonsItem.UserData.UnplayedItemCount }}</p>
+                            <p>{{ seasonsItem.ProductionYear }} 未播放：{{ seasonsItem.UserData.UnplayedItemCount }}</p>
                         </div>
                     </el-scrollbar>
                 </div>
