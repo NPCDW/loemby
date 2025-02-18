@@ -1,6 +1,6 @@
 <template>
-    <div style="height: 100vh; display: flex; flex-direction: row;">
-        <div style="flex: none; width: 200px;">
+    <div style="display: flex; flex-direction: row;">
+        <el-scrollbar style="height: 100vh; flex: none; width: 200px;">
             <el-menu class="el-menu" :collapse="true" :router="true" :default-active="active">
                 <el-menu-item index="/nav/search">
                     <el-icon><i-ep-Search /></el-icon>聚合搜索
@@ -29,7 +29,7 @@
                     </el-dropdown>
                 </el-menu-item>
             </el-menu>
-        </div>
+        </el-scrollbar>
         <div style="flex: auto; height: 100vh; width: 100%;">
             <router-view></router-view>
         </div>

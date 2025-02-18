@@ -26,7 +26,6 @@ declare module 'vue' {
     ElSteps: typeof import('element-plus/es')['ElSteps']
     IEpCircleCloseFilled: typeof import('~icons/ep/circle-close-filled')['default']
     IEpLoading: typeof import('~icons/ep/loading')['default']
-    IEpMoreFilled: typeof import('~icons/ep/more-filled')['default']
     IEpPlus: typeof import('~icons/ep/plus')['default']
     IEpSearch: typeof import('~icons/ep/search')['default']
     IEpSuccessFilled: typeof import('~icons/ep/success-filled')['default']
