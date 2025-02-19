@@ -191,6 +191,7 @@ interface EpisodesItems {
 async function search() {
     search_loading.value = true
     embyServerKeys.value = []
+    emby_search_result.value = {}
     let promises = []
     let config = await useConfig().get_config();
     for (let embyServer of config.emby_server!) {

@@ -11,6 +11,7 @@
                 <el-menu-item v-if="embyServers" v-for="embyServer in embyServers">
                     <el-dropdown trigger="contextmenu">
                         <div>
+                            <svg-icon className="icon-emby" icon-class="emby"></svg-icon>
                             <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
                             <el-icon v-else-if="embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
                             <el-icon v-else-if="embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
