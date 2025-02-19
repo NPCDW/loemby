@@ -8,15 +8,24 @@ use config::{
     app_state::AppState,
 };
 
+#[cfg(debug_assertions)]
+fn is_development() -> bool {
+    true
+}
+
+#[cfg(not(debug_assertions))]
+fn is_development() -> bool {
+    false
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![get_config_command, save_config])
         .setup(|app| {
-            let debug = std::env::var("TAURI_ENV_DEBUG").unwrap_or("false".to_string()).parse::<bool>().unwrap_or(false);
             let root_dir = app.path().resolve(
-                format!("loemby{}/", if debug { "-dev" } else { "" }),
+                format!("loemby{}/", if is_development() { "-dev" } else { "" }),
                 tauri::path::BaseDirectory::AppLocalData,
             )?;
 
@@ -31,7 +40,7 @@ pub fn run() {
             app.manage(AppState {
                 app_config: RwLock::new(config.unwrap()),
                 app: app.app_handle().clone(),
-                debug,
+                debug: is_development(),
                 root_dir
             });
             Ok(())
