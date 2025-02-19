@@ -138,7 +138,9 @@ async function search() {
     embyServerKeys.value = []
     let config = await useConfig().get_config();
     for (let embyServer of config.emby_server!) {
-        singleEmbySearch(embyServer, 1, 30)
+        if (!embyServer.disabled) {
+            singleEmbySearch(embyServer, 1, 30)
+        }
     }
 }
 async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: number, pageSize: number) {
@@ -161,6 +163,7 @@ async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: numbe
     })
 }
 async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
+    dialogSeasons.value = undefined
     dialogSeasonsList.value = []
     dialogEpisodesList.value = []
     dialogEmbyServer.value = embyServer

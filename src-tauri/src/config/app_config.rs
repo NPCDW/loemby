@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde_inline_default::serde_inline_default;
 
 use crate::util::file_util;
@@ -55,15 +57,15 @@ pub async fn get_config_command(state: State<'_, AppState>) -> Result<Config, ()
     Ok(state.app_config.read().await.clone())
 }
 
-pub fn get_config(app: &tauri::App) -> anyhow::Result<Config> {
-    let config_path = app.path().resolve(
-        "loemby/config/app-config.json",
-        tauri::path::BaseDirectory::AppLocalData,
-    )?;
+const APP_CONFIG_PATH: &'static str = "config/app-config.json";
+const RESOURCES_CONFIG_PATH: &'static str = "resources/config/app-config.default.json";
+
+pub fn get_config(app: &tauri::App, root_dir: &PathBuf) -> anyhow::Result<Config> {
+    let config_path = root_dir.join(APP_CONFIG_PATH);
     if !config_path.exists() {
         file_util::mkdir(config_path.parent().unwrap())?;
         let resource_path = app.path().resolve(
-            "resources/config/app-config.default.json",
+            RESOURCES_CONFIG_PATH,
             tauri::path::BaseDirectory::Resource,
         )?;
         file_util::copy(&resource_path, &config_path)?;
@@ -74,14 +76,7 @@ pub fn get_config(app: &tauri::App) -> anyhow::Result<Config> {
 
 #[tauri::command]
 pub async fn save_config(state: tauri::State<'_, AppState>, config: Config) -> Result<(), ()> {
-    let config_path = state
-        .app
-        .path()
-        .resolve(
-            "loemby/config/app-config.json",
-            tauri::path::BaseDirectory::AppLocalData,
-        )
-        .unwrap();
+    let config_path = state.root_dir.join(APP_CONFIG_PATH);
     {
         *state.app_config.write().await = config.clone();
     }

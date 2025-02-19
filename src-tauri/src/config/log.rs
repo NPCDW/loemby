@@ -1,15 +1,11 @@
-use std::str::FromStr;
+use std::{path::PathBuf, str::FromStr};
 
-use tauri::Manager;
 use time::UtcOffset;
 use tracing_subscriber::{filter::LevelFilter, fmt::time::OffsetTime, prelude::*, Layer};
 
-pub fn init(app: &tauri::App, log_level: &str) {
-    let dir = app
-        .path()
-        .resolve("loemby/logs/", tauri::path::BaseDirectory::AppLocalData)
-        .unwrap();
-    let file_appender = tracing_appender::rolling::never(dir, "loemby.log");
+pub fn init(root_dir: &PathBuf, log_level: &str) {
+    let logs_dir = root_dir.join("logs/");
+    let file_appender = tracing_appender::rolling::never(logs_dir, "loemby.log");
     let local_time = OffsetTime::new(
         UtcOffset::from_hms(8, 0, 0).unwrap(),
         time::format_description::parse(

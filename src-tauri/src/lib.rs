@@ -14,15 +14,14 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![get_config_command, save_config])
         .setup(|app| {
-            let config = config::app_config::get_config(app);
-            config::log::init(
-                app,
-                if config.is_err() {
-                    "info"
-                } else {
-                    &config.as_ref().unwrap().log_level
-                },
-            );
+            let debug = std::env::var("TAURI_ENV_DEBUG").unwrap_or("false".to_string()).parse::<bool>().unwrap_or(false);
+            let root_dir = app.path().resolve(
+                format!("loemby{}/", if debug { "-dev" } else { "" }),
+                tauri::path::BaseDirectory::AppLocalData,
+            )?;
+
+            config::log::init(&root_dir, "info");
+            let config = config::app_config::get_config(app, &root_dir);
             if config.is_err() {
                 tracing::error!("{:#?}", config);
                 panic!("{}", config.unwrap_err())
@@ -32,6 +31,8 @@ pub fn run() {
             app.manage(AppState {
                 app_config: RwLock::new(config.unwrap()),
                 app: app.app_handle().clone(),
+                debug,
+                root_dir
             });
             Ok(())
         })
