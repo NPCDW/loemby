@@ -10,10 +10,12 @@
             <el-collapse v-model="embyServerKeys">
                 <el-collapse-item :title="embySearchItem.server.server_name" :name="rootKey" :disabled="embySearchItem.result?.Items.length == 0" v-for="(embySearchItem, rootKey) in emby_search_result">
                     <template #icon>
-                        <el-icon v-if="embySearchItem.server.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
-                        <el-icon v-else-if="embySearchItem.server.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
-                        <el-icon v-else-if="embySearchItem.result?.Items.length == 0" style="color: #909399;">empty</el-icon>
-                        <el-icon v-else style="color: #67C23A;"><i-ep-SuccessFilled /></el-icon>
+                        <span style="display: flex; align-items: center; margin: auto 18px auto auto;">
+                            <el-icon v-if="embySearchItem.server.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
+                            <el-icon v-else-if="embySearchItem.server.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
+                            <el-icon v-else-if="embySearchItem.result?.Items.length == 0" style="color: #909399;">empty</el-icon>
+                            <el-icon v-else style="color: #67C23A;"><i-ep-SuccessFilled /></el-icon>
+                        </span>
                     </template>
                     <div v-if="embySearchItem.success" style="display: flex; flex-wrap: wrap; flex-direction: row;">
                         <el-card style="width: 300px; margin: 5px;" v-for="rootItem in embySearchItem.result?.Items">
@@ -29,7 +31,8 @@
                         </el-card>
                     </div>
                     <div v-else style="display: flex; flex-direction: column; align-content: center;">
-                        {{ embySearchItem.message }} <el-button type="primary" @click="singleEmbySearch(embySearchItem.server)">重试</el-button>
+                        <el-text type="danger">{{ embySearchItem.message }}</el-text>
+                        <el-button type="primary" @click="singleEmbySearch(embySearchItem.server)">重试</el-button>
                     </div>
                 </el-collapse-item>
             </el-collapse>
