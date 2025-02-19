@@ -9,8 +9,8 @@
                     <el-icon><i-ep-Plus /></el-icon>添加服务器
                 </el-menu-item>
                 <el-menu-item v-if="embyServers" v-for="embyServer in embyServers">
-                    <el-dropdown trigger="contextmenu">
-                        <div>
+                    <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
+                        <div style="height: 100%; width: 100%; display: flex; align-items: center;">
                             <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
                             <!-- <el-icon v-else-if="embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
                             <el-icon v-else-if="embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon> -->
@@ -85,12 +85,26 @@
     </div>
   </el-dialog>
   <el-dialog v-model="dialogEditEmbyServerVisible" title="Emby Server" width="800">
-    <el-input v-model="tmpEmbyServerConfig.base_url" style="width: 240px" placeholder="Please input" />
-    <el-input v-model="tmpEmbyServerConfig.server_name" style="width: 240px" placeholder="Please input" />
-    <el-input v-model="tmpEmbyServerConfig.username" style="width: 240px" placeholder="Please input" />
-    <el-input v-model="tmpEmbyServerConfig.password" style="width: 240px" placeholder="Please input" />
-    <el-button @click="saveEditEmbyServer">保存</el-button>
-    <el-button @click="dialogEditEmbyServerVisible = false">取消</el-button>
+    <el-form label-position="top" style="width: 60%; margin: 25px auto;">
+        <el-form-item label="服务器地址">
+            <el-input v-model="tmpEmbyServerConfig.base_url" placeholder="Please input" />
+        </el-form-item>
+        <el-form-item label="服务器名称">
+            <el-input v-model="tmpEmbyServerConfig.server_name" placeholder="Please input" />
+        </el-form-item>
+        <el-form-item label="用户名">
+            <el-input v-model="tmpEmbyServerConfig.username" placeholder="Please input" />
+        </el-form-item>
+        <el-form-item label="密码">
+            <el-input v-model="tmpEmbyServerConfig.password" placeholder="Please input" show-password />
+        </el-form-item>
+        <el-form-item>
+            <div style="width: 100%; display: flex; justify-content: center;">
+                <el-button type="primary" @click="saveEditEmbyServer">保存</el-button>
+                <el-button @click="dialogEditEmbyServerVisible = false">取消</el-button>
+            </div>
+        </el-form-item>
+    </el-form>
   </el-dialog>
 </template>
 
