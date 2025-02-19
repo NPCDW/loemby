@@ -38,6 +38,6 @@ declare module 'vue' {
     NavMenu: typeof import('./src/components/NavMenu.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    SvgIcon: typeof import('./src/components/SvgIcon.vue')['default']
+    SvgIcon: typeof import('./src/components/SvgIcon/index.vue')['default']
   }
 }
