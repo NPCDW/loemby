@@ -1,6 +1,6 @@
 <template>
     <div>
-        <el-input v-model="search_str" @keyup.enter="search" style="padding: 10px;">
+        <el-input v-model="search_str" @keyup.enter="search" :disabled="search_loading" style="padding: 10px;">
             <template #append>
                 <el-button @click="search"><el-icon><i-ep-Search /></el-icon></el-button>
             </template>
@@ -8,9 +8,15 @@
         
         <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
             <el-collapse v-model="embyServerKeys">
-                <el-collapse-item :title="val.server.server_name" :name="rootKey" v-for="(val, rootKey) in root_search_result">
-                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <el-card style="width: 300px; margin: 5px;" v-for="rootItem in val.result.Items">
+                <el-collapse-item :title="embySearchItem.server.server_name" :name="rootKey" :disabled="embySearchItem.result?.Items.length == 0" v-for="(embySearchItem, rootKey) in emby_search_result">
+                    <template #icon>
+                        <el-icon v-if="embySearchItem.server.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
+                        <el-icon v-else-if="embySearchItem.server.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
+                        <el-icon v-else-if="embySearchItem.result?.Items.length == 0" style="color: #909399;">empty</el-icon>
+                        <el-icon v-else style="color: #67C23A;"><i-ep-SuccessFilled /></el-icon>
+                    </template>
+                    <div v-if="embySearchItem.success" style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                        <el-card style="width: 300px; margin: 5px;" v-for="rootItem in embySearchItem.result?.Items">
                             <p>{{ rootItem.Name }}</p>
                             <p v-if="rootItem.Type == 'Series'">
                                 {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
@@ -19,8 +25,11 @@
                             <p v-else>
                                 {{ rootItem.ProductionYear }} 最大媒体流：{{ formatBytes(maxMediaSources(rootItem.MediaSources)) }}
                             </p>
-                            <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(val.server, rootItem)" type="primary" plain>剧集</el-button>
+                            <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
                         </el-card>
+                    </div>
+                    <div v-else style="display: flex; flex-direction: column; align-content: center;">
+                        {{ embySearchItem.message }} <el-button type="primary" @click="singleEmbySearch(embySearchItem.server)">重试</el-button>
                     </div>
                 </el-collapse-item>
             </el-collapse>
@@ -91,10 +100,11 @@ import embyApi from '../api/embyApi'
 import { ElMessage } from 'element-plus'
 import { formatBytes } from '../util/str_util'
 
+const search_loading = ref(false)
 const search_str = ref('')
 const embyServerKeys = ref<string[]>([])
 
-const root_search_result = ref<{[key: string]: {server: EmbyServerConfig, currentPage: number, pageSize: number, result: EmbyPageList<SearchItems>}}>({})
+const emby_search_result = ref<{[key: string]: {server: EmbyServerConfig, success: boolean, message?: string, result?: EmbyPageList<SearchItems>}}>({})
 const seasons_result = ref<{[key: string]: EmbyPageList<SeasonsItems>}>({})
 const episodes_result = ref<{[key: string]: {total: number, [key: number]: EpisodesItems[]}}>({})
 
@@ -153,16 +163,21 @@ interface EpisodesItems {
 }
 
 async function search() {
+    search_loading.value = true
     embyServerKeys.value = []
+    let promises = []
     let config = await useConfig().get_config();
     for (let embyServer of config.emby_server!) {
         if (!embyServer.disabled) {
-            singleEmbySearch(embyServer, 1, 30)
+            let promise = singleEmbySearch(embyServer)
+            promises.push(promise)
         }
     }
+    Promise.allSettled(promises).then(() => search_loading.value = false);
 }
-async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: number, pageSize: number) {
-    return embyApi.search(embyServer, search_str.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
+async function singleEmbySearch(embyServer: EmbyServerConfig) {
+    embyServer.request_status = true
+    return embyApi.search(embyServer, search_str.value, 0, 30).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
@@ -170,15 +185,15 @@ async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: numbe
             return
         }
         let json: EmbyPageList<SearchItems> = await response.json();
-        root_search_result.value[embyServer.id!] = {server: embyServer, currentPage, pageSize, result: json}
+        emby_search_result.value[embyServer.id!] = {server: embyServer, success: true, result: json}
         if (json.Items.length > 0) {
             embyServerKeys.value.push(embyServer.id!)
         }
+        embyServer.request_fail = false
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
-    })
+        emby_search_result.value[embyServer.id!] = {server: embyServer, success: false, message: e}
+        embyServer.request_fail = true
+    }).finally(() => embyServer.request_status = false)
 }
 async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
     dialogSeasons.value = undefined
