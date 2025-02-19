@@ -25,7 +25,7 @@ jobs:
         cache: false
     - name: Build release
       shell: bash
-      run: npm install -g pnpm && pnpm run tauri build
+      run: npm install -g pnpm && pnpm i && pnpm run tauri build
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
