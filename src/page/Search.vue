@@ -34,24 +34,40 @@
             <div class="note-container">
                 <div class="note-sidebar">
                     <el-scrollbar>
-                        <div
-                             v-for="seasonsItem in dialogSeasonsList"
-                            :key="seasonsItem.Id"
-                            class="note-item"
-                            :class="{ active: dialogSeasons?.Id === seasonsItem.Id }"
-                            @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)"
-                        >
-                            <h3>{{ seasonsItem.IndexNumber + '. ' + seasonsItem.Name }}</h3>
-                            <p>{{ seasonsItem.ProductionYear }} 未播放：{{ seasonsItem.UserData.UnplayedItemCount }}</p>
-                        </div>
+                        <el-skeleton :loading="dialogSeasonsLoading" animated>
+                            <template #template>
+                                <div class="note-item" v-for="i in 5" :key="i">
+                                    <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
+                                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                                </div>
+                            </template>
+                            <div
+                                v-for="seasonsItem in dialogSeasonsList"
+                                :key="seasonsItem.Id"
+                                class="note-item"
+                                :class="{ active: dialogSeasons?.Id === seasonsItem.Id }"
+                                @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)"
+                            >
+                                <h3>{{ seasonsItem.IndexNumber + '. ' + seasonsItem.Name }}</h3>
+                                <p>{{ seasonsItem.ProductionYear }} 未播放：{{ seasonsItem.UserData.UnplayedItemCount }}</p>
+                            </div>
+                        </el-skeleton>
                     </el-scrollbar>
                 </div>
                 <div class="note-content">
                     <el-scrollbar>
-                        <div v-for="episodesItem in dialogEpisodesList" class="note-item">
-                            <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
-                            <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ formatBytes(maxMediaSources(episodesItem.MediaSources)) }}</p>
-                        </div>
+                        <el-skeleton :loading="dialogEpisodesLoading" animated>
+                            <template #template>
+                                <div class="note-item" v-for="i in 5" :key="i">
+                                    <p><el-skeleton-item variant="text" style="width: 50%" /></p>
+                                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                                </div>
+                            </template>
+                            <div v-for="episodesItem in dialogEpisodesList" class="note-item">
+                                <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
+                                <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ formatBytes(maxMediaSources(episodesItem.MediaSources)) }}</p>
+                            </div>
+                        </el-skeleton>
                         <el-pagination
                             v-if="episodes_result[dialogEmbyServer!.id + '|' + dialogSeries!.Id + '|' + dialogSeasons?.Id]"
                             v-model:current-page="dialogEpisodesCurrentPage"
@@ -90,6 +106,8 @@ const dialogSeasonsList = ref<SeasonsItems[]>([])
 const dialogEpisodesList = ref<EpisodesItems[]>([])
 const dialogEpisodesCurrentPage = ref(1)
 const dialogEpisodesPageSize = ref(10)
+const dialogSeasonsLoading = ref(false)
+const dialogEpisodesLoading = ref(false)
 
 interface EmbyPageList<T> {
     TotalRecordCount: number,
@@ -164,6 +182,7 @@ async function singleEmbySearch(embyServer: EmbyServerConfig, currentPage: numbe
 }
 async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
     dialogSeasons.value = undefined
+    dialogSeasonsLoading.value = true
     dialogSeasonsList.value = []
     dialogEpisodesList.value = []
     dialogEmbyServer.value = embyServer
@@ -171,6 +190,7 @@ async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
     dialogSeriesVisible.value = true
     if (seasons_result.value[embyServer.id! + '|' + series.Id]) {
         dialogSeasonsList.value = seasons_result.value[embyServer.id! + '|' + series.Id].Items
+        dialogSeasonsLoading.value = false
         return
     }
     return embyApi.seasons(embyServer, series.Id).then(async response => {
@@ -187,9 +207,10 @@ async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
         ElMessage.error({
             message: e
         })
-    })
+    }).finally(() => dialogSeasonsLoading.value = false)
 }
 async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seasons: SeasonsItems, currentPage: number, pageSize: number) {
+    dialogEpisodesLoading.value = true
     dialogEpisodesList.value = []
     dialogEpisodesCurrentPage.value = currentPage
     dialogEpisodesPageSize.value = pageSize
@@ -199,6 +220,7 @@ async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seas
     }
     if (episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id][currentPage]) {
         dialogEpisodesList.value = episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id][currentPage]
+        dialogEpisodesLoading.value = false
         return
     }
     return embyApi.episodes(embyServer, series_id, seasons.Id, (currentPage - 1) * pageSize, pageSize).then(async response => {
@@ -216,7 +238,7 @@ async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seas
         ElMessage.error({
             message: e
         })
-    })
+    }).finally(() => dialogEpisodesLoading.value = false)
 }
 async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfig, series_id: string, seasons: SeasonsItems) {
     await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
