@@ -8,7 +8,7 @@
         
         <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
             <el-collapse v-model="embyServerKeys">
-                <el-collapse-item :title="embySearchItem.server.server_name" :name="rootKey" :disabled="embySearchItem.result?.Items.length == 0" v-for="(embySearchItem, rootKey) in emby_search_result">
+                <el-collapse-item :title="embySearchItem.server.server_name" :name="embySearchItem.server.id" :disabled="embySearchItem.result?.Items.length == 0" v-for="embySearchItem in emby_search_result_list">
                     <template #icon>
                         <span style="display: flex; align-items: center; margin: auto 18px auto auto;">
                             <el-icon v-if="embySearchItem.server.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
@@ -30,8 +30,8 @@
                             <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
                         </el-card>
                     </div>
-                    <div v-else style="display: flex; flex-direction: column; align-content: center;">
-                        <el-text type="danger">{{ embySearchItem.message }}</el-text>
+                    <div v-else style="text-align: center;">
+                        <el-text type="danger" style="word-break: break-all;display: block;">{{ embySearchItem.message }}</el-text>
                         <el-button type="primary" @click="singleEmbySearch(embySearchItem.server)">重试</el-button>
                     </div>
                 </el-collapse-item>
@@ -97,7 +97,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useConfig, EmbyServerConfig } from '../store/config'
 import embyApi from '../api/embyApi'
 import { ElMessage } from 'element-plus'
@@ -121,6 +121,29 @@ const dialogEpisodesCurrentPage = ref(1)
 const dialogEpisodesPageSize = ref(10)
 const dialogSeasonsLoading = ref(false)
 const dialogEpisodesLoading = ref(false)
+
+const emby_search_result_list = computed(() => {
+  return Object.entries(emby_search_result.value).map(([_key, value]) => (value)).sort((a, b) => {
+        if (a.success && a.result && a.result.Items.length > 0) {
+            if (b.success && b.result && b.result.Items.length > 0) {
+                return 0; // 保持顺序不变
+            }
+            return -1; // a 排在 b 前面
+        } else if (a.success && a.result && a.result.Items.length === 0) {
+            if (b.success && b.result && b.result.Items.length > 0) {
+                return 1; // b 排在 a 前面
+            } else if (b.success && b.result && b.result.Items.length === 0) {
+                return 0; // 保持顺序不变
+            }
+            return -1; // a 排在 b 前面
+        } else {
+            if (b.success) {
+                return 1; // b 排在 a 前面
+            }
+            return 0; // 保持顺序不变
+        }
+    });
+})
 
 interface EmbyPageList<T> {
     TotalRecordCount: number,
@@ -182,15 +205,18 @@ async function singleEmbySearch(embyServer: EmbyServerConfig) {
     embyServer.request_status = true
     return embyApi.search(embyServer, search_str.value, 0, 30).then(async response => {
         if (response.status != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
-            })
+            emby_search_result.value[embyServer.id!] = {server: embyServer, success: false, message: 'response status' + response.status + ' ' + response.statusText}
+            embyServer.request_fail = true
             return
         }
         let json: EmbyPageList<SearchItems> = await response.json();
         emby_search_result.value[embyServer.id!] = {server: embyServer, success: true, result: json}
         if (json.Items.length > 0) {
             embyServerKeys.value.push(embyServer.id!)
+        } else {
+            if (embyServerKeys.value.includes(embyServer.id!)) {
+                embyServerKeys.value.splice(embyServerKeys.value.indexOf(embyServer.id!), 1)
+            }
         }
         embyServer.request_fail = false
     }).catch(e => {
