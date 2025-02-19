@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  push:
+    tags: "*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+
+jobs:
+  binaries:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Nodejs
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: '.nvmrc'
+    - name: Install Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        cache: false
+    - name: Build release
+      shell: bash
+      run: npm install -g pnpm && pnpm run tauri build
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          src-tauri/target/release/bundle/msi/*.msi
+          src-tauri/target/release/bundle/nsis/*.exe
