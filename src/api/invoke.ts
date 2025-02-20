@@ -5,10 +5,14 @@ async function getConfig(): Promise<Config> {
     return invoke('get_config_command');
 }
 
-async function saveConfig(config: {config: Config}) {
-    return invoke('save_config', config);
+async function saveConfig(config: Config) {
+    return invoke('save_config', {config});
+}
+
+async function playback(path: string) {
+    return invoke('play_video', {path});
 }
 
 export default {
-    getConfig, saveConfig
+    getConfig, saveConfig, playback
 }

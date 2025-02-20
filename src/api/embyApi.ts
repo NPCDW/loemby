@@ -101,11 +101,29 @@ async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return fetch(embyServer.base_url + `/Items/${item_id}/PlaybackInfo?UserId=${embyServer.user_id}`, {
-        method: 'GET',
+        method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
+            'Content-Type': 'application/json',
             'X-Emby-Token': embyServer.auth_token,
-        }
+        },
+        body: JSON.stringify({
+            "MaxStreamingBitrate": 1400000000,
+            "MaxStaticBitrate": 1400000000,
+            "MusicStreamingTranscodingBitrate": 1920000,
+            "DeviceProfile": {
+                "DirectPlayProfiles": [
+                    {
+                        "Container": "",
+                        "Type": "Video"
+                    },
+                    {
+                        "Container": "",
+                        "Type": "Audio"
+                    }
+                ]
+            }
+        })
     });
 }
 

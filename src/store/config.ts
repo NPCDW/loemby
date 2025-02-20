@@ -13,7 +13,7 @@ export const useConfig = defineStore('config', () => {
 
     async function save_config(tmp: Config) {
         config.value = _.cloneDeep(tmp);
-        await invoke.saveConfig({ config: config.value! });
+        await invoke.saveConfig(config.value!);
     }
 
     async function saveEmbyServer(embyServers: EmbyServerConfig[]) {

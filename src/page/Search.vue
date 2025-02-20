@@ -2,7 +2,7 @@
     <div>
         <el-input v-model="search_str" @keyup.enter="search" :disabled="search_loading" style="padding: 10px;">
             <template #append>
-                <el-button @click="search"><el-icon><i-ep-Search /></el-icon></el-button>
+                <el-button @click="search" :loading="search_loading"><el-icon><i-ep-Search /></el-icon></el-button>
             </template>
         </el-input>
         
@@ -28,6 +28,7 @@
                                 {{ rootItem.ProductionYear }} 最大媒体流：{{ formatBytes(maxMediaSources(rootItem.MediaSources)) }}
                             </p>
                             <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
+                            <el-button v-else @click="playback(embySearchItem.server, rootItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
                         </el-card>
                     </div>
                     <div v-else style="text-align: center;">
@@ -78,6 +79,7 @@
                             <div v-for="episodesItem in dialogEpisodesList" class="note-item">
                                 <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
                                 <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ formatBytes(maxMediaSources(episodesItem.MediaSources)) }}</p>
+                                <el-button @click="playback(dialogEmbyServer!, episodesItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
                             </div>
                         </el-skeleton>
                         <el-pagination
@@ -102,6 +104,7 @@ import { useConfig, EmbyServerConfig } from '../store/config'
 import embyApi from '../api/embyApi'
 import { ElMessage } from 'element-plus'
 import { formatBytes } from '../util/str_util'
+import invoke from '../api/invoke'
 
 const search_loading = ref(false)
 const search_str = ref('')
@@ -185,6 +188,14 @@ interface EpisodesItems {
     MediaSources: {
         Size: number,
         Name: string
+    }[],
+}
+
+interface PlaybackInfo {
+    PlaySessionId: string,
+    MediaSources: {
+        Size: number,
+        DirectStreamUrl: string
     }[],
 }
 
@@ -289,6 +300,20 @@ async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfi
     await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
 }
 
+async function playback(embyServer: EmbyServerConfig, item_id: string) {
+    return embyApi.playbackInfo(embyServer, item_id).then(async response => {
+        if (response.status != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status + ' ' + response.statusText
+            })
+            return
+        }
+        let json: PlaybackInfo = await response.json();
+        let directStreamUrl = embyServer.base_url + maxPlaybackMediaSources(json.MediaSources)
+        invoke.playback(directStreamUrl)
+    })
+}
+
 const maxMediaSources = (mediaSources: {Size: number}[]) => {
     let max = 0
     for (let mediaSource of mediaSources) {
@@ -297,6 +322,17 @@ const maxMediaSources = (mediaSources: {Size: number}[]) => {
         }
     }
     return max
+}
+const maxPlaybackMediaSources = (mediaSources: {Size: number, DirectStreamUrl: string}[]) => {
+    let max = 0
+    let directStreamUrl = ''
+    for (let mediaSource of mediaSources) {
+        if (mediaSource.Size > max) {
+            max = mediaSource.Size
+            directStreamUrl = mediaSource.DirectStreamUrl
+        }
+    }
+    return directStreamUrl
 }
 </script>
 
