@@ -310,7 +310,12 @@ async function playback(embyServer: EmbyServerConfig, item_id: string) {
         }
         let json: PlaybackInfo = await response.json();
         let directStreamUrl = embyServer.base_url + maxPlaybackMediaSources(json.MediaSources)
-        invoke.playback(directStreamUrl)
+        let res = await invoke.playback(directStreamUrl)
+        if (res) {
+            ElMessage.error({
+                message: res
+            })
+        }
     })
 }
 
