@@ -48,6 +48,7 @@ pub struct EmbyServer {
 pub struct Config {
     #[serde_inline_default("info".to_string())]
     pub log_level: String,
+    pub mpv_path: Option<String>,
     pub emby_server: Vec<EmbyServer>,
     pub proxy_server: Vec<ProxyServer>,
 }
