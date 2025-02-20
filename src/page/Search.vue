@@ -28,7 +28,7 @@
                                 {{ rootItem.ProductionYear }} 最大媒体流：{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)) : 0 }}
                             </p>
                             <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
-                            <el-button v-else v-if="rootItem.Type == 'Series'" @click="playback(embySearchItem.server, rootItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
+                            <el-button v-else v-if="mpv_config" @click="playback(embySearchItem.server, rootItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
                         </el-card>
                     </div>
                     <div v-else style="text-align: center;">
@@ -79,7 +79,7 @@
                             <div v-for="episodesItem in dialogEpisodesList" class="note-item">
                                 <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
                                 <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)) : 0 }}</p>
-                                <el-button @click="playback(dialogEmbyServer!, episodesItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
+                                <el-button v-if="mpv_config" @click="playback(dialogEmbyServer!, episodesItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
                             </div>
                         </el-skeleton>
                         <el-pagination
