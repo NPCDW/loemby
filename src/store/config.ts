@@ -73,6 +73,7 @@ export interface EmbyServerConfig {
 
 export interface Config {
     log_level?: string,
+    mpv_path?: string,
     emby_server?: EmbyServerConfig[],
     proxy_server?: ProxyServerConfig[],
 }

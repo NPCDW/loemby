@@ -28,7 +28,7 @@
                                 {{ rootItem.ProductionYear }} 最大媒体流：{{ formatBytes(maxMediaSources(rootItem.MediaSources)) }}
                             </p>
                             <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
-                            <el-button v-else @click="playback(embySearchItem.server, rootItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
+                            <el-button v-else v-if="rootItem.Type == 'Series'" @click="playback(embySearchItem.server, rootItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
                         </el-card>
                     </div>
                     <div v-else style="text-align: center;">
@@ -109,6 +109,7 @@ import invoke from '../api/invoke'
 const search_loading = ref(false)
 const search_str = ref('')
 const embyServerKeys = ref<string[]>([])
+const mpv_config = ref(false)
 
 const emby_search_result = ref<{[key: string]: {server: EmbyServerConfig, success: boolean, message?: string, result?: EmbyPageList<SearchItems>}}>({})
 const seasons_result = ref<{[key: string]: EmbyPageList<SeasonsItems>}>({})
@@ -205,6 +206,7 @@ async function search() {
     emby_search_result.value = {}
     let promises = []
     let config = await useConfig().get_config();
+    mpv_config.value = config.mpv_path ? true : false
     for (let embyServer of config.emby_server!) {
         if (!embyServer.disabled) {
             let promise = singleEmbySearch(embyServer)
