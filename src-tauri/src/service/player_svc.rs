@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use rust_decimal::prelude::*;
+
 use tauri_plugin_shell::ShellExt;
 
 use crate::{config::app_state::AppState, util::file_util};
@@ -34,16 +36,24 @@ pub async fn play_video(path: String, state: tauri::State<'_, AppState>, app_han
     
         let (mut rx, mut _child) = player.unwrap();
         while let Some(event) = rx.recv().await {
-            if let tauri_plugin_shell::process::CommandEvent::Stdout(line) = event {
-                println!("got: {}", String::from_utf8(line).unwrap());
-            } else if let tauri_plugin_shell::process::CommandEvent::Terminated(payload) = event {
-                tracing::info!("播放结束 {:?}", payload);
+            if let tauri_plugin_shell::process::CommandEvent::Terminated(_payload) = event {
                 // 读取保存的播放进度
-                // let progress_path = format!("{}", &watch_later_dir.join(md5(path)).as_os_str().to_str().unwrap());
-                // let progress = std::fs::read_to_string(progress_path).unwrap_or_default();
+                let path_md5 = md5::compute(&video_path);
+                let progress_path = format!("{}", &watch_later_dir.join(format!("{:x}", path_md5)).as_os_str().to_str().unwrap());
+                let watch_later = std::fs::read_to_string(progress_path).unwrap_or_default();
+                tracing::info!("播放结束 {:?}", watch_later);
+
+                watch_later.split("\n").for_each(|line| {
+                    if line.starts_with("start=") {
+                        let position = Decimal::from_str(line.split("=").nth(1).unwrap()).unwrap();
+                        tracing::info!("播放进度 {:?}", position);
+
+                    }
+                });
             
-                // // 发送播放进度回 Tauri 应用
+                // 发送播放进度回 Tauri 应用
                 // window.emit("playback_progress", progress).unwrap();
+                break;
             }
         }
 

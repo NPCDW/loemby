@@ -34,3 +34,7 @@ anyhow = "1.0"
 
 time = "0.3.21"
 chrono = { version = "0.4.38", features = ["serde"] }
+
+md5 = "0.7.0"
+
+rust_decimal = "1.36"
