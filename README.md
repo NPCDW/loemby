@@ -2,11 +2,6 @@
 
 ## 开发
 
-国内网络使用 NPM 镜像源
-```bash
-npm config set registry http://mirrors.cloud.tencent.com/npm/
-```
-
 安装依赖
 ```bash
 pnpm i

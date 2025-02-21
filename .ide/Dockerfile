@@ -7,6 +7,7 @@ RUN mkdir ${node_root_dir} && cd ${node_root_dir} \
 && tar xJf node-${node_version}-linux-x64.tar.xz --strip-components 1 \
 && rm node-${node_version}-linux-x64.tar.xz
 ENV PATH="${node_root_dir}/bin:${PATH}"
+RUN npm config set registry http://mirrors.cloud.tencent.com/npm/
 RUN npm install -g pnpm
 
 RUN curl -fsSL https://code-server.dev/install.sh | sh
@@ -15,6 +16,8 @@ RUN code-server --install-extension tamasfe.even-better-toml
 RUN code-server --install-extension fill-labs.dependi
 RUN code-server --install-extension Vue.volar
 RUN code-server --install-extension njzy.stats-bar
+RUN code-server --install-extension Tencent-Cloud.coding-copilot
+RUN code-server --install-extension cnbcool.cnb-welcome
 
 RUN apt-get update && apt-get install -y webkit2gtk-4.1 libwebkit2gtk-4.0-dev build-essential file libxdo-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 RUN apt-get update && apt-get install -y curl wget unzip openssh-server git 
