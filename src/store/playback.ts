@@ -14,7 +14,7 @@ export const usePlayback = defineStore('playback', () => {
                 console.error(`Emby服务器Id: ${event.payload.server_id} 不存在`);
                 return
             }
-            embyApi.playbackProgress(embyServer, event.payload.item_id, event.payload.media_source_id, event.payload.progress);
+            embyApi.playbackProgress(embyServer, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, event.payload.progress);
         });
     }
     
@@ -25,5 +25,6 @@ export type DownloadStarted = {
     server_id: string;
     item_id: string;
     media_source_id: string;
+    play_session_id: string;
     progress: number;
 };

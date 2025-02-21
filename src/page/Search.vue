@@ -28,7 +28,7 @@
                                 {{ rootItem.ProductionYear }} 最大媒体流：{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)) : 0 }}
                             </p>
                             <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
-                            <el-button v-else-if="mpv_config" @click="playback(embySearchItem.server, rootItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
+                            <el-button v-else-if="mpv_config && rootItem.MediaSources" @click="playback(embySearchItem.server, rootItem.Id, maxPlaybackMediaSourcesId(rootItem.MediaSources))" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
                         </el-card>
                     </div>
                     <div v-else style="text-align: center;">
@@ -79,7 +79,7 @@
                             <div v-for="episodesItem in dialogEpisodesList" class="note-item">
                                 <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
                                 <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)) : 0 }}</p>
-                                <el-button v-if="mpv_config" @click="playback(dialogEmbyServer!, episodesItem.Id)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
+                                <el-button v-if="mpv_config && episodesItem.MediaSources" @click="playback(dialogEmbyServer!, episodesItem.Id, maxPlaybackMediaSourcesId(episodesItem.MediaSources))" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
                             </div>
                         </el-skeleton>
                         <el-pagination
@@ -160,11 +160,12 @@ interface SearchItems {
     ProductionYear: number,
     EndDate: string,
     Type: string,
-    MediaSources: {
+    MediaSources?: {
+        Id: string,
         Size: number,
         Name: string
     }[],
-    UserData: {
+    UserData?: {
         UnplayedItemCount: number,
         PlayCount: number
     }
@@ -175,7 +176,7 @@ interface SeasonsItems {
     Id: string,
     ProductionYear: number,
     IndexNumber: number,
-    UserData: {
+    UserData?: {
         UnplayedItemCount: number,
         PlayCount: number
     }
@@ -186,7 +187,8 @@ interface EpisodesItems {
     Id: string,
     PremiereDate: string,
     IndexNumber: number,
-    MediaSources: {
+    MediaSources?: {
+        Id: string,
         Size: number,
         Name: string
     }[],
@@ -195,6 +197,7 @@ interface EpisodesItems {
 interface PlaybackInfo {
     PlaySessionId: string,
     MediaSources: {
+        Id: string,
         Size: number,
         DirectStreamUrl: string
     }[],
@@ -302,7 +305,7 @@ async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfi
     await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
 }
 
-async function playback(embyServer: EmbyServerConfig, item_id: string) {
+async function playback(embyServer: EmbyServerConfig, item_id: string, mediaSourceId: string) {
     return embyApi.playbackInfo(embyServer, item_id).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
@@ -312,7 +315,7 @@ async function playback(embyServer: EmbyServerConfig, item_id: string) {
         }
         let json: PlaybackInfo = await response.json();
         let directStreamUrl = embyServer.base_url + maxPlaybackMediaSources(json.MediaSources)
-        let res = await invoke.playback(directStreamUrl, embyServer!.id!, item_id)
+        let res = await invoke.playback(directStreamUrl, embyServer!.id!, item_id, mediaSourceId, json.PlaySessionId)
         if (res) {
             ElMessage.error({
                 message: res
@@ -329,6 +332,17 @@ const maxMediaSources = (mediaSources: {Size: number}[]) => {
         }
     }
     return max
+}
+const maxPlaybackMediaSourcesId = (mediaSources: {Size: number, Id: string}[]) => {
+    let max = 0
+    let id = ''
+    for (let mediaSource of mediaSources) {
+        if (mediaSource.Size > max) {
+            max = mediaSource.Size
+            id = mediaSource.Id
+        }
+    }
+    return id
 }
 const maxPlaybackMediaSources = (mediaSources: {Size: number, DirectStreamUrl: string}[]) => {
     let max = 0

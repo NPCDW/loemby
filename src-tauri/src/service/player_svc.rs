@@ -9,7 +9,7 @@ use tauri_plugin_shell::ShellExt;
 use crate::{config::app_state::AppState, util::file_util};
 
 #[tauri::command]
-pub async fn play_video(path: String, server_id: String, item_id: String, media_source_id: String, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+pub async fn play_video(path: String, server_id: String, item_id: String, media_source_id: String, play_session_id: String, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = state.app_config.read().await.mpv_path.clone();
     if mpv_path.is_none() {
         return Err("未配置 mpv 播放器路径".to_string());
@@ -47,11 +47,13 @@ pub async fn play_video(path: String, server_id: String, item_id: String, media_
                 watch_later.split("\n").for_each(|line| {
                     if line.starts_with("start=") {
                         let position = Decimal::from_str(line.split("=").nth(1).unwrap()).unwrap() * Decimal::from_i64(1000_0000).unwrap();
+                        let position = position.round();
                         tracing::debug!("播放进度 {}", position);
                         app_handle.emit("playback_progress", PlaybackProgress {
                             server_id: &server_id,
                             item_id: &item_id,
                             media_source_id: &media_source_id,
+                            play_session_id: &play_session_id,
                             progress: position,
                         }).unwrap();
                     }
@@ -70,5 +72,6 @@ struct PlaybackProgress<'a> {
     server_id: &'a str,
     item_id: &'a str,
     media_source_id: &'a str,
+    play_session_id: &'a str,
     progress: Decimal
 }
