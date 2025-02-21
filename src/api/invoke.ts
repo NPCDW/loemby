@@ -9,8 +9,8 @@ async function saveConfig(config: Config) {
     return invoke('save_config', {config});
 }
 
-async function playback(path: string, server_id: string, item_id: string): Promise<string> {
-    return invoke('play_video', {path, server_id, id: item_id});
+async function playback(path: string, serverId: string, itemId: string): Promise<string> {
+    return invoke('play_video', {path, serverId, itemId});
 }
 
 export default {
