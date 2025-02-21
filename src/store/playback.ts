@@ -7,7 +7,7 @@ export const usePlayback = defineStore('playback', () => {
     async function listen_playback_progress() {
         listen<DownloadStarted>('playback_progress', (event) => {
             console.log(
-              `playback ${event.payload.progress / 1000 / 10000} second from ${event.payload.playback_id}`
+              `playback ${event.payload.progress / 1000 / 10000} second from ${event.payload.server_id} ${event.payload.item_id}`
             );
         });
     }
@@ -16,6 +16,7 @@ export const usePlayback = defineStore('playback', () => {
 })
 
 export type DownloadStarted = {
-    playback_id: string;
+    server_id: string;
+    item_id: string;
     progress: number;
 };
