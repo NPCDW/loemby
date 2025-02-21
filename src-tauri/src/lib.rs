@@ -32,7 +32,7 @@ pub fn run() {
                 tauri::path::BaseDirectory::AppLocalData,
             )?;
 
-            config::log::init(&root_dir, "info");
+            config::log::init(&root_dir, is_development());
             let config = config::app_config::get_config(app, &root_dir);
             if config.is_err() {
                 tracing::error!("{:#?}", config);

@@ -16,24 +16,23 @@ pub async fn play_video(path: String, state: tauri::State<'_, AppState>, app_han
     let watch_later_dir = state.root_dir.join("watch_later");
     file_util::mkdir(&watch_later_dir).expect("Failed to create watch_later dir");
 
-    tauri::async_runtime::spawn(async move {
-        let mpv_path = PathBuf::from(mpv_path.as_ref().unwrap());
-        let mpv_parent_path = mpv_path.parent().unwrap();
+    let mpv_path = PathBuf::from(mpv_path.as_ref().unwrap());
+    let mpv_parent_path = mpv_path.parent().unwrap();
 
-        let shell = app_handle.shell();
-        let video_path = path.clone();
-        let player = shell.command(&mpv_path.as_os_str().to_str().unwrap())
-            .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
-            .arg("--save-position-on-quit")
-            .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
-            .arg(&video_path)
-            .spawn();
-    
-        tracing::info!("播放视频: {} {:?}", &video_path, &player);
-        if player.is_err() {
-            return Err(player.err().unwrap().to_string());
-        }
-    
+    let video_path = path.clone();
+    let player = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
+        .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
+        .arg("--save-position-on-quit")
+        .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
+        .arg(&video_path)
+        .spawn();
+
+    tracing::debug!("播放视频: {} {:?}", &video_path, &player);
+    if player.is_err() {
+        return Err(player.err().unwrap().to_string());
+    }
+
+    tauri::async_runtime::spawn(async move {
         let (mut rx, mut _child) = player.unwrap();
         while let Some(event) = rx.recv().await {
             if let tauri_plugin_shell::process::CommandEvent::Terminated(_payload) = event {
@@ -41,12 +40,12 @@ pub async fn play_video(path: String, state: tauri::State<'_, AppState>, app_han
                 let path_md5 = md5::compute(&video_path);
                 let progress_path = format!("{}", &watch_later_dir.join(format!("{:x}", path_md5)).as_os_str().to_str().unwrap());
                 let watch_later = std::fs::read_to_string(progress_path).unwrap_or_default();
-                tracing::info!("播放结束 {:?}", watch_later);
+                tracing::debug!("播放结束 {:?}", watch_later);
 
                 watch_later.split("\n").for_each(|line| {
                     if line.starts_with("start=") {
                         let position = Decimal::from_str(line.split("=").nth(1).unwrap()).unwrap();
-                        tracing::info!("播放进度 {:?}", position);
+                        tracing::debug!("播放进度 {:?} {}", position, position * Decimal::from_i64(1000_0000).unwrap());
 
                     }
                 });
@@ -56,8 +55,6 @@ pub async fn play_video(path: String, state: tauri::State<'_, AppState>, app_han
                 break;
             }
         }
-
-        Ok(())
     });
 
     Ok(())
