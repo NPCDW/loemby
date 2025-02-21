@@ -263,7 +263,7 @@ async function reLogin(embyServerConfig: EmbyServerConfig) {
     }
   ).then(async () => {
     login(embyServerConfig).then(() => {
-        ElMessage.info({
+        ElMessage.success({
             message: "登录成功"
         })
     }).catch(e => {
