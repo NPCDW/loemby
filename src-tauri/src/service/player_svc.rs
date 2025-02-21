@@ -9,7 +9,7 @@ use tauri_plugin_shell::ShellExt;
 use crate::{config::app_state::AppState, util::file_util};
 
 #[tauri::command]
-pub async fn play_video(path: String, server_id: String, item_id: String, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+pub async fn play_video(path: String, server_id: String, item_id: String, media_source_id: String, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = state.app_config.read().await.mpv_path.clone();
     if mpv_path.is_none() {
         return Err("未配置 mpv 播放器路径".to_string());
@@ -51,6 +51,7 @@ pub async fn play_video(path: String, server_id: String, item_id: String, state:
                         app_handle.emit("playback_progress", PlaybackProgress {
                             server_id: &server_id,
                             item_id: &item_id,
+                            media_source_id: &media_source_id,
                             progress: position,
                         }).unwrap();
                     }
@@ -68,5 +69,6 @@ pub async fn play_video(path: String, server_id: String, item_id: String, state:
 struct PlaybackProgress<'a> {
     server_id: &'a str,
     item_id: &'a str,
+    media_source_id: &'a str,
     progress: Decimal
 }
