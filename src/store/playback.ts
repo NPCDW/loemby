@@ -11,6 +11,8 @@ export const usePlayback = defineStore('playback', () => {
             );
         });
     }
+    
+    return { listen_playback_progress }
 })
 
 export type DownloadStarted = {

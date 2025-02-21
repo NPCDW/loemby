@@ -6,6 +6,7 @@ import App from './App.vue'
 import router from './router/router'
 import { createPinia } from 'pinia'
 import { useConfig } from './store/config'
+import { usePlayback } from './store/playback'
 import svgIcon from "./components/SvgIcon/index.vue";
 import 'virtual:svg-icons-register'
 
@@ -17,5 +18,6 @@ app.use(router)
 app.component('svg-icon', svgIcon)
 
 await useConfig().sync_config()
+await usePlayback().listen_playback_progress()
 
 app.mount('#app')
