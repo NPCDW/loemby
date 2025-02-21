@@ -6,7 +6,11 @@ import { ref } from "vue";
 export const useConfig = defineStore('config', () => {
     const config = ref<Config>({})
 
-    async function get_config() {
+    function get_config() {
+        return config.value
+    }
+
+    async function sync_config() {
         config.value = await invoke.getConfig();
         return config.value
     }
@@ -34,7 +38,7 @@ export const useConfig = defineStore('config', () => {
         }
     }
 
-    return { get_config, save_config, saveEmbyServer, delEmbyServer }
+    return { get_config, sync_config, save_config, saveEmbyServer, delEmbyServer }
 })
 
 interface ProxyServerConfig {

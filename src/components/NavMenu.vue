@@ -126,9 +126,8 @@ watchEffect(() => {
 })
 
 const embyServers = ref<EmbyServerConfig[]>([])
-useConfig().get_config().then(config => {
-    embyServers.value = config?.emby_server ? config.emby_server : []
-})
+let config = useConfig().get_config()
+embyServers.value = config?.emby_server ? config.emby_server : []
 async function saveEmbyServer(tmp: EmbyServerConfig) {
     let value = _.cloneDeep(tmp);
     for (let index = 0; index < embyServers.value.length; index++) {

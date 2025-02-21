@@ -205,7 +205,7 @@ async function search() {
     embyServerKeys.value = []
     emby_search_result.value = {}
     let promises = []
-    let config = await useConfig().get_config();
+    let config = useConfig().get_config()
     mpv_config.value = config.mpv_path ? true : false
     for (let embyServer of config.emby_server!) {
         if (!embyServer.disabled) {
@@ -312,7 +312,7 @@ async function playback(embyServer: EmbyServerConfig, item_id: string) {
         }
         let json: PlaybackInfo = await response.json();
         let directStreamUrl = embyServer.base_url + maxPlaybackMediaSources(json.MediaSources)
-        let res = await invoke.playback(directStreamUrl)
+        let res = await invoke.playback(directStreamUrl, embyServer!.id + item_id)
         if (res) {
             ElMessage.error({
                 message: res

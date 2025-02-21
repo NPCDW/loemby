@@ -2,12 +2,14 @@ use std::path::PathBuf;
 
 use rust_decimal::prelude::*;
 
+use serde::Serialize;
+use tauri::Emitter;
 use tauri_plugin_shell::ShellExt;
 
 use crate::{config::app_state::AppState, util::file_util};
 
 #[tauri::command]
-pub async fn play_video(path: String, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+pub async fn play_video(path: String, id: String, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = state.app_config.read().await.mpv_path.clone();
     if mpv_path.is_none() {
         return Err("未配置 mpv 播放器路径".to_string());
@@ -44,18 +46,25 @@ pub async fn play_video(path: String, state: tauri::State<'_, AppState>, app_han
 
                 watch_later.split("\n").for_each(|line| {
                     if line.starts_with("start=") {
-                        let position = Decimal::from_str(line.split("=").nth(1).unwrap()).unwrap();
-                        tracing::debug!("播放进度 {:?} {}", position, position * Decimal::from_i64(1000_0000).unwrap());
-
+                        let position = Decimal::from_str(line.split("=").nth(1).unwrap()).unwrap() * Decimal::from_i64(1000_0000).unwrap();
+                        tracing::debug!("播放进度 {}", position);
+                        app_handle.emit("playback_progress", PlaybackProgress {
+                            playback_id: &id,
+                            progress: position,
+                        }).unwrap();
                     }
                 });
             
-                // 发送播放进度回 Tauri 应用
-                // window.emit("playback_progress", progress).unwrap();
                 break;
             }
         }
     });
 
     Ok(())
+}
+
+#[derive(Clone, Serialize)]
+struct PlaybackProgress<'a> {
+    playback_id: &'a str,
+    progress: Decimal
 }
