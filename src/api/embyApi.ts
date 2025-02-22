@@ -127,11 +127,24 @@ async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
     });
 }
 
-async function playbackProgress(embyServer: EmbyServerConfig, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
+async function playing(embyServer: EmbyServerConfig, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id || !positionTicks) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/PlayingItems/${item_id}/Progress?MediaSourceId=${media_source_id}&PositionTicks=${positionTicks}&PlaySessionId=${play_session_id}`, {
+    return fetch(embyServer.base_url + `/Sessions/Playing?ItemId=${item_id}&CanSeek=true&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}&VolumeLevel=100`, {
+        method: 'POST',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+    });
+}
+
+async function playingStopped(embyServer: EmbyServerConfig, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id || !positionTicks) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Sessions/Playing/Stopped?ItemId=${item_id}&CanSeek=true&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}&VolumeLevel=100`, {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -141,5 +154,5 @@ async function playbackProgress(embyServer: EmbyServerConfig, item_id: string, m
 }
 
 export default {
-    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playbackProgress
+    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingStopped
 }
