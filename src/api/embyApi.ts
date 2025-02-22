@@ -128,7 +128,7 @@ async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
 }
 
 async function playing(embyServer: EmbyServerConfig, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id || !positionTicks) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id) {
         return Promise.reject("参数缺失");
     }
     return fetch(embyServer.base_url + `/Sessions/Playing?ItemId=${item_id}&CanSeek=true&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}&VolumeLevel=100`, {
