@@ -1,8 +1,8 @@
 <template>
     <div>
-        <el-input v-model="search_str" @keyup.enter="search" :disabled="search_loading" style="padding: 10px;">
+        <el-input v-model="search_str" autofocus @keyup.enter="search" :disabled="search_loading" style="padding: 10px;">
             <template #append>
-                <el-button @click="search" :loading="search_loading"><el-icon><i-ep-Search /></el-icon></el-button>
+                <el-button type="primary" @click="search" :loading="search_loading"><el-icon><i-ep-Search /></el-icon></el-button>
             </template>
         </el-input>
         
@@ -25,10 +25,10 @@
                                 未播放：{{ rootItem.UserData?.UnplayedItemCount }}
                             </p>
                             <p v-else>
-                                {{ rootItem.ProductionYear }} 最大媒体流：{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)) : 0 }}
+                                {{ rootItem.ProductionYear }} 最大媒体流：{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)?.Size!) : 0 }}
                             </p>
                             <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
-                            <el-button v-else-if="mpv_config && rootItem.MediaSources && rootItem.UserData" @click="playback(embySearchItem.server, rootItem.Id, maxPlaybackMediaSourcesId(rootItem.MediaSources), rootItem.UserData.PlaybackPositionTicks)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
+                            <el-button v-else-if="mpv_config && rootItem.MediaSources && rootItem.UserData" @click="playback(embySearchItem.server, rootItem.Id, maxMediaSources(rootItem.MediaSources)?.Id!, rootItem.UserData.PlaybackPositionTicks)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
                         </el-card>
                     </div>
                     <div v-else style="text-align: center;">
@@ -78,8 +78,8 @@
                             </template>
                             <div v-for="episodesItem in dialogEpisodesList" class="note-item">
                                 <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
-                                <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)) : 0 }}</p>
-                                <el-button v-if="mpv_config && episodesItem.MediaSources && episodesItem.UserData" @click="playback(dialogEmbyServer!, episodesItem.Id, maxPlaybackMediaSourcesId(episodesItem.MediaSources), episodesItem.UserData.PlaybackPositionTicks)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
+                                <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</p>
+                                <el-button v-if="mpv_config && episodesItem.MediaSources && episodesItem.UserData" @click="playback(dialogEmbyServer!, episodesItem.Id, maxMediaSources(episodesItem.MediaSources)?.Id!, episodesItem.UserData.PlaybackPositionTicks)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
                             </div>
                         </el-skeleton>
                         <el-pagination
@@ -101,9 +101,10 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { useConfig, EmbyServerConfig } from '../store/config'
-import embyApi from '../api/embyApi'
+import embyApi, { EmbyPageList, EpisodesItems, PlaybackInfo, SearchItems, SeasonsItems } from '../api/embyApi'
 import { ElMessage } from 'element-plus'
 import { formatBytes } from '../util/str_util'
+import { maxMediaSources } from '../util/play_info_util'
 import invoke from '../api/invoke'
 
 const search_loading = ref(false)
@@ -148,72 +149,6 @@ const emby_search_result_list = computed(() => {
         }
     });
 })
-
-interface EmbyPageList<T> {
-    TotalRecordCount: number,
-    Items: T[]
-}
-
-interface SearchItems {
-    Name: string,
-    Id: string,
-    ProductionYear: number,
-    EndDate: string,
-    Type: string,
-    MediaSources?: {
-        Id: string,
-        Size: number,
-        Name: string
-    }[],
-    UserData?: {
-        UnplayedItemCount: number,
-        PlaybackPositionTicks: number,
-        PlayCount: number,
-        IsFavorite: number,
-        Played: number,
-    }
-}
-
-interface SeasonsItems {
-    Name: string,
-    Id: string,
-    ProductionYear: number,
-    IndexNumber: number,
-    UserData?: {
-        UnplayedItemCount: number,
-        PlaybackPositionTicks: number,
-        PlayCount: number,
-        IsFavorite: number,
-        Played: number,
-    }
-}
-
-interface EpisodesItems {
-    Name: string,
-    Id: string,
-    PremiereDate: string,
-    IndexNumber: number,
-    MediaSources?: {
-        Id: string,
-        Size: number,
-        Name: string
-    }[],
-    UserData?: {
-        PlayedPercentage: number,
-        PlaybackPositionTicks: number,
-        IsFavorite: number,
-        Played: number,
-    },
-}
-
-interface PlaybackInfo {
-    PlaySessionId: string,
-    MediaSources: {
-        Id: string,
-        Size: number,
-        DirectStreamUrl: string
-    }[],
-}
 
 async function search() {
     search_loading.value = true
@@ -326,49 +261,17 @@ async function playback(embyServer: EmbyServerConfig, item_id: string, mediaSour
             return
         }
         let json: PlaybackInfo = await response.json();
-        let directStreamUrl = embyServer.base_url + maxPlaybackMediaSources(json.MediaSources)
-        let res = await invoke.playback(directStreamUrl, embyServer!.id!, item_id, mediaSourceId, json.PlaySessionId)
-        if (res) {
+        let directStreamUrl = embyServer.base_url + maxMediaSources(json.MediaSources)?.DirectStreamUrl!
+        invoke.playback(directStreamUrl, embyServer!.id!, item_id, mediaSourceId, json.PlaySessionId).then(async () => {
+            await embyApi.playing(embyServer!, item_id, mediaSourceId, json.PlaySessionId, positionTicks)
+        }).catch(res => {
             ElMessage.error({
                 message: res
             })
-        } else {
-            await embyApi.playing(embyServer!, item_id, mediaSourceId, json.PlaySessionId, positionTicks)
-        }
+        })
     })
 }
 
-const maxMediaSources = (mediaSources: {Size: number}[]) => {
-    let max = 0
-    for (let mediaSource of mediaSources) {
-        if (mediaSource.Size > max) {
-            max = mediaSource.Size
-        }
-    }
-    return max
-}
-const maxPlaybackMediaSourcesId = (mediaSources: {Size: number, Id: string}[]) => {
-    let max = 0
-    let id = ''
-    for (let mediaSource of mediaSources) {
-        if (mediaSource.Size > max) {
-            max = mediaSource.Size
-            id = mediaSource.Id
-        }
-    }
-    return id
-}
-const maxPlaybackMediaSources = (mediaSources: {Size: number, DirectStreamUrl: string}[]) => {
-    let max = 0
-    let directStreamUrl = ''
-    for (let mediaSource of mediaSources) {
-        if (mediaSource.Size > max) {
-            max = mediaSource.Size
-            directStreamUrl = mediaSource.DirectStreamUrl
-        }
-    }
-    return directStreamUrl
-}
 </script>
 
 <style scoped>

@@ -1,6 +1,7 @@
 import * as VueRouter from 'vue-router'
 import NavMenu from '../components/NavMenu.vue'
 import Search from '../page/Search.vue'
+import EmbyHome from '../page/EmbyHome.vue'
 
 const routes = [
     { path: '/', redirect: '/nav/search' },
@@ -11,6 +12,10 @@ const routes = [
             {
                 path: 'search',
                 component: Search,
+            },
+            {
+                path: 'embyHome/:id',
+                component: EmbyHome,
             },
         ],
     },
