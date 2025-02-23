@@ -336,14 +336,14 @@ function playing(item: EpisodesItems) {
     let currentMediaSources = mediaSources.value.find(mediaSource => mediaSource.Id == versionSelect.value)
     if (currentMediaSources) {
         let directStreamUrl = embyServer.base_url + currentMediaSources.DirectStreamUrl!
-        if (!audioSelect.value) {
-            directStreamUrl += '&AudioStreamIndex=' + audioSelect.value
-        }
         if (!videoSelect.value) {
             directStreamUrl += '&VideoStreamIndex=' + videoSelect.value
         }
+        if (!audioSelect.value) {
+            directStreamUrl += '&AudioStreamIndex=' + audioSelect.value
+        }
         if (!subtitleSelect.value) {
-            directStreamUrl += '&SubtitleStreamIndexs=-1'
+            directStreamUrl += '&SubtitleStreamIndex=' + subtitleSelect.value
         }
         invoke.playback(directStreamUrl, embyServer!.id!, item.Id, currentMediaSources.Id, playSessionId.value).then(async () => {
             await embyApi.playing(embyServer!, item.Id, currentMediaSources.Id, playSessionId.value, item.UserData ? item.UserData.PlaybackPositionTicks : 0)
