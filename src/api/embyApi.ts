@@ -91,11 +91,11 @@ async function continuePlay(embyServer: EmbyServerConfig, startIndex: number, li
  * 系列剧集 接下来 应该播放的剧集
  * @returns EmbyPageList<EpisodesItems>
  */
-async function nextUp(embyServer: EmbyServerConfig, startIndex: number, limit: number) {
+async function nextUp(embyServer: EmbyServerConfig, seriesId: string, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/Items/Resume?MediaTypes=Video&Recursive=true&Fields=MediaSources&StartIndex=${startIndex}&Limit=${limit}`, {
+    return fetch(embyServer.base_url + `/Shows/NextUp?UserId=${embyServer.user_id}&SeriesId=${seriesId}&StartIndex=${startIndex}&Limit=${limit}&Fields=MediaSources`, {
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -269,10 +269,12 @@ export interface SeasonsItems {
 export interface EpisodesItems {
     Name: string,
     Id: string,
+    SeriesName: string,
     PremiereDate: string,
     ParentIndexNumber: number,
     IndexNumber: number,
     MediaSources?: MediaSources[],
+    SeriesId: string,
     UserData?: {
         PlayedPercentage: number,
         PlaybackPositionTicks: number,
@@ -288,7 +290,10 @@ export interface PlaybackInfo {
 
 export interface MediaSources {
     Id: string,
+    Name: string,
+    RunTimeTicks: number,
     Size: number,
+    Bitrate: number,
     DirectStreamUrl: string,
     MediaStreams: {
         // 视频编码
@@ -297,8 +302,7 @@ export interface MediaSources {
         // 码率
         BitRate: number,
         Type: 'Video' | 'Audio' | 'Subtitle',
-        Height: number,
-        Width: number,
+        Language: string,
         Index: number,
     }[]
 }
