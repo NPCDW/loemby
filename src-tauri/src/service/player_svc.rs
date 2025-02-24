@@ -24,16 +24,29 @@ pub async fn play_video(path: String, server_id: String, item_id: String, media_
     let mpv_parent_path = mpv_path.parent().unwrap();
 
     let video_path = path.clone();
-    let command = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
+    let mut command = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
         .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
         .arg("--save-position-on-quit")
         .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
-        .arg(&format!("--audio-files={}", &external_audio.join(";")))
-        .arg(&format!("--sub-files={}", &external_subtitle.join(";")))
-        .arg(&format!("--aid={}", if aid == -1 { "no".to_string() } else { aid.to_string() }))
-        .arg(&format!("--sid={}", if sid == -1 { "no".to_string() } else { sid.to_string() }))
         .arg(&format!("--start=+{}", playback_position_ticks / 1000_0000))
         .arg(&video_path);
+
+    for audio in external_audio {
+        command = command.arg(&format!("--audio-file={}", &audio));
+    }
+    for subtitle in external_subtitle {
+        command = command.arg(&format!("--sub-file={}", &subtitle));
+    }
+    if aid == -1 {
+        command = command.arg(&format!("--aid=no"));
+    } else {
+        command = command.arg(&format!("--aid={}", aid));
+    }
+    if sid == -1 {
+        command = command.arg(&format!("--sid=no"));
+    } else {
+        command = command.arg(&format!("--sid={}", sid));
+    }
     tracing::debug!("调用MPV: {:?}", &command);
     
     let player = command.spawn();
