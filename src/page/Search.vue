@@ -262,7 +262,18 @@ async function playback(embyServer: EmbyServerConfig, item_id: string, mediaSour
         }
         let json: PlaybackInfo = await response.json();
         let directStreamUrl = embyServer.base_url + maxMediaSources(json.MediaSources)?.DirectStreamUrl!
-        invoke.playback(directStreamUrl, embyServer!.id!, item_id, mediaSourceId, json.PlaySessionId).then(async () => {
+        invoke.playback({
+            path: directStreamUrl,
+            serverId: embyServer!.id!,
+            itemId: item_id,
+            mediaSourceId: mediaSourceId,
+            playSessionId:json.PlaySessionId,
+            playbackPositionTicks: positionTicks,
+            aid: 0,
+            sid: 0,
+            externalAudio: [],
+            externalSubtitle: [],
+        }).then(async () => {
             await embyApi.playing(embyServer!, item_id, mediaSourceId, json.PlaySessionId, positionTicks)
         }).catch(res => {
             ElMessage.error({
