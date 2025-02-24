@@ -23,7 +23,8 @@
                         <p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
                         <p><el-progress :percentage="episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                         <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</p>
-                        <p><el-button type="primary" @click="playbackInfo(episodesItem.Id);nextUp(episodesItem.SeriesId)" :loading="search_loading">播放信息</el-button></p>
+                        <p><el-button type="primary" @click="displayPlayback(episodesItem)" :loading="playbackInfoLoading">播放信息</el-button></p>
+                        <p><el-button type="primary" @click="nextUp(episodesItem.SeriesId)" :loading="nextUpLoading">接下来</el-button></p>
                     </el-card>
                 </div>
             </el-skeleton>
@@ -135,7 +136,7 @@
                         <el-card style="width: 300px; margin: 5px;" v-if="index != 0">
                             <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
                             <p>{{ nextUpItem.PremiereDate ? nextUpItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</p>
-                            <p><el-button type="primary" @click="displayPlayback(nextUpItem);nextUp(nextUpItem.SeriesId)" :loading="search_loading">播放信息</el-button></p>
+                            <p><el-button type="primary" @click="displayPlayback(nextUpItem)" :loading="playbackInfoLoading">播放信息</el-button></p>
                         </el-card>
                     </template>
                 </div>
@@ -378,8 +379,9 @@ async function playing(item: EpisodesItems) {
             return
         }
         playSessionId.value = json.PlaySessionId
+        currentPlayback.value!.MediaSources = json.MediaSources
     }
-    let currentMediaSources = item.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
+    let currentMediaSources = currentPlayback.value!.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
     if (currentMediaSources) {
         let directStreamUrl = embyServer.base_url + currentMediaSources.DirectStreamUrl!
         let externalAudio = []
@@ -399,7 +401,7 @@ async function playing(item: EpisodesItems) {
             mediaSourceId: currentMediaSources.Id,
             playSessionId: playSessionId.value,
             playbackPositionTicks: playbackPositionTicks,
-            aid: videoSelect.value,
+            aid: audioSelect.value,
             sid: subtitleSelect.value,
             externalAudio: externalAudio,
             externalSubtitle: externalSubtitle,

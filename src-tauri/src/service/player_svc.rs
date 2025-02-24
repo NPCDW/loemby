@@ -10,7 +10,7 @@ use crate::{config::app_state::AppState, util::file_util};
 
 #[tauri::command]
 pub async fn play_video(path: String, server_id: String, item_id: String, media_source_id: String, playback_position_ticks: u64,
-    play_session_id: String, aid: u32, sid: u32, external_audio: Vec<String>, external_subtitle: Vec<String>,
+    play_session_id: String, aid: i32, sid: i32, external_audio: Vec<String>, external_subtitle: Vec<String>,
     state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = state.app_config.read().await.mpv_path.clone();
     if mpv_path.is_none() {
@@ -24,17 +24,19 @@ pub async fn play_video(path: String, server_id: String, item_id: String, media_
     let mpv_parent_path = mpv_path.parent().unwrap();
 
     let video_path = path.clone();
-    let player = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
+    let command = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
         .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
         .arg("--save-position-on-quit")
         .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
         .arg(&format!("--audio-files={}", &external_audio.join(";")))
         .arg(&format!("--sub-files={}", &external_subtitle.join(";")))
-        .arg(&format!("--aid={}", aid))
-        .arg(&format!("--sid={}", sid))
+        .arg(&format!("--aid={}", if aid == -1 { "no".to_string() } else { aid.to_string() }))
+        .arg(&format!("--sid={}", if sid == -1 { "no".to_string() } else { sid.to_string() }))
         .arg(&format!("--start=+{}", playback_position_ticks / 1000_0000))
-        .arg(&video_path)
-        .spawn();
+        .arg(&video_path);
+    tracing::debug!("调用MPV: {:?}", &command);
+    
+    let player = command.spawn();
 
     tracing::debug!("播放视频: {} {:?}", &video_path, &player);
     if player.is_err() {
