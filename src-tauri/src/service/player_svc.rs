@@ -9,7 +9,9 @@ use tauri_plugin_shell::ShellExt;
 use crate::{config::app_state::AppState, util::file_util};
 
 #[tauri::command]
-pub async fn play_video(path: String, server_id: String, item_id: String, media_source_id: String, play_session_id: String, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+pub async fn play_video(path: String, server_id: String, item_id: String, media_source_id: String, playback_position_ticks: u64,
+    play_session_id: String, aid: u32, sid: u32, external_audio: Vec<String>, external_subtitle: Vec<String>,
+    state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = state.app_config.read().await.mpv_path.clone();
     if mpv_path.is_none() {
         return Err("未配置 mpv 播放器路径".to_string());
@@ -26,6 +28,11 @@ pub async fn play_video(path: String, server_id: String, item_id: String, media_
         .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
         .arg("--save-position-on-quit")
         .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
+        .arg(&format!("--audio-files={}", &external_audio.join(";")))
+        .arg(&format!("--sub-files={}", &external_subtitle.join(";")))
+        .arg(&format!("--aid={}", aid))
+        .arg(&format!("--sid={}", sid))
+        .arg(&format!("--start=+{}", playback_position_ticks / 1000_0000))
         .arg(&video_path)
         .spawn();
 

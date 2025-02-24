@@ -39,90 +39,103 @@
 
         <div>
             <h1>接下来</h1>
+            <el-skeleton :loading="playbackInfoLoading" animated>
+                <template #template>
+                    <div class="note-item" v-for="i in 3" :key="i">
+                        <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
+                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                    </div>
+                </template>
+                <div v-if="currentPlayback" style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                    <div style="width: 100%;padding: 10px;">
+                        <h2>{{ currentPlayback.SeriesName }}</h2>
+                        <p>{{ 'S' + currentPlayback.ParentIndexNumber + 'E' + currentPlayback.IndexNumber + '. ' + currentPlayback.Name }}</p>
+                        <p><el-progress :percentage="currentPlayback.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
+                        <p>
+                            <span>版本：
+                            <el-select
+                            v-model="versionSelect"
+                            @change="playbackVersionChange"
+                            placeholder="Select"
+                            size="large"
+                            style="width: 850px"
+                            :disabled="versionOptions.length <= 1"
+                            >
+                            <el-option
+                                v-for="item in versionOptions"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value"
+                            />
+                            </el-select></span>
+                        </p>
+                        <p>
+                            <span>视频：
+                            <el-select
+                            v-model="videoSelect"
+                            placeholder="Select"
+                            size="large"
+                            style="width: 240px"
+                            :disabled="videoOptions.length <= 1"
+                            >
+                            <el-option
+                                v-for="item in videoOptions"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value"
+                            />
+                            </el-select></span>
+                            <span style="margin-left: 15px;">音频：
+                            <el-select
+                            v-model="audioSelect"
+                            placeholder="Select"
+                            size="large"
+                            style="width: 240px"
+                            :disabled="audioOptions.length <= 1"
+                            >
+                            <el-option
+                                v-for="item in audioOptions"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value"
+                            />
+                            </el-select></span>
+                            <span style="margin-left: 15px;">字幕：
+                            <el-select
+                            v-model="subtitleSelect"
+                            placeholder="Select"
+                            size="large"
+                            style="width: 240px"
+                            :disabled="subtitleOptions.length <= 1"
+                            >
+                            <el-option
+                                v-for="item in subtitleOptions"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value"
+                            />
+                            </el-select></span>
+                        </p>
+                        <p><el-button type="primary" @click="playing(currentPlayback)" :loading="play_loading">播放</el-button></p>
+                    </div>
+                </div>
+            </el-skeleton>
             <el-skeleton :loading="nextUpLoading" animated>
                 <template #template>
-                    <div class="note-item" v-for="i in 5" :key="i">
+                    <div class="note-item" v-for="i in 3" :key="i">
                         <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
                         <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                     </div>
                 </template>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <template  v-for="(nextUpItem, index) in nextUpList">
-                        <div v-if="index == 0" style="width: 100%;padding: 10px;">
-                            <h2>{{ nextUpItem.SeriesName }}</h2>
-                            <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
-                            <p><el-progress :percentage="nextUpItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
-                            <p>
-                                <span>版本：
-                                <el-select
-                                v-model="versionSelect"
-                                @change="playbackVersionChange"
-                                placeholder="Select"
-                                size="large"
-                                style="width: 850px"
-                                :disabled="versionOptions.length <= 1"
-                                >
-                                <el-option
-                                    v-for="item in versionOptions"
-                                    :key="item.value"
-                                    :label="item.label"
-                                    :value="item.value"
-                                />
-                                </el-select></span>
-                            </p>
-                            <p>
-                                <span>视频：
-                                <el-select
-                                v-model="videoSelect"
-                                placeholder="Select"
-                                size="large"
-                                style="width: 240px"
-                                :disabled="videoOptions.length <= 1"
-                                >
-                                <el-option
-                                    v-for="item in videoOptions"
-                                    :key="item.value"
-                                    :label="item.label"
-                                    :value="item.value"
-                                />
-                                </el-select></span>
-                                <span style="margin-left: 15px;">音频：
-                                <el-select
-                                v-model="audioSelect"
-                                placeholder="Select"
-                                size="large"
-                                style="width: 240px"
-                                :disabled="audioOptions.length <= 1"
-                                >
-                                <el-option
-                                    v-for="item in audioOptions"
-                                    :key="item.value"
-                                    :label="item.label"
-                                    :value="item.value"
-                                />
-                                </el-select></span>
-                                <span style="margin-left: 15px;">字幕：
-                                <el-select
-                                v-model="subtitleSelect"
-                                placeholder="Select"
-                                size="large"
-                                style="width: 240px"
-                                :disabled="subtitleOptions.length <= 1"
-                                >
-                                <el-option
-                                    v-for="item in subtitleOptions"
-                                    :key="item.value"
-                                    :label="item.label"
-                                    :value="item.value"
-                                />
-                                </el-select></span>
-                            </p>
-                            <p><el-button type="primary" @click="playing(nextUpItem)" :loading="search_loading">播放</el-button></p>
-                        </div>
                         <el-card style="width: 300px; margin: 5px;" v-if="index != 0">
                             <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
                             <p>{{ nextUpItem.PremiereDate ? nextUpItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</p>
-                            <p><el-button type="primary" @click="playbackInfo(nextUpItem.Id);nextUp(nextUpItem.SeriesId)" :loading="search_loading">播放信息</el-button></p>
+                            <p><el-button type="primary" @click="displayPlayback(nextUpItem);nextUp(nextUpItem.SeriesId)" :loading="search_loading">播放信息</el-button></p>
                         </el-card>
                     </template>
                 </div>
@@ -167,6 +180,8 @@ watch(() => route.params.id, (newId, _oldId) => {
     nextUpCurrentPage.value = 1
     nextUpPageSize.value = 4
     nextUpTotal.value = 0
+
+    currentPlayback.value = undefined
 })
 
 const search_str = ref('')
@@ -216,8 +231,11 @@ const versionSelect = ref('')
 const videoSelect = ref(-1)
 const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
-const mediaSources = ref<MediaSources[]>([])
+
+const currentPlayback = ref<EpisodesItems>()
+const playbackInfoLoading = ref(false)
 const playSessionId = ref('')
+const play_loading = ref(false)
 
 const nextUpLoading = ref(false)
 const nextUpList = ref<EpisodesItems[]>([])
@@ -248,8 +266,25 @@ function nextUp(seriesId: string) {
     }).finally(() => nextUpLoading.value = false)
 }
 
-function playbackInfo(itemId: string) {
-    nextUpLoading.value = true
+function displayPlayback(item: EpisodesItems) {
+    currentPlayback.value = item
+    playSessionId.value = ''
+    if (item.MediaSources && item.MediaSources.length != 0) {
+        handleMediaSources(item.MediaSources)
+    } else {
+        playbackInfoLoading.value = true
+        playbackInfo(item.Id).then((json) => {
+            if (!json) {
+                return
+            }
+            currentPlayback.value!.MediaSources = json.MediaSources
+            playSessionId.value = json.PlaySessionId
+            handleMediaSources(json.MediaSources)
+        }).finally(() => playbackInfoLoading.value = false)
+    }
+}
+
+function playbackInfo(itemId: string): Promise<PlaybackInfo | undefined> {
     return embyApi.playbackInfo(embyServer, itemId).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
@@ -258,14 +293,13 @@ function playbackInfo(itemId: string) {
             return
         }
         let json: PlaybackInfo = await response.json();
-        mediaSources.value = json.MediaSources
-        playSessionId.value = json.PlaySessionId
-        handleMediaSources(json.MediaSources)
+        return Promise.resolve(json)
     }).catch(e => {
         ElMessage.error({
             message: e
         })
-    }).finally(() => nextUpLoading.value = false)
+        return Promise.reject(e)
+    })
 }
 
 function handleMediaSources(mediaSources: MediaSources[]) {
@@ -304,7 +338,7 @@ function playbackVersionChange(val: string) {
         label: '关闭',
         value: -1
     })
-    let currentMediaSources = mediaSources.value.find(mediaSource => mediaSource.Id == versionSelect.value)
+    let currentMediaSources = currentPlayback.value!.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
     if (currentMediaSources) {
         for (let mediaStream of currentMediaSources.MediaStreams) {
             if (mediaStream.Type == 'Video') {
@@ -318,40 +352,64 @@ function playbackVersionChange(val: string) {
                     label: mediaStream.DisplayTitle,
                     value: mediaStream.Index
                 })
+                if (mediaStream.IsDefault) {
+                    audioSelect.value = mediaStream.Index
+                }
             } else if (mediaStream.Type == 'Subtitle') {
                 subtitleOptions.value.push({
                     label: mediaStream.DisplayTitle,
                     value: mediaStream.Index
                 })
-                if (mediaStream.Language === 'zh-CN') {
+                if (mediaStream.Language === 'zh-CN' || mediaStream.Language === 'chi' || mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1) {
+                    subtitleSelect.value = mediaStream.Index
+                } else if (mediaStream.IsDefault && subtitleSelect.value === -1) {
                     subtitleSelect.value = mediaStream.Index
                 }
             }
         }
     }
-    audioSelect.value = audioOptions.value.length > 1 ? audioOptions.value[1].value : audioOptions.value[0].value
 }
 
-function playing(item: EpisodesItems) {
-    let currentMediaSources = mediaSources.value.find(mediaSource => mediaSource.Id == versionSelect.value)
+async function playing(item: EpisodesItems) {
+    play_loading.value = true
+    if (!playSessionId.value) {
+        let json = await playbackInfo(item.Id)
+        if (!json) {
+            return
+        }
+        playSessionId.value = json.PlaySessionId
+    }
+    let currentMediaSources = item.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
     if (currentMediaSources) {
         let directStreamUrl = embyServer.base_url + currentMediaSources.DirectStreamUrl!
-        if (!videoSelect.value) {
-            directStreamUrl += '&VideoStreamIndex=' + videoSelect.value
+        let externalAudio = []
+        let externalSubtitle = []
+        for (let mediaStream of currentMediaSources.MediaStreams) {
+            if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
+                externalAudio.push(embyApi.getAudioStreamUrl(embyServer, currentMediaSources, mediaStream)!)
+            } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
+                externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer, currentMediaSources, mediaStream)!)
+            }
         }
-        if (!audioSelect.value) {
-            directStreamUrl += '&AudioStreamIndex=' + audioSelect.value
-        }
-        if (!subtitleSelect.value) {
-            directStreamUrl += '&SubtitleStreamIndex=' + subtitleSelect.value
-        }
-        invoke.playback(directStreamUrl, embyServer!.id!, item.Id, currentMediaSources.Id, playSessionId.value).then(async () => {
-            await embyApi.playing(embyServer!, item.Id, currentMediaSources.Id, playSessionId.value, item.UserData ? item.UserData.PlaybackPositionTicks : 0)
+        let playbackPositionTicks = item.UserData ? item.UserData.PlaybackPositionTicks : 0
+        invoke.playback({
+            path: directStreamUrl,
+            serverId: embyServer!.id!,
+            itemId: item.Id,
+            mediaSourceId: currentMediaSources.Id,
+            playSessionId: playSessionId.value,
+            playbackPositionTicks: playbackPositionTicks,
+            aid: videoSelect.value,
+            sid: subtitleSelect.value,
+            externalAudio: externalAudio,
+            externalSubtitle: externalSubtitle,
+        }).then(async () => {
+            await embyApi.playing(embyServer!, item.Id, currentMediaSources.Id, playSessionId.value, playbackPositionTicks)
         }).catch(res => {
             ElMessage.error({
                 message: res
             })
-        })
+        }).finally(() => play_loading.value = false)
     }
 }
 </script>

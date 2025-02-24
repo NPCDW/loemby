@@ -210,7 +210,6 @@ async function playing(embyServer: EmbyServerConfig, item_id: string, media_sour
 
 /**
  * 结束播放
- * @param embyServer 
  * @returns 204
  */
 async function playingStopped(embyServer: EmbyServerConfig, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
@@ -226,8 +225,30 @@ async function playingStopped(embyServer: EmbyServerConfig, item_id: string, med
     });
 }
 
+/**
+ * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
+ * @returns
+ */
+function getAudioStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSources, mediaStreams: MediaStreams) {
+    if (!mediaStreams.IsExternal) {
+        return null;
+    }
+    return embyServer.base_url + `/Audio/${mediaSource.ItemId}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
+}
+
+/**
+ * 组装字幕流地址，请确保字幕流支持外部流
+ * @returns
+ */
+function getSubtitleStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSources, mediaStreams: MediaStreams) {
+    if (!mediaStreams.IsExternal) {
+        return null;
+    }
+    return embyServer.base_url + `/Audio/${mediaSource.ItemId}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
+}
+
 export default {
-    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingStopped, continuePlay, nextUp,
+    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingStopped, continuePlay, nextUp, getAudioStreamUrl, getSubtitleStreamUrl,
 }
 
 
@@ -290,19 +311,25 @@ export interface PlaybackInfo {
 
 export interface MediaSources {
     Id: string,
+    ItemId: string, // 电影和剧集的id，一个剧集有多个媒体源，但每个媒体源的itemid不一样，但是用不同的itemid能查询到同一个剧集
     Name: string,
     RunTimeTicks: number,
     Size: number,
     Bitrate: number,
     DirectStreamUrl: string,
-    MediaStreams: {
-        // 视频编码
-        Codec: string,
-        DisplayTitle: string,
-        // 码率
-        BitRate: number,
-        Type: 'Video' | 'Audio' | 'Subtitle',
-        Language: string,
-        Index: number,
-    }[]
+    MediaStreams: MediaStreams[]
+}
+
+export interface MediaStreams {
+    // 视频、音频、字幕编码
+    Codec: string,
+    DisplayTitle: string,
+    DisplayLanguage: string,
+    // 码率
+    BitRate: number,
+    Type: 'Video' | 'Audio' | 'Subtitle',
+    Language: string,
+    Index: number,
+    IsDefault: boolean,
+    IsExternal: boolean,
 }
