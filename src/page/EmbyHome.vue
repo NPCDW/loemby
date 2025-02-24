@@ -361,7 +361,7 @@ function playbackVersionChange(val: string) {
                     label: mediaStream.DisplayTitle,
                     value: mediaStream.Index
                 })
-                if (mediaStream.Language === 'zh-CN' || mediaStream.Language === 'chi' || mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1) {
+                if (mediaStream.Language === 'zh-CN' || mediaStream.Language === 'chi' || (mediaStream.DisplayLanguage && mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1)) {
                     subtitleSelect.value = mediaStream.Index
                 } else if (mediaStream.IsDefault && subtitleSelect.value === -1) {
                     subtitleSelect.value = mediaStream.Index

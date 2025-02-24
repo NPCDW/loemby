@@ -244,7 +244,7 @@ function getSubtitleStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSo
     if (!mediaStreams.IsExternal) {
         return null;
     }
-    return embyServer.base_url + `/Audio/${mediaSource.ItemId}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
+    return embyServer.base_url + `/Videos/${mediaSource.ItemId}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
 }
 
 export default {
