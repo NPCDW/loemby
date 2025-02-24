@@ -341,30 +341,36 @@ function playbackVersionChange(val: string) {
     })
     let currentMediaSources = currentPlayback.value!.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
     if (currentMediaSources) {
+        let videoIndex = 0
+        let audioIndex = 0
+        let subtitleIndex = 0
         for (let mediaStream of currentMediaSources.MediaStreams) {
             if (mediaStream.Type == 'Video') {
+                videoIndex++
                 videoOptions.value.push({
                     label: mediaStream.DisplayTitle,
-                    value: mediaStream.Index
+                    value: videoIndex
                 })
-                videoSelect.value = mediaStream.Index
+                videoSelect.value = videoIndex
             } else if (mediaStream.Type == 'Audio') {
+                audioIndex++
                 audioOptions.value.push({
                     label: mediaStream.DisplayTitle,
-                    value: mediaStream.Index
+                    value: audioIndex
                 })
                 if (mediaStream.IsDefault) {
-                    audioSelect.value = mediaStream.Index
+                    audioSelect.value = audioIndex
                 }
             } else if (mediaStream.Type == 'Subtitle') {
+                subtitleIndex++
                 subtitleOptions.value.push({
                     label: mediaStream.DisplayTitle,
-                    value: mediaStream.Index
+                    value: subtitleIndex
                 })
                 if (mediaStream.Language === 'zh-CN' || mediaStream.Language === 'chi' || (mediaStream.DisplayLanguage && mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1)) {
-                    subtitleSelect.value = mediaStream.Index
+                    subtitleSelect.value = subtitleIndex
                 } else if (mediaStream.IsDefault && subtitleSelect.value === -1) {
-                    subtitleSelect.value = mediaStream.Index
+                    subtitleSelect.value = subtitleIndex
                 }
             }
         }
