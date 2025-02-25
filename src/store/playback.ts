@@ -4,8 +4,13 @@ import { defineStore } from 'pinia'
 import embyApi from '../api/embyApi';
 import { useConfig } from './config';
 import { ElMessage } from 'element-plus';
+import { ref } from 'vue';
 
 export const usePlayback = defineStore('playback', () => {
+    const playingStopped = ref({
+        server_id: '',
+        item_id: '',
+    });
 
     async function listen_playback_progress() {
         listen<DownloadStarted>('playback_progress', (event) => {
@@ -19,11 +24,12 @@ export const usePlayback = defineStore('playback', () => {
                 ElMessage.success({
                     message: '播放结束'
                 })
+                playingStopped.value = { server_id: event.payload.server_id, item_id: event.payload.item_id }
             })
         });
     }
     
-    return { listen_playback_progress }
+    return { listen_playback_progress, playingStopped }
 })
 
 export type DownloadStarted = {

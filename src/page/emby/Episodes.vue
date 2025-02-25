@@ -1,7 +1,6 @@
 <template>
     <el-scrollbar style="height: 100vh; padding: 0 20px;">
         <div>
-            <h1>接下来</h1>
             <el-skeleton :loading="playbackInfoLoading" animated>
                 <template #template>
                     <div class="note-item" v-for="i in 3" :key="i">
@@ -37,7 +36,13 @@
                                 <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select></span>
                         </p>
-                        <p><el-button type="primary" @click="playing(currentEpisodes)" :loading="play_loading">播放</el-button></p>
+                        <p v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
+                            <el-button type="primary" :loading="play_loading" @click="playing(currentEpisodes, currentEpisodes.UserData.PlaybackPositionTicks)">继续播放</el-button>
+                            <el-button type="primary" @click="playing(currentEpisodes, 0)" :loading="play_loading">从头播放</el-button>
+                        </p>
+                        <p v-else><el-button type="primary" @click="playing(currentEpisodes, 0)" :loading="play_loading">播放</el-button></p>
+                        <p><el-button type="primary" :loading="play_loading">连播</el-button></p>
+                        <p><el-button type="primary" :loading="play_loading">已播放</el-button></p>
                     </div>
                 </div>
             </el-skeleton>
@@ -48,13 +53,14 @@
                         <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                     </div>
                 </template>
+                <h1>接下来</h1>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <template  v-for="(nextUpItem, index) in nextUpList">
                         <el-card style="width: 300px; margin: 5px;" v-if="index != 0">
                             <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
                             <p>{{ nextUpItem.PremiereDate ? nextUpItem.PremiereDate.substring(0, 10) : '' }}
                                  最大媒体流：{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</p>
-                            <p><el-button type="primary" @click="displayPlayback(nextUpItem)" :loading="playbackInfoLoading">播放信息</el-button></p>
+                            <p><el-button type="primary" @click="gotoEpisodes(nextUpItem.Id)" :loading="playbackInfoLoading">详情</el-button></p>
                         </el-card>
                     </template>
                 </div>
@@ -72,18 +78,47 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo } from '../../api/embyApi';
 import { formatBytes, formatMbps } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import invoke from '../../api/invoke';
 import { useConfig } from '../../store/config';
 import { useRoute, useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { usePlayback } from '../../store/playback';
 
 const router = useRouter()
 const route = useRoute()
 
 let embyServer = useConfig().getEmbyServer(<string>route.params.embyId)!
+    
+const currentEpisodes = ref<EpisodesItems>()
+function updateCurrentEpisodes(silent: boolean = false) {
+    if (!silent) {
+        playbackInfoLoading.value = true
+    }
+    return embyApi.items(embyServer, <string>route.params.episodeId).then(async response => {
+        if (response.status != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status + ' ' + response.statusText
+            })
+            return Promise.reject('response status' + response.status + ' ' + response.statusText)
+        }
+        let json: EpisodesItems = await response.json();
+        currentEpisodes.value = json
+        if (!silent && json.MediaSources) {
+            handleMediaSources(json.MediaSources)
+        }
+        return Promise.resolve(json)
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+        return Promise.reject(e)
+    }).finally(() => playbackInfoLoading.value = false)
+}
+updateCurrentEpisodes()
 
 const versionOptions = ref<{label: string, value: string}[]>([])
 const videoOptions = ref<{label: string, value: number}[]>([])
@@ -94,7 +129,6 @@ const videoSelect = ref(-1)
 const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
 
-const currentEpisodes = ref<EpisodesItems>()
 const playbackInfoLoading = ref(false)
 const playSessionId = ref('')
 const play_loading = ref(false)
@@ -106,12 +140,12 @@ const nextUpPageSize = ref(4)
 const nextUpTotal = ref(0)
 const handleNextUpPageChange = (val: number) => {
     nextUpCurrentPage.value = val
-    nextUp(val, nextUpPageSize.value)
+    nextUp(val)
 }
 
-function nextUp(seriesId: string) {
+function nextUp(pageNumber: number) {
     nextUpLoading.value = true
-    return embyApi.nextUp(embyServer, seriesId, (nextUpCurrentPage.value - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
+    return embyApi.nextUp(embyServer, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
@@ -128,31 +162,13 @@ function nextUp(seriesId: string) {
     }).finally(() => nextUpLoading.value = false)
 }
 
-function displayPlayback(item: EpisodesItems) {
-    currentEpisodes.value = item
-    playSessionId.value = ''
-    if (item.MediaSources && item.MediaSources.length != 0) {
-        handleMediaSources(item.MediaSources)
-    } else {
-        playbackInfoLoading.value = true
-        playbackInfo(item.Id).then((json) => {
-            if (!json) {
-                return
-            }
-            currentEpisodes.value!.MediaSources = json.MediaSources
-            playSessionId.value = json.PlaySessionId
-            handleMediaSources(json.MediaSources)
-        }).finally(() => playbackInfoLoading.value = false)
-    }
-}
-
 function playbackInfo(itemId: string): Promise<PlaybackInfo | undefined> {
     return embyApi.playbackInfo(embyServer, itemId).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
             })
-            return
+            return Promise.reject('response status' + response.status + ' ' + response.statusText)
         }
         let json: PlaybackInfo = await response.json();
         return Promise.resolve(json)
@@ -238,7 +254,7 @@ function playbackVersionChange(val: string) {
     }
 }
 
-async function playing(item: EpisodesItems) {
+async function playing(item: EpisodesItems, playbackPositionTicks: number) {
     play_loading.value = true
     if (!playSessionId.value) {
         let json = await playbackInfo(item.Id)
@@ -261,7 +277,6 @@ async function playing(item: EpisodesItems) {
                 externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer, currentMediaSources, mediaStream)!)
             }
         }
-        let playbackPositionTicks = item.UserData ? item.UserData.PlaybackPositionTicks : 0
         invoke.playback({
             path: directStreamUrl,
             serverId: embyServer!.id!,
@@ -285,6 +300,18 @@ async function playing(item: EpisodesItems) {
             })
         }).finally(() => play_loading.value = false)
     }
+}
+
+const playbackStore = usePlayback()
+watch(playbackStore.playingStopped, (newValue, _oldValue) => {
+    if (embyServer.id === newValue.server_id && newValue.item_id === currentEpisodes.value?.Id) {
+        console.log('stop playing')
+        updateCurrentEpisodes()
+    }
+});
+
+function gotoEpisodes(episodesId: string) {
+    router.push('/emby/' + embyServer.id + '/item?id=' + episodesId)
 }
 </script>
 

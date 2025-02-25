@@ -23,7 +23,7 @@
                         <p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
                         <p><el-progress :percentage="episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                         <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</p>
-                        <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">去播放</el-button></p>
+                        <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">详情</el-button></p>
                     </el-card>
                 </div>
             </el-skeleton>

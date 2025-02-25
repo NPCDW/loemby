@@ -28,7 +28,7 @@
                                 {{ rootItem.ProductionYear }} 最大媒体流：{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)?.Size!) : 0 }}
                             </p>
                             <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
-                            <el-button v-else-if="mpv_config && rootItem.MediaSources && rootItem.UserData" @click="playback(embySearchItem.server, rootItem.Id, maxMediaSources(rootItem.MediaSources)?.Id!, rootItem.UserData.PlaybackPositionTicks)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
+                            <el-button v-else @click="gotoEpisodes(embySearchItem.server.id!, rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
                         </el-card>
                     </div>
                     <div v-else style="text-align: center;">
@@ -79,7 +79,7 @@
                             <div v-for="episodesItem in dialogEpisodesList" class="note-item">
                                 <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
                                 <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</p>
-                                <el-button v-if="mpv_config && episodesItem.MediaSources && episodesItem.UserData" @click="playback(dialogEmbyServer!, episodesItem.Id, maxMediaSources(episodesItem.MediaSources)?.Id!, episodesItem.UserData.PlaybackPositionTicks)" type="success" plain circle><el-icon><i-ep-VideoPlay /></el-icon></el-button>
+                                <el-button @click="gotoEpisodes(dialogEmbyServer!.id!, episodesItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
                             </div>
                         </el-skeleton>
                         <el-pagination
@@ -101,11 +101,13 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { useConfig, EmbyServerConfig } from '../store/config'
-import embyApi, { EmbyPageList, EpisodesItems, PlaybackInfo, SearchItems, SeasonsItems } from '../api/embyApi'
+import embyApi, { EmbyPageList, EpisodesItems, SearchItems, SeasonsItems } from '../api/embyApi'
 import { ElMessage } from 'element-plus'
 import { formatBytes } from '../util/str_util'
 import { maxMediaSources } from '../util/play_info_util'
-import invoke from '../api/invoke'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const search_loading = ref(false)
 const search_str = ref('')
@@ -252,37 +254,9 @@ async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfi
     await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
 }
 
-async function playback(embyServer: EmbyServerConfig, item_id: string, mediaSourceId: string, positionTicks: number) {
-    return embyApi.playbackInfo(embyServer, item_id).then(async response => {
-        if (response.status != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
-            })
-            return
-        }
-        let json: PlaybackInfo = await response.json();
-        let directStreamUrl = embyServer.base_url + maxMediaSources(json.MediaSources)?.DirectStreamUrl!
-        invoke.playback({
-            path: directStreamUrl,
-            serverId: embyServer!.id!,
-            itemId: item_id,
-            mediaSourceId: mediaSourceId,
-            playSessionId:json.PlaySessionId,
-            playbackPositionTicks: positionTicks,
-            aid: 0,
-            sid: 0,
-            externalAudio: [],
-            externalSubtitle: [],
-        }).then(async () => {
-            await embyApi.playing(embyServer!, item_id, mediaSourceId, json.PlaySessionId, positionTicks)
-        }).catch(res => {
-            ElMessage.error({
-                message: res
-            })
-        })
-    })
+function gotoEpisodes(embyId: string, episodesId: string) {
+    router.push('/emby/' + embyId + '/item?id=' + episodesId)
 }
-
 </script>
 
 <style scoped>
