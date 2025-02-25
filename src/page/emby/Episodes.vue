@@ -106,7 +106,6 @@ const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
 
 const playbackInfoLoading = ref(false)
-const playSessionId = ref('')
 const play_loading = ref(false)
 
 const nextUpLoading = ref(false)
@@ -125,19 +124,17 @@ function updateCurrentEpisodes(silent: boolean = false) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
             })
-            return Promise.reject('response status' + response.status + ' ' + response.statusText)
+            return
         }
         let json: EpisodesItems = await response.json();
         currentEpisodes.value = json
         if (!silent && json.MediaSources) {
             handleMediaSources(json.MediaSources)
         }
-        return Promise.resolve(json)
     }).catch(e => {
         ElMessage.error({
             message: e
         })
-        return Promise.reject(e)
     }).finally(() => playbackInfoLoading.value = false)
 }
 updateCurrentEpisodes()
@@ -164,24 +161,6 @@ function nextUp(pageNumber: number) {
             message: e
         })
     }).finally(() => nextUpLoading.value = false)
-}
-
-function playbackInfo(itemId: string): Promise<PlaybackInfo | undefined> {
-    return embyApi.playbackInfo(embyServer, itemId).then(async response => {
-        if (response.status != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
-            })
-            return Promise.reject('response status' + response.status + ' ' + response.statusText)
-        }
-        let json: PlaybackInfo = await response.json();
-        return Promise.resolve(json)
-    }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
-        return Promise.reject(e)
-    })
 }
 
 function handleMediaSources(mediaSources: MediaSources[]) {
@@ -264,59 +243,67 @@ function playbackVersionChange(val: string) {
     }
 }
 
-async function playing(item: EpisodesItems, playbackPositionTicks: number) {
+function playing(item: EpisodesItems, playbackPositionTicks: number) {
     play_loading.value = true
-    if (!playSessionId.value) {
-        let json = await playbackInfo(item.Id)
-        if (!json) {
-            play_loading.value = false
+    return embyApi.playbackInfo(embyServer, item.Id).then(async response => {
+        if (response.status != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status + ' ' + response.statusText
+            })
             return
         }
-        playSessionId.value = json.PlaySessionId
-        currentEpisodes.value!.MediaSources = json.MediaSources
-    }
-    let currentMediaSources = currentEpisodes.value!.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
-    if (currentMediaSources) {
-        let directStreamUrl = embyServer.base_url + currentMediaSources.DirectStreamUrl!
-        let externalAudio = []
-        let externalSubtitle = []
-        for (let mediaStream of currentMediaSources.MediaStreams) {
-            if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
-                externalAudio.push(embyApi.getAudioStreamUrl(embyServer, currentMediaSources, mediaStream)!)
-            } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
-                externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer, currentMediaSources, mediaStream)!)
+        let playbackInfo: PlaybackInfo = await response.json();
+        let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
+        if (currentMediaSources) {
+            let directStreamUrl = embyServer.base_url + currentMediaSources.DirectStreamUrl!
+            let externalAudio = []
+            let externalSubtitle = []
+            for (let mediaStream of currentMediaSources.MediaStreams) {
+                if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
+                    externalAudio.push(embyApi.getAudioStreamUrl(embyServer, currentMediaSources, mediaStream)!)
+                } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
+                    externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer, currentMediaSources, mediaStream)!)
+                }
             }
-        }
-        invoke.playback({
-            path: directStreamUrl,
-            serverId: embyServer!.id!,
-            itemId: item.Id,
-            mediaSourceId: currentMediaSources.Id,
-            playSessionId: playSessionId.value,
-            playbackPositionTicks: playbackPositionTicks,
-            aid: audioSelect.value,
-            sid: subtitleSelect.value,
-            externalAudio: externalAudio,
-            externalSubtitle: externalSubtitle,
-        }).then(async () => {
-            embyApi.playing(embyServer!, item.Id, currentMediaSources.Id, playSessionId.value, playbackPositionTicks).then(() => {
-                ElMessage.success({
-                    message: '开始播放，请稍候'
+            return invoke.playback({
+                path: directStreamUrl,
+                serverId: embyServer!.id!,
+                itemId: item.Id,
+                mediaSourceId: currentMediaSources.Id,
+                playSessionId: playbackInfo.PlaySessionId,
+                playbackPositionTicks: playbackPositionTicks,
+                aid: audioSelect.value,
+                sid: subtitleSelect.value,
+                externalAudio: externalAudio,
+                externalSubtitle: externalSubtitle,
+            }).then(async () => {
+                embyApi.playing(embyServer!, item.Id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
+                    ElMessage.success({
+                        message: '开始播放，请稍候'
+                    })
+                })
+            }).catch(res => {
+                ElMessage.error({
+                    message: res
                 })
             })
-        }).catch(res => {
-            ElMessage.error({
-                message: res
-            })
-        }).finally(() => play_loading.value = false)
-    }
+        }
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => play_loading.value = false)
 }
 
 const playbackStore = usePlayback()
-watch(playbackStore.playingStopped, (newValue, _oldValue) => {
+watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
+    console.log('listen store playingStopped', playbackStore.playingStopped, newValue, _oldValue);
     if (embyServer.id === newValue.server_id && newValue.item_id === currentEpisodes.value?.Id) {
-        console.log('stop playing')
-        updateCurrentEpisodes()
+        updateCurrentEpisodes(true).then(() => {
+            if (currentEpisodes.value?.UserData?.Played) {
+                // playing(currentEpisodes.value!, currentEpisodes.value!.UserData!.PlaybackPositionTicks)
+            }
+        })
     }
 });
 

@@ -25,6 +25,7 @@ export const usePlayback = defineStore('playback', () => {
                     message: '播放结束'
                 })
                 playingStopped.value = { server_id: event.payload.server_id, item_id: event.payload.item_id }
+                console.log('store playingStopped', playingStopped.value);
             })
         });
     }
