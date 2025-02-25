@@ -168,6 +168,7 @@ async function search() {
     Promise.allSettled(promises).then(() => search_loading.value = false);
 }
 async function singleEmbySearch(embyServer: EmbyServerConfig) {
+    embyServer = useConfig().getEmbyServer(embyServer.id!)!
     embyServer.request_status = true
     return embyApi.search(embyServer, search_str.value, 0, 30).then(async response => {
         if (response.status != 200) {

@@ -40,10 +40,10 @@
                             </el-select></span>
                         </p>
                         <p v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                            <el-button type="primary" :loading="play_loading" @click="playing(currentEpisodes, currentEpisodes.UserData.PlaybackPositionTicks)">继续播放</el-button>
-                            <el-button type="primary" @click="playing(currentEpisodes, 0)" :loading="play_loading">从头播放</el-button>
+                            <el-button type="primary" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">继续播放</el-button>
+                            <el-button type="primary" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">从头播放</el-button>
                         </p>
-                        <p v-else><el-button type="primary" @click="playing(currentEpisodes, 0)" :loading="play_loading">播放</el-button></p>
+                        <p v-else><el-button type="primary" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">播放</el-button></p>
                         <p><el-button type="primary" :loading="play_loading">连播</el-button></p>
                         <p><el-button type="primary" :loading="play_loading">已播放</el-button></p>
                     </div>
@@ -81,7 +81,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo } from '../../api/embyApi';
 import { formatBytes, formatMbps } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
@@ -243,9 +243,9 @@ function playbackVersionChange(val: string) {
     }
 }
 
-function playing(item: EpisodesItems, playbackPositionTicks: number) {
+function playing(item_id: string, playbackPositionTicks: number) {
     play_loading.value = true
-    return embyApi.playbackInfo(embyServer, item.Id).then(async response => {
+    return embyApi.playbackInfo(embyServer, item_id).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
@@ -268,7 +268,7 @@ function playing(item: EpisodesItems, playbackPositionTicks: number) {
             return invoke.playback({
                 path: directStreamUrl,
                 serverId: embyServer!.id!,
-                itemId: item.Id,
+                itemId: item_id,
                 mediaSourceId: currentMediaSources.Id,
                 playSessionId: playbackInfo.PlaySessionId,
                 playbackPositionTicks: playbackPositionTicks,
@@ -277,7 +277,7 @@ function playing(item: EpisodesItems, playbackPositionTicks: number) {
                 externalAudio: externalAudio,
                 externalSubtitle: externalSubtitle,
             }).then(async () => {
-                embyApi.playing(embyServer!, item.Id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
+                embyApi.playing(embyServer!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
                     ElMessage.success({
                         message: '开始播放，请稍候'
                     })
@@ -300,12 +300,29 @@ watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
     console.log('listen store playingStopped', playbackStore.playingStopped, newValue, _oldValue);
     if (embyServer.id === newValue.server_id && newValue.item_id === currentEpisodes.value?.Id) {
         updateCurrentEpisodes(true).then(() => {
-            if (currentEpisodes.value?.UserData?.Played) {
-                // playing(currentEpisodes.value!, currentEpisodes.value!.UserData!.PlaybackPositionTicks)
+            if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
+                ElMessage.success({
+                    message: '播放完成，即将播放下一集'
+                })
+                nextUp(nextUpCurrentPage.value).then(() => {
+                    if (nextUpList.value.length > 0) {
+                        router.replace({path: '/nav/emby/' + embyServer.id + '/episodes/' + nextUpList.value[0].Id, query: {autoplay: 'true'}})
+                    }
+                })
             }
         })
     }
 });
+
+watch(() => route.params.episodeId, (_newId, _oldId) => {
+    updateCurrentEpisodes().then(() => {
+        if (route.query.autoplay === 'true') {
+            nextTick(() => {
+                playing(<string>route.params.episodeId, 0)
+            })
+        }
+    })
+})
 
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)

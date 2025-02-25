@@ -38,7 +38,6 @@ declare module 'vue' {
     IEpPlus: typeof import('~icons/ep/plus')['default']
     IEpSearch: typeof import('~icons/ep/search')['default']
     IEpSuccessFilled: typeof import('~icons/ep/success-filled')['default']
-    IEpVideoPlay: typeof import('~icons/ep/video-play')['default']
     IEpWarningFilled: typeof import('~icons/ep/warning-filled')['default']
     NavMenu: typeof import('./src/components/NavMenu.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
