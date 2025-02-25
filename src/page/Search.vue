@@ -255,7 +255,7 @@ async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfi
 }
 
 function gotoEpisodes(embyId: string, episodesId: string) {
-    router.push('/emby/' + embyId + '/item?id=' + episodesId)
+    router.push('/nav/emby/' + embyId + '/episodes/' + episodesId)
 }
 </script>
 

@@ -13,9 +13,12 @@
                 </template>
                 <div v-if="currentEpisodes" style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <div style="width: 100%;padding: 10px;">
-                        <h2>{{ currentEpisodes.SeriesName }}</h2>
-                        <p>{{ 'S' + currentEpisodes.ParentIndexNumber + 'E' + currentEpisodes.IndexNumber + '. ' + currentEpisodes.Name }}</p>
-                        <p><el-progress :percentage="currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
+                        <h2 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h2>
+                        <template v-else>
+                            <h2>{{ currentEpisodes.SeriesName }}</h2>
+                            <p>{{ 'S' + currentEpisodes.ParentIndexNumber + 'E' + currentEpisodes.IndexNumber + '. ' + currentEpisodes.Name }}</p>
+                        </template>
+                        <p><el-progress :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                         <p>
                             版本：
                             <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 850px" :disabled="versionOptions.length <= 1">
@@ -92,7 +95,26 @@ const router = useRouter()
 const route = useRoute()
 
 let embyServer = useConfig().getEmbyServer(<string>route.params.embyId)!
-    
+
+const versionOptions = ref<{label: string, value: string}[]>([])
+const videoOptions = ref<{label: string, value: number}[]>([])
+const audioOptions = ref<{label: string, value: number}[]>([])
+const subtitleOptions = ref<{label: string, value: number}[]>([])
+const versionSelect = ref('')
+const videoSelect = ref(-1)
+const audioSelect = ref(-1)
+const subtitleSelect = ref(-1)
+
+const playbackInfoLoading = ref(false)
+const playSessionId = ref('')
+const play_loading = ref(false)
+
+const nextUpLoading = ref(false)
+const nextUpList = ref<EpisodesItems[]>([])
+const nextUpCurrentPage = ref(1)
+const nextUpPageSize = ref(4)
+const nextUpTotal = ref(0)
+
 const currentEpisodes = ref<EpisodesItems>()
 function updateCurrentEpisodes(silent: boolean = false) {
     if (!silent) {
@@ -120,24 +142,6 @@ function updateCurrentEpisodes(silent: boolean = false) {
 }
 updateCurrentEpisodes()
 
-const versionOptions = ref<{label: string, value: string}[]>([])
-const videoOptions = ref<{label: string, value: number}[]>([])
-const audioOptions = ref<{label: string, value: number}[]>([])
-const subtitleOptions = ref<{label: string, value: number}[]>([])
-const versionSelect = ref('')
-const videoSelect = ref(-1)
-const audioSelect = ref(-1)
-const subtitleSelect = ref(-1)
-
-const playbackInfoLoading = ref(false)
-const playSessionId = ref('')
-const play_loading = ref(false)
-
-const nextUpLoading = ref(false)
-const nextUpList = ref<EpisodesItems[]>([])
-const nextUpCurrentPage = ref(1)
-const nextUpPageSize = ref(4)
-const nextUpTotal = ref(0)
 const handleNextUpPageChange = (val: number) => {
     nextUpCurrentPage.value = val
     nextUp(val)
@@ -251,6 +255,12 @@ function playbackVersionChange(val: string) {
                 }
             }
         }
+        if (audioSelect.value === -1 && audioOptions.value.length > 1) {
+            audioSelect.value = audioOptions.value[1].value
+        }
+        if (subtitleSelect.value === -1 && subtitleOptions.value.length > 1) {
+            subtitleSelect.value = subtitleOptions.value[1].value
+        }
     }
 }
 
@@ -311,7 +321,7 @@ watch(playbackStore.playingStopped, (newValue, _oldValue) => {
 });
 
 function gotoEpisodes(episodesId: string) {
-    router.push('/emby/' + embyServer.id + '/item?id=' + episodesId)
+    router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
 }
 </script>
 

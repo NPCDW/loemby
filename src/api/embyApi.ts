@@ -296,6 +296,7 @@ export interface EpisodesItems {
     IndexNumber: number,
     MediaSources?: MediaSources[],
     SeriesId: string,
+    Type: string,
     UserData?: {
         PlayedPercentage: number,
         PlaybackPositionTicks: number,

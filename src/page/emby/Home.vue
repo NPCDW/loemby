@@ -21,7 +21,7 @@
                     <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList">
                         <h2>{{ episodesItem.SeriesName }}</h2>
                         <p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
-                        <p><el-progress :percentage="episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
+                        <p><el-progress :percentage="episodesItem.UserData?.Played ? 100 : episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                         <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</p>
                         <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">详情</el-button></p>
                     </el-card>
@@ -104,7 +104,7 @@ function continuePlay(currentPage: number, pageSize: number) {
 continuePlay(episodesCurrentPage.value, episodesPageSize.value)
 
 function gotoEpisodes(episodesId: string) {
-    router.push('/emby/' + embyServer.id + '/item?id=' + episodesId)
+    router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
 }
 </script>
 
