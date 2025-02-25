@@ -26,6 +26,7 @@ pub async fn play_video(path: String, server_id: String, item_id: String, media_
     let video_path = path.clone();
     let mut command = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
         .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
+        .arg("--force-window=yes")
         .arg("--save-position-on-quit")
         .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
         .arg(&format!("--start=+{}", playback_position_ticks / 1000_0000))

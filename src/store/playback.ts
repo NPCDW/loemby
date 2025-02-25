@@ -3,6 +3,7 @@ import _ from 'lodash';
 import { defineStore } from 'pinia'
 import embyApi from '../api/embyApi';
 import { useConfig } from './config';
+import { ElMessage } from 'element-plus';
 
 export const usePlayback = defineStore('playback', () => {
 
@@ -14,7 +15,11 @@ export const usePlayback = defineStore('playback', () => {
                 console.error(`Emby服务器Id: ${event.payload.server_id} 不存在`);
                 return
             }
-            embyApi.playingStopped(embyServer, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, event.payload.progress);
+            embyApi.playingStopped(embyServer, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, event.payload.progress).then(() => {
+                ElMessage.success({
+                    message: '播放结束'
+                })
+            })
         });
     }
     

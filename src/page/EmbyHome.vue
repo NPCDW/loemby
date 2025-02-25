@@ -382,6 +382,7 @@ async function playing(item: EpisodesItems) {
     if (!playSessionId.value) {
         let json = await playbackInfo(item.Id)
         if (!json) {
+            play_loading.value = false
             return
         }
         playSessionId.value = json.PlaySessionId
@@ -412,7 +413,11 @@ async function playing(item: EpisodesItems) {
             externalAudio: externalAudio,
             externalSubtitle: externalSubtitle,
         }).then(async () => {
-            await embyApi.playing(embyServer!, item.Id, currentMediaSources.Id, playSessionId.value, playbackPositionTicks)
+            embyApi.playing(embyServer!, item.Id, currentMediaSources.Id, playSessionId.value, playbackPositionTicks).then(() => {
+                ElMessage.success({
+                    message: '开始播放，请稍候'
+                })
+            })
         }).catch(res => {
             ElMessage.error({
                 message: res
