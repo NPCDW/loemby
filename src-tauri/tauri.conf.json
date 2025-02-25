@@ -14,7 +14,8 @@
       {
         "title": "loemby",
         "width": 1200,
-        "height": 800
+        "height": 800,
+        "backgroundColor": "#121212"
       }
     ],
     "security": {
