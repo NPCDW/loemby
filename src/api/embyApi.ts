@@ -163,7 +163,7 @@ async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Items/${item_id}/PlaybackInfo?UserId=${embyServer.user_id}`, {
+    return fetch(embyServer.base_url + `/Items/${item_id}/PlaybackInfo`, {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -171,6 +171,7 @@ async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({
+            "UserId": embyServer.user_id,
             "MaxStreamingBitrate": 1400000000,
             "MaxStaticBitrate": 1400000000,
             "MusicStreamingTranscodingBitrate": 1920000,
@@ -199,12 +200,20 @@ async function playing(embyServer: EmbyServerConfig, item_id: string, media_sour
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Sessions/Playing?ItemId=${item_id}&CanSeek=true&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}&VolumeLevel=100`, {
+    return fetch(embyServer.base_url + `/Sessions/Playing`, {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
+            'Content-Type': 'application/json',
             'X-Emby-Token': embyServer.auth_token,
         },
+        body: JSON.stringify({
+            "ItemId": `${item_id}`,
+            "MediaSourceId": `${media_source_id}`,
+            "PlayMethod": "DirectStream",
+            "PlaySessionId": `${play_session_id}`,
+            "PositionTicks": `${positionTicks}`,
+        })
     });
 }
 
@@ -216,12 +225,20 @@ async function playingStopped(embyServer: EmbyServerConfig, item_id: string, med
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id || !positionTicks) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + `/Sessions/Playing/Stopped?ItemId=${item_id}&CanSeek=true&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}&VolumeLevel=100`, {
+    return fetch(embyServer.base_url + `/Sessions/Playing/Stopped`, {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
+            'Content-Type': 'application/json',
             'X-Emby-Token': embyServer.auth_token,
         },
+        body: JSON.stringify({
+            "ItemId": `${item_id}`,
+            "MediaSourceId": `${media_source_id}`,
+            "PlayMethod": "DirectStream",
+            "PlaySessionId": `${play_session_id}`,
+            "PositionTicks": `${positionTicks}`,
+        })
     });
 }
 

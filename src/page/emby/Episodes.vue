@@ -319,7 +319,6 @@ function playing(item_id: string, playbackPositionTicks: number) {
 
 const playbackStore = usePlayback()
 watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
-    console.log('listen store playingStopped', playbackStore.playingStopped, newValue, _oldValue);
     if (embyServer.id === newValue.server_id && newValue.item_id === currentEpisodes.value?.Id) {
         updateCurrentEpisodes(true).then(() => {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
