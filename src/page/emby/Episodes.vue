@@ -15,7 +15,7 @@
                     <div style="width: 100%;padding: 10px;">
                         <h2 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h2>
                         <template v-else>
-                            <h2><el-link @click="gotoSeries(currentEpisodes.SeriesId)">{{ currentEpisodes.SeriesName }}</el-link></h2>
+                            <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h2>{{ currentEpisodes.SeriesName }}</h2></el-link>
                             <p>{{ 'S' + currentEpisodes.ParentIndexNumber + 'E' + currentEpisodes.IndexNumber + '. ' + currentEpisodes.Name }}</p>
                         </template>
                         <p><el-progress :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>

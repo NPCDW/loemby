@@ -10,9 +10,9 @@
                     <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                 </div>
             </template>
-            <div style="display: flex;" v-if="currentSeries">
-                <img v-if="embyServer" :src="embyServer.base_url + '/Items/' + route.params.serieId + '/Images/Primary'" />
-                <div>
+            <div style="display: flex; padding: 20px;" v-if="currentSeries">
+                <img v-if="embyServer" :src="embyServer.base_url + '/Items/' + route.params.serieId + '/Images/Primary'" style="height: 416px; width: 300px;" />
+                <div style="padding: 20px;">
                     <h1>{{ currentSeries.Name }}</h1>
                     <p>{{ currentSeries.ProductionYear }}</p>
                     <p>{{ currentSeries.Overview }}</p>
@@ -34,9 +34,9 @@
                 </div>
             </div>
         </el-skeleton>
-        <div v-if="episodesList && episodesList.length > 0">
+        <div v-if="episodesList && episodesList.length > 0" style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;">
             <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList">
-                <p><el-link @click="gotoEpisodes(episodesItem.Id)">{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</el-link></p>
+                <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)"><p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p></el-link>
                 <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</p>
             </el-card>
             <el-pagination
@@ -56,9 +56,9 @@
                     <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                 </div>
             </template>
-            <div style="display: flex;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
-                <div v-for="season in seasonsList">
-                    <img v-if="embyServer" :src="embyServer.base_url + '/Items/' + season.Id + '/Images/Primary'" />
+            <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
+                <div v-for="season in seasonsList" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
+                    <img v-if="embyServer" :src="embyServer.base_url + '/Items/' + season.Id + '/Images/Primary'" style="height: 160px; width: 115px;" />
                     <span>{{ season.Name }}</span>
                 </div>
             </div>
@@ -180,10 +180,10 @@ async function getSeasons() {
 
 const episodesList = ref<EpisodesItems[]>([])
 const episodesCurrentPage = ref<number>(1)
-const episodesPageSize = ref<number>(10)
+const episodesPageSize = ref<number>(6)
 const episodesTotal = ref<number>(0)
 async function getEpisodes() {
-    return embyApi.episodes(embyServer, currentSeries.value?.Id!, '', episodesCurrentPage.value, episodesPageSize.value).then(async response => {
+    return embyApi.episodes(embyServer, currentSeries.value?.Id!, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText

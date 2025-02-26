@@ -19,7 +19,7 @@
                 </template>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList">
-                        <h2>{{ episodesItem.SeriesName }}</h2>
+                        <el-link :underline="false" @click="gotoSeries(episodesItem.SeriesId)"><h2>{{ episodesItem.SeriesName }}</h2></el-link>
                         <p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
                         <p><el-progress :percentage="episodesItem.UserData?.Played ? 100 : episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                         <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
@@ -105,6 +105,9 @@ continuePlay(episodesCurrentPage.value, episodesPageSize.value)
 
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
+}
+function gotoSeries(seriesId: string) {
+    router.push('/nav/emby/' + embyServer.id + '/series/' + seriesId)
 }
 </script>
 
