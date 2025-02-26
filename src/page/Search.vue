@@ -29,6 +29,14 @@
                             </p>
                             <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
                             <el-button v-else @click="gotoEpisodes(embySearchItem.server.id!, rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
+                            <el-link type="warning" :underline="false" :disabled="starLoading" v-if="rootItem.UserData" @click="star(embySearchItem.server.id!, rootItem.Id)">
+                                <el-icon color="#E6A23C" :size="24" :loading="starLoading" v-if="rootItem.UserData.IsFavorite"><i-ep-Star /></el-icon>
+                                <el-icon color="#E6A23C" :size="24" :loading="starLoading" v-else><i-ep-StarFilled /></el-icon>
+                            </el-link>
+                            <el-link type="success" :underline="false" :disabled="playedLoading" v-if="rootItem.UserData" @click="played(embySearchItem.server.id!, rootItem.Id)">
+                                <el-icon color="#67C23A" :size="24" :loading="playedLoading" v-if="rootItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                <el-icon color="#67C23A" :size="24" :loading="playedLoading" v-else><i-ep-CircleCheck /></el-icon>
+                            </el-link>
                         </el-card>
                     </div>
                     <div v-else style="text-align: center;">
@@ -192,6 +200,7 @@ async function singleEmbySearch(embyServer: EmbyServerConfig) {
     }).finally(() => embyServer.request_status = false)
 }
 async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
+    embyServer = useConfig().getEmbyServer(embyServer.id!)!
     dialogSeasons.value = undefined
     dialogSeasonsLoading.value = true
     dialogSeasonsList.value = []
@@ -221,6 +230,7 @@ async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
     }).finally(() => dialogSeasonsLoading.value = false)
 }
 async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seasons: SeasonsItems, currentPage: number, pageSize: number) {
+    embyServer = useConfig().getEmbyServer(embyServer.id!)!
     dialogEpisodesLoading.value = true
     dialogEpisodesList.value = []
     dialogEpisodesCurrentPage.value = currentPage
@@ -252,11 +262,48 @@ async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seas
     }).finally(() => dialogEpisodesLoading.value = false)
 }
 async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfig, series_id: string, seasons: SeasonsItems) {
+    embyServer = useConfig().getEmbyServer(embyServer.id!)!
     await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
 }
 
 function gotoEpisodes(embyId: string, episodesId: string) {
     router.push('/nav/emby/' + embyId + '/episodes/' + episodesId)
+}
+
+const starLoading = ref(false)
+function star(embyServerId: string, item_id: string) {
+    let embyServer = useConfig().getEmbyServer(embyServerId)!
+    starLoading.value = true
+    return embyApi.star(embyServer, item_id).then(async response => {
+        if (response.status != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status + ' ' + response.statusText
+            })
+            return
+        }
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => starLoading.value = false)
+}
+
+const playedLoading = ref(false)
+function played(embyServerId: string, item_id: string) {
+    let embyServer = useConfig().getEmbyServer(embyServerId)!
+    playedLoading.value = true
+    return embyApi.played(embyServer, item_id).then(async response => {
+        if (response.status != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status + ' ' + response.statusText
+            })
+            return
+        }
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => playedLoading.value = false)
 }
 </script>
 

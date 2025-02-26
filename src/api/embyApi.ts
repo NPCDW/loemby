@@ -247,8 +247,77 @@ function getSubtitleStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSo
     return embyServer.base_url + `/Videos/${mediaSource.ItemId}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
 }
 
+/**
+ * 收藏
+ * @returns
+ */
+async function star(embyServer: EmbyServerConfig, item_id: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/FavoriteItems/${item_id}`, {
+        method: 'POST',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+    });
+}
+
+/**
+ * 取消收藏
+ * @returns
+ */
+async function unstar(embyServer: EmbyServerConfig, item_id: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/FavoriteItems/${item_id}`, {
+        method: 'DELETE',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+    });
+}
+
+/**
+ * 标记已播放
+ * @returns
+ */
+async function played(embyServer: EmbyServerConfig, item_id: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/PlayedItems/${item_id}`, {
+        method: 'POST',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+    });
+}
+
+/**
+ * 取消已播放
+ * @returns
+ */
+async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
+        return Promise.reject("参数缺失");
+    }
+    return fetch(embyServer.base_url + `/Users/${embyServer.user_id}/PlayedItems/${item_id}`, {
+        method: 'DELETE',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+    });
+}
+
 export default {
-    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingStopped, continuePlay, nextUp, getAudioStreamUrl, getSubtitleStreamUrl,
+    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingStopped, continuePlay, nextUp,
+    getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed,
 }
 
 
