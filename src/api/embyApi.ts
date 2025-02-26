@@ -339,6 +339,7 @@ export interface SearchItems {
 export interface SeasonsItems {
     Name: string,
     Id: string,
+    Overview: string,
     ProductionYear: number,
     IndexNumber: number,
     UserData?: UserData

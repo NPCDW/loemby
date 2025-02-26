@@ -37,7 +37,7 @@
         <div v-if="episodesList && episodesList.length > 0" style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;">
             <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList">
                 <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)"><p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p></el-link>
-                <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</p>
+                <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
             </el-card>
             <el-pagination
                 v-model:current-page="episodesCurrentPage"
@@ -57,13 +57,47 @@
                 </div>
             </template>
             <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
-                <div v-for="season in seasonsList" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
+                <div v-for="season in seasonsList" @click="showSeasons(season)" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
                     <img v-if="embyServer" :src="embyServer.base_url + '/Items/' + season.Id + '/Images/Primary'" style="height: 160px; width: 115px;" />
                     <span>{{ season.Name }}</span>
                 </div>
             </div>
         </el-skeleton>
     </el-scrollbar>
+    
+    <el-dialog
+        v-model="dialogSeasonsVisible"
+        :title="dialogSeasons?.Name"
+        width="800"
+    >
+        <el-scrollbar>
+            <h1>{{ dialogSeasons?.Name }}</h1>
+            <p>{{ dialogSeasons?.Overview }}</p>
+            <el-skeleton :loading="dialogEpisodesLoading" animated>
+                <template #template>
+                    <div class="note-item" v-for="i in 5" :key="i">
+                        <p><el-skeleton-item variant="text" style="width: 50%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                    </div>
+                </template>
+                <div v-for="episodesItem in dialogEpisodesList" class="note-item" style="display: flex;justify-content: space-between; align-items: center;">
+                    <div>
+                        <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
+                        <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
+                    </div>
+                    <el-button @click="gotoEpisodes(episodesItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
+                </div>
+            </el-skeleton>
+            <el-pagination
+                v-model:current-page="dialogEpisodesCurrentPage"
+                v-model:page-size="dialogEpisodesPageSize"
+                layout="total, prev, pager, next, jumper"
+                :total="dialogEpisodesTotal"
+                @current-change="handleDialogEpisodesPageChange"
+                hide-on-single-page
+            />
+        </el-scrollbar>
+    </el-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -72,6 +106,8 @@ import { useConfig } from '../../store/config';
 import { ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, SeasonsItems, UserData } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
+import { formatBytes } from '../../util/str_util'
+import { maxMediaSources } from '../../util/play_info_util'
 
 const router = useRouter()
 const route = useRoute()
@@ -205,6 +241,45 @@ function handleEpisodesPageChange(page: number) {
 }
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
+}
+
+const dialogSeasonsVisible = ref<boolean>(false)
+const dialogSeasons = ref<SeasonsItems>()
+const dialogEpisodesLoading = ref<boolean>(false)
+const dialogEpisodesList = ref<EpisodesItems[]>([])
+const dialogEpisodesCurrentPage = ref<number>(1)
+const dialogEpisodesPageSize = ref<number>(6)
+const dialogEpisodesTotal = ref<number>(0)
+function showSeasons(season: SeasonsItems) {
+    dialogSeasonsVisible.value = true
+    dialogSeasons.value = season
+    dialogEpisodesCurrentPage.value = 1
+    dialogEpisodesPageSize.value = 6
+    dialogEpisodesTotal.value = 0
+    dialogEpisodesList.value = []
+    getDialogEpisodes()
+}
+function getDialogEpisodes() {
+    dialogEpisodesLoading.value = true
+    return embyApi.episodes(embyServer, currentSeries.value?.Id!, dialogSeasons.value?.Id!, (dialogEpisodesCurrentPage.value - 1) * dialogEpisodesPageSize.value, dialogEpisodesPageSize.value).then(async response => {
+        if (response.status != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status + ' ' + response.statusText
+            })
+            return
+        }
+        let json: EmbyPageList<EpisodesItems> = await response.json();
+        dialogEpisodesList.value = json.Items
+        dialogEpisodesTotal.value = json.TotalRecordCount
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => dialogEpisodesLoading.value = false)
+}
+function handleDialogEpisodesPageChange(page: number) {
+    dialogEpisodesCurrentPage.value = page
+    getDialogEpisodes()
 }
 </script>
 
