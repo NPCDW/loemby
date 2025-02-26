@@ -29,11 +29,11 @@
                             </p>
                             <div style="display: flex;justify-content: space-between;">
                                 <span>
-                                    <el-link :underline="false" v-if="rootItem.UserData" @click="star(embySearchItem.server.id!, rootItem)">
+                                    <el-link :underline="false" v-if="rootItem.UserData" :disabled="starLoading[embySearchItem.server.id + rootItem.Id]" @click="star(embySearchItem.server.id!, rootItem)">
                                         <el-icon color="#E6A23C" :size="24" :class="starLoading[embySearchItem.server.id + rootItem.Id] ? 'is-loading' : ''" v-if="rootItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
                                         <el-icon :size="24" :class="starLoading[embySearchItem.server.id + rootItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
                                     </el-link>
-                                    <el-link style="margin-left: 7px;" :underline="false" v-if="rootItem.UserData" @click="played(embySearchItem.server.id!, rootItem)">
+                                    <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[embySearchItem.server.id + rootItem.Id]" v-if="rootItem.UserData" @click="played(embySearchItem.server.id!, rootItem)">
                                         <el-icon color="#67C23A" :size="24" :class="playedLoading[embySearchItem.server.id + rootItem.Id] ? 'is-loading' : ''" v-if="rootItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
                                         <el-icon :size="24" :class="playedLoading[embySearchItem.server.id + rootItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                                     </el-link>

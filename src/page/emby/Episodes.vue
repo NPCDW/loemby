@@ -3,7 +3,7 @@
         <div>
             <el-skeleton :loading="playbackInfoLoading" animated>
                 <template #template>
-                    <div class="note-item" v-for="i in 3" :key="i">
+                    <div class="note-item">
                         <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
                         <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                         <p><el-skeleton-item variant="text" style="width: 30%" /></p>
@@ -44,13 +44,27 @@
                                 <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select></span>
                         </p>
-                        <p v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                            <el-button type="primary" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">继续播放</el-button>
-                            <el-button type="primary" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">从头播放</el-button>
-                        </p>
-                        <p v-else><el-button type="primary" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">播放</el-button></p>
-                        <p><el-button type="primary" :loading="play_loading">连播</el-button></p>
-                        <p><el-button type="primary" :loading="play_loading">已播放</el-button></p>
+                        <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
+                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">继续播放</el-button>
+                            <el-button plain type="success" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">从头播放</el-button>
+                        </template>
+                        <template v-else><el-button plain type="success" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">播放</el-button></template>
+                        <el-button plain>连播</el-button>
+                        <el-button plain :disabled="playedLoading" @click="played()">
+                            <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
+                            <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                            <span>已播放</span>
+                        </el-button>
+                        <el-button plain :disabled="starLoading" @click="star()">
+                            <template v-if="currentEpisodes.UserData?.IsFavorite">
+                                <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
+                                <span>取消收藏</span>
+                            </template>
+                            <template v-else>
+                                <el-icon :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
+                                <span>收藏</span>
+                            </template>
+                        </el-button>
                     </div>
                 </div>
             </el-skeleton>
@@ -61,7 +75,7 @@
                         <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                     </div>
                 </template>
-                <h1>接下来</h1>
+                <h1 v-if="nextUpList && nextUpList.length != 0">接下来</h1>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <template  v-for="(nextUpItem, index) in nextUpList">
                         <el-card style="width: 300px; margin: 5px;" v-if="index != 0">
@@ -87,7 +101,7 @@
 
 <script lang="ts" setup>
 import { nextTick, ref, watch } from 'vue';
-import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import invoke from '../../api/invoke';
@@ -331,6 +345,62 @@ watch(() => route.params.episodeId, (_newId, _oldId) => {
         }
     })
 })
+
+const starLoading = ref<boolean>(false)
+function star() {
+    if (!currentEpisodes.value?.UserData) {
+        return
+    }
+    starLoading.value = true
+    let fun;
+    if (currentEpisodes.value?.UserData.IsFavorite) {
+        fun = embyApi.unstar(embyServer, currentEpisodes.value?.Id)
+    } else {
+        fun = embyApi.star(embyServer, currentEpisodes.value?.Id)
+    }
+    return fun.then(async response => {
+        if (response.status != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status + ' ' + response.statusText
+            })
+            return
+        }
+        let json: UserData = await response.json();
+        currentEpisodes.value!.UserData!.IsFavorite = json.IsFavorite
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => starLoading.value = false)
+}
+
+const playedLoading = ref<boolean>(false)
+function played() {
+    if (!currentEpisodes.value?.UserData) {
+        return
+    }
+    playedLoading.value = true
+    let fun;
+    if (currentEpisodes.value?.UserData.Played) {
+        fun = embyApi.unplayed(embyServer, currentEpisodes.value?.Id)
+    } else {
+        fun = embyApi.played(embyServer, currentEpisodes.value?.Id)
+    }
+    return fun.then(async response => {
+        if (response.status != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status + ' ' + response.statusText
+            })
+            return
+        }
+        let json: UserData = await response.json();
+        currentEpisodes.value!.UserData!.Played = json.Played
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => playedLoading.value = false)
+}
 
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
