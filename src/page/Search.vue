@@ -39,7 +39,10 @@
                                     </el-link>
                                 </span>
                                 <span>
-                                    <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
+                                    <template v-if="rootItem.Type == 'Series'">
+                                        <el-button @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
+                                        <el-button @click="gotoSeries(embySearchItem.server.id!, rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
+                                    </template>
                                     <el-button v-else @click="gotoEpisodes(embySearchItem.server.id!, rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
                                 </span>
                             </div>
@@ -276,6 +279,9 @@ async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfi
 
 function gotoEpisodes(embyId: string, episodesId: string) {
     router.push('/nav/emby/' + embyId + '/episodes/' + episodesId)
+}
+function gotoSeries(embyId: string, seriesId: string) {
+    router.push('/nav/emby/' + embyId + '/series/' + seriesId)
 }
 
 const starLoading = ref<{[key: string]: boolean}>({})

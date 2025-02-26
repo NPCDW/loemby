@@ -143,7 +143,7 @@ async function seasons(embyServer: EmbyServerConfig, item_id: string) {
  * @returns EmbyPageList<EpisodesItems>
  */
 async function episodes(embyServer: EmbyServerConfig, item_id: string, seasonId: string, startIndex: number, limit: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !item_id || !seasonId || startIndex < 0 || !limit) {
+    if (!embyServer.base_url || !embyServer.auth_token || !item_id || startIndex < 0 || !limit) {
         return Promise.reject("参数缺失");
     }
     return fetch(embyServer.base_url + `/Shows/${item_id}/Episodes?StartIndex=${startIndex}&Limit=${limit}&SeasonId=${seasonId}&Fields=AlternateMediaSources,MediaSources&UserId=${embyServer.user_id}`, {
@@ -355,6 +355,8 @@ export interface EpisodesItems {
     SeriesId: string,
     Type: string,
     UserData?: UserData,
+    Overview: string,
+    ProductionYear: string,
 }
 
 export interface PlaybackInfo {
