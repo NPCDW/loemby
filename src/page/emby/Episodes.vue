@@ -22,7 +22,12 @@
                         <p>
                             版本：
                             <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 850px" :disabled="versionOptions.length <= 1">
-                                <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value" />
+                                <template #label="{ label }">
+                                    {{ label.split("$|$")[0] }} <el-tag disable-transitions>{{ label.split("$|$")[1] }}</el-tag> <el-tag disable-transitions>{{ label.split("$|$")[2] }}</el-tag>
+                                </template>
+                                <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value">
+                                    {{ item.label.split("$|$")[0] }} <el-tag disable-transitions>{{ item.label.split("$|$")[1] }}</el-tag> <el-tag disable-transitions>{{ item.label.split("$|$")[2] }}</el-tag>
+                                </el-option>
                             </el-select>
                         </p>
                         <p>
@@ -62,7 +67,7 @@
                         <el-card style="width: 300px; margin: 5px;" v-if="index != 0">
                             <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
                             <p>{{ nextUpItem.PremiereDate ? nextUpItem.PremiereDate.substring(0, 10) : '' }}
-                                 最大媒体流：{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</p>
+                                <el-tag disable-transitions>{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
                             <p><el-button type="primary" @click="gotoEpisodes(nextUpItem.Id)" :loading="playbackInfoLoading">详情</el-button></p>
                         </el-card>
                     </template>
@@ -172,8 +177,8 @@ function handleMediaSources(mediaSources: MediaSources[]) {
     let maxMediaSource = mediaSources[0]
     for (let mediaSource of mediaSources) {
         versionOptions.value.push({
-            label: mediaSource.Name + '    大小: ' + formatBytes(mediaSource.Size) + '     码率: ' + formatMbps(mediaSource.Bitrate) + '',
-            value: mediaSource.Id
+            label: mediaSource.Name + '$|$' + formatBytes(mediaSource.Size) + '$|$' + formatMbps(mediaSource.Bitrate),
+            value: mediaSource.Id,
         })
         if (max < mediaSource.Size) {
             max = mediaSource.Size

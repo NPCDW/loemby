@@ -333,13 +333,7 @@ export interface SearchItems {
     EndDate: string,
     Type: string,
     MediaSources?: MediaSources[],
-    UserData?: {
-        UnplayedItemCount: number,
-        PlaybackPositionTicks: number,
-        PlayCount: number,
-        IsFavorite: number,
-        Played: number,
-    }
+    UserData?: UserData
 }
 
 export interface SeasonsItems {
@@ -347,13 +341,7 @@ export interface SeasonsItems {
     Id: string,
     ProductionYear: number,
     IndexNumber: number,
-    UserData?: {
-        UnplayedItemCount: number,
-        PlaybackPositionTicks: number,
-        PlayCount: number,
-        IsFavorite: number,
-        Played: number,
-    }
+    UserData?: UserData
 }
 
 export interface EpisodesItems {
@@ -366,12 +354,7 @@ export interface EpisodesItems {
     MediaSources?: MediaSources[],
     SeriesId: string,
     Type: string,
-    UserData?: {
-        PlayedPercentage: number,
-        PlaybackPositionTicks: number,
-        IsFavorite: number,
-        Played: number,
-    },
+    UserData?: UserData,
 }
 
 export interface PlaybackInfo {
@@ -402,4 +385,13 @@ export interface MediaStreams {
     Index: number,
     IsDefault: boolean,
     IsExternal: boolean,
+}
+
+export interface UserData {
+    PlayedPercentage: number,
+    UnplayedItemCount: number,
+    PlaybackPositionTicks: number,
+    PlayCount: number,
+    IsFavorite: boolean,
+    Played: boolean,
 }

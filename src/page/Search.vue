@@ -25,18 +25,24 @@
                                 未播放：{{ rootItem.UserData?.UnplayedItemCount }}
                             </p>
                             <p v-else>
-                                {{ rootItem.ProductionYear }} 最大媒体流：{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)?.Size!) : 0 }}
+                                {{ rootItem.ProductionYear }} <el-tag disable-transitions>{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)?.Size!) : 0 }}</el-tag>
                             </p>
-                            <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
-                            <el-button v-else @click="gotoEpisodes(embySearchItem.server.id!, rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
-                            <el-link type="warning" :underline="false" :disabled="starLoading" v-if="rootItem.UserData" @click="star(embySearchItem.server.id!, rootItem.Id)">
-                                <el-icon color="#E6A23C" :size="24" :loading="starLoading" v-if="rootItem.UserData.IsFavorite"><i-ep-Star /></el-icon>
-                                <el-icon color="#E6A23C" :size="24" :loading="starLoading" v-else><i-ep-StarFilled /></el-icon>
-                            </el-link>
-                            <el-link type="success" :underline="false" :disabled="playedLoading" v-if="rootItem.UserData" @click="played(embySearchItem.server.id!, rootItem.Id)">
-                                <el-icon color="#67C23A" :size="24" :loading="playedLoading" v-if="rootItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                <el-icon color="#67C23A" :size="24" :loading="playedLoading" v-else><i-ep-CircleCheck /></el-icon>
-                            </el-link>
+                            <div style="display: flex;justify-content: space-between;">
+                                <span>
+                                    <el-link :underline="false" v-if="rootItem.UserData" @click="star(embySearchItem.server.id!, rootItem)">
+                                        <el-icon color="#E6A23C" :size="24" :class="starLoading[embySearchItem.server.id + rootItem.Id] ? 'is-loading' : ''" v-if="rootItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
+                                        <el-icon :size="24" :class="starLoading[embySearchItem.server.id + rootItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
+                                    </el-link>
+                                    <el-link style="margin-left: 7px;" :underline="false" v-if="rootItem.UserData" @click="played(embySearchItem.server.id!, rootItem)">
+                                        <el-icon color="#67C23A" :size="24" :class="playedLoading[embySearchItem.server.id + rootItem.Id] ? 'is-loading' : ''" v-if="rootItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                        <el-icon :size="24" :class="playedLoading[embySearchItem.server.id + rootItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                                    </el-link>
+                                </span>
+                                <span>
+                                    <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
+                                    <el-button v-else @click="gotoEpisodes(embySearchItem.server.id!, rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
+                                </span>
+                            </div>
                         </el-card>
                     </div>
                     <div v-else style="text-align: center;">
@@ -84,9 +90,11 @@
                                     <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                                 </div>
                             </template>
-                            <div v-for="episodesItem in dialogEpisodesList" class="note-item">
-                                <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
-                                <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} 最大媒体流：{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</p>
+                            <div v-for="episodesItem in dialogEpisodesList" class="note-item" style="display: flex;justify-content: space-between; align-items: center;">
+                                <div>
+                                    <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
+                                    <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
+                                </div>
                                 <el-button @click="gotoEpisodes(dialogEmbyServer!.id!, episodesItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
                             </div>
                         </el-skeleton>
@@ -109,7 +117,7 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { useConfig, EmbyServerConfig } from '../store/config'
-import embyApi, { EmbyPageList, EpisodesItems, SearchItems, SeasonsItems } from '../api/embyApi'
+import embyApi, { EmbyPageList, EpisodesItems, SearchItems, SeasonsItems, UserData } from '../api/embyApi'
 import { ElMessage } from 'element-plus'
 import { formatBytes } from '../util/str_util'
 import { maxMediaSources } from '../util/play_info_util'
@@ -270,40 +278,72 @@ function gotoEpisodes(embyId: string, episodesId: string) {
     router.push('/nav/emby/' + embyId + '/episodes/' + episodesId)
 }
 
-const starLoading = ref(false)
-function star(embyServerId: string, item_id: string) {
+const starLoading = ref<{[key: string]: boolean}>({})
+function star(embyServerId: string, item: SearchItems) {
+    if (!item.UserData) {
+        return
+    }
     let embyServer = useConfig().getEmbyServer(embyServerId)!
-    starLoading.value = true
-    return embyApi.star(embyServer, item_id).then(async response => {
+    starLoading.value[embyServerId + item.Id] = true
+    let fun;
+    if (item.UserData.IsFavorite) {
+        fun = embyApi.unstar(embyServer, item.Id)
+    } else {
+        fun = embyApi.star(embyServer, item.Id)
+    }
+    return fun.then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
             })
             return
         }
+        let json: UserData = await response.json();
+        for (let i = 0; i < emby_search_result.value[embyServer.id!].result!.Items.length; i++) {
+            if (emby_search_result.value[embyServer.id!].result!.Items[i].Id == item.Id) {
+                emby_search_result.value[embyServer.id!].result!.Items[i]!.UserData!.IsFavorite = json.IsFavorite
+                break
+            }
+        }
     }).catch(e => {
         ElMessage.error({
             message: e
         })
-    }).finally(() => starLoading.value = false)
+    }).finally(() => starLoading.value[embyServerId + item.Id] = false)
 }
 
-const playedLoading = ref(false)
-function played(embyServerId: string, item_id: string) {
+const playedLoading = ref<{[key: string]: boolean}>({})
+function played(embyServerId: string, item: SearchItems) {
+    if (!item.UserData) {
+        return
+    }
     let embyServer = useConfig().getEmbyServer(embyServerId)!
-    playedLoading.value = true
-    return embyApi.played(embyServer, item_id).then(async response => {
+    playedLoading.value[embyServerId + item.Id] = true
+    let fun;
+    if (item.UserData.Played) {
+        fun = embyApi.unplayed(embyServer, item.Id)
+    } else {
+        fun = embyApi.played(embyServer, item.Id)
+    }
+    return fun.then(async response => {
         if (response.status != 200) {
             ElMessage.error({
                 message: 'response status' + response.status + ' ' + response.statusText
             })
             return
         }
+        let json: UserData = await response.json();
+        for (let i = 0; i < emby_search_result.value[embyServer.id!].result!.Items.length; i++) {
+            if (emby_search_result.value[embyServer.id!].result!.Items[i].Id == item.Id) {
+                emby_search_result.value[embyServer.id!].result!.Items[i]!.UserData!.Played = json.Played
+                break
+            }
+        }
     }).catch(e => {
         ElMessage.error({
             message: e
         })
-    }).finally(() => playedLoading.value = false)
+    }).finally(() => playedLoading.value[embyServerId + item.Id] = false)
 }
 </script>
 
