@@ -26,7 +26,7 @@
                                     {{ label.split("$|$")[0] }} <el-tag disable-transitions>{{ label.split("$|$")[1] }}</el-tag> <el-tag disable-transitions>{{ label.split("$|$")[2] }}</el-tag>
                                 </template>
                                 <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value">
-                                    {{ item.label.split("$|$")[0] }} <el-tag disable-transitions>{{ item.label.split("$|$")[1] }}</el-tag> <el-tag disable-transitions>{{ item.label.split("$|$")[2] }}</el-tag>
+                                    {{ item.name }} <el-tag disable-transitions>{{ item.size }}</el-tag> <el-tag disable-transitions>{{ item.bitrate }}</el-tag>
                                 </el-option>
                             </el-select>
                         </p>
@@ -101,7 +101,7 @@ const route = useRoute()
 
 let embyServer = useConfig().getEmbyServer(<string>route.params.embyId)!
 
-const versionOptions = ref<{label: string, value: string}[]>([])
+const versionOptions = ref<{label: string, value: string, name: string, size: string, bitrate: string}[]>([])
 const videoOptions = ref<{label: string, value: number}[]>([])
 const audioOptions = ref<{label: string, value: number}[]>([])
 const subtitleOptions = ref<{label: string, value: number}[]>([])
@@ -179,6 +179,9 @@ function handleMediaSources(mediaSources: MediaSources[]) {
         versionOptions.value.push({
             label: mediaSource.Name + '$|$' + formatBytes(mediaSource.Size) + '$|$' + formatMbps(mediaSource.Bitrate),
             value: mediaSource.Id,
+            name: mediaSource.Name,
+            size: formatBytes(mediaSource.Size),
+            bitrate: formatMbps(mediaSource.Bitrate),
         })
         if (max < mediaSource.Size) {
             max = mediaSource.Size
