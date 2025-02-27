@@ -5,6 +5,7 @@ use rust_decimal::prelude::*;
 use serde::Serialize;
 use tauri::Emitter;
 use tauri_plugin_shell::ShellExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::{config::app_state::AppState, controller::invoke_ctl::PlayVideoParam, util::file_util};
 
@@ -23,7 +24,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let video_path = body.path.clone();
     let mut command = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
         .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
-        .arg("--input-ipc-server=\\.\\pipe\\loemby-mpv-socket")
+        .arg(r"--input-ipc-server=\\.\pipe\mpvsocket")
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
         .arg("--save-position-on-quit")
@@ -58,22 +59,28 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     
     let playback_progress_process = tauri::async_runtime::spawn(async move {
         // 连接到命名管道
-        let pipe_name = r"\\.\pipe\loemby-mpv-socket";
-        let mut client;
+        let pipe_name = r"\\.\pipe\mpvsocket";
         let mut retry_count = 0;
-        while retry_count < 10 {
-            client = tokio::net::windows::named_pipe::ClientOptions::new().open(pipe_name);
-            if client.is_err() {
-                tracing::debug!("Failed to connect to mpv IPC, retrying...");
-            } else {
-                tracing::debug!("mpv IPC connected");
+        let client = loop {
+            if retry_count >= 10 {
+                break None;
             }
+            let client = tokio::net::windows::named_pipe::ClientOptions::new().open(pipe_name);
+            if client.is_ok() {
+                tracing::debug!("mpv IPC connected");
+                break Some(client.unwrap());
+            }
+            tracing::debug!("Failed to connect to mpv IPC, retrying...");
             tokio::time::sleep(std::time::Duration::from_secs(10)).await;
             retry_count += 1;
-        }
-        if retry_count >= 10 {
-            return;
-        }
+        };
+        let mut client = match client {
+            Some(client) => client,
+            None => {
+                tracing::error!("Failed to connect to mpv IPC");
+                return;
+            }
+        };
 
         // 发送获取播放进度的命令
         let command = serde_json::json!({
@@ -119,7 +126,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
                         }).unwrap();
                     }
                 });
-            
+                playback_progress_process.abort();
                 break;
             }
         }
