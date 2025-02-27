@@ -6,12 +6,9 @@ use serde::Serialize;
 use tauri::Emitter;
 use tauri_plugin_shell::ShellExt;
 
-use crate::{config::app_state::AppState, util::file_util};
+use crate::{config::app_state::AppState, controller::invoke_ctl::PlayVideoParam, util::file_util};
 
-#[tauri::command]
-pub async fn play_video(path: String, server_id: String, item_id: String, media_source_id: String, playback_position_ticks: u64,
-    play_session_id: String, aid: i32, sid: i32, external_audio: Vec<String>, external_subtitle: Vec<String>,
-    state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = state.app_config.read().await.mpv_path.clone();
     if mpv_path.is_none() {
         return Err("未配置 mpv 播放器路径".to_string());
@@ -23,31 +20,31 @@ pub async fn play_video(path: String, server_id: String, item_id: String, media_
     let mpv_path = PathBuf::from(mpv_path.as_ref().unwrap());
     let mpv_parent_path = mpv_path.parent().unwrap();
 
-    let video_path = path.clone();
+    let video_path = body.path.clone();
     let mut command = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
         .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
         .arg("--save-position-on-quit")
         .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
-        .arg(&format!("--start=+{}", playback_position_ticks / 1000_0000))
+        .arg(&format!("--start=+{}", body.playback_position_ticks / 1000_0000))
         .arg(&video_path);
 
-    for audio in external_audio {
+    for audio in body.external_audio {
         command = command.arg(&format!("--audio-file={}", &audio));
     }
-    for subtitle in external_subtitle {
+    for subtitle in body.external_subtitle {
         command = command.arg(&format!("--sub-file={}", &subtitle));
     }
-    if aid == -1 {
+    if body.aid == -1 {
         command = command.arg(&format!("--aid=no"));
     } else {
-        command = command.arg(&format!("--aid={}", aid));
+        command = command.arg(&format!("--aid={}", body.aid));
     }
-    if sid == -1 {
+    if body.sid == -1 {
         command = command.arg(&format!("--sid=no"));
     } else {
-        command = command.arg(&format!("--sid={}", sid));
+        command = command.arg(&format!("--sid={}", body.sid));
     }
     tracing::debug!("调用MPV: {:?}", &command);
     
@@ -74,10 +71,10 @@ pub async fn play_video(path: String, server_id: String, item_id: String, media_
                         let position = position.round();
                         tracing::debug!("播放进度 {}", position);
                         app_handle.emit("playback_progress", PlaybackProgress {
-                            server_id: &server_id,
-                            item_id: &item_id,
-                            media_source_id: &media_source_id,
-                            play_session_id: &play_session_id,
+                            server_id: &body.server_id,
+                            item_id: &body.item_id,
+                            media_source_id: &body.media_source_id,
+                            play_session_id: &body.play_session_id,
                             progress: position,
                         }).unwrap();
                     }

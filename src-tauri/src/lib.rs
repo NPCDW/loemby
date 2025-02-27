@@ -1,14 +1,12 @@
 use tauri::{async_runtime::RwLock, Manager};
 
+mod controller;
 mod config;
 mod service;
 mod util;
 
-use config::{
-    app_config::{get_config_command, save_config},
-    app_state::AppState,
-};
-use service::player_svc::play_video;
+use controller::invoke_ctl::{get_config, save_config, play_video};
+use config::app_state::AppState;
 
 #[cfg(debug_assertions)]
 fn is_development() -> bool {
@@ -25,7 +23,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![get_config_command, save_config, play_video])
+        .invoke_handler(tauri::generate_handler![get_config, save_config, play_video])
         .setup(|app| {
             let root_dir = app.path().resolve(
                 format!("loemby{}/", if is_development() { "-dev" } else { "" }),

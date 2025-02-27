@@ -4,7 +4,7 @@ use serde_inline_default::serde_inline_default;
 
 use crate::util::file_util;
 use serde::{Deserialize, Serialize};
-use tauri::{Manager, State};
+use tauri::Manager;
 
 use super::app_state::AppState;
 
@@ -53,11 +53,6 @@ pub struct Config {
     pub proxy_server: Vec<ProxyServer>,
 }
 
-#[tauri::command]
-pub async fn get_config_command(state: State<'_, AppState>) -> Result<Config, ()> {
-    Ok(state.app_config.read().await.clone())
-}
-
 const APP_CONFIG_PATH: &'static str = "config/app-config.json";
 const RESOURCES_CONFIG_PATH: &'static str = "resources/config/app-config.default.json";
 
@@ -75,7 +70,6 @@ pub fn get_config(app: &tauri::App, root_dir: &PathBuf) -> anyhow::Result<Config
     anyhow::Ok(serde_json::from_str(&content)?)
 }
 
-#[tauri::command]
 pub async fn save_config(state: tauri::State<'_, AppState>, config: Config) -> Result<(), ()> {
     let config_path = state.root_dir.join(APP_CONFIG_PATH);
     {

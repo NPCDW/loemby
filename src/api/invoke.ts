@@ -2,7 +2,7 @@ import { Config } from "../store/config";
 import { invoke } from '@tauri-apps/api/core';
 
 async function getConfig(): Promise<Config> {
-    return invoke('get_config_command');
+    return invoke('get_config');
 }
 
 async function saveConfig(config: Config) {
@@ -23,7 +23,7 @@ interface InvokePlayback {
 }
 
 async function playback(param: InvokePlayback): Promise<string> {
-    return invoke('play_video', {...param});
+    return invoke('play_video', {body: param});
 }
 
 export default {
