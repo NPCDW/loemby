@@ -23,6 +23,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let video_path = body.path.clone();
     let mut command = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
         .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
+        .arg("--input-ipc-server=\\.\\pipe\\loemby-mpv-socket")
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
         .arg("--save-position-on-quit")
@@ -54,6 +55,45 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     if player.is_err() {
         return Err(player.err().unwrap().to_string());
     }
+    
+    let playback_progress_process = tauri::async_runtime::spawn(async move {
+        // 连接到命名管道
+        let pipe_name = r"\\.\pipe\loemby-mpv-socket";
+        let mut client;
+        let mut retry_count = 0;
+        while retry_count < 10 {
+            client = tokio::net::windows::named_pipe::ClientOptions::new().open(pipe_name);
+            if client.is_err() {
+                tracing::debug!("Failed to connect to mpv IPC, retrying...");
+            } else {
+                tracing::debug!("mpv IPC connected");
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            retry_count += 1;
+        }
+        if retry_count >= 10 {
+            return;
+        }
+
+        // 发送获取播放进度的命令
+        let command = serde_json::json!({
+            "command": ["get_property", "time-pos"]
+        });
+
+        let request = serde_json::to_vec(&command).unwrap();
+        client.write_all(&request).await.expect("Failed to write to pipe");
+
+        // 读取响应
+        let mut buffer = [0u8; 1024];
+        let n = client.read(&mut buffer).await.expect("Failed to read from pipe");
+        let response = String::from_utf8_lossy(&buffer[..n]);
+
+        // 解析响应
+        let json: serde_json::Value = serde_json::from_str(&response).unwrap();
+        let progress = json["data"].as_f64().unwrap_or(0.0);
+
+        tracing::debug!("Current playback position: {} seconds", progress);
+    });
 
     tauri::async_runtime::spawn(async move {
         let (mut rx, mut _child) = player.unwrap();
