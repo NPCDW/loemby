@@ -289,15 +289,15 @@ function playing(item_id: string, playbackPositionTicks: number) {
             }
             return invoke.playback({
                 path: directStreamUrl,
-                serverId: embyServer!.id!,
-                itemId: item_id,
-                mediaSourceId: currentMediaSources.Id,
-                playSessionId: playbackInfo.PlaySessionId,
-                playbackPositionTicks: playbackPositionTicks,
+                server_id: embyServer!.id!,
+                item_id: item_id,
+                media_source_id: currentMediaSources.Id,
+                play_session_id: playbackInfo.PlaySessionId,
+                playback_position_ticks: playbackPositionTicks,
                 aid: audioSelect.value,
                 sid: subtitleSelect.value,
-                externalAudio: externalAudio,
-                externalSubtitle: externalSubtitle,
+                external_audio: externalAudio,
+                external_subtitle: externalSubtitle,
             }).then(async () => {
                 embyApi.playing(embyServer!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
                     ElMessage.success({

@@ -11,15 +11,15 @@ async function saveConfig(config: Config) {
 
 interface InvokePlayback {
     path: string,
-    serverId: string,
-    itemId: string,
-    mediaSourceId: string,
-    playSessionId: string,
-    playbackPositionTicks: number,
+    server_id: string,
+    item_id: string,
+    media_source_id: string,
+    play_session_id: string,
+    playback_position_ticks: number,
     aid: number,
     sid: number,
-    externalAudio: string[],
-    externalSubtitle: string[],
+    external_audio: string[],
+    external_subtitle: string[],
 }
 
 async function playback(param: InvokePlayback): Promise<string> {
