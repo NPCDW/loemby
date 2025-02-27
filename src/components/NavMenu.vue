@@ -215,13 +215,13 @@ async function addEmbyServerAddr() {
     }
     await saveEmbyServer(tmpEmbyServerConfig.value);
     embyApi.getServerInfo(tmpEmbyServerConfig.value).then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: {ServerName: string, Id: string} = await response.json();
+        let json: {ServerName: string, Id: string} = JSON.parse(response.body);
         tmpEmbyServerConfig.value!.server_name = json['ServerName']
         tmpEmbyServerConfig.value!.server_id = json['Id']
         await saveEmbyServer(tmpEmbyServerConfig.value);

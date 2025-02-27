@@ -1,4 +1,4 @@
-import { fetch } from '@tauri-apps/plugin-http';
+import invoke from './invoke';
 import { EmbyServerConfig } from '../store/config';
 
 /**
@@ -8,7 +8,8 @@ async function getServerInfo(embyServer: EmbyServerConfig) {
     if (!embyServer.base_url) {
         return Promise.reject("参数缺失");
     }
-    return fetch(embyServer.base_url + '/System/Info/Public', {
+    return invoke.httpForward({
+        url: embyServer.base_url + '/System/Info/Public',
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,

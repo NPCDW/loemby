@@ -26,6 +26,24 @@ async function playback(param: InvokePlayback): Promise<string> {
     return invoke('play_video', {body: param});
 }
 
+interface HttpForwardParam {
+    method: string,
+    url: string,
+    headers: {[key: string]: string},
+    body?: string,
+}
+
+interface HttpForwardResult {
+    status_code: number,
+    status_text: string,
+    headers: {[key: string]: string},
+    body: string,
+}
+
+async function httpForward(param: HttpForwardParam): Promise<HttpForwardResult> {
+    return invoke('http_forward', {param});
+}
+
 export default {
-    getConfig, saveConfig, playback
+    getConfig, saveConfig, playback, httpForward
 }

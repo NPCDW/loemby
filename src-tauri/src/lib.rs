@@ -5,7 +5,7 @@ mod config;
 mod service;
 mod util;
 
-use controller::invoke_ctl::{get_config, save_config, play_video};
+use controller::invoke_ctl::{get_config, save_config, play_video, http_forward};
 use config::app_state::AppState;
 
 #[cfg(debug_assertions)]
@@ -23,7 +23,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![get_config, save_config, play_video])
+        .invoke_handler(tauri::generate_handler![get_config, save_config, play_video, http_forward])
         .setup(|app| {
             let root_dir = app.path().resolve(
                 format!("loemby{}/", if is_development() { "-dev" } else { "" }),
