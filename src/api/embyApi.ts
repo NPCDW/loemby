@@ -229,6 +229,33 @@ async function playing(embyServer: EmbyServerConfig, item_id: string, media_sour
 }
 
 /**
+ * 播放进度（保活），只要还在播放就需要定时调用播放进度，长时间没有播放进度，服务器会认为已经停止播放
+ * @param positionTicks 播放位置 / 一千万 换算成秒 
+ * @returns 204
+ */
+async function playingProgress(embyServer: EmbyServerConfig, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id) {
+        return Promise.reject("参数缺失");
+    }
+    return invoke.httpForward({
+        url: embyServer.base_url + `/Sessions/Playing/Progress`,
+        method: 'POST',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'Content-Type': 'application/json',
+            'X-Emby-Token': embyServer.auth_token,
+        },
+        body: JSON.stringify({
+            "ItemId": `${item_id}`,
+            "MediaSourceId": `${media_source_id}`,
+            "PlayMethod": "DirectStream",
+            "PlaySessionId": `${play_session_id}`,
+            "PositionTicks": `${positionTicks}`,
+        })
+    });
+}
+
+/**
  * 结束播放
  * @returns 204
  */
@@ -349,7 +376,7 @@ async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
 }
 
 export default {
-    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingStopped, continuePlay, nextUp,
+    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, continuePlay, nextUp,
     getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed,
 }
 
