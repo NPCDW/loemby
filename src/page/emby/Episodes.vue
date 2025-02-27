@@ -329,6 +329,7 @@ watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
         }
         updateCurrentEpisodes(true).then(() => {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
+                // todo 播放完成后，展示窗口，跳到下一集，继承当前音频和字幕选项
                 ElMessage.success({
                     message: '播放完成，即将播放下一集'
                 })
