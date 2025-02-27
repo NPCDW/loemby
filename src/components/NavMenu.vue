@@ -275,10 +275,10 @@ async function reLogin(embyServerConfig: EmbyServerConfig) {
 async function login(embyServerConfig: EmbyServerConfig) {
     await saveEmbyServer(embyServerConfig);
     return embyApi.authenticateByName(embyServerConfig).then(async response => {
-        if (response.status != 200) {
-            return Promise.reject('response status' + response.status + ' ' + response.statusText)
+        if (response.status_code != 200) {
+            return Promise.reject('response status' + response.status_code + ' ' + response.status_text)
         }
-        let json: {User: {Id: string}, AccessToken: string} = await response.json();
+        let json: {User: {Id: string}, AccessToken: string} = JSON.parse(response.body);
         embyServerConfig.auth_token = json['AccessToken']
         embyServerConfig.user_id = json["User"]['Id']
         embyServerConfig.disabled = false

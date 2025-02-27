@@ -86,13 +86,13 @@ function continuePlay(currentPage: number, pageSize: number) {
     episodesCurrentPage.value = currentPage
     episodesPageSize.value = pageSize
     return embyApi.continuePlay(embyServer, (currentPage - 1) * pageSize, pageSize).then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: EmbyPageList<EpisodesItems> = await response.json();
+        let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
     }).catch(e => {

@@ -190,12 +190,12 @@ async function singleEmbySearch(embyServer: EmbyServerConfig) {
     embyServer = useConfig().getEmbyServer(embyServer.id!)!
     embyServer.request_status = true
     return embyApi.search(embyServer, search_str.value, 0, 30).then(async response => {
-        if (response.status != 200) {
-            emby_search_result.value[embyServer.id!] = {server: embyServer, success: false, message: 'response status' + response.status + ' ' + response.statusText}
+        if (response.status_code != 200) {
+            emby_search_result.value[embyServer.id!] = {server: embyServer, success: false, message: 'response status' + response.status_code + ' ' + response.status_text}
             embyServer.request_fail = true
             return
         }
-        let json: EmbyPageList<SearchItems> = await response.json();
+        let json: EmbyPageList<SearchItems> = JSON.parse(response.body);
         emby_search_result.value[embyServer.id!] = {server: embyServer, success: true, result: json}
         if (json.Items.length > 0) {
             embyServerKeys.value.push(embyServer.id!)
@@ -225,13 +225,13 @@ async function getSeasons(embyServer: EmbyServerConfig, series: SearchItems) {
         return
     }
     return embyApi.seasons(embyServer, series.Id).then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: EmbyPageList<SeasonsItems> = await response.json();
+        let json: EmbyPageList<SeasonsItems> = JSON.parse(response.body);
         seasons_result.value[embyServer.id! + '|' + series.Id] = json
         dialogSeasonsList.value = json.Items
     }).catch(e => {
@@ -256,13 +256,13 @@ async function getEpisodes(embyServer: EmbyServerConfig, series_id: string, seas
         return
     }
     return embyApi.episodes(embyServer, series_id, seasons.Id, (currentPage - 1) * pageSize, pageSize).then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: EmbyPageList<EpisodesItems> = await response.json();
+        let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
         episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id].total = json.TotalRecordCount
         episodes_result.value[embyServer.id! + '|' + series_id + '|' + seasons.Id][currentPage]= json.Items
         dialogEpisodesList.value = json.Items
@@ -298,13 +298,13 @@ function star(embyServerId: string, item: SearchItems) {
         fun = embyApi.star(embyServer, item.Id)
     }
     return fun.then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: UserData = await response.json();
+        let json: UserData = JSON.parse(response.body);
         for (let i = 0; i < emby_search_result.value[embyServer.id!].result!.Items.length; i++) {
             if (emby_search_result.value[embyServer.id!].result!.Items[i].Id == item.Id) {
                 emby_search_result.value[embyServer.id!].result!.Items[i]!.UserData!.IsFavorite = json.IsFavorite
@@ -332,13 +332,13 @@ function played(embyServerId: string, item: SearchItems) {
         fun = embyApi.played(embyServer, item.Id)
     }
     return fun.then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: UserData = await response.json();
+        let json: UserData = JSON.parse(response.body);
         for (let i = 0; i < emby_search_result.value[embyServer.id!].result!.Items.length; i++) {
             if (emby_search_result.value[embyServer.id!].result!.Items[i].Id == item.Id) {
                 emby_search_result.value[embyServer.id!].result!.Items[i]!.UserData!.Played = json.Played

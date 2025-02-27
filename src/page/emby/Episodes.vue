@@ -139,13 +139,13 @@ function updateCurrentEpisodes(silent: boolean = false) {
         playbackInfoLoading.value = true
     }
     return embyApi.items(embyServer, <string>route.params.episodeId).then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: EpisodesItems = await response.json();
+        let json: EpisodesItems = JSON.parse(response.body);
         currentEpisodes.value = json
         if (!silent && json.MediaSources) {
             handleMediaSources(json.MediaSources)
@@ -166,13 +166,13 @@ const handleNextUpPageChange = (val: number) => {
 function nextUp(pageNumber: number) {
     nextUpLoading.value = true
     return embyApi.nextUp(embyServer, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: EmbyPageList<EpisodesItems> = await response.json();
+        let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
         nextUpList.value = json.Items
         nextUpTotal.value = json.TotalRecordCount
     }).catch(e => {
@@ -268,13 +268,13 @@ function playbackVersionChange(val: string) {
 function playing(item_id: string, playbackPositionTicks: number) {
     play_loading.value = true
     return embyApi.playbackInfo(embyServer, item_id).then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let playbackInfo: PlaybackInfo = await response.json();
+        let playbackInfo: PlaybackInfo = JSON.parse(response.body);
         let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
         if (currentMediaSources) {
             let directStreamUrl = embyServer.base_url + currentMediaSources.DirectStreamUrl!
@@ -358,13 +358,13 @@ function star() {
         fun = embyApi.star(embyServer, currentEpisodes.value?.Id)
     }
     return fun.then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: UserData = await response.json();
+        let json: UserData = JSON.parse(response.body);
         currentEpisodes.value!.UserData!.IsFavorite = json.IsFavorite
     }).catch(e => {
         ElMessage.error({
@@ -386,13 +386,13 @@ function played() {
         fun = embyApi.played(embyServer, currentEpisodes.value?.Id)
     }
     return fun.then(async response => {
-        if (response.status != 200) {
+        if (response.status_code != 200) {
             ElMessage.error({
-                message: 'response status' + response.status + ' ' + response.statusText
+                message: 'response status' + response.status_code + ' ' + response.status_text
             })
             return
         }
-        let json: UserData = await response.json();
+        let json: UserData = JSON.parse(response.body);
         currentEpisodes.value!.UserData!.Played = json.Played
     }).catch(e => {
         ElMessage.error({
