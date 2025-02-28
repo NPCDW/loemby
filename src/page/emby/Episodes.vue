@@ -265,7 +265,7 @@ function playbackVersionChange(val: string) {
     }
 }
 
-const playingProgressTask = ref<NodeJS.Timeout>()
+// const playingProgressTask = ref<NodeJS.Timeout>()
 function playing(item_id: string, playbackPositionTicks: number) {
     play_loading.value = true
     return embyApi.playbackInfo(embyServer, item_id).then(async response => {
@@ -304,9 +304,9 @@ function playing(item_id: string, playbackPositionTicks: number) {
                     ElMessage.success({
                         message: '开始播放，请稍候'
                     })
-                    playingProgressTask.value = setInterval(() => {
-                        embyApi.playingProgress(embyServer!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks)
-                    }, 30000)
+                    // playingProgressTask.value = setInterval(() => {
+                    //     embyApi.playingProgress(embyServer!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks)
+                    // }, 30000)
                 })
             }).catch(res => {
                 ElMessage.error({
@@ -324,9 +324,9 @@ function playing(item_id: string, playbackPositionTicks: number) {
 const playbackStore = usePlayback()
 watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
     if (embyServer.id === newValue.server_id && newValue.item_id === currentEpisodes.value?.Id) {
-        if (playingProgressTask.value) {
-            clearInterval(playingProgressTask.value)
-        }
+        // if (playingProgressTask.value) {
+        //     clearInterval(playingProgressTask.value)
+        // }
         updateCurrentEpisodes(true).then(() => {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
                 // todo 播放完成后，展示窗口，跳到下一集，继承当前音频和字幕选项

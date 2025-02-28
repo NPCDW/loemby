@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use rust_decimal::prelude::*;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tauri_plugin_shell::ShellExt;
 
@@ -32,11 +32,11 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg(&format!("--start=+{}", body.playback_position_ticks / 1000_0000))
         .arg(&video_path);
 
-    for audio in body.external_audio {
-        command = command.arg(&format!("--audio-file={}", &audio));
+    for audio in &body.external_audio {
+        command = command.arg(&format!("--audio-file={}", audio));
     }
-    for subtitle in body.external_subtitle {
-        command = command.arg(&format!("--sub-file={}", &subtitle));
+    for subtitle in &body.external_subtitle {
+        command = command.arg(&format!("--sub-file={}", subtitle));
     }
     if body.aid == -1 {
         command = command.arg(&format!("--aid=no"));
@@ -57,14 +57,17 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         return Err(player.err().unwrap().to_string());
     }
 
+    let body_clone = body.clone();
+    let app_handle_clone = app_handle.clone();
     let playback_progress_process = tauri::async_runtime::spawn(async move {
-        playback_progress(pipe_name).await;
+        playback_progress(pipe_name, body_clone, app_handle_clone).await;
     });
 
     tauri::async_runtime::spawn(async move {
         let (mut rx, mut _child) = player.unwrap();
         while let Some(event) = rx.recv().await {
             if let tauri_plugin_shell::process::CommandEvent::Terminated(_payload) = event {
+                playback_progress_process.abort();
                 // 读取保存的播放进度
                 let path_md5 = md5::compute(&video_path);
                 let progress_path = format!("{}", &watch_later_dir.join(format!("{:x}", path_md5)).as_os_str().to_str().unwrap());
@@ -75,17 +78,17 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
                     if line.starts_with("start=") {
                         let position = Decimal::from_str(line.split("=").nth(1).unwrap()).unwrap() * Decimal::from_i64(1000_0000).unwrap();
                         let position = position.round();
-                        tracing::debug!("播放进度 {}", position);
+                        tracing::debug!("播放结束进度 {}", position);
                         app_handle.emit("playback_progress", PlaybackProgress {
                             server_id: &body.server_id,
                             item_id: &body.item_id,
                             media_source_id: &body.media_source_id,
                             play_session_id: &body.play_session_id,
                             progress: position,
+                            playback_status: 0,
                         }).unwrap();
                     }
                 });
-                playback_progress_process.abort();
                 break;
             }
         }
@@ -94,7 +97,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     Ok(())
 }
 
-async fn playback_progress(pipe_name: &str) {
+async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: tauri::AppHandle) {
     use tokio as tokio_root;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     #[cfg(windows)]
@@ -117,24 +120,24 @@ async fn playback_progress(pipe_name: &str) {
                 pipe_name.to_fs_name::<GenericFilePath>()
             };
             if name.is_err() {
-                tracing::error!("Failed to convert pipe name to fs name");
+                tracing::debug!("Failed to convert pipe name to fs name");
                 return;
             }
             let name = name.unwrap();
             Stream::connect(name.clone()).await
         };
         if conn.is_ok() {
-            tracing::error!("mpv IPC connected");
+            tracing::debug!("mpv IPC connected");
             break Some(conn.unwrap());
         }
-        tracing::error!("Failed to connect to mpv IPC, retrying...");
+        tracing::debug!("Failed to connect to mpv IPC, retrying...");
         tokio_root::time::sleep(std::time::Duration::from_secs(10)).await;
         retry_count += 1;
     };
     let conn = match conn {
         Some(conn) => conn,
         None => {
-            tracing::error!("Failed to connect to mpv IPC");
+            tracing::debug!("Failed to connect to mpv IPC");
             return;
         }
     };
@@ -142,26 +145,59 @@ async fn playback_progress(pipe_name: &str) {
     let mut recver = BufReader::new(recver);
 
     tokio_root::spawn(async move {
-        let command = r#"{ "command": ["get_property", "playback-time"] }"#.to_string() + "\n";
+        let command = r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n";
         loop {
             let write = sender.write_all(command.as_bytes()).await;
             if write.is_err() {
-                tracing::error!("Failed to write to pipe {:?}", write);
+                tracing::debug!("Failed to write to pipe {:?}", write);
                 break;
             }
-            tokio_root::time::sleep(std::time::Duration::from_secs(10)).await;
+            tokio_root::time::sleep(std::time::Duration::from_secs(30)).await;
         }
     });
 
-    let mut buffer = String::with_capacity(128);
     loop {
+        let mut buffer = String::with_capacity(128);
         let read = recver.read_line(&mut buffer).await;
         if read.is_err() {
-            tracing::error!("Failed to read pipe {:?}", read);
+            tracing::debug!("Failed to read pipe {:?}", read);
             break;
         }
-        tracing::error!("Server answered: {}", buffer.trim());
+        tracing::debug!("mpv-ipc Server answered: {}", buffer.trim());
+        let json = serde_json::from_str::<MpvIpcResponse>(&buffer);
+        if json.is_err() {
+            tracing::error!("解析 mpv-ipc 响应失败 {:?}", json);
+            break;
+        }
+        let json = json.unwrap();
+        if let Some("end-file") = json.event {
+            tracing::debug!("播放结束");
+            break;
+        }
+        if let Some(10023) = json.request_id {
+            let progress = json.data.unwrap_or(0.0);
+            tracing::debug!("播放进度 {}", progress);
+            let position = Decimal::from_f64(progress).unwrap() * Decimal::from_i64(1000_0000).unwrap();
+            let position = position.round();
+            app_handle.emit("playback_progress", PlaybackProgress {
+                server_id: &body.server_id,
+                item_id: &body.item_id,
+                media_source_id: &body.media_source_id,
+                play_session_id: &body.play_session_id,
+                progress: position,
+                playback_status: 1,
+            }).unwrap();
+        }
+        tokio_root::time::sleep(std::time::Duration::from_millis(100)).await;
     }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+struct MpvIpcResponse<'a> {
+    event: Option<&'a str>,
+    data: Option<f64>,
+    request_id: Option<u32>,
+    error: Option<&'a str>,
 }
 
 #[derive(Clone, Serialize)]
@@ -170,5 +206,7 @@ struct PlaybackProgress<'a> {
     item_id: &'a str,
     media_source_id: &'a str,
     play_session_id: &'a str,
-    progress: Decimal
+    progress: Decimal,
+    // 0 停止  1 播放中
+    playback_status: u32,
 }
