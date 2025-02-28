@@ -124,7 +124,7 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
     });
 
     let mut last_save_time = chrono::Local::now();
-    let mut last_record_position = Decimal::from_i64(0).unwrap();
+    let mut last_record_position = Decimal::from_u64(body.playback_position_ticks).unwrap();
     loop {
         let mut buffer = String::with_capacity(128);
         let read = recver.read_line(&mut buffer).await;
