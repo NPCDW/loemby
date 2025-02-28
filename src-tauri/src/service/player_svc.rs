@@ -28,7 +28,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
         .arg("--save-position-on-quit")
-        .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
+        // .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
         .arg(&format!("--start=+{}", body.playback_position_ticks / 1000_0000))
         .arg(&video_path);
 
@@ -59,51 +59,55 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
 
     let body_clone = body.clone();
     let app_handle_clone = app_handle.clone();
-    let playback_progress_process = tauri::async_runtime::spawn(async move {
-        playback_progress(pipe_name, body_clone, app_handle_clone).await;
-    });
-
-    tauri::async_runtime::spawn(async move {
-        let (mut rx, mut _child) = player.unwrap();
-        while let Some(event) = rx.recv().await {
-            if let tauri_plugin_shell::process::CommandEvent::Terminated(_payload) = event {
-                playback_progress_process.abort();
-                // 读取保存的播放进度
-                let path_md5 = md5::compute(&video_path);
-                let progress_path = format!("{}", &watch_later_dir.join(format!("{:x}", path_md5)).as_os_str().to_str().unwrap());
-                let watch_later = std::fs::read_to_string(progress_path).unwrap_or_default();
-                tracing::debug!("播放结束 {:?}", watch_later);
-
-                watch_later.split("\n").for_each(|line| {
-                    if line.starts_with("start=") {
-                        let position = Decimal::from_str(line.split("=").nth(1).unwrap()).unwrap() * Decimal::from_i64(1000_0000).unwrap();
-                        let position = position.round();
-                        tracing::debug!("播放结束进度 {}", position);
-                        app_handle.emit("playback_progress", PlaybackProgress {
-                            server_id: &body.server_id,
-                            item_id: &body.item_id,
-                            media_source_id: &body.media_source_id,
-                            play_session_id: &body.play_session_id,
-                            progress: position,
-                            playback_status: 0,
-                        }).unwrap();
-                    }
-                });
-                break;
-            }
+    let _playback_progress_process = tauri::async_runtime::spawn(async move {
+        let res = playback_progress(pipe_name, body_clone, app_handle_clone).await;
+        if res.is_err() {
+            tracing::error!("播放进度失败: {:?}", res.unwrap_err());
+            save_playback_progress(&body, &app_handle, Decimal::from_u64(body.playback_position_ticks).unwrap(), 0);
         }
     });
+
+    // tauri::async_runtime::spawn(async move {
+    //     let (mut rx, mut _child) = player.unwrap();
+    //     while let Some(event) = rx.recv().await {
+    //         if let tauri_plugin_shell::process::CommandEvent::Terminated(_payload) = event {
+    //             playback_progress_process.abort();
+    //             // 读取保存的播放进度
+    //             let path_md5 = md5::compute(&video_path);
+    //             let progress_path = format!("{}", &watch_later_dir.join(format!("{:x}", path_md5)).as_os_str().to_str().unwrap());
+    //             let watch_later = std::fs::read_to_string(progress_path).unwrap_or_default();
+    //             tracing::debug!("播放结束 {:?}", watch_later);
+
+    //             watch_later.split("\n").for_each(|line| {
+    //                 if line.starts_with("start=") {
+    //                     let position = Decimal::from_str(line.split("=").nth(1).unwrap()).unwrap() * Decimal::from_i64(1000_0000).unwrap();
+    //                     let position = position.round();
+    //                     tracing::debug!("播放结束进度 {}", position);
+    //                     app_handle.emit("playback_progress", PlaybackProgress {
+    //                         server_id: &body.server_id,
+    //                         item_id: &body.item_id,
+    //                         media_source_id: &body.media_source_id,
+    //                         play_session_id: &body.play_session_id,
+    //                         progress: position,
+    //                         playback_status: 0,
+    //                     }).unwrap();
+    //                 }
+    //             });
+    //             break;
+    //         }
+    //     }
+    // });
 
     Ok(())
 }
 
-async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: tauri::AppHandle) {
+async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     use tokio as tokio_root;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     #[cfg(windows)]
     use interprocess::os::windows::named_pipe::{pipe_mode, tokio::*};
     #[cfg(not(windows))]
-    use interprocess::local_socket::{tokio::{prelude::*, Stream}, GenericFilePath, GenericNamespaced};
+    use interprocess::local_socket::{tokio::{prelude::*, Stream}, GenericFilePath};
 
     let mut retry_count = 0;
     let conn = loop {
@@ -114,31 +118,25 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
         let conn = DuplexPipeStream::<pipe_mode::Bytes>::connect_by_path(pipe_name).await;
         #[cfg(not(windows))]
         let conn = {
-            let name = if GenericNamespaced::is_supported() {
-                pipe_name.to_ns_name::<GenericNamespaced>()
-            } else {
-                pipe_name.to_fs_name::<GenericFilePath>()
-            };
+            let name = pipe_name.to_fs_name::<GenericFilePath>();
             if name.is_err() {
-                tracing::debug!("Failed to convert pipe name to fs name");
-                return;
+                return Err(anyhow::anyhow!("MPV IPC Failed to convert pipe name to fs name"));
             }
             let name = name.unwrap();
             Stream::connect(name.clone()).await
         };
         if conn.is_ok() {
-            tracing::debug!("mpv IPC connected");
+            tracing::debug!("MPV IPC connected");
             break Some(conn.unwrap());
         }
-        tracing::debug!("Failed to connect to mpv IPC, retrying...");
-        tokio_root::time::sleep(std::time::Duration::from_secs(10)).await;
+        tracing::debug!("MPV IPC Failed to connect to mpv IPC, retrying...");
+        tokio_root::time::sleep(std::time::Duration::from_millis(500)).await;
         retry_count += 1;
     };
     let conn = match conn {
         Some(conn) => conn,
         None => {
-            tracing::debug!("Failed to connect to mpv IPC");
-            return;
+            return Err(anyhow::anyhow!("MPV IPC Failed to connect to mpv IPC"));
         }
     };
     let (recver, mut sender) = conn.split();
@@ -149,47 +147,59 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
         loop {
             let write = sender.write_all(command.as_bytes()).await;
             if write.is_err() {
-                tracing::debug!("Failed to write to pipe {:?}", write);
+                tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
                 break;
             }
             tokio_root::time::sleep(std::time::Duration::from_secs(30)).await;
         }
     });
 
+    let mut last_save_time = chrono::Local::now();
+    let mut last_record_position = Decimal::from_i64(0).unwrap();
     loop {
         let mut buffer = String::with_capacity(128);
         let read = recver.read_line(&mut buffer).await;
         if read.is_err() {
-            tracing::debug!("Failed to read pipe {:?}", read);
+            tracing::error!("MPV IPC Failed to read pipe {:?}", read);
+            save_playback_progress(&body, &app_handle, last_record_position, 0);
             break;
         }
-        tracing::debug!("mpv-ipc Server answered: {}", buffer.trim());
+        tracing::debug!("MPV IPC Server answered: {}", buffer.trim());
         let json = serde_json::from_str::<MpvIpcResponse>(&buffer);
         if json.is_err() {
             tracing::error!("解析 mpv-ipc 响应失败 {:?}", json);
+            save_playback_progress(&body, &app_handle, last_record_position, 0);
             break;
         }
         let json = json.unwrap();
         if let Some("end-file") = json.event {
-            tracing::debug!("播放结束");
+            tracing::debug!("MPV IPC 播放结束");
+            save_playback_progress(&body, &app_handle, last_record_position, 0);
             break;
         }
         if let Some(10023) = json.request_id {
             let progress = json.data.unwrap_or(0.0);
-            tracing::debug!("播放进度 {}", progress);
-            let position = Decimal::from_f64(progress).unwrap() * Decimal::from_i64(1000_0000).unwrap();
-            let position = position.round();
-            app_handle.emit("playback_progress", PlaybackProgress {
-                server_id: &body.server_id,
-                item_id: &body.item_id,
-                media_source_id: &body.media_source_id,
-                play_session_id: &body.play_session_id,
-                progress: position,
-                playback_status: 1,
-            }).unwrap();
+            tracing::debug!("MPV IPC 播放进度 {}", progress);
+            last_record_position = Decimal::from_f64(progress).unwrap() * Decimal::from_i64(1000_0000).unwrap();
+            last_record_position = last_record_position.round();
+            if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
+                last_save_time = chrono::Local::now();
+                save_playback_progress(&body, &app_handle, last_record_position, 1);
+            }
         }
-        tokio_root::time::sleep(std::time::Duration::from_millis(100)).await;
     }
+    anyhow::Ok(())
+}
+
+fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHandle, last_record_position: Decimal, playback_status: u32) {
+    app_handle.emit("playback_progress", PlaybackProgress {
+        server_id: &body.server_id,
+        item_id: &body.item_id,
+        media_source_id: &body.media_source_id,
+        play_session_id: &body.play_session_id,
+        progress: last_record_position,
+        playback_status: playback_status,
+    }).unwrap();
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
