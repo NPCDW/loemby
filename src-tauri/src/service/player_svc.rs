@@ -163,10 +163,11 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
 }
 
 fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHandle, last_record_position: Decimal, playback_status: u32) {
-    app_handle.webview_windows().values().next()
-        .expect("Sorry, no window found")
-        .set_focus()
-        .expect("Can't Bring Window to Focus");
+    let window = app_handle.webview_windows();
+    let window = window.values().next().expect("Sorry, no window found");
+    window.unminimize().expect("Sorry, no window unminimize");
+    window.show().expect("Sorry, no window show");
+    window.set_focus().expect("Can't Bring Window to Focus");
     app_handle.emit("playback_progress", PlaybackProgress {
         server_id: &body.server_id,
         item_id: &body.item_id,

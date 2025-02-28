@@ -23,10 +23,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            app.webview_windows().values().next()
-                .expect("Sorry, no window found")
-                .set_focus()
-                .expect("Can't Bring Window to Focus");
+            let window = app.webview_windows();
+            let window = window.values().next().expect("Sorry, no window found");
+            window.unminimize().expect("Sorry, no window unminimize");
+            window.show().expect("Sorry, no window show");
+            window.set_focus().expect("Can't Bring Window to Focus");
         }))
         .invoke_handler(tauri::generate_handler![get_config, save_config, play_video, http_forward])
         .setup(|app| {
