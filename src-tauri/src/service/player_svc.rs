@@ -22,7 +22,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let pipe_name = r"\\.\pipe\mpvsocket";
     let pipe_name = format!("{}-{}-{}", &pipe_name, &body.server_id, &body.media_source_id);
     let video_path = body.path.clone();
-    let mut command = tokio::process::Command::new("pwsh");
+    let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap());
     command.current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
         .arg(&format!("--input-ipc-server={}", pipe_name))
         .arg("--terminal=no")  // 不显示控制台输出
@@ -118,7 +118,7 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
                 tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
                 break;
             }
-            tokio_root::time::sleep(std::time::Duration::from_secs(30)).await;
+            tokio_root::time::sleep(std::time::Duration::from_secs(5)).await;
         }
     });
 
