@@ -3,8 +3,7 @@ use std::path::PathBuf;
 use rust_decimal::prelude::*;
 
 use serde::{Deserialize, Serialize};
-use tauri::Emitter;
-use tauri_plugin_shell::ShellExt;
+use tauri::{Emitter, Manager};
 
 use crate::{config::app_state::AppState, controller::invoke_ctl::PlayVideoParam, util::file_util};
 
@@ -21,32 +20,32 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let mpv_parent_path = mpv_path.parent().unwrap();
 
     let pipe_name = r"\\.\pipe\mpvsocket";
+    let pipe_name = format!("{}-{}-{}", &pipe_name, &body.server_id, &body.media_source_id);
     let video_path = body.path.clone();
-    let mut command = app_handle.shell().command(&mpv_path.as_os_str().to_str().unwrap())
-        .current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
+    let mut command = tokio::process::Command::new("pwsh");
+    command.current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
         .arg(&format!("--input-ipc-server={}", pipe_name))
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
         .arg("--save-position-on-quit")
-        // .arg(&format!("--watch-later-directory={}", &watch_later_dir.as_os_str().to_str().unwrap()))
         .arg(&format!("--start=+{}", body.playback_position_ticks / 1000_0000))
         .arg(&video_path);
 
     for audio in &body.external_audio {
-        command = command.arg(&format!("--audio-file={}", audio));
+        command.arg(&format!("--audio-file={}", audio));
     }
     for subtitle in &body.external_subtitle {
-        command = command.arg(&format!("--sub-file={}", subtitle));
+        command.arg(&format!("--sub-file={}", subtitle));
     }
     if body.aid == -1 {
-        command = command.arg(&format!("--aid=no"));
+        command.arg(&format!("--aid=no"));
     } else {
-        command = command.arg(&format!("--aid={}", body.aid));
+        command.arg(&format!("--aid={}", body.aid));
     }
     if body.sid == -1 {
-        command = command.arg(&format!("--sid=no"));
+        command.arg(&format!("--sid=no"));
     } else {
-        command = command.arg(&format!("--sid={}", body.sid));
+        command.arg(&format!("--sid={}", body.sid));
     }
     tracing::debug!("调用MPV: {:?}", &command);
     
@@ -59,44 +58,13 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
 
     let body_clone = body.clone();
     let app_handle_clone = app_handle.clone();
-    let _playback_progress_process = tauri::async_runtime::spawn(async move {
-        let res = playback_progress(pipe_name, body_clone, app_handle_clone).await;
+    tauri::async_runtime::spawn(async move {
+        let res = playback_progress(&pipe_name, body_clone, app_handle_clone).await;
         if res.is_err() {
             tracing::error!("播放进度失败: {:?}", res.unwrap_err());
             save_playback_progress(&body, &app_handle, Decimal::from_u64(body.playback_position_ticks).unwrap(), 0);
         }
     });
-
-    // tauri::async_runtime::spawn(async move {
-    //     let (mut rx, mut _child) = player.unwrap();
-    //     while let Some(event) = rx.recv().await {
-    //         if let tauri_plugin_shell::process::CommandEvent::Terminated(_payload) = event {
-    //             playback_progress_process.abort();
-    //             // 读取保存的播放进度
-    //             let path_md5 = md5::compute(&video_path);
-    //             let progress_path = format!("{}", &watch_later_dir.join(format!("{:x}", path_md5)).as_os_str().to_str().unwrap());
-    //             let watch_later = std::fs::read_to_string(progress_path).unwrap_or_default();
-    //             tracing::debug!("播放结束 {:?}", watch_later);
-
-    //             watch_later.split("\n").for_each(|line| {
-    //                 if line.starts_with("start=") {
-    //                     let position = Decimal::from_str(line.split("=").nth(1).unwrap()).unwrap() * Decimal::from_i64(1000_0000).unwrap();
-    //                     let position = position.round();
-    //                     tracing::debug!("播放结束进度 {}", position);
-    //                     app_handle.emit("playback_progress", PlaybackProgress {
-    //                         server_id: &body.server_id,
-    //                         item_id: &body.item_id,
-    //                         media_source_id: &body.media_source_id,
-    //                         play_session_id: &body.play_session_id,
-    //                         progress: position,
-    //                         playback_status: 0,
-    //                     }).unwrap();
-    //                 }
-    //             });
-    //             break;
-    //         }
-    //     }
-    // });
 
     Ok(())
 }
@@ -192,6 +160,10 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
 }
 
 fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHandle, last_record_position: Decimal, playback_status: u32) {
+    app_handle.webview_windows().values().next()
+        .expect("Sorry, no window found")
+        .set_focus()
+        .expect("Can't Bring Window to Focus");
     app_handle.emit("playback_progress", PlaybackProgress {
         server_id: &body.server_id,
         item_id: &body.item_id,
