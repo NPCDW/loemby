@@ -28,6 +28,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
         .arg("--save-position-on-quit")
+        .arg(&format!("--title={}", &body.title))
         .arg(&format!("--start=+{}", body.playback_position_ticks / 1000_0000))
         .arg(&video_path);
 
@@ -146,13 +147,15 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
             break;
         }
         if let Some(10023) = json.request_id {
-            let progress = json.data.unwrap_or(0.0);
-            tracing::debug!("MPV IPC 播放进度 {}", progress);
-            last_record_position = Decimal::from_f64(progress).unwrap() * Decimal::from_i64(1000_0000).unwrap();
-            last_record_position = last_record_position.round();
-            if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
-                last_save_time = chrono::Local::now();
-                save_playback_progress(&body, &app_handle, last_record_position, 1);
+            let progress = json.data;
+            if let Some(progress) = progress {
+                tracing::debug!("MPV IPC 播放进度 {}", progress);
+                last_record_position = Decimal::from_f64(progress).unwrap() * Decimal::from_i64(1000_0000).unwrap();
+                last_record_position = last_record_position.round();
+                if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
+                    last_save_time = chrono::Local::now();
+                    save_playback_progress(&body, &app_handle, last_record_position, 1);
+                }
             }
         }
     }

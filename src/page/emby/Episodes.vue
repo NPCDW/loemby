@@ -288,8 +288,11 @@ function playing(item_id: string, playbackPositionTicks: number) {
                     externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer, currentMediaSources, mediaStream)!)
                 }
             }
+            let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
+                 : 'S' + currentEpisodes.value?.ParentIndexNumber + 'E' + currentEpisodes.value?.IndexNumber + '. ' + currentEpisodes.value?.Name
             return invoke.playback({
                 path: directStreamUrl,
+                title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.server_name,
                 server_id: embyServer!.id!,
                 item_id: item_id,
                 media_source_id: currentMediaSources.Id,

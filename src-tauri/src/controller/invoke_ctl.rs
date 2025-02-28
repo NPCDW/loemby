@@ -19,6 +19,7 @@ pub async fn save_config(state: tauri::State<'_, AppState>, config: Config) -> R
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlayVideoParam {
     pub path: String,
+    pub title: String,
     pub server_id: String,
     pub item_id: String,
     pub media_source_id: String,

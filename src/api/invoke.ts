@@ -11,6 +11,7 @@ async function saveConfig(config: Config) {
 
 interface InvokePlayback {
     path: string,
+    title: string,
     server_id: string,
     item_id: string,
     media_source_id: string,
