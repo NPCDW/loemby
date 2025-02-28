@@ -57,110 +57,8 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         return Err(player.err().unwrap().to_string());
     }
 
-    #[cfg(windows)]
     let playback_progress_process = tauri::async_runtime::spawn(async move {
-        use tokio as tokio_root;
-        use {
-            interprocess::os::windows::named_pipe::*,
-            std::io::{prelude::*, BufReader},
-        };
-    
-        // Preemptively allocate a sizeable buffer for receiving. This size should be enough and
-        // should be easy to find for the allocator.
-        let mut buffer = String::with_capacity(128);
-    
-        // Create our connection. This will block until the server accepts our connection, but will
-        // fail immediately if the server hasn't even started yet; somewhat similar to how happens
-        // with TCP, where connecting to a port that's not bound to any server will send a "connection
-        // refused" response, but that will take twice the ping, the roundtrip time, to reach the
-        // client.
-        // let conn = DuplexPipeStream::<pipe_mode::Bytes>::connect_by_path(pipe_name)?;
-        // Wrap it into a buffered reader right away so that we could receive a single line out of it.
-        let mut retry_count = 0;
-        let conn = loop {
-            if retry_count >= 10 {
-                break None;
-            }
-            let conn = DuplexPipeStream::<pipe_mode::Bytes>::connect_by_path(pipe_name);
-            if conn.is_ok() {
-                tracing::error!("mpv IPC connected");
-                break Some(conn.unwrap());
-            }
-            tracing::error!("Failed to connect to mpv IPC, retrying...");
-            tokio_root::time::sleep(std::time::Duration::from_secs(10)).await;
-            retry_count += 1;
-        };
-        let conn = match conn {
-            Some(conn) => conn,
-            None => {
-                tracing::error!("Failed to connect to mpv IPC");
-                return;
-            }
-        };
-        let mut conn = BufReader::new(conn);
-    
-        // Send our message into the stream. This will finish either when the whole message has been
-        // sent or if a send operation returns an error. (`.get_mut()` is to get the sender,
-        // `BufReader` doesn't implement a pass-through `Write`.)
-        let command = r#"{ "command": ["get_property", "playback-time"] }"#.to_string() + "\n";
-
-        loop {
-            tracing::error!("mpv IPC request");
-            conn.get_mut().write_all(command.as_bytes()).expect("Failed to write to pipe");
-        
-            tracing::error!("mpv IPC read_line");
-            // We now employ the buffer we allocated prior and receive a single line, interpreting a
-            // newline character as an end-of-file (because local sockets cannot be portably shut down),
-            // verifying validity of UTF-8 on the fly.
-            conn.read_line(&mut buffer).expect("Failed to read from pipe");
-        
-            // Print out the result, getting the newline for free!
-            tracing::error!("Server answered: {buffer}");
-            
-            tokio_root::time::sleep(std::time::Duration::from_secs(10)).await;
-        }
-        // use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        // 连接到命名管道
-        // let mut retry_count = 0;
-        // let client = loop {
-        //     if retry_count >= 10 {
-        //         break None;
-        //     }
-        //     let client = tokio::net::windows::named_pipe::ClientOptions::new().open(pipe_name);
-        //     if client.is_ok() {
-        //         tracing::debug!("mpv IPC connected");
-        //         break Some(client.unwrap());
-        //     }
-        //     tracing::debug!("Failed to connect to mpv IPC, retrying...");
-        //     tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-        //     retry_count += 1;
-        // };
-        // let mut client = match client {
-        //     Some(client) => client,
-        //     None => {
-        //         tracing::error!("Failed to connect to mpv IPC");
-        //         return;
-        //     }
-        // };
-
-        // // 发送获取播放进度的命令
-        // let command = serde_json::json!({
-        //     "command": ["get_property", "time-pos"]
-        // });
-
-        // let request = serde_json::to_vec(&command).unwrap();
-        // client.write_all(&request).await.expect("Failed to write to pipe");
-
-        // // 读取响应
-        // let mut buffer = [0u8; 1024];
-        // let n = client.read(&mut buffer).await.expect("Failed to read from pipe");
-        // let response = String::from_utf8_lossy(&buffer[..n]);
-
-        // // 解析响应
-        // let json: serde_json::Value = serde_json::from_str(&response).unwrap();
-        // let progress = json["data"].as_f64().unwrap_or(0.0);
-
-        // tracing::debug!("Current playback position: {} seconds", progress);
+        playback_progress(pipe_name).await;
     });
 
     tauri::async_runtime::spawn(async move {
@@ -187,7 +85,6 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
                         }).unwrap();
                     }
                 });
-                #[cfg(windows)]
                 playback_progress_process.abort();
                 break;
             }
@@ -195,6 +92,76 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     });
 
     Ok(())
+}
+
+async fn playback_progress(pipe_name: &str) {
+    use tokio as tokio_root;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    #[cfg(windows)]
+    use interprocess::os::windows::named_pipe::{pipe_mode, tokio::*};
+    #[cfg(not(windows))]
+    use interprocess::local_socket::{tokio::{prelude::*, Stream}, GenericFilePath, GenericNamespaced};
+
+    let mut retry_count = 0;
+    let conn = loop {
+        if retry_count >= 10 {
+            break None;
+        }
+        #[cfg(windows)]
+        let conn = DuplexPipeStream::<pipe_mode::Bytes>::connect_by_path(pipe_name).await;
+        #[cfg(not(windows))]
+        let conn = {
+            let name = if GenericNamespaced::is_supported() {
+                pipe_name.to_ns_name::<GenericNamespaced>()
+            } else {
+                pipe_name.to_fs_name::<GenericFilePath>()
+            };
+            if name.is_err() {
+                tracing::error!("Failed to convert pipe name to fs name");
+                return;
+            }
+            let name = name.unwrap();
+            Stream::connect(name.clone()).await
+        };
+        if conn.is_ok() {
+            tracing::error!("mpv IPC connected");
+            break Some(conn.unwrap());
+        }
+        tracing::error!("Failed to connect to mpv IPC, retrying...");
+        tokio_root::time::sleep(std::time::Duration::from_secs(10)).await;
+        retry_count += 1;
+    };
+    let conn = match conn {
+        Some(conn) => conn,
+        None => {
+            tracing::error!("Failed to connect to mpv IPC");
+            return;
+        }
+    };
+    let (recver, mut sender) = conn.split();
+    let mut recver = BufReader::new(recver);
+
+    tokio_root::spawn(async move {
+        let command = r#"{ "command": ["get_property", "playback-time"] }"#.to_string() + "\n";
+        loop {
+            let write = sender.write_all(command.as_bytes()).await;
+            if write.is_err() {
+                tracing::error!("Failed to write to pipe {:?}", write);
+                break;
+            }
+            tokio_root::time::sleep(std::time::Duration::from_secs(10)).await;
+        }
+    });
+
+    let mut buffer = String::with_capacity(128);
+    loop {
+        let read = recver.read_line(&mut buffer).await;
+        if read.is_err() {
+            tracing::error!("Failed to read pipe {:?}", read);
+            break;
+        }
+        tracing::error!("Server answered: {}", buffer.trim());
+    }
 }
 
 #[derive(Clone, Serialize)]
