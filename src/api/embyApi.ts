@@ -9,7 +9,7 @@ async function getServerInfo(embyServer: EmbyServerConfig) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + '/System/Info/Public',
+        url: embyServer.base_url + '/emby/System/Info/Public',
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -25,7 +25,7 @@ async function authenticateByName(embyServer: EmbyServerConfig) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + '/Users/AuthenticateByName',
+        url: embyServer.base_url + '/emby/Users/AuthenticateByName',
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -47,7 +47,7 @@ async function logout(embyServer: EmbyServerConfig) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + '/Sessions/Logout',
+        url: embyServer.base_url + '/emby/Sessions/Logout',
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -65,7 +65,7 @@ async function search(embyServer: EmbyServerConfig, search_str: string, startInd
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Users/${embyServer.user_id}/Items?SearchTerm=${encodeURIComponent(search_str)}&IncludeItemTypes=Movie,Series&Recursive=true&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex=${startIndex}&Limit=${limit}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?SearchTerm=${encodeURIComponent(search_str)}&IncludeItemTypes=Movie,Series&Recursive=true&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex=${startIndex}&Limit=${limit}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -83,7 +83,7 @@ async function continuePlay(embyServer: EmbyServerConfig, startIndex: number, li
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Users/${embyServer.user_id}/Items/Resume?MediaTypes=Video&Recursive=true&Fields=AlternateMediaSources,MediaSources&StartIndex=${startIndex}&Limit=${limit}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/Resume?MediaTypes=Video&Recursive=true&Fields=AlternateMediaSources,MediaSources&StartIndex=${startIndex}&Limit=${limit}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -101,7 +101,7 @@ async function nextUp(embyServer: EmbyServerConfig, seriesId: string, startIndex
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Shows/NextUp?UserId=${embyServer.user_id}&SeriesId=${seriesId}&StartIndex=${startIndex}&Limit=${limit}&Fields=AlternateMediaSources,MediaSources`,
+        url: embyServer.base_url + `/emby/Shows/NextUp?UserId=${embyServer.user_id}&SeriesId=${seriesId}&StartIndex=${startIndex}&Limit=${limit}&Fields=AlternateMediaSources,MediaSources`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -119,7 +119,7 @@ async function items(embyServer: EmbyServerConfig, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Users/${embyServer.user_id}/Items/${item_id}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/${item_id}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -137,7 +137,7 @@ async function seasons(embyServer: EmbyServerConfig, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Shows/${item_id}/Seasons?Fields=ProductionYear&UserId=${embyServer.user_id}`,
+        url: embyServer.base_url + `/emby/Shows/${item_id}/Seasons?Fields=ProductionYear&UserId=${embyServer.user_id}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -155,7 +155,7 @@ async function episodes(embyServer: EmbyServerConfig, item_id: string, seasonId:
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Shows/${item_id}/Episodes?StartIndex=${startIndex}&Limit=${limit}&SeasonId=${seasonId}&Fields=AlternateMediaSources,MediaSources&UserId=${embyServer.user_id}`,
+        url: embyServer.base_url + `/emby/Shows/${item_id}/Episodes?StartIndex=${startIndex}&Limit=${limit}&SeasonId=${seasonId}&Fields=AlternateMediaSources,MediaSources&UserId=${embyServer.user_id}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -173,7 +173,7 @@ async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Items/${item_id}/PlaybackInfo`,
+        url: embyServer.base_url + `/emby/Items/${item_id}/PlaybackInfo`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -211,7 +211,7 @@ async function playing(embyServer: EmbyServerConfig, item_id: string, media_sour
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Sessions/Playing`,
+        url: embyServer.base_url + `/emby/Sessions/Playing`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -238,7 +238,7 @@ async function playingProgress(embyServer: EmbyServerConfig, item_id: string, me
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Sessions/Playing/Progress`,
+        url: embyServer.base_url + `/emby/Sessions/Playing/Progress`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -264,7 +264,7 @@ async function playingStopped(embyServer: EmbyServerConfig, item_id: string, med
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Sessions/Playing/Stopped`,
+        url: embyServer.base_url + `/emby/Sessions/Playing/Stopped`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -289,7 +289,7 @@ function getAudioStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSourc
     if (!mediaStreams.IsExternal) {
         return null;
     }
-    return embyServer.base_url + `/Audio/${mediaSource.ItemId}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
+    return embyServer.base_url + `/emby/Audio/${mediaSource.ItemId}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
 }
 
 /**
@@ -300,7 +300,7 @@ function getSubtitleStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSo
     if (!mediaStreams.IsExternal) {
         return null;
     }
-    return embyServer.base_url + `/Videos/${mediaSource.ItemId}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
+    return embyServer.base_url + `/emby/Videos/${mediaSource.ItemId}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
 }
 
 /**
@@ -312,7 +312,7 @@ async function star(embyServer: EmbyServerConfig, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Users/${embyServer.user_id}/FavoriteItems/${item_id}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/FavoriteItems/${item_id}`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -330,7 +330,7 @@ async function unstar(embyServer: EmbyServerConfig, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Users/${embyServer.user_id}/FavoriteItems/${item_id}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/FavoriteItems/${item_id}`,
         method: 'DELETE',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -348,7 +348,7 @@ async function played(embyServer: EmbyServerConfig, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Users/${embyServer.user_id}/PlayedItems/${item_id}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/PlayedItems/${item_id}`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -366,7 +366,7 @@ async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/Users/${embyServer.user_id}/PlayedItems/${item_id}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/PlayedItems/${item_id}`,
         method: 'DELETE',
         headers: {
             'User-Agent': embyServer.user_agent!,

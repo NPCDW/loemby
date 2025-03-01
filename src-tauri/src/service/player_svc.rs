@@ -27,8 +27,8 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg(&format!("--input-ipc-server={}", pipe_name))
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
-        .arg("--save-position-on-quit")
         .arg(&format!("--title={}", &body.title))
+        .arg(&format!("--force-media-title={}", &body.title))
         .arg(&format!("--start=+{}", body.playback_position_ticks / 1000_0000))
         .arg(&video_path);
 

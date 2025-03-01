@@ -278,7 +278,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
         let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
         if (currentMediaSources) {
-            let directStreamUrl = embyServer.base_url + currentMediaSources.DirectStreamUrl!
+            let directStreamUrl = embyServer.base_url + "/emby" + currentMediaSources.DirectStreamUrl!
             let externalAudio = []
             let externalSubtitle = []
             for (let mediaStream of currentMediaSources.MediaStreams) {
