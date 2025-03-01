@@ -60,7 +60,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let body_clone = body.clone();
     let app_handle_clone = app_handle.clone();
     tauri::async_runtime::spawn(async move {
-        let res = playback_progress(&pipe_name, body_clone, app_handle_clone).await;
+        let res = playback_progress(&pipe_name, &mut player.unwrap(), body_clone, app_handle_clone).await;
         if res.is_err() {
             tracing::error!("播放进度失败: {:?}", res.unwrap_err());
             save_playback_progress(&body, &app_handle, Decimal::from_u64(body.playback_position_ticks).unwrap(), 0);
@@ -70,7 +70,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     Ok(())
 }
 
-async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
+async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, body: PlayVideoParam, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     use tokio as tokio_root;
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     #[cfg(windows)]
@@ -111,7 +111,7 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
     let (recver, mut sender) = conn.split();
     let mut recver = BufReader::new(recver);
 
-    tokio_root::spawn(async move {
+    let send_task = tokio_root::spawn(async move {
         let command = r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n";
         loop {
             let write = sender.write_all(command.as_bytes()).await;
@@ -143,6 +143,8 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
         let json = json.unwrap();
         if let Some("end-file") = json.event {
             tracing::debug!("MPV IPC 播放结束");
+            send_task.abort();
+            let _ = player.kill().await;
             save_playback_progress(&body, &app_handle, last_record_position, 0);
             break;
         }
@@ -163,11 +165,13 @@ async fn playback_progress(pipe_name: &str, body: PlayVideoParam, app_handle: ta
 }
 
 fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHandle, last_record_position: Decimal, playback_status: u32) {
-    let window = app_handle.webview_windows();
-    let window = window.values().next().expect("Sorry, no window found");
-    window.unminimize().expect("Sorry, no window unminimize");
-    window.show().expect("Sorry, no window show");
-    window.set_focus().expect("Can't Bring Window to Focus");
+    if playback_status == 0 {
+        let window = app_handle.webview_windows();
+        let window = window.values().next().expect("Sorry, no window found");
+        window.unminimize().expect("Sorry, no window unminimize");
+        window.show().expect("Sorry, no window show");
+        window.set_focus().expect("Can't Bring Window to Focus");
+    }
     app_handle.emit("playback_progress", PlaybackProgress {
         server_id: &body.server_id,
         item_id: &body.item_id,
