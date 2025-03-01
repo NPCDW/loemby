@@ -30,10 +30,13 @@ pub fn run() {
         }))
         .invoke_handler(tauri::generate_handler![get_config, save_config, play_video, http_forward])
         .setup(|app| {
-            let root_dir = app.path().resolve(
-                format!("loemby{}/", if is_development() { "-dev" } else { "" }),
-                tauri::path::BaseDirectory::AppLocalData,
-            )?;
+            let root_dir = if is_development() {
+                &format!("loemby-{}", std::env::var("TAURI_DEV_MODE").unwrap_or("dev".to_string()))
+            } else {
+                "loemby"
+            };
+            println!("TAURI_DEV_MODE: {:?}, root_dir: {:?}", std::env::var("TAURI_DEV_MODE"), &root_dir);
+            let root_dir = app.path().resolve(root_dir, tauri::path::BaseDirectory::AppLocalData)?;
 
             config::log::init(&root_dir, is_development());
             let config = config::app_config::get_config(app, &root_dir);
@@ -41,7 +44,7 @@ pub fn run() {
                 tracing::error!("{:#?}", config);
                 panic!("{}", config.unwrap_err())
             }
-            tracing::debug!("Read Config: {:#?}", &config);
+            tracing::debug!("Read Config: {:?}", &config);
 
             app.manage(AppState {
                 app_config: RwLock::new(config.unwrap()),
