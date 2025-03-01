@@ -293,6 +293,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
             return invoke.playback({
                 path: directStreamUrl,
                 title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.server_name,
+                user_agent: embyServer!.user_agent!,
                 server_id: embyServer!.id!,
                 item_id: item_id,
                 media_source_id: currentMediaSources.Id,
