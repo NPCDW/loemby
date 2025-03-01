@@ -1,8 +1,8 @@
 <template>
     <div>
-        <el-input v-model="search_str" autofocus @keyup.enter="search" :disabled="search_loading" style="padding: 10px;">
+        <el-input v-model="search_str" autofocus @keyup.enter="search" style="padding: 10px;">
             <template #append>
-                <el-button type="primary" @click="search" :loading="search_loading"><el-icon><i-ep-Search /></el-icon></el-button>
+                <el-button type="primary" @click="search"><el-icon><i-ep-Search /></el-icon></el-button>
             </template>
         </el-input>
     </div>
@@ -65,10 +65,8 @@ watch(() => route.params.id, (newId, _oldId) => {
 })
 
 const search_str = ref('')
-const search_loading = ref(false)
 const search = async () => {
-    search_loading.value = true
-    search_loading.value = false
+    router.push('/nav/emby/' + embyServer.id + '/search?search=' + encodeURIComponent(search_str.value))
 }
 
 const episodesLoading = ref(false)
