@@ -51,8 +51,10 @@ async function logout(embyServer: EmbyServerConfig) {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
+            'Content-Type': 'application/json',
             'X-Emby-Token': embyServer.auth_token,
-        }
+        },
+        body: JSON.stringify({})
     });
 }
 
@@ -282,6 +284,17 @@ async function playingStopped(embyServer: EmbyServerConfig, item_id: string, med
 }
 
 /**
+ * 组装直连视频流地址
+ * @returns
+ */
+function getDirectStreamUrl(embyServer: EmbyServerConfig, directStreamUrl: string) {
+    if (!directStreamUrl) {
+        return null;
+    }
+    return embyServer.base_url + "/emby" + directStreamUrl;
+}
+
+/**
  * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
  * @returns
  */
@@ -316,8 +329,10 @@ async function star(embyServer: EmbyServerConfig, item_id: string) {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
+            'Content-Type': 'application/json',
             'X-Emby-Token': embyServer.auth_token,
         },
+        body: JSON.stringify({})
     });
 }
 
@@ -352,8 +367,10 @@ async function played(embyServer: EmbyServerConfig, item_id: string) {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
+            'Content-Type': 'application/json',
             'X-Emby-Token': embyServer.auth_token,
         },
+        body: JSON.stringify({})
     });
 }
 
@@ -377,7 +394,7 @@ async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
 
 export default {
     getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, continuePlay, nextUp,
-    getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed,
+    getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, 
 }
 
 

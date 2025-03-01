@@ -24,7 +24,7 @@
                                 {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
                                 未播放：{{ rootItem.UserData?.UnplayedItemCount }}
                             </p>
-                            <p v-else>
+                            <p v-else style="display: flex; align-items: center;">
                                 {{ rootItem.ProductionYear }} <el-tag disable-transitions>{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)?.Size!) : 0 }}</el-tag>
                             </p>
                             <div style="display: flex;justify-content: space-between;">

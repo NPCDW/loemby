@@ -17,7 +17,8 @@ pub async fn forward(param: HttpForwardParam) -> anyhow::Result<Response> {
     if let Some(body) = param.body {
         builder = builder.body(body);
     }
+    tracing::debug!("reqwest request {:?}", &builder);
     let response = builder.send().await?;
-    tracing::debug!("put for response {:?}", &response);
+    tracing::debug!("reqwest response {:?}", &response);
     Ok(response)
 }

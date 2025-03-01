@@ -49,7 +49,7 @@
                             <el-button plain type="success" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">从头播放</el-button>
                         </template>
                         <template v-else><el-button plain type="success" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">播放</el-button></template>
-                        <el-button plain>连播</el-button>
+                        <!-- <el-button plain>连播</el-button> -->
                         <el-button plain :disabled="playedLoading" @click="played()">
                             <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
                             <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
@@ -278,7 +278,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
         let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
         if (currentMediaSources) {
-            let directStreamUrl = embyServer.base_url + "/emby" + currentMediaSources.DirectStreamUrl!
+            let directStreamUrl = embyApi.getDirectStreamUrl(embyServer, currentMediaSources.DirectStreamUrl!)!
             let externalAudio = []
             let externalSubtitle = []
             for (let mediaStream of currentMediaSources.MediaStreams) {
