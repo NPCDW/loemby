@@ -1,3 +1,4 @@
+use service::proxy_svc;
 use tauri::{async_runtime::RwLock, Manager};
 
 mod controller;
@@ -46,6 +47,13 @@ pub fn run() {
             }
             tracing::debug!("Read Config: {:?}", &config);
 
+            tokio::spawn(async move {
+                let res = proxy_svc::init_proxy_svc().await;
+                if res.is_err() {
+                    tracing::error!("{:#?}", res);
+                }
+            });
+            
             app.manage(AppState {
                 app_config: RwLock::new(config.unwrap()),
                 app: app.app_handle().clone(),
