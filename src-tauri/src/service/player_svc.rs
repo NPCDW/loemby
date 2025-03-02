@@ -16,11 +16,11 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let mpv_path = PathBuf::from(mpv_path.as_ref().unwrap());
     let mpv_parent_path = mpv_path.parent().unwrap();
 
-    let mut app_state = state.auxm_app_state.write().await.clone().unwrap();
+    let mut app_state = state.auxm_app_state.read().await.clone().unwrap();
 
     let uuid = uuid::Uuid::new_v4().to_string();
-    app_state.path.insert(uuid.clone(), body.path.clone());
-    let video_path = format!("http://127.0.0.1:{}/video/{}", &app_state.port, &uuid);
+    app_state.connect.insert(uuid.clone(), (body.path.clone(), body.proxy.clone()));
+    let video_path = format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid);
 
     let pipe_name = r"\\.\pipe\mpvsocket";
     let pipe_name = format!("{}-{}-{}", &pipe_name, &body.server_id, &body.media_source_id);
@@ -37,13 +37,13 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
 
     for audio in &body.external_audio {
         let uuid = uuid::Uuid::new_v4().to_string();
-        app_state.path.insert(uuid.clone(), audio.clone());
-        command.arg(&format!("--audio-file={}", format!("http://127.0.0.1:{}/video/{}", &app_state.port, &uuid)));
+        app_state.connect.insert(uuid.clone(), (audio.clone(), body.proxy.clone()));
+        command.arg(&format!("--audio-file={}", format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)));
     }
     for subtitle in &body.external_subtitle {
         let uuid = uuid::Uuid::new_v4().to_string();
-        app_state.path.insert(uuid.clone(), subtitle.clone());
-        command.arg(&format!("--sub-file={}", format!("http://127.0.0.1:{}/video/{}", &app_state.port, &uuid)));
+        app_state.connect.insert(uuid.clone(), (subtitle.clone(), body.proxy.clone()));
+        command.arg(&format!("--sub-file={}", format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)));
     }
     if body.aid == -1 {
         command.arg(&format!("--aid=no"));
@@ -56,6 +56,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         command.arg(&format!("--sid={}", body.sid));
     }
     tracing::debug!("调用MPV: {:?}", &command);
+    { *state.auxm_app_state.write().await = Some(app_state); }
     
     let player = command.spawn();
 

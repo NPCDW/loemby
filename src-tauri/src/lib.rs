@@ -52,7 +52,7 @@ pub fn run() {
             let axum_app_state = Arc::new(RwLock::new(None));
 
             let axum_app_state_clone = axum_app_state.clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 let res = proxy_svc::init_proxy_svc(axum_app_state_clone).await;
                 if res.is_err() {
                     tracing::error!("{:#?}", res);
