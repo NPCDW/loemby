@@ -75,11 +75,11 @@
                         <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                     </div>
                 </template>
-                <h1 v-if="nextUpList && nextUpList.length == 1">已经是最后一集了</h1>
+                <h1 v-if="nextUpList && nextUpList.length == 1 && nextUpCurrentPage == 1">已经是最后一集了</h1>
                 <h1 v-if="nextUpList && nextUpList.length > 1">接下来</h1>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <template  v-for="(nextUpItem, index) in nextUpList">
-                        <el-card style="width: 300px; margin: 5px;" v-if="index != 0">
+                        <el-card style="width: 300px; margin: 5px;" v-if="index != 0 || nextUpCurrentPage != 1">
                             <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
                             <p>{{ nextUpItem.PremiereDate ? nextUpItem.PremiereDate.substring(0, 10) : '' }}
                                 <el-tag disable-transitions>{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
@@ -88,14 +88,14 @@
                     </template>
                 </div>
             </el-skeleton>
-            <!-- <el-pagination
+            <el-pagination
                 v-model:current-page="nextUpCurrentPage"
                 v-model:page-size="nextUpPageSize"
                 layout="total, prev, pager, next, jumper"
                 :total="nextUpTotal"
                 @current-change="handleNextUpPageChange"
                 hide-on-single-page
-            /> -->
+            />
         </div>
     </el-scrollbar>
 </template>
@@ -130,7 +130,7 @@ const play_loading = ref(false)
 
 const nextUpLoading = ref(false)
 const nextUpList = ref<EpisodesItems[]>([])
-// const nextUpCurrentPage = ref(1)
+const nextUpCurrentPage = ref(1)
 const nextUpPageSize = ref(7)
 const nextUpTotal = ref(0)
 
@@ -159,10 +159,10 @@ function updateCurrentEpisodes(silent: boolean = false) {
 }
 updateCurrentEpisodes()
 
-// const handleNextUpPageChange = (val: number) => {
-//     nextUpCurrentPage.value = val
-//     nextUp(val)
-// }
+const handleNextUpPageChange = (val: number) => {
+    nextUpCurrentPage.value = val
+    nextUp(val)
+}
 
 function nextUp(pageNumber: number) {
     nextUpLoading.value = true
@@ -339,6 +339,7 @@ watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
                 ElMessage.success({
                     message: '播放完成，即将播放下一集'
                 })
+                nextUpCurrentPage.value = 1
                 nextUp(1).then(() => {
                     if (nextUpList.value.length > 0) {
                         router.replace({path: '/nav/emby/' + embyServer.id + '/episodes/' + nextUpList.value[0].Id, query: {autoplay: 'true'}})

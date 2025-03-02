@@ -42,7 +42,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         Some(proxy_url) => {
             let proxy = reqwest::Proxy::all(proxy_url);
             if proxy.is_err() {
-                tracing::error!("{} 对应的代理链接失败", &id);
+                tracing::error!("{} 对应的代理链接失败 {:?}", &id, proxy);
                 return (
                     axum::http::StatusCode::SERVICE_UNAVAILABLE,
                     axum::http::HeaderMap::new(),
@@ -59,6 +59,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     }
     let client = client.build();
     if client.is_err() {
+        tracing::error!("{} 创建媒体流请求失败 {:?}", &id, client);
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
             axum::http::HeaderMap::new(),
@@ -73,6 +74,14 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         .headers(req_headers)
         .send()
         .await;
+    if res.is_err() {
+        tracing::error!("{} 请求媒体流失败 {:?}", &id, res);
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::empty()
+        ).into_response();
+    }
     let res = res.unwrap();
     (
         res.status(),
