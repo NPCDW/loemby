@@ -40,6 +40,8 @@ chrono = { version = "0.4.38", features = ["serde"] }
 
 md5 = "0.7.0"
 
+uuid = { version = "1.15.1", features = ["v4"] }
+
 rust_decimal = "1.36"
 
 reqwest = { version = "0.12.12", features = ["json", "stream", "socks"] }

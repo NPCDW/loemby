@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use service::proxy_svc;
 use tauri::{async_runtime::RwLock, Manager};
 
@@ -47,17 +49,19 @@ pub fn run() {
             }
             tracing::debug!("Read Config: {:?}", &config);
 
+            let axum_app_state = Arc::new(RwLock::new(None));
+
+            let axum_app_state_clone = axum_app_state.clone();
             tokio::spawn(async move {
-                let res = proxy_svc::init_proxy_svc().await;
+                let res = proxy_svc::init_proxy_svc(axum_app_state_clone).await;
                 if res.is_err() {
                     tracing::error!("{:#?}", res);
                 }
             });
-            
+
             app.manage(AppState {
                 app_config: RwLock::new(config.unwrap()),
-                app: app.app_handle().clone(),
-                debug: is_development(),
+                auxm_app_state: axum_app_state,
                 root_dir
             });
             Ok(())

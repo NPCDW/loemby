@@ -130,7 +130,7 @@ const play_loading = ref(false)
 const nextUpLoading = ref(false)
 const nextUpList = ref<EpisodesItems[]>([])
 const nextUpCurrentPage = ref(1)
-const nextUpPageSize = ref(4)
+const nextUpPageSize = ref(7)
 const nextUpTotal = ref(0)
 
 const currentEpisodes = ref<EpisodesItems>()

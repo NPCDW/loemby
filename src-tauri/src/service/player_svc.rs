@@ -5,7 +5,7 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 
-use crate::{config::app_state::AppState, controller::invoke_ctl::PlayVideoParam, util::file_util};
+use crate::{config::app_state::AppState, controller::invoke_ctl::PlayVideoParam};
 
 pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = state.app_config.read().await.mpv_path.clone();
@@ -13,15 +13,17 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         return Err("未配置 mpv 播放器路径".to_string());
     }
 
-    let watch_later_dir = state.root_dir.join("watch_later");
-    file_util::mkdir(&watch_later_dir).expect("Failed to create watch_later dir");
-
     let mpv_path = PathBuf::from(mpv_path.as_ref().unwrap());
     let mpv_parent_path = mpv_path.parent().unwrap();
 
+    let mut app_state = state.auxm_app_state.write().await.clone().unwrap();
+
+    let uuid = uuid::Uuid::new_v4().to_string();
+    app_state.path.insert(uuid.clone(), body.path.clone());
+    let video_path = format!("http://127.0.0.1:{}/video/{}", &app_state.port, &uuid);
+
     let pipe_name = r"\\.\pipe\mpvsocket";
     let pipe_name = format!("{}-{}-{}", &pipe_name, &body.server_id, &body.media_source_id);
-    let video_path = body.path.clone();
     let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap());
     command.current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
         .arg(&format!("--input-ipc-server={}", pipe_name))
@@ -34,10 +36,14 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg(&video_path);
 
     for audio in &body.external_audio {
-        command.arg(&format!("--audio-file={}", audio));
+        let uuid = uuid::Uuid::new_v4().to_string();
+        app_state.path.insert(uuid.clone(), audio.clone());
+        command.arg(&format!("--audio-file={}", format!("http://127.0.0.1:{}/video/{}", &app_state.port, &uuid)));
     }
     for subtitle in &body.external_subtitle {
-        command.arg(&format!("--sub-file={}", subtitle));
+        let uuid = uuid::Uuid::new_v4().to_string();
+        app_state.path.insert(uuid.clone(), subtitle.clone());
+        command.arg(&format!("--sub-file={}", format!("http://127.0.0.1:{}/video/{}", &app_state.port, &uuid)));
     }
     if body.aid == -1 {
         command.arg(&format!("--aid=no"));
