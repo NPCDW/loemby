@@ -96,7 +96,8 @@ export interface EmbyServerConfig {
     client_version?: string,
     user_agent?: string,
 
-    proxy_id?: string,
+    browse_proxy_id?: string,
+    play_proxy_id?: string,
 
     disabled?: boolean,
     // 前端状态字段
@@ -104,9 +105,15 @@ export interface EmbyServerConfig {
     request_fail?: boolean,
 }
 
+export interface GlobalProxy {
+    browse_proxy_id?: string,
+    play_proxy_id?: string,
+}
+
 export interface Config {
     log_level?: string,
     mpv_path?: string,
     emby_server?: EmbyServerConfig[],
     proxy_server?: ProxyServerConfig[],
+    global_proxy?: GlobalProxy,
 }

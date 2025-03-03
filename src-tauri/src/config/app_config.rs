@@ -39,9 +39,17 @@ pub struct EmbyServer {
     pub client_version: Option<String>,
     pub user_agent: Option<String>,
 
-    pub proxy_id: Option<String>,
+    pub browse_proxy_id: Option<String>,
+    pub play_proxy_id: Option<String>,
 
     pub disabled: bool,
+}
+
+#[serde_inline_default]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GlobalProxy {
+    pub browse_proxy_id: Option<String>,
+    pub play_proxy_id: Option<String>,
 }
 
 #[serde_inline_default]
@@ -52,6 +60,7 @@ pub struct Config {
     pub mpv_path: Option<String>,
     pub emby_server: Vec<EmbyServer>,
     pub proxy_server: Vec<ProxyServer>,
+    pub global_proxy: Option<GlobalProxy>,
 }
 
 const APP_CONFIG_PATH: &'static str = "config/app-config.json";

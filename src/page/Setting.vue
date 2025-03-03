@@ -1,22 +1,51 @@
 <template>
     <div style="padding: 20px;">
-        <h1>代理服务器</h1>
-        <el-table :data="proxyServerTableData" style="width: 100%">
-            <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
-            <el-table-column prop="proxy_type" label="Type" width="80" />
-            <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
-            <el-table-column prop="username" label="Username" width="140" />
-            <el-table-column prop="location" label="Location" show-overflow-tooltip />
-            <el-table-column fixed="right" label="Operations" width="160">
-                <template #header>
-                    <el-button type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
-                </template>
-                <template #default="scope">
-                    <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkProxy(scope.row.id)">检测</el-button>
-                    <el-button plain type="primary" size="small" @click.prevent="editProxy(scope.$index)">编辑</el-button>
-                </template>
-            </el-table-column>
-        </el-table>
+        <div>
+            <h1>代理服务器</h1>
+            <el-table :data="proxyServerTableData" style="width: 100%">
+                <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
+                <el-table-column prop="proxy_type" label="Type" width="80" />
+                <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
+                <el-table-column prop="username" label="Username" width="140" />
+                <el-table-column prop="location" label="Location" show-overflow-tooltip />
+                <el-table-column fixed="right" label="Operations" width="160">
+                    <template #header>
+                        <el-button type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
+                    </template>
+                    <template #default="scope">
+                        <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkProxy(scope.row.id)">检测</el-button>
+                        <el-button plain type="primary" size="small" @click.prevent="editProxy(scope.$index)">编辑</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </div>
+        <div>
+            <h1>Emby服务代理配置</h1>
+            <el-table :data="embyServerTableData" style="width: 100%">
+                <el-table-column prop="server_name" label="Emby" show-overflow-tooltip />
+                <el-table-column label="媒体库浏览">
+                    <template #default="scope">
+                        <el-select v-model="scope.row.browse_proxy_id">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" label="跟随全局代理" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServerTableData" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </template>
+                </el-table-column>
+                <el-table-column label="媒体流播放">
+                    <template #default="scope">
+                        <el-select v-model="scope.row.play_proxy_id">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" label="跟随全局代理" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServerTableData" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <div>
+                <el-button type="primary" @click="saveEmbyProxy()">保存修改</el-button>
+            </div>
+        </div>
     </div>
 
     <el-dialog
@@ -115,6 +144,20 @@ function checkProxy(id: string) {
             message: e + '    可能是代理配置错误，请检查代理配置'
         })
     }).finally(() => checkProxyLoading.value[id] = false);
+}
+
+const embyServerTableData = config.emby_server ? config.emby_server : [];
+const global_browse_proxy_id = config.global_proxy?.browse_proxy_id ? config.global_proxy?.browse_proxy_id : 'no';
+const global_play_proxy_id = config.global_proxy?.play_proxy_id ? config.global_proxy?.play_proxy_id : 'no';
+embyServerTableData.splice(0, 0, {server_name: '全局配置', browse_proxy_id: global_browse_proxy_id, play_proxy_id: global_play_proxy_id});
+function saveEmbyProxy() {
+    const global_proxy = embyServerTableData.shift();
+    config.global_proxy = {
+        browse_proxy_id: global_proxy?.browse_proxy_id,
+        play_proxy_id: global_proxy?.play_proxy_id
+    };
+    config.emby_server = embyServerTableData;
+    useConfig().save_config(config);
 }
 </script>
 
