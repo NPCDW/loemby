@@ -1,20 +1,19 @@
 <template>
-    <div>
+    <div style="padding: 20px;">
         <h1>代理服务器</h1>
         <el-table :data="proxyServerTableData" style="width: 100%">
-            <el-table-column prop="id" label="ID" />
-            <el-table-column prop="name" label="Name" />
-            <el-table-column prop="proxy_type" label="Type" />
-            <el-table-column prop="addr" label="Address" />
-            <el-table-column prop="username" label="Username" />
-            <el-table-column prop="location" label="Location" />
-            <el-table-column fixed="right" label="Operations" min-width="120">
+            <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
+            <el-table-column prop="proxy_type" label="Type" width="80" />
+            <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
+            <el-table-column prop="username" label="Username" width="140" />
+            <el-table-column prop="location" label="Location" show-overflow-tooltip />
+            <el-table-column fixed="right" label="Operations" width="160">
                 <template #header>
                     <el-button type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
                 </template>
                 <template #default="scope">
-                    <el-button link type="success" size="small" @click.prevent="checkProxy(scope.id)">检测</el-button>
-                    <el-button link type="primary" size="small" @click.prevent="editProxy(scope.$index)">编辑</el-button>
+                    <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkProxy(scope.row.id)">检测</el-button>
+                    <el-button plain type="primary" size="small" @click.prevent="editProxy(scope.$index)">编辑</el-button>
                 </template>
             </el-table-column>
         </el-table>
@@ -31,7 +30,6 @@
                     <el-input v-model="dialogProxyServer.name" placeholder="代理名称" />
                 </el-form-item>
                 <el-form-item label="代理类型">
-                    <el-input v-model="dialogProxyServer.proxy_type" placeholder="服务器地址" />
                     <el-select v-model="dialogProxyServer.proxy_type">
                         <el-option key="socks5" label="socks5" value="socks5"/>
                         <el-option key="socks" label="socks4" value="socks"/>
@@ -40,7 +38,7 @@
                     </el-select>
                 </el-form-item>
                 <el-form-item label="服务器地址">
-                    <el-input v-model="dialogProxyServer.addr" placeholder="服务器地址" />
+                    <el-input v-model="dialogProxyServer.addr" placeholder="服务器地址（ ip:port ）" />
                 </el-form-item>
                 <el-form-item label="用户名">
                     <el-input v-model="dialogProxyServer.username" placeholder="用户名（可选）" />
@@ -96,9 +94,9 @@ function saveProxyServer() {
     ElMessage.success('保存成功');
 }
 
-const checkProxyLoading = ref<boolean>(false);
+const checkProxyLoading = ref<{[key: string]: boolean}>({});
 function checkProxy(id: string) {
-    checkProxyLoading.value = true;
+    checkProxyLoading.value[id] = true;
     appApi.getProxyLocation(id).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error({
@@ -114,9 +112,9 @@ function checkProxy(id: string) {
         }
     }).catch(e => {
         ElMessage.error({
-            message: e
+            message: e + '    可能是代理配置错误，请检查代理配置'
         })
-    }).finally(() => checkProxyLoading.value = false);
+    }).finally(() => checkProxyLoading.value[id] = false);
 }
 </script>
 
