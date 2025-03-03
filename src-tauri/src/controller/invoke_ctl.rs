@@ -80,6 +80,6 @@ pub struct LoadImageParam {
 }
 
 #[tauri::command]
-pub async fn load_image(body: LoadImageParam, reader: tauri::ipc::Channel<&[u8]>) -> Result<(), String> {
+pub async fn load_image(body: LoadImageParam, reader: tauri::ipc::Channel<&[u8]>) {
     http_forward::load_image(body, reader).await
 }

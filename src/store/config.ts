@@ -49,12 +49,35 @@ export const useConfig = defineStore('config', () => {
         }
     }
 
-    function getProxyUrl(id?: string) {
-        if (!id || id == 'no' || !config.value.proxy_server) {
+    function getBrowseProxyUrl(id?: string) {
+        if (id == 'no' || !config.value.proxy_server) {
             return
         }
-        if (id == 'follow') {
-            return getProxyUrl(config.value.global_proxy?.browse_proxy_id)
+        if (!id || id == 'follow') {
+            if (config.value.global_proxy && config.value.global_proxy.browse_proxy_id) {
+                return getBrowseProxyUrl(config.value.global_proxy.browse_proxy_id)
+            }
+            return
+        }
+        return getProxyUrl(id)
+    }
+
+    function getPlayProxyUrl(id?: string) {
+        if (id == 'no' || !config.value.proxy_server) {
+            return
+        }
+        if (!id || id == 'follow') {
+            if (config.value.global_proxy && config.value.global_proxy.play_proxy_id) {
+                return getProxyUrl(config.value.global_proxy.play_proxy_id)
+            }
+            return
+        }
+        return getProxyUrl(id)
+    }
+
+    function getProxyUrl(id: string) {
+        if (!config.value.proxy_server) {
+            return
         }
         for (let index = 0; index < config.value.proxy_server.length; index++) {
             if (config.value.proxy_server[index].id === id) {
@@ -67,7 +90,7 @@ export const useConfig = defineStore('config', () => {
         }
     }
 
-    return { get_config, sync_config, save_config, getEmbyServer, saveEmbyServer, delEmbyServer, getProxyUrl }
+    return { get_config, sync_config, save_config, getEmbyServer, saveEmbyServer, delEmbyServer, getBrowseProxyUrl, getPlayProxyUrl, getProxyUrl }
 })
 
 export interface ProxyServerConfig {

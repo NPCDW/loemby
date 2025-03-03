@@ -293,7 +293,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
                  : 'S' + currentEpisodes.value?.ParentIndexNumber + 'E' + currentEpisodes.value?.IndexNumber + '. ' + currentEpisodes.value?.Name
             return invoke.playback({
                 path: directStreamUrl,
-                proxy: useConfig().getProxyUrl(embyServer!.play_proxy_id),
+                proxy: useConfig().getPlayProxyUrl(embyServer!.play_proxy_id),
                 title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.server_name,
                 user_agent: embyServer!.user_agent!,
                 server_id: embyServer!.id!,
