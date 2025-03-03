@@ -43,6 +43,7 @@ declare module 'vue' {
     IEpLoading: typeof import('~icons/ep/loading')['default']
     IEpPlus: typeof import('~icons/ep/plus')['default']
     IEpSearch: typeof import('~icons/ep/search')['default']
+    IEpSetting: typeof import('~icons/ep/setting')['default']
     IEpStar: typeof import('~icons/ep/star')['default']
     IEpStarFilled: typeof import('~icons/ep/star-filled')['default']
     IEpSuccessFilled: typeof import('~icons/ep/success-filled')['default']

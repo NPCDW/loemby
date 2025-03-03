@@ -1,6 +1,6 @@
 <template>
-    <div style="padding: 20px;">
-        <div>
+    <el-scrollbar style="height: 100vh;">
+        <div style="padding: 20px;">
             <h1>代理服务器</h1>
             <el-table :data="proxyServerTableData" style="width: 100%">
                 <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
@@ -18,12 +18,22 @@
                     </template>
                 </el-table-column>
             </el-table>
-        </div>
-        <div>
+            
             <h1>Emby服务代理配置</h1>
             <el-table :data="embyServerTableData" style="width: 100%">
                 <el-table-column prop="server_name" label="Emby" show-overflow-tooltip />
                 <el-table-column label="媒体库浏览">
+                    <template #header="">
+                        <span>媒体库浏览</span><br/>
+                        <el-select v-model="global_browse_proxy_id">
+                            <template #label="{ label }">
+                                <span>全局配置: </span>
+                                <span style="font-weight: bold">{{ label }}</span>
+                            </template>
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServerTableData" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </template>
                     <template #default="scope">
                         <el-select v-model="scope.row.browse_proxy_id">
                             <el-option key="no" label="不使用代理" value="no"/>
@@ -33,6 +43,17 @@
                     </template>
                 </el-table-column>
                 <el-table-column label="媒体流播放">
+                    <template #header="">
+                        <span>媒体流播放</span><br/>
+                        <el-select v-model="global_play_proxy_id">
+                            <template #label="{ label }">
+                                <span>全局配置: </span>
+                                <span style="font-weight: bold">{{ label }}</span>
+                            </template>
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServerTableData" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </template>
                     <template #default="scope">
                         <el-select v-model="scope.row.play_proxy_id">
                             <el-option key="no" label="不使用代理" value="no"/>
@@ -46,7 +67,7 @@
                 <el-button type="primary" @click="saveEmbyProxy()">保存修改</el-button>
             </div>
         </div>
-    </div>
+    </el-scrollbar>
 
     <el-dialog
         v-model="dialogProxyServerVisible"
@@ -147,17 +168,24 @@ function checkProxy(id: string) {
 }
 
 const embyServerTableData = config.emby_server ? config.emby_server : [];
-const global_browse_proxy_id = config.global_proxy?.browse_proxy_id ? config.global_proxy?.browse_proxy_id : 'no';
-const global_play_proxy_id = config.global_proxy?.play_proxy_id ? config.global_proxy?.play_proxy_id : 'no';
-embyServerTableData.splice(0, 0, {server_name: '全局配置', browse_proxy_id: global_browse_proxy_id, play_proxy_id: global_play_proxy_id});
+for(let embyServer of embyServerTableData) {
+    if (!embyServer.play_proxy_id) {
+        embyServer.play_proxy_id = 'follow'
+    }
+    if (!embyServer.browse_proxy_id) {
+        embyServer.browse_proxy_id = 'follow'
+    }
+}
+const global_browse_proxy_id = ref(config.global_proxy?.browse_proxy_id ? config.global_proxy?.browse_proxy_id : 'no');
+const global_play_proxy_id = ref(config.global_proxy?.play_proxy_id ? config.global_proxy?.play_proxy_id : 'no');
 function saveEmbyProxy() {
-    const global_proxy = embyServerTableData.shift();
     config.global_proxy = {
-        browse_proxy_id: global_proxy?.browse_proxy_id,
-        play_proxy_id: global_proxy?.play_proxy_id
+        browse_proxy_id: global_browse_proxy_id.value,
+        play_proxy_id: global_play_proxy_id.value,
     };
     config.emby_server = embyServerTableData;
     useConfig().save_config(config);
+    ElMessage.success('保存成功');
 }
 </script>
 
