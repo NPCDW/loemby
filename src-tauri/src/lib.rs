@@ -8,7 +8,7 @@ mod config;
 mod service;
 mod util;
 
-use controller::invoke_ctl::{get_config, save_config, play_video, http_forward};
+use controller::invoke_ctl::{get_config, save_config, play_video, http_forward, load_image};
 use config::app_state::AppState;
 
 #[cfg(debug_assertions)]
@@ -31,7 +31,7 @@ pub fn run() {
             window.show().expect("Sorry, no window show");
             window.set_focus().expect("Can't Bring Window to Focus");
         }))
-        .invoke_handler(tauri::generate_handler![get_config, save_config, play_video, http_forward])
+        .invoke_handler(tauri::generate_handler![get_config, save_config, play_video, http_forward, load_image])
         .setup(|app| {
             let root_dir = if is_development() {
                 &format!("loemby-{}", std::env::var("TAURI_DEV_MODE").unwrap_or("dev".to_string()))

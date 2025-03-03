@@ -48,6 +48,16 @@ async function httpForward(param: HttpForwardParam): Promise<HttpForwardResult> 
     return invoke('http_forward', {param});
 }
 
+interface LoadImageParam {
+    image_url: String,
+    proxy_url?: String,
+    user_agent: String,
+}
+
+async function loadImage(param: LoadImageParam): Promise<string> {
+    return invoke('load_image', {body: param});
+}
+
 export default {
-    getConfig, saveConfig, playback, httpForward
+    getConfig, saveConfig, playback, httpForward, loadImage
 }

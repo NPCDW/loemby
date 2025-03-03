@@ -38,7 +38,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     let connect = connect.unwrap();
 
     let mut client = reqwest::Client::builder();
-    if let Some(proxy_url) = connect.1.clone() {
+    if let Some(proxy_url) = connect.proxy_url.clone() {
         let proxy = reqwest::Proxy::all(&proxy_url);
         if proxy.is_err() {
             tracing::error!("{} 代理不正确 {:?}", proxy_url, proxy);
@@ -62,8 +62,9 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     let client = client.unwrap();
     let mut req_headers = headers.clone();
     req_headers.remove( axum::http::header::HOST);
+    req_headers.insert( axum::http::header::USER_AGENT, connect.user_agent.clone().parse().unwrap() );
     let res = client
-        .get(connect.0.clone())
+        .get(connect.stream_url.clone())
         .headers(req_headers)
         .send()
         .await;
@@ -84,7 +85,14 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
 }
 
 #[derive(Clone)]
+pub struct AxumAppStateConnect {
+    pub stream_url: String,
+    pub proxy_url: Option<String>,
+    pub user_agent: String,
+}
+
+#[derive(Clone)]
 pub struct AxumAppState {
     pub port: u16,
-    pub connect: HashMap<String, (String, Option<String>)>,
+    pub connect: HashMap<String, AxumAppStateConnect>,
 }

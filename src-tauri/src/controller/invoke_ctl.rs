@@ -71,3 +71,19 @@ pub async fn http_forward(param: HttpForwardParam) -> Result<HttpForwardResult, 
         }),
     })
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LoadImageParam {
+    pub image_url: String,
+    pub proxy_url: Option<String>,
+    pub user_agent: String,
+}
+
+#[tauri::command]
+pub async fn load_image(body: LoadImageParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let res = http_forward::load_image(body, state).await;
+    if res.is_err() {
+        return Err(res.unwrap_err().to_string());
+    }
+    Ok(res.unwrap())
+}

@@ -11,7 +11,7 @@
                 </div>
             </template>
             <div style="display: flex; padding: 20px;" v-if="currentSeries">
-                <img v-if="embyServer" :src="embyServer.base_url + '/Items/' + route.params.serieId + '/Images/Primary'" style="height: 416px; width: 300px;" />
+                <img v-if="embyServer" :src="await loadImage(<string>route.params.serieId)" style="height: 416px; width: 300px;" />
                 <div style="padding: 20px;">
                     <h1>{{ currentSeries.Name }}</h1>
                     <p>{{ currentSeries.ProductionYear }}</p>
@@ -58,7 +58,7 @@
             </template>
             <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
                 <div v-for="season in seasonsList" @click="showSeasons(season)" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
-                    <img v-if="embyServer" :src="embyServer.base_url + '/Items/' + season.Id + '/Images/Primary'" style="height: 160px; width: 115px;" />
+                    <img v-if="embyServer" :src="await loadImage(season.Id)" style="height: 160px; width: 115px;" />
                     <span>{{ season.Name }}</span>
                 </div>
             </div>
@@ -108,6 +108,7 @@ import embyApi, { EmbyPageList, EpisodesItems, SeasonsItems, UserData } from '..
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
+import invoke from '../../api/invoke';
 
 const router = useRouter()
 const route = useRoute()
@@ -280,6 +281,21 @@ function getDialogEpisodes() {
 function handleDialogEpisodesPageChange(page: number) {
     dialogEpisodesCurrentPage.value = page
     getDialogEpisodes()
+}
+
+function loadImage(itemId: string) {
+    return invoke.loadImage({
+        image_url: embyServer.base_url + '/Items/' + itemId + '/Images/Primary',
+        proxy_url: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id),
+        user_agent: embyServer.user_agent!,
+    }).then(response => {
+        return response
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+        return ""
+    })
 }
 </script>
 
