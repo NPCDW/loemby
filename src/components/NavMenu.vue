@@ -5,6 +5,9 @@
                 <el-menu-item index="/nav/search">
                     <el-icon><i-ep-Search /></el-icon>聚合搜索
                 </el-menu-item>
+                <el-menu-item index="/nav/setting">
+                    <el-icon><i-ep-Plus /></el-icon>添加服务器
+                </el-menu-item>
                 <el-menu-item @click="addEmbyServer">
                     <el-icon><i-ep-Plus /></el-icon>添加服务器
                 </el-menu-item>

@@ -12,6 +12,7 @@ use super::app_state::AppState;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProxyServer {
     pub id: String,
+    pub name: String,
     pub proxy_type: String,
     pub addr: String,
     pub username: Option<String>,

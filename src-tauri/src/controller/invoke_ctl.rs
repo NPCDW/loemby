@@ -44,6 +44,7 @@ pub struct HttpForwardParam {
     pub url: String,
     pub headers: HashMap<String, String>,
     pub body: Option<String>,
+    pub proxy: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -34,6 +34,7 @@ interface HttpForwardParam {
     url: string,
     headers: {[key: string]: string},
     body?: string,
+    proxy?: string,
 }
 
 interface HttpForwardResult {

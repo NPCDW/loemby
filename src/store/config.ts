@@ -49,15 +49,33 @@ export const useConfig = defineStore('config', () => {
         }
     }
 
-    return { get_config, sync_config, save_config, getEmbyServer, saveEmbyServer, delEmbyServer }
+    function getProxyUrl(id: string) {
+        if (!config.value.proxy_server) {
+            return
+        }
+        for (let index = 0; index < config.value.proxy_server.length; index++) {
+            if (config.value.proxy_server[index].id === id) {
+                let proxy = config.value.proxy_server[index]
+                let username = proxy.username ? proxy.username : ""
+                let password = proxy.password ? ":" + proxy.password : ""
+                let auth = username || password ? username + password + "@" : ""
+                return proxy.proxy_type + "://" + auth + proxy.addr
+            }
+        }
+    }
+
+    return { get_config, sync_config, save_config, getEmbyServer, saveEmbyServer, delEmbyServer, getProxyUrl }
 })
 
-interface ProxyServerConfig {
+export interface ProxyServerConfig {
     id?: string,
+    name?: string,
     proxy_type?: string,
     addr?: string,
     username?: string,
     password?: string,
+    // 前端展示字段
+    location?: string,
 }
 
 export interface EmbyServerConfig {

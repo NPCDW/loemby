@@ -37,24 +37,17 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     }
     let connect = connect.unwrap();
 
-    let proxy = match connect.1.clone() {
-        None => None,
-        Some(proxy_url) => {
-            let proxy = reqwest::Proxy::all(proxy_url);
-            if proxy.is_err() {
-                tracing::error!("{} 对应的代理链接失败 {:?}", &id, proxy);
-                return (
-                    axum::http::StatusCode::SERVICE_UNAVAILABLE,
-                    axum::http::HeaderMap::new(),
-                    axum::body::Body::empty()
-                ).into_response();
-            }
-            Some(proxy.unwrap())
-        }
-    };
-
     let mut client = reqwest::Client::builder();
-    if proxy.is_some() {
+    if let Some(proxy_url) = connect.1.clone() {
+        let proxy = reqwest::Proxy::all(&proxy_url);
+        if proxy.is_err() {
+            tracing::error!("{} 代理不正确 {:?}", proxy_url, proxy);
+            return (
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                axum::http::HeaderMap::new(),
+                axum::body::Body::empty()
+            ).into_response();
+        }
         client = client.proxy(proxy.unwrap());
     }
     let client = client.build();
