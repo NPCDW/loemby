@@ -11,7 +11,7 @@
                 </div>
             </template>
             <div style="display: flex; padding: 20px;" v-if="currentSeries">
-                <img v-if="embyServer" :src="await loadImage(<string>route.params.serieId)" style="height: 416px; width: 300px;" />
+                <img v-if="embyServer" :src="images[<string>route.params.serieId]" style="height: 416px; width: 300px;" />
                 <div style="padding: 20px;">
                     <h1>{{ currentSeries.Name }}</h1>
                     <p>{{ currentSeries.ProductionYear }}</p>
@@ -58,7 +58,7 @@
             </template>
             <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
                 <div v-for="season in seasonsList" @click="showSeasons(season)" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
-                    <img v-if="embyServer" :src="await loadImage(season.Id)" style="height: 160px; width: 115px;" />
+                    <img v-if="embyServer" :src="images[season.Id]" style="height: 160px; width: 115px;" />
                     <span>{{ season.Name }}</span>
                 </div>
             </div>
@@ -208,6 +208,9 @@ async function getSeasons() {
         }
         let json: EmbyPageList<SeasonsItems> = JSON.parse(response.body);
         seasonsList.value = json.Items
+        json.Items.forEach(item => {
+            loadImage(item.Id)
+        })
     }).catch(e => {
         ElMessage.error({
             message: e
@@ -283,20 +286,21 @@ function handleDialogEpisodesPageChange(page: number) {
     getDialogEpisodes()
 }
 
+const images = ref<{[key: string]: string}>({})
 function loadImage(itemId: string) {
-    return invoke.loadImage({
+    invoke.loadImage({
         image_url: embyServer.base_url + '/Items/' + itemId + '/Images/Primary',
         proxy_url: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id),
         user_agent: embyServer.user_agent!,
     }).then(response => {
-        return response
+        images.value[itemId] = response
     }).catch(e => {
         ElMessage.error({
             message: e
         })
-        return ""
     })
 }
+loadImage(<string>route.params.serieId)
 </script>
 
 <style scoped>
