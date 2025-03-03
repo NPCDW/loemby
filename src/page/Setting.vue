@@ -8,7 +8,7 @@
                 <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
                 <el-table-column prop="username" label="Username" width="140" />
                 <el-table-column prop="location" label="Location" show-overflow-tooltip />
-                <el-table-column fixed="right" label="Operations" width="240">
+                <el-table-column fixed="right" label="Operations" width="210">
                     <template #header>
                         <el-button type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
                     </template>

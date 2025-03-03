@@ -15,7 +15,8 @@
         "title": "loemby",
         "width": 1200,
         "height": 800,
-        "backgroundColor": "#121212"
+        "backgroundColor": "#121212",
+        "userAgent": "loemby/0.3.8"
       }
     ],
     "security": {
