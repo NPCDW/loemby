@@ -34,11 +34,12 @@ pub async fn forward(param: HttpForwardParam) -> anyhow::Result<Response> {
 }
 
 pub async fn load_image(body: LoadImageParam, state: tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let mut app_state = state.auxm_app_state.write().await.clone();
+    let auxm_app_state = state.auxm_app_state.clone();
+    let mut app_state = auxm_app_state.read().await.clone();
     let app_state = app_state.as_mut().unwrap();
 
     let uuid = uuid::Uuid::new_v4().to_string();
-    app_state.connect.insert(uuid.clone(), AxumAppStateConnect {stream_url: body.image_url.clone(), proxy_url: body.proxy_url.clone(), user_agent: body.user_agent.clone()});
+    app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: body.image_url.clone(), proxy_url: body.proxy_url.clone(), user_agent: body.user_agent.clone()});
     let image_path = format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid);
 
     anyhow::Ok(image_path)

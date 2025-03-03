@@ -16,11 +16,12 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let mpv_path = PathBuf::from(mpv_path.as_ref().unwrap());
     let mpv_parent_path = mpv_path.parent().unwrap();
 
-    let mut app_state = state.auxm_app_state.write().await.clone();
+    let auxm_app_state = state.auxm_app_state.clone();
+    let mut app_state = auxm_app_state.read().await.clone();
     let app_state = app_state.as_mut().unwrap();
 
     let uuid = uuid::Uuid::new_v4().to_string();
-    app_state.connect.insert(uuid.clone(), AxumAppStateConnect {stream_url: body.path.clone(), proxy_url: body.proxy.clone(), user_agent: body.user_agent.clone()});
+    app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: body.path.clone(), proxy_url: body.proxy.clone(), user_agent: body.user_agent.clone()});
     let video_path = format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid);
 
     let pipe_name = r"\\.\pipe\mpvsocket";
@@ -38,12 +39,12 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
 
     for audio in &body.external_audio {
         let uuid = uuid::Uuid::new_v4().to_string();
-        app_state.connect.insert(uuid.clone(), AxumAppStateConnect {stream_url: audio.clone(), proxy_url: body.proxy.clone(), user_agent: body.user_agent.clone()});
+        app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: audio.clone(), proxy_url: body.proxy.clone(), user_agent: body.user_agent.clone()});
         command.arg(&format!("--audio-file={}", format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)));
     }
     for subtitle in &body.external_subtitle {
         let uuid = uuid::Uuid::new_v4().to_string();
-        app_state.connect.insert(uuid.clone(), AxumAppStateConnect {stream_url: subtitle.clone(), proxy_url: body.proxy.clone(), user_agent: body.user_agent.clone()});
+        app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: subtitle.clone(), proxy_url: body.proxy.clone(), user_agent: body.user_agent.clone()});
         command.arg(&format!("--sub-file={}", format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)));
     }
     if body.aid == -1 {
@@ -57,6 +58,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         command.arg(&format!("--sid={}", body.sid));
     }
     tracing::debug!("调用MPV: {:?}", &command);
+    {  }
     
     let player = command.spawn();
 

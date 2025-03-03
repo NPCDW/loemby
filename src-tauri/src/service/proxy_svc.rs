@@ -11,7 +11,7 @@ pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>) -
     
     *axum_app_state.write().await = Some(AxumAppState {
         port: actual_port,
-        connect: HashMap::new(),
+        connect: Arc::new(RwLock::new(HashMap::new())),
     });
 
     let router = Router::new()
@@ -26,7 +26,8 @@ pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>) -
 async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path(id): Path<String>) -> axum::response::Response {
     tracing::debug!("stream: {} {:?}", id, headers);
     let app_state = app_state.read().await.clone().unwrap();
-    let connect = app_state.connect.get(&id).clone();
+    let connect = app_state.connect.read().await;
+    let connect = connect.get(&id).clone();
     if connect.is_none() {
         tracing::error!("没有找到 {} 对应的流媒体", &id);
         return (
@@ -94,5 +95,5 @@ pub struct AxumAppStateConnect {
 #[derive(Clone)]
 pub struct AxumAppState {
     pub port: u16,
-    pub connect: HashMap<String, AxumAppStateConnect>,
+    pub connect: Arc::<RwLock<HashMap<String, AxumAppStateConnect>>>,
 }
