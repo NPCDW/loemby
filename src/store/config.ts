@@ -49,9 +49,12 @@ export const useConfig = defineStore('config', () => {
         }
     }
 
-    function getProxyUrl(id: string) {
-        if (!config.value.proxy_server) {
+    function getProxyUrl(id?: string) {
+        if (!id || id == 'no' || !config.value.proxy_server) {
             return
+        }
+        if (id == 'follow') {
+            return getProxyUrl(config.value.global_proxy?.browse_proxy_id)
         }
         for (let index = 0; index < config.value.proxy_server.length; index++) {
             if (config.value.proxy_server[index].id === id) {

@@ -8,13 +8,14 @@
                 <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
                 <el-table-column prop="username" label="Username" width="140" />
                 <el-table-column prop="location" label="Location" show-overflow-tooltip />
-                <el-table-column fixed="right" label="Operations" width="160">
+                <el-table-column fixed="right" label="Operations" width="240">
                     <template #header>
                         <el-button type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
                     </template>
                     <template #default="scope">
                         <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkProxy(scope.row.id)">检测</el-button>
                         <el-button plain type="primary" size="small" @click.prevent="editProxy(scope.$index)">编辑</el-button>
+                        <el-button plain type="danger" size="small" @click.prevent="delProxy(scope.$index)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -110,7 +111,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { useConfig } from '../store/config';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { ProxyServerConfig } from '../store/config';
 import _ from 'lodash';
 import { generateGuid } from '../util/uuid_util';
@@ -142,6 +143,21 @@ function saveProxyServer() {
     useConfig().save_config(config);
     dialogProxyServerVisible.value = false;
     ElMessage.success('保存成功');
+}
+function delProxy(index: number) {
+    ElMessageBox.confirm(
+    `确认删除代理服务器「${proxyServerTableData[index].name}」吗`,
+    'Warning',
+    {
+      confirmButtonText: 'OK',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    }
+  ).then(async () => {
+        proxyServerTableData.splice(index, 1)
+        config.proxy_server = proxyServerTableData;
+        useConfig().save_config(config);
+    })
 }
 
 const checkProxyLoading = ref<{[key: string]: boolean}>({});

@@ -1,5 +1,5 @@
 import invoke from './invoke';
-import { EmbyServerConfig } from '../store/config';
+import { EmbyServerConfig, useConfig } from '../store/config';
 
 /**
  * 获取服务器信息，无需验证
@@ -13,7 +13,8 @@ async function getServerInfo(embyServer: EmbyServerConfig) {
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
-        }
+        },
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -35,7 +36,8 @@ async function authenticateByName(embyServer: EmbyServerConfig) {
         body: JSON.stringify({
             "Username": embyServer.username,
             "Pw": !embyServer.password ? null : embyServer.password
-        })
+        }),
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -54,7 +56,8 @@ async function logout(embyServer: EmbyServerConfig) {
             'Content-Type': 'application/json',
             'X-Emby-Token': embyServer.auth_token,
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({}),
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -72,7 +75,8 @@ async function search(embyServer: EmbyServerConfig, search_str: string, startInd
         headers: {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
-        }
+        },
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -90,7 +94,8 @@ async function continuePlay(embyServer: EmbyServerConfig, startIndex: number, li
         headers: {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
-        }
+        },
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -108,7 +113,8 @@ async function nextUp(embyServer: EmbyServerConfig, seriesId: string, startIndex
         headers: {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
-        }
+        },
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -126,7 +132,8 @@ async function items(embyServer: EmbyServerConfig, item_id: string) {
         headers: {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
-        }
+        },
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -144,7 +151,8 @@ async function seasons(embyServer: EmbyServerConfig, item_id: string) {
         headers: {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
-        }
+        },
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -162,7 +170,8 @@ async function episodes(embyServer: EmbyServerConfig, item_id: string, seasonId:
         headers: {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
-        }
+        },
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -199,7 +208,8 @@ async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
                     }
                 ]
             }
-        })
+        }),
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -226,7 +236,8 @@ async function playing(embyServer: EmbyServerConfig, item_id: string, media_sour
             "PlayMethod": "DirectStream",
             "PlaySessionId": `${play_session_id}`,
             "PositionTicks": `${positionTicks}`,
-        })
+        }),
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -253,7 +264,8 @@ async function playingProgress(embyServer: EmbyServerConfig, item_id: string, me
             "PlayMethod": "DirectStream",
             "PlaySessionId": `${play_session_id}`,
             "PositionTicks": `${positionTicks}`,
-        })
+        }),
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -279,7 +291,8 @@ async function playingStopped(embyServer: EmbyServerConfig, item_id: string, med
             "PlayMethod": "DirectStream",
             "PlaySessionId": `${play_session_id}`,
             "PositionTicks": `${positionTicks}`,
-        })
+        }),
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -332,7 +345,8 @@ async function star(embyServer: EmbyServerConfig, item_id: string) {
             'Content-Type': 'application/json',
             'X-Emby-Token': embyServer.auth_token,
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({}),
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -351,6 +365,7 @@ async function unstar(embyServer: EmbyServerConfig, item_id: string) {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -370,7 +385,8 @@ async function played(embyServer: EmbyServerConfig, item_id: string) {
             'Content-Type': 'application/json',
             'X-Emby-Token': embyServer.auth_token,
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({}),
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -389,6 +405,7 @@ async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
+        proxy: useConfig().getProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
