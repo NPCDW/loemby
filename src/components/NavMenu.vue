@@ -1,7 +1,7 @@
 <template>
     <div style="display: flex; flex-direction: row;">
         <el-scrollbar style="height: 100vh; flex: none; width: 200px;">
-            <el-menu class="el-menu" :collapse="true" :router="true" :default-active="active">
+            <el-menu style="height: 100%; min-height: 100vh;" class="el-menu" :collapse="true" :router="true" :default-active="active">
                 <el-menu-item index="/nav/search">
                     <el-icon><i-ep-Search /></el-icon>聚合搜索
                 </el-menu-item>

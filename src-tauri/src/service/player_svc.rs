@@ -14,6 +14,9 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     }
 
     let mpv_path = PathBuf::from(mpv_path.as_ref().unwrap());
+    if !mpv_path.exists() {
+        return Err(format!("mpv 路径不存在: {}", mpv_path.to_str().unwrap()));
+    }
     let mpv_parent_path = mpv_path.parent().unwrap();
 
     let auxm_app_state = state.auxm_app_state.clone();

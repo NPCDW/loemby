@@ -1,6 +1,6 @@
 <template>
-    <el-scrollbar style="height: 100vh; padding: 0 20px;">
-        <div>
+    <el-scrollbar style="height: 100vh;">
+        <div style="padding: 20px 40px;">
             <el-skeleton :loading="playbackInfoLoading" animated>
                 <template #template>
                     <div style="width: 100%;padding: 10px;">
@@ -21,7 +21,7 @@
                     </div>
                 </template>
                 <div v-if="currentEpisodes">
-                    <div style="width: 100%;padding: 10px;">
+                    <div style="width: 100%;">
                         <h2 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h2>
                         <template v-else>
                             <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h2>{{ currentEpisodes.SeriesName }}</h2></el-link>
@@ -30,7 +30,7 @@
                         <p><el-progress :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                         <p>
                             版本：
-                            <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 850px" :disabled="versionOptions.length <= 1">
+                            <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 840px" :disabled="versionOptions.length <= 1">
                                 <template #label="{ label }">
                                     {{ label.split("$|$")[0] }} <el-tag disable-transitions>{{ label.split("$|$")[1] }}</el-tag> <el-tag disable-transitions>{{ label.split("$|$")[2] }}</el-tag>
                                 </template>
@@ -41,15 +41,15 @@
                         </p>
                         <p>
                             <span>视频：
-                            <el-select v-model="videoSelect" size="large" style="width: 240px" :disabled="videoOptions.length <= 1">
+                            <el-select v-model="videoSelect" size="large" style="width: 235px" :disabled="videoOptions.length <= 1">
                                 <el-option v-for="item in videoOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select></span>
                             <span style="margin-left: 15px;">音频：
-                            <el-select v-model="audioSelect" size="large" style="width: 240px" :disabled="audioOptions.length <= 1">
+                            <el-select v-model="audioSelect" size="large" style="width: 235px" :disabled="audioOptions.length <= 1">
                                 <el-option v-for="item in audioOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select></span>
                             <span style="margin-left: 15px;">字幕：
-                            <el-select v-model="subtitleSelect" size="large" style="width: 240px" :disabled="subtitleOptions.length <= 1">
+                            <el-select v-model="subtitleSelect" size="large" style="width: 235px" :disabled="subtitleOptions.length <= 1">
                                 <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select></span>
                         </p>
@@ -86,9 +86,9 @@
                 </template>
                 <h1 v-if="nextUpList && nextUpList.length == 1 && nextUpCurrentPage == 1">已经是最后一集了</h1>
                 <h1 v-if="nextUpList && nextUpList.length > 1">接下来</h1>
-                <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                <div style="display: flex; flex-wrap: wrap; flex-direction: row; justify-content: space-between;">
                     <template  v-for="(nextUpItem, index) in nextUpList">
-                        <el-card style="width: 300px; margin: 5px;" v-if="index != 0 || nextUpCurrentPage != 1">
+                        <el-card style="width: 300px; margin-bottom: 7px;" v-if="index != 0 || nextUpCurrentPage != 1">
                             <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
                             <p>{{ nextUpItem.PremiereDate ? nextUpItem.PremiereDate.substring(0, 10) : '' }}
                                 <el-tag disable-transitions>{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
