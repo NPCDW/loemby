@@ -2,20 +2,30 @@
     <el-scrollbar>
         <el-skeleton :loading="serieInfoLoading" animated>
             <template #template>
-                <div class="note-item">
-                    <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
-                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                <div style="display: flex; padding: 20px;">
+                    <el-skeleton-item variant="image" style="height: 416px; width: 300px;" />
+                    <div style="flex: 1;padding: 20px;">
+                        <h1><el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" /></h1>
+                        <p><el-skeleton-item variant="text" style="width: 100%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 100%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 100%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 100%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 100%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 100%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                        <p>
+                            <el-skeleton-item variant="button" style="width: 15%;margin: 5px;margin-left: 0;" />
+                            <el-skeleton-item variant="button" style="width: 15%;margin: 5px;margin-left: 0;" />
+                        </p>
+                    </div>
                 </div>
             </template>
             <div style="display: flex; padding: 20px;" v-if="currentSeries">
-                <img v-if="embyServer" :src="images[<string>route.params.serieId]" style="height: 416px; width: 300px;" />
+                <img v-if="embyServer" :src="images[<string>route.params.serieId]" style="max-height: 416px; max-width: 300px;" />
                 <div style="padding: 20px;">
                     <h1>{{ currentSeries.Name }}</h1>
                     <p>{{ currentSeries.ProductionYear }}</p>
-                    <p>{{ currentSeries.Overview }}</p>
+                    <p><el-scrollbar style="height: 180px;">{{ currentSeries.Overview }}</el-scrollbar></p>
                     <el-button plain :disabled="playedLoading" @click="played()">
                         <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentSeries.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
                         <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
@@ -34,31 +44,42 @@
                 </div>
             </div>
         </el-skeleton>
-        <div v-if="episodesList && episodesList.length > 0" style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;">
-            <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList">
-                <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)"><p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p></el-link>
-                <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
-            </el-card>
-            <el-pagination
-                v-model:current-page="episodesCurrentPage"
-                v-model:page-size="episodesPageSize"
-                layout="total, prev, pager, next, jumper"
-                :total="episodesTotal"
-                @current-change="handleEpisodesPageChange"
-                hide-on-single-page
-            />
-        </div>
+        <el-skeleton :loading="episodesLoading" animated>
+            <template #template>
+                <div style="display: flex; flex-wrap: wrap; flex-direction: row;padding: 20px;padding-top: 0;">
+                    <el-card class="box-item" v-for="i in 5" :key="i">
+                        <p><el-skeleton-item variant="text" style="width: 90%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 60%" /></p>
+                    </el-card>
+                </div>
+            </template>
+            <div v-if="episodesList && episodesList.length > 0" style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;">
+                <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList">
+                    <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)"><p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p></el-link>
+                    <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
+                </el-card>
+                <el-pagination
+                    v-model:current-page="episodesCurrentPage"
+                    v-model:page-size="episodesPageSize"
+                    layout="total, prev, pager, next, jumper"
+                    :total="episodesTotal"
+                    @current-change="handleEpisodesPageChange"
+                    hide-on-single-page
+                />
+            </div>
+        </el-skeleton>
         <el-skeleton :loading="seasonsLoading" animated>
             <template #template>
-                <div class="note-item">
-                    <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
-                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;">
+                    <div v-for="i in 5" :key="i" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
+                        <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
+                        <p><el-skeleton-item variant="text" style="width: 50%" /></p>
+                    </div>
                 </div>
             </template>
             <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
                 <div v-for="season in seasonsList" @click="showSeasons(season)" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
-                    <img v-if="embyServer" :src="images[season.Id]" style="height: 160px; width: 115px;" />
+                    <img v-if="embyServer" :src="images[season.Id]" style="max-height: 160px; max-width: 115px;" />
                     <span>{{ season.Name }}</span>
                 </div>
             </div>
@@ -117,7 +138,7 @@ let embyServer = useConfig().getEmbyServer(<string>route.params.embyId)!
 
 const serieInfoLoading = ref(false)
 const currentSeries = ref<EpisodesItems>()
-function updateCurrentEpisodes() {
+function updateCurrentSerie() {
     serieInfoLoading.value = true
     return embyApi.items(embyServer, <string>route.params.serieId).then(async response => {
         if (response.status_code != 200) {
@@ -134,10 +155,7 @@ function updateCurrentEpisodes() {
         })
     }).finally(() => serieInfoLoading.value = false)
 }
-updateCurrentEpisodes().then(() => {
-    getSeasons()
-    getEpisodes()
-})
+updateCurrentSerie()
 
 const starLoading = ref<boolean>(false)
 function star() {
@@ -199,7 +217,7 @@ const seasonsLoading = ref<boolean>(false)
 const seasonsList = ref<SeasonsItems[]>([])
 async function getSeasons() {
     seasonsLoading.value = true
-    return embyApi.seasons(embyServer, currentSeries.value?.Id!).then(async response => {
+    return embyApi.seasons(embyServer, <string>route.params.serieId).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error({
                 message: 'response status' + response.status_code + ' ' + response.status_text
@@ -217,13 +235,16 @@ async function getSeasons() {
         })
     }).finally(() => seasonsLoading.value = false)
 }
+getSeasons()
 
+const episodesLoading = ref<boolean>(false)
 const episodesList = ref<EpisodesItems[]>([])
 const episodesCurrentPage = ref<number>(1)
 const episodesPageSize = ref<number>(6)
 const episodesTotal = ref<number>(0)
 async function getEpisodes() {
-    return embyApi.episodes(embyServer, currentSeries.value?.Id!, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
+    episodesLoading.value = true
+    return embyApi.episodes(embyServer, <string>route.params.serieId, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error({
                 message: 'response status' + response.status_code + ' ' + response.status_text
@@ -237,8 +258,9 @@ async function getEpisodes() {
         ElMessage.error({
             message: e
         })
-    })
+    }).finally(() => episodesLoading.value = false)
 }
+getEpisodes()
 function handleEpisodesPageChange(page: number) {
     episodesCurrentPage.value = page
     getEpisodes()
@@ -304,4 +326,16 @@ loadImage(<string>route.params.serieId)
 </script>
 
 <style scoped>
+.box-item {
+    width: 300px; margin: 5px;
+}
+
+.box-item:hover {
+  background-color: #18222C;
+}
+
+.box-item.active {
+  color: #409EFF;
+}
+
 </style>

@@ -19,14 +19,18 @@
                     </template>
                     <div v-if="embySearchItem.success" style="display: flex; flex-wrap: wrap; flex-direction: row;">
                         <el-card style="width: 300px; margin: 5px;" v-for="rootItem in embySearchItem.result?.Items">
-                            <p>{{ rootItem.Name }}</p>
-                            <p v-if="rootItem.Type == 'Series'">
-                                {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
-                                未播放：{{ rootItem.UserData?.UnplayedItemCount }}
-                            </p>
-                            <p v-else style="display: flex; align-items: center;">
-                                {{ rootItem.ProductionYear }} <el-tag disable-transitions>{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)?.Size!) : 0 }}</el-tag>
-                            </p>
+                            <template #header>
+                                <el-link v-if="rootItem.Type == 'Series'" :underline="false" @click="gotoSeries(embySearchItem.server.id!, rootItem.Id)">{{ rootItem.Name }}</el-link>
+                                <el-link v-else :underline="false" @click="gotoEpisodes(embySearchItem.server.id!, rootItem.Id)">{{ rootItem.Name }}</el-link>
+                            </template>
+                            <div style="margin-bottom: 10px;">
+                                <span v-if="rootItem.Type == 'Series'">
+                                    {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
+                                </span>
+                                <span v-else>
+                                    {{ rootItem.ProductionYear }} <el-tag disable-transitions>{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)?.Size!) : 0 }}</el-tag>
+                                </span>
+                            </div>
                             <div style="display: flex;justify-content: space-between;">
                                 <span>
                                     <el-link :underline="false" v-if="rootItem.UserData" :disabled="starLoading[embySearchItem.server.id + rootItem.Id]" @click="star(embySearchItem.server.id!, rootItem)">
@@ -39,11 +43,9 @@
                                     </el-link>
                                 </span>
                                 <span>
-                                    <template v-if="rootItem.Type == 'Series'">
-                                        <el-button @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
-                                        <el-button @click="gotoSeries(embySearchItem.server.id!, rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
-                                    </template>
-                                    <el-button v-else @click="gotoEpisodes(embySearchItem.server.id!, rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
+                                    <el-badge :value="rootItem.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
+                                        <el-button v-if="rootItem.Type == 'Series'" @click="getSeasons(embySearchItem.server, rootItem)" type="primary" plain>剧集</el-button>
+                                    </el-badge>
                                 </span>
                             </div>
                         </el-card>
@@ -78,8 +80,10 @@
                                 :class="{ active: dialogSeasons?.Id === seasonsItem.Id }"
                                 @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)"
                             >
-                                <h3>{{ seasonsItem.IndexNumber + '. ' + seasonsItem.Name }}</h3>
-                                <p>{{ seasonsItem.ProductionYear }} 未播放：{{ seasonsItem.UserData?.UnplayedItemCount }}</p>
+                                <h3>{{ 'S' + seasonsItem.IndexNumber + '. ' + seasonsItem.Name }}</h3>
+                                <el-badge :value="seasonsItem.UserData?.UnplayedItemCount" :max="999" :show-zero="false" :offset="[20, 8]" type="primary">
+                                    <div>{{ seasonsItem.ProductionYear }}</div>
+                                </el-badge>
                             </div>
                         </el-skeleton>
                     </el-scrollbar>
@@ -95,10 +99,15 @@
                             </template>
                             <div v-for="episodesItem in dialogEpisodesList" class="note-item" style="display: flex;justify-content: space-between; align-items: center;">
                                 <div>
-                                    <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
+                                    <p>
+                                        <el-link :underline="false" @click="gotoEpisodes(dialogEmbyServer!.id!, episodesItem.Id)">
+                                            <el-badge is-dot :value="episodesItem.UserData?.Played" type="primary" :offset="[5, 0]">
+                                                {{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}
+                                            </el-badge>
+                                        </el-link>
+                                    </p>
                                     <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
                                 </div>
-                                <el-button @click="gotoEpisodes(dialogEmbyServer!.id!, episodesItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
                             </div>
                         </el-skeleton>
                         <el-pagination
@@ -387,6 +396,7 @@ function played(embyServerId: string, item: SearchItems) {
 
 h2 {
   margin-top: 0;
+  margin-bottom: 0;
 }
 
 .el-scrollbar {

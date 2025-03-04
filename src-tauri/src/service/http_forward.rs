@@ -38,7 +38,8 @@ pub async fn load_image(body: LoadImageParam, state: tauri::State<'_, AppState>)
     let mut app_state = auxm_app_state.read().await.clone();
     let app_state = app_state.as_mut().unwrap();
 
-    let uuid = uuid::Uuid::new_v4().to_string();
+    let uuid = md5::compute(format!("{}{:?}{}", &body.image_url, &body.proxy_url, &body.user_agent));
+    let uuid = format!("{:x}", uuid);
     app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: body.image_url.clone(), proxy_url: body.proxy_url.clone(), user_agent: body.user_agent.clone()});
     let image_path = format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid);
 

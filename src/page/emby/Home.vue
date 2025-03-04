@@ -12,9 +12,14 @@
             <h1>继续观看</h1>
             <el-skeleton :loading="episodesLoading" animated>
                 <template #template>
-                    <div class="note-item" v-for="i in 5" :key="i">
-                        <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
-                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                        <el-card class="box-item" v-for="i in 5" :key="i">
+                            <el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" />
+                            <p><el-skeleton-item variant="text" style="width: 80%" /></p>
+                            <p><el-skeleton-item variant="text" style="width: 90%" /></p>
+                            <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                            <p><el-skeleton-item variant="button" style="width: 30%" /></p>
+                        </el-card>
                     </div>
                 </template>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
@@ -23,7 +28,7 @@
                         <p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
                         <p><el-progress :percentage="episodesItem.UserData?.Played ? 100 : episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                         <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
-                        <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">详情</el-button></p>
+                        <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">继续</el-button></p>
                     </el-card>
                 </div>
             </el-skeleton>
@@ -110,33 +115,31 @@ function gotoSeries(seriesId: string) {
 </script>
 
 <style scoped>
-.note-container {
+.box-container {
   display: flex;
   height: 500px;
 }
 
-.note-sidebar {
+.box-sidebar {
   width: 30%;
   border-right: 1px solid #18222C;
   padding-right: 20px;
   overflow-y: auto;
 }
 
-.note-item {
-  padding: 3px 10px;
-  cursor: pointer;
-  border-bottom: 1px solid #18222C;
+.box-item {
+    width: 300px; margin: 5px;
 }
 
-.note-item:hover {
+.box-item:hover {
   background-color: #18222C;
 }
 
-.note-item.active {
+.box-item.active {
   color: #409EFF;
 }
 
-.note-content {
+.box-content {
   width: 70%;
   padding-left: 20px;
 }

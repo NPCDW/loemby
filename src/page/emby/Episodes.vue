@@ -3,15 +3,24 @@
         <div>
             <el-skeleton :loading="playbackInfoLoading" animated>
                 <template #template>
-                    <div class="note-item">
-                        <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
-                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                    <div style="width: 100%;padding: 10px;">
+                        <h2><el-skeleton-item variant="h1" style="width: 50%;" /></h2>
+                        <p><el-skeleton-item variant="text" style="width: 40%; margin: 5px 0;" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 100%; margin: 5px 0;" /></p>
+                        <p><el-skeleton-item variant="button" style="width: 100%; margin: 5px 0;" /></p>
+                        <p>
+                            <el-skeleton-item variant="button" style="width: 30%; margin: 5px; margin-left: 0;" />
+                            <el-skeleton-item variant="button" style="width: 30%; margin: 5px;" />
+                            <el-skeleton-item variant="button" style="width: 30%; margin: 5px;" />
+                        </p>
+                        <p>
+                            <el-skeleton-item variant="button" style="width: 15%; margin: 5px; margin-left: 0;" />
+                            <el-skeleton-item variant="button" style="width: 15%; margin: 5px;" />
+                            <el-skeleton-item variant="button" style="width: 15%; margin: 5px;" />
+                        </p>
                     </div>
                 </template>
-                <div v-if="currentEpisodes" style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                <div v-if="currentEpisodes">
                     <div style="width: 100%;padding: 10px;">
                         <h2 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h2>
                         <template v-else>
