@@ -21,7 +21,9 @@
                 </div>
             </template>
             <div style="display: flex; padding: 20px;" v-if="currentSeries">
-                <img v-if="embyServer" :src="images[<string>route.params.serieId]" style="max-height: 416px; max-width: 300px;" />
+                <div style="min-height: 416px; min-width: 300px;">
+                    <img v-if="embyServer" :src="images[<string>route.params.serieId]" style="max-height: 416px; max-width: 300px;" />
+                </div>
                 <div style="padding: 20px;">
                     <h1>{{ currentSeries.Name }}</h1>
                     <p>{{ currentSeries.ProductionYear }}</p>
@@ -79,7 +81,9 @@
             </template>
             <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
                 <div v-for="season in seasonsList" @click="showSeasons(season)" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
-                    <img v-if="embyServer" :src="images[season.Id]" style="max-height: 160px; max-width: 115px;" />
+                    <div style="min-height: 160px; min-width: 115px;">
+                        <img v-if="embyServer" :src="images[season.Id]" style="max-height: 160px; max-width: 115px;" />
+                    </div>
                     <span>{{ season.Name }}</span>
                 </div>
             </div>

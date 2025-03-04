@@ -9,14 +9,19 @@
         <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
             <div v-if="emby_search_result.success" style="display: flex; flex-wrap: wrap; flex-direction: row;">
                 <el-card style="width: 300px; margin: 5px;" v-for="rootItem in emby_search_result.result?.Items">
-                    <p>{{ rootItem.Name }}</p>
-                    <p v-if="rootItem.Type == 'Series'">
-                        {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
-                        未播放：{{ rootItem.UserData?.UnplayedItemCount }}
-                    </p>
-                    <p v-else style="display: flex; align-items: center;">
-                        {{ rootItem.ProductionYear }} <el-tag disable-transitions>{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)?.Size!) : 0 }}</el-tag>
-                    </p>
+                    <template #header>
+                        <el-link v-if="rootItem.Type == 'Series'" :underline="false" @click="gotoSeries(rootItem.Id)">{{ rootItem.Name }}</el-link>
+                        <el-link v-else :underline="false" @click="gotoEpisodes(rootItem.Id)">{{ rootItem.Name }}</el-link>
+                    </template>
+                    <div style="margin-bottom: 10px;">
+                        <span v-if="rootItem.Type == 'Series'">
+                            {{ rootItem.ProductionYear + (rootItem.EndDate && rootItem.EndDate.substring(0, 4) != rootItem.ProductionYear + '' ? '-' + rootItem.EndDate.substring(0, 4) : '') }}
+                            未播放：{{ rootItem.UserData?.UnplayedItemCount }}
+                        </span>
+                        <span v-else>
+                            {{ rootItem.ProductionYear }} <el-tag disable-transitions>{{ rootItem.MediaSources ? formatBytes(maxMediaSources(rootItem.MediaSources)?.Size!) : 0 }}</el-tag>
+                        </span>
+                    </div>
                     <div style="display: flex;justify-content: space-between;">
                         <span>
                             <el-link :underline="false" v-if="rootItem.UserData" :disabled="starLoading[rootItem.Id]" @click="star(rootItem)">
@@ -28,18 +33,15 @@
                                 <el-icon :size="24" :class="playedLoading[rootItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                             </el-link>
                         </span>
-                        <span>
-                            <template v-if="rootItem.Type == 'Series'">
-                                <el-button @click="gotoSeries(rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
-                            </template>
-                            <el-button v-else @click="gotoEpisodes(rootItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
-                        </span>
                     </div>
                 </el-card>
             </div>
             <div v-else style="text-align: center;">
                 <el-text type="danger" style="word-break: break-all;display: block;">{{ emby_search_result.message }}</el-text>
                 <el-button type="primary" @click="search()">重试</el-button>
+            </div>
+            <div v-if="emby_search_result.success && emby_search_result.result?.Items.length == 0" style="text-align: center;">
+                <el-empty :image-size="200" />
             </div>
         </el-scrollbar>
     </div>
