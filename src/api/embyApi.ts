@@ -223,7 +223,7 @@ async function playing(embyServer: EmbyServerConfig, item_id: string, media_sour
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/emby/Sessions/Playing`,
+        url: embyServer.base_url + `/emby/Sessions/Playing?ItemId=${item_id}&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -251,7 +251,7 @@ async function playingProgress(embyServer: EmbyServerConfig, item_id: string, me
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/emby/Sessions/Playing/Progress`,
+        url: embyServer.base_url + `/emby/Sessions/Playing/Progress?ItemId=${item_id}&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -278,7 +278,7 @@ async function playingStopped(embyServer: EmbyServerConfig, item_id: string, med
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/emby/Sessions/Playing/Stopped`,
+        url: embyServer.base_url + `/emby/Sessions/Playing/Stopped?ItemId=${item_id}&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
