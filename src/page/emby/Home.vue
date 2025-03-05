@@ -197,7 +197,7 @@ function handlePaneClick(pane: TabsPaneContext, _ev: Event) {
         favoriteCurrentPage.value = 1
         favoritePageSize.value = 12
         favoriteTotal.value = 0
-        getContinuePlayList(favoriteCurrentPage.value, favoritePageSize.value)
+        getFavoriteList(favoriteCurrentPage.value, favoritePageSize.value)
     } else if (pane.paneName == 'MediaLibrary') {
 
     }

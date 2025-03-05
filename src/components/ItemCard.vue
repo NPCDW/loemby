@@ -8,19 +8,20 @@
             <span v-if="item.Type == 'Series'">
                 {{ item.ProductionYear + (item.EndDate && item.EndDate.substring(0, 4) != item.ProductionYear + '' ? '-' + item.EndDate.substring(0, 4) : '') }}
             </span>
-            <span v-else>
-                {{ item.ProductionYear }} <el-tag disable-transitions>{{ item.MediaSources ? formatBytes(maxMediaSources(item.MediaSources)?.Size!) : 0 }}</el-tag>
+            <span v-else style="display: flex;justify-content: space-between;align-items: center;">
+                <span>{{ item.ProductionYear }}</span>
+                <el-tag disable-transitions>{{ item.MediaSources ? formatBytes(maxMediaSources(item.MediaSources)?.Size!) : 0 }}</el-tag>
             </span>
         </div>
         <div style="display: flex;justify-content: space-between;">
             <span>
-                <el-link :underline="false" v-if="item.UserData" :disabled="starLoading" @click="star(item)">
-                    <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''" v-if="item.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
-                    <el-icon :size="24" :class="starLoading ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
+                <el-link :underline="false" v-if="item.UserData" :disabled="starLoading[item.Id]" @click="star(item)">
+                    <el-icon color="#E6A23C" :size="24" :class="starLoading[item.Id] ? 'is-loading' : ''" v-if="item.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
+                    <el-icon :size="24" :class="starLoading[item.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
                 </el-link>
-                <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading" v-if="item.UserData" @click="played(item)">
-                    <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="item.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                    <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[item.Id]" v-if="item.UserData" @click="played(item)">
+                    <el-icon color="#67C23A" :size="24" :class="playedLoading[item.Id] ? 'is-loading' : ''" v-if="item.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
+                    <el-icon :size="24" :class="playedLoading[item.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                 </el-link>
             </span>
             <span>
@@ -83,31 +84,27 @@
                                 <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                             </div>
                         </template>
-                        <div v-for="episodesItem in dialogEpisodesList" class="note-item" style="display: flex;justify-content: space-between; align-items: center;">
-                            <div>
-                                <p>
-                                    <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">
-                                        <el-badge is-dot :value="episodesItem.UserData?.Played" type="primary" :offset="[5, 0]">
-                                            {{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}
-                                        </el-badge>
+                        <div v-for="episodesItem in dialogEpisodesList" class="note-item">
+                            <p>
+                                <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">
+                                    {{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}
+                                </el-link>
+                            </p>
+                            <div style="display: flex;justify-content: space-between;">
+                                <span>
+                                    <span style="margin-right: 10px;">{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
+                                    <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag>
+                                </span>
+                                <span>
+                                    <el-link :underline="false" v-if="episodesItem.UserData" :disabled="starLoading[episodesItem.Id]" @click="star(episodesItem)">
+                                        <el-icon color="#E6A23C" :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
+                                        <el-icon :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
                                     </el-link>
-                                </p>
-                                <div style="display: flex;justify-content: space-between;">
-                                    <span>
-                                        <span style="margin-right: 10px;">{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
-                                        <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag>
-                                    </span>
-                                    <span>
-                                        <el-link :underline="false" v-if="episodesItem.UserData" :disabled="starLoading[episodesItem.Id]" @click="star(episodesItem)">
-                                            <el-icon color="#E6A23C" :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
-                                            <el-icon :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
-                                        </el-link>
-                                        <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodesItem.Id]" v-if="episodesItem.UserData" @click="played(episodesItem)">
-                                            <el-icon color="#67C23A" :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                            <el-icon :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
-                                        </el-link>
-                                    </span>
-                                </div>
+                                    <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodesItem.Id]" v-if="episodesItem.UserData" @click="played(episodesItem)">
+                                        <el-icon color="#67C23A" :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                        <el-icon :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                                    </el-link>
+                                </span>
                             </div>
                         </div>
                     </el-skeleton>
@@ -141,6 +138,8 @@ const {item, embyServer} = defineProps<{
   item: SearchItems,
   embyServer: EmbyServerConfig
 }>()
+
+console.log(item)
 
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
@@ -286,4 +285,43 @@ async function handleEpisodesPageChange(val: number, embyServer: EmbyServerConfi
 </script>
 
 <style scoped>
+.note-container {
+  display: flex;
+  height: 500px;
+}
+
+.note-sidebar {
+  width: 30%;
+  border-right: 1px solid #18222C;
+  padding-right: 20px;
+  overflow-y: auto;
+}
+
+.note-item {
+  padding: 3px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #18222C;
+}
+
+.note-item:hover {
+  background-color: #18222C;
+}
+
+.note-item.active {
+  color: #409EFF;
+}
+
+.note-content {
+  width: 70%;
+  padding-left: 20px;
+}
+
+h2 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.el-scrollbar {
+  height: 100%;
+}
 </style>

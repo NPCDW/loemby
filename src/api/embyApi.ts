@@ -108,7 +108,7 @@ async function getFavoriteList(embyServer: EmbyServerConfig, startIndex: number,
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie&Fields=AlternateMediaSources,MediaSources&StartIndex=${startIndex}&Limit=${limit}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex=${startIndex}&Limit=${limit}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,

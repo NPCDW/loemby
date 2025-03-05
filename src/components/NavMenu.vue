@@ -21,12 +21,19 @@
                             {{ embyServer.server_name }}
                         </div>
                         <template #dropdown>
-                            <el-dropdown-menu>
-                                <el-dropdown-item @click="reLogin(embyServer)">重新登录</el-dropdown-item>
-                                <el-dropdown-item @click="editEmbyServer(embyServer)">编辑</el-dropdown-item>
-                                <el-dropdown-item @click="enabledEmbyServer(embyServer)" v-text="embyServer.disabled ? '启用' : '禁用'"></el-dropdown-item>
-                                <el-dropdown-item @click="logoutEmbyServer(embyServer)">退出登录</el-dropdown-item>
-                                <el-dropdown-item @click="delEmbyServer(embyServer)">删除</el-dropdown-item>
+                            <el-dropdown-menu split-button>
+                                <el-dropdown-item @click="reLogin(embyServer)"><i-ep-Promotion /> 重新登录</el-dropdown-item>
+                                <el-dropdown-item @click="editEmbyServer(embyServer)"><i-ep-Edit />编辑</el-dropdown-item>
+                                <el-dropdown-item @click="enabledEmbyServer(embyServer)">
+                                    <template v-if="embyServer.disabled">
+                                        <i-ep-CircleCheckFilled /> 启用
+                                    </template>
+                                    <template v-else>
+                                        <i-ep-CircleCloseFilled /> 禁用
+                                    </template>
+                                </el-dropdown-item>
+                                <el-dropdown-item style="color: #E6A23C" @click="logoutEmbyServer(embyServer)"><i-ep-WarnTriangleFilled /> 退出登录</el-dropdown-item>
+                                <el-dropdown-item style="color: #F56C6C" @click="delEmbyServer(embyServer)"><i-ep-Delete /> 删除</el-dropdown-item>
                             </el-dropdown-menu>
                         </template>
                     </el-dropdown>
@@ -49,6 +56,13 @@
         <el-form label-position="top">
             <el-form-item label="服务器地址">
                 <el-input v-model="tmpEmbyServerConfig.base_url" placeholder="Please input" />
+            </el-form-item>
+            <el-form-item label="服务器地址">
+                <el-select v-model="tmpEmbyServerConfig.browse_proxy_id">
+                    <el-option key="no" label="不使用代理" value="no"/>
+                    <el-option key="follow" label="跟随全局代理" value="follow"/>
+                    <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                </el-select>
             </el-form-item>
             <el-form-item>
                 <div style="width: 100%; display: flex; justify-content: end;">
@@ -128,20 +142,20 @@ watchEffect(() => {
     console.log(active.value)
 })
 
-const embyServers = ref<EmbyServerConfig[]>([])
 let config = useConfig().get_config()
-embyServers.value = config?.emby_server ? config.emby_server : []
+const proxyServers = config.proxy_server ? config.proxy_server : [];
+const embyServers = config?.emby_server ? config.emby_server : []
 async function saveEmbyServer(tmp: EmbyServerConfig) {
     let value = _.cloneDeep(tmp);
-    for (let index = 0; index < embyServers.value.length; index++) {
-        if (embyServers.value[index].id === value.id) {
-            embyServers.value[index] = value
-            await useConfig().saveEmbyServer(embyServers.value)
+    for (let index = 0; index < embyServers.length; index++) {
+        if (embyServers[index].id === value.id) {
+            embyServers[index] = value
+            await useConfig().saveEmbyServer(embyServers)
             return
         }
     }
-    embyServers.value.push(value)
-    await useConfig().saveEmbyServer(embyServers.value)
+    embyServers.push(value)
+    await useConfig().saveEmbyServer(embyServers)
 }
 
 
@@ -163,6 +177,8 @@ function addEmbyServer() {
         client_version: client_version,
         device: getOsInfo().name,
         device_id: generateGuid(),
+        browse_proxy_id: 'follow',
+        play_proxy_id: 'follow',
     }
 }
 const dialogEditEmbyServerVisible = ref(false)
@@ -171,6 +187,12 @@ function editEmbyServer(embyServer: EmbyServerConfig) {
     tmpEmbyServerConfig.value = _.clone(embyServer)
 }
 async function enabledEmbyServer(embyServer: EmbyServerConfig) {
+    if (!embyServer.auth_token && embyServer.disabled) {
+        ElMessage.error({
+            message: '请先登录'
+        })
+        return
+    }
     embyServer.disabled = !embyServer.disabled
     await saveEmbyServer(embyServer)
 }
@@ -200,10 +222,10 @@ function delEmbyServer(tmp: EmbyServerConfig) {
       type: 'warning',
     }
   ).then(async () => {
-        for (let index = 0; index < embyServers.value.length; index++) {
-            if (embyServers.value[index].id === tmp.id) {
-                embyServers.value.splice(index, 1)
-                await useConfig().saveEmbyServer(embyServers.value)
+        for (let index = 0; index < embyServers.length; index++) {
+            if (embyServers[index].id === tmp.id) {
+                embyServers.splice(index, 1)
+                await useConfig().saveEmbyServer(embyServers)
                 return
             }
         }
