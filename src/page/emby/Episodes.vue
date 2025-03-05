@@ -223,14 +223,6 @@ function playbackVersionChange(val: string) {
     videoOptions.value = []
     audioOptions.value = []
     subtitleOptions.value = []
-    audioOptions.value.push({
-        label: '关闭',
-        value: -1
-    })
-    subtitleOptions.value.push({
-        label: '关闭',
-        value: -1
-    })
     let currentMediaSources = currentEpisodes.value!.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
     if (currentMediaSources) {
         let videoIndex = 0
@@ -265,6 +257,42 @@ function playbackVersionChange(val: string) {
                     subtitleSelect.value = subtitleIndex
                 }
             }
+        }
+        if (videoOptions.value.length > 0) {
+            videoOptions.value.push({
+                label: '关闭',
+                value: -1
+            })
+        } else {
+            videoOptions.value.push({
+                label: '自动',
+                value: 0
+            })
+            videoSelect.value = 0
+        }
+        if (audioOptions.value.length > 0) {
+            audioOptions.value.push({
+                label: '关闭',
+                value: -1
+            })
+        } else {
+            audioOptions.value.push({
+                label: '自动',
+                value: 0
+            })
+            audioSelect.value = 0
+        }
+        if (subtitleOptions.value.length > 0) {
+            subtitleOptions.value.push({
+                label: '关闭',
+                value: -1
+            })
+        } else {
+            subtitleOptions.value.push({
+                label: '自动',
+                value: 0
+            })
+            subtitleSelect.value = 0
         }
         if (audioSelect.value === -1 && audioOptions.value.length > 1) {
             audioSelect.value = audioOptions.value[1].value
@@ -310,6 +338,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
                 media_source_id: currentMediaSources.Id,
                 play_session_id: playbackInfo.PlaySessionId,
                 playback_position_ticks: playbackPositionTicks,
+                vid: videoSelect.value,
                 aid: audioSelect.value,
                 sid: subtitleSelect.value,
                 external_audio: externalAudio,

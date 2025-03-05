@@ -19,6 +19,7 @@ interface InvokePlayback {
     media_source_id: string,
     play_session_id: string,
     playback_position_ticks: number,
+    vid: number,
     aid: number,
     sid: number,
     external_audio: string[],

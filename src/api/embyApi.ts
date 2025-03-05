@@ -138,6 +138,44 @@ async function nextUp(embyServer: EmbyServerConfig, seriesId: string, startIndex
 }
 
 /**
+ * 首页媒体库列表
+ * @returns EmbyPageList<MediaLibrary>
+ */
+async function getMediaLibraryList(embyServer: EmbyServerConfig) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id) {
+        return Promise.reject("参数缺失");
+    }
+    return invoke.httpForward({
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Views`,
+        method: 'GET',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+    });
+}
+
+/**
+ * 首页媒体库子项目
+ * @returns EmbyPageList<SearchItems>
+ */
+async function getMediaLibraryChildLatest(embyServer: EmbyServerConfig, parentId: string, limit: number) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || parentId || !limit) {
+        return Promise.reject("参数缺失");
+    }
+    return invoke.httpForward({
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/Latest?Limit=${limit}ParentId=${parentId}&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate`,
+        method: 'GET',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+    });
+}
+
+/**
  * 电影详情、剧集详情、季详情、系列详情、合集详情
  * @returns EpisodesItems
  */
@@ -430,7 +468,7 @@ async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
 
 export default {
     getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, getContinuePlayList, nextUp,
-    getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, 
+    getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
 }
 
 
@@ -510,4 +548,10 @@ export interface UserData {
     PlayCount: number,
     IsFavorite: boolean,
     Played: boolean,
+}
+
+export interface MediaLibrary {
+    Name: string,
+    Id: string,
+    Type: string,
 }

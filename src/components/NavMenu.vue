@@ -11,7 +11,7 @@
                 <el-menu-item @click="addEmbyServer">
                     <el-icon><i-ep-Plus /></el-icon>添加服务器
                 </el-menu-item>
-                <el-menu-item :index="'/nav/emby/' + embyServer.id" v-if="embyServers" v-for="embyServer in embyServers">
+                <el-menu-item :index="'/nav/emby/' + embyServer.id" v-if="embyServers" v-for="embyServer in embyServers" :disabled="embyServer.disabled">
                     <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
                         <div style="height: 100%; width: 100%; display: flex; align-items: center;">
                             <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>

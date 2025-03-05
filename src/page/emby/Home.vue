@@ -37,6 +37,9 @@
                                 <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">继续</el-button></p>
                             </el-card>
                         </div>
+                        <div style="display: flex;justify-content: center;">
+                            <el-empty v-if="episodesList && episodesList.length == 0" :image-size="200" description="" />
+                        </div>
                     </el-skeleton>
                     <el-pagination
                         v-model:current-page="episodesCurrentPage"

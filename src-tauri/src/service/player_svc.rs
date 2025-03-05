@@ -50,18 +50,28 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: subtitle.clone(), proxy_url: body.proxy.clone(), user_agent: body.user_agent.clone()});
         command.arg(&format!("--sub-file={}", format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)));
     }
+    if body.vid == -1 {
+        command.arg(&format!("--vid=no"));
+    } else if body.vid == 0 {
+        command.arg(&format!("--vid=auto"));
+    } else {
+        command.arg(&format!("--vid={}", body.aid));
+    }
     if body.aid == -1 {
         command.arg(&format!("--aid=no"));
+    } else if body.aid == 0 {
+        command.arg(&format!("--aid=auto"));
     } else {
         command.arg(&format!("--aid={}", body.aid));
     }
     if body.sid == -1 {
         command.arg(&format!("--sid=no"));
+    } else if body.sid == 0 {
+        command.arg(&format!("--sid=auto"));
     } else {
         command.arg(&format!("--sid={}", body.sid));
     }
     tracing::debug!("调用MPV: {:?}", &command);
-    {  }
     
     let player = command.spawn();
 

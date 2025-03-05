@@ -1,4 +1,7 @@
 export const formatBytes = (size: number) => {
+    if (!size) {
+        return "0 KB"
+    }
     const units: string[] = ['KB', 'MB', 'GB', 'TB'];
     for (let index = 0; index < units.length; index++) {
         size /= 1024;
@@ -10,6 +13,9 @@ export const formatBytes = (size: number) => {
 }
 
 export const formatMbps = (size: number) => {
+    if (!size) {
+        return "0 Kbps"
+    }
     const units: string[] = ['Kbps', 'Mbps', 'Gbps', 'Tbps'];
     for (let index = 0; index < units.length; index++) {
         size /= 1024;
