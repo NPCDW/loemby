@@ -235,7 +235,9 @@ function playbackVersionChange(val: string) {
                     label: mediaStream.DisplayTitle,
                     value: videoIndex
                 })
-                videoSelect.value = videoIndex
+                if (mediaStream.IsDefault) {
+                    videoSelect.value = videoIndex
+                }
             } else if (mediaStream.Type == 'Audio') {
                 audioIndex++
                 audioOptions.value.push({
@@ -293,6 +295,9 @@ function playbackVersionChange(val: string) {
                 value: 0
             })
             subtitleSelect.value = 0
+        }
+        if (videoSelect.value === -1 && videoOptions.value.length > 1) {
+            videoSelect.value = videoOptions.value[1].value
         }
         if (audioSelect.value === -1 && audioOptions.value.length > 1) {
             audioSelect.value = audioOptions.value[1].value
