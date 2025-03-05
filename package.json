@@ -1,7 +1,7 @@
 {
   "name": "loemby",
   "private": true,
-  "version": "",
+  "version": "0.4.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
