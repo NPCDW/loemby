@@ -84,12 +84,31 @@ async function search(embyServer: EmbyServerConfig, search_str: string, startInd
  * 首页继续播放列表
  * @returns EmbyPageList<EpisodesItems>
  */
-async function continuePlay(embyServer: EmbyServerConfig, startIndex: number, limit: number) {
+async function getContinuePlayList(embyServer: EmbyServerConfig, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
         url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/Resume?MediaTypes=Video&Recursive=true&Fields=AlternateMediaSources,MediaSources&StartIndex=${startIndex}&Limit=${limit}`,
+        method: 'GET',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+    });
+}
+
+/**
+ * 收藏列表
+ * @returns EmbyPageList<EpisodesItems>
+ */
+async function getFavoriteList(embyServer: EmbyServerConfig, startIndex: number, limit: number) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
+        return Promise.reject("参数缺失");
+    }
+    return invoke.httpForward({
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie&Fields=AlternateMediaSources,MediaSources&StartIndex=${startIndex}&Limit=${limit}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -410,8 +429,8 @@ async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
 }
 
 export default {
-    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, continuePlay, nextUp,
-    getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, 
+    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, getContinuePlayList, nextUp,
+    getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, 
 }
 
 
