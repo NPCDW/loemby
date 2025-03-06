@@ -38,29 +38,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     }
     let connect = connect.unwrap();
 
-    let mut client = reqwest::Client::builder();
-    if let Some(proxy_url) = connect.proxy_url.clone() {
-        let proxy = reqwest::Proxy::all(&proxy_url);
-        if proxy.is_err() {
-            tracing::error!("{} 代理不正确 {:?}", proxy_url, proxy);
-            return (
-                axum::http::StatusCode::SERVICE_UNAVAILABLE,
-                axum::http::HeaderMap::new(),
-                axum::body::Body::empty()
-            ).into_response();
-        }
-        client = client.proxy(proxy.unwrap());
-    }
-    let client = client.build();
-    if client.is_err() {
-        tracing::error!("{} 创建媒体流请求失败 {:?}", &id, client);
-        return (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            axum::http::HeaderMap::new(),
-            axum::body::Body::empty()
-        ).into_response();
-    }
-    let client = client.unwrap();
+    let client = connect.client.clone();
     let mut req_headers = headers.clone();
     req_headers.remove( axum::http::header::HOST);
     req_headers.insert( axum::http::header::USER_AGENT, connect.user_agent.clone().parse().unwrap() );
@@ -88,7 +66,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
 #[derive(Clone)]
 pub struct AxumAppStateConnect {
     pub stream_url: String,
-    pub proxy_url: Option<String>,
+    pub client: reqwest::Client,
     pub user_agent: String,
 }
 

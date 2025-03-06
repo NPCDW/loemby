@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use service::proxy_svc;
 use tauri::{async_runtime::RwLock, Manager};
@@ -62,6 +62,7 @@ pub fn run() {
             app.manage(AppState {
                 app_config: RwLock::new(config.unwrap()),
                 auxm_app_state: axum_app_state,
+                reqwest_pool: RwLock::new(HashMap::new()),
                 root_dir
             });
             Ok(())
