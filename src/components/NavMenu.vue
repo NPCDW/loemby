@@ -166,7 +166,7 @@ function addEmbyServer() {
     stepActive.value = 1;
     dialogAddEmbyServerVisible.value = true
     const client = "loemby";
-    const client_version = "0.4.2";
+    const client_version = "0.4.3";
     const user_agent = client + "/" + client_version;
     tmpEmbyServerConfig.value = {
         id: generateGuid(),
