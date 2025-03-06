@@ -8,7 +8,7 @@
     </div>
 
     <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
-        <el-tabs v-model="activePane" @tab-click="handlePaneClick">
+        <el-tabs v-model="activePane" @tab-change="handlePaneChange">
             <el-tab-pane label="继续观看" name="ContinuePlay">
                 <div>
                     <el-skeleton :loading="episodesLoading" animated>
@@ -142,7 +142,7 @@ import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem } from '../../api/embyApi';
 import { useConfig } from '../../store/config';
-import { ElMessage, TabsPaneContext } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
@@ -156,11 +156,7 @@ let embyServer = useConfig().getEmbyServer(<string>route.params.id)!
 watch(() => route.params.id, (newId, _oldId) => {
     embyServer = useConfig().getEmbyServer(<string>newId)!
 
-    episodesList.value = []
-    episodesCurrentPage.value = 1
-    episodesPageSize.value = 6
-    episodesTotal.value = 0
-    getContinuePlayList(episodesCurrentPage.value, episodesPageSize.value)
+    handlePaneChange()
 })
 
 const search_str = ref('')
@@ -300,20 +296,20 @@ function loadImage(itemId: string) {
 }
 
 const activePane = ref('ContinuePlay')
-function handlePaneClick(pane: TabsPaneContext, _ev: Event) {
-    if (pane.paneName == 'ContinuePlay') {
+function handlePaneChange() {
+    if (activePane.value == 'ContinuePlay') {
         episodesList.value = []
         episodesCurrentPage.value = 1
         episodesPageSize.value = 6
         episodesTotal.value = 0
         getContinuePlayList(episodesCurrentPage.value, episodesPageSize.value)
-    } else if (pane.paneName == 'Favorite') {
+    } else if (activePane.value == 'Favorite') {
         favoriteList.value = []
         favoriteCurrentPage.value = 1
         favoritePageSize.value = 12
         favoriteTotal.value = 0
         getFavoriteList(favoriteCurrentPage.value, favoritePageSize.value)
-    } else if (pane.paneName == 'MediaLibrary') {
+    } else if (activePane.value == 'MediaLibrary') {
         mediaLibraryList.value = []
         getMediaLibraryList()
     }

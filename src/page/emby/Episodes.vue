@@ -89,10 +89,12 @@
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row; justify-content: space-between;">
                     <template  v-for="(nextUpItem, index) in nextUpList">
                         <el-card style="width: 300px; margin-bottom: 7px;" v-if="index != 0 || nextUpCurrentPage != 1">
-                            <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
+                            <el-link :underline="false" @click="gotoEpisodes(nextUpItem.Id)">
+                                <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
+                            </el-link>
                             <p>{{ nextUpItem.PremiereDate ? nextUpItem.PremiereDate.substring(0, 10) : '' }}
-                                <el-tag disable-transitions>{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
-                            <p><el-button type="primary" @click="gotoEpisodes(nextUpItem.Id)" :loading="playbackInfoLoading">详情</el-button></p>
+                                <el-tag disable-transitions>{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</el-tag>
+                            </p>
                         </el-card>
                     </template>
                 </div>
@@ -297,13 +299,13 @@ function playbackVersionChange(val: string) {
             subtitleSelect.value = 0
         }
         if (videoSelect.value === -1 && videoOptions.value.length > 1) {
-            videoSelect.value = videoOptions.value[1].value
+            videoSelect.value = videoOptions.value[0].value
         }
         if (audioSelect.value === -1 && audioOptions.value.length > 1) {
-            audioSelect.value = audioOptions.value[1].value
+            audioSelect.value = audioOptions.value[0].value
         }
         if (subtitleSelect.value === -1 && subtitleOptions.value.length > 1) {
-            subtitleSelect.value = subtitleOptions.value[1].value
+            subtitleSelect.value = subtitleOptions.value[0].value
         }
     }
 }
