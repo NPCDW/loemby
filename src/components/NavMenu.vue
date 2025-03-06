@@ -40,7 +40,7 @@
                 </el-menu-item>
             </el-menu>
         </el-scrollbar>
-        <div style="flex: auto; height: 100vh; width: 100%;">
+        <div style="flex: auto; height: 100vh; width: calc(100% - 200px);">
             <router-view></router-view>
         </div>
     </div>

@@ -80,7 +80,57 @@
                 </div>
             </el-tab-pane>
             <el-tab-pane label="媒体库" name="MediaLibrary">
-                
+                <el-scrollbar>
+                    <div>
+                        <el-scrollbar>
+                            <el-skeleton :loading="mediaLibraryLoading" animated>
+                                <template #template>
+                                    <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
+                                        <div v-for="i in 5" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                            <el-skeleton-item variant="image" style="width: 267px; height: 150px;" />
+                                            <p><el-skeleton-item variant="text" style="width: 100px" /></p>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
+                                    <div v-for="item in mediaLibraryList" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                        <div style="min-width: 267px; min-height: 150px;">
+                                            <img :src="images[item.Id]" style="max-width: 267px; max-height: 150px;" />
+                                        </div>
+                                        <span>{{ item.Name }}</span>
+                                    </div>
+                                </div>
+                            </el-skeleton>
+                        </el-scrollbar>
+                    </div>
+                    <div v-for="mediaLibrary in mediaLibraryList">
+                        <h1>{{ mediaLibrary.Name }}</h1>
+                        <el-scrollbar>
+                            <div style="display: flex;">
+                                <el-skeleton :loading="mediaLibraryChildLoading[mediaLibrary.Id]" animated>
+                                    <template #template>
+                                        <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
+                                            <div v-for="i in 8" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                                <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
+                                                <p><el-skeleton-item variant="text" style="width: 60px" /></p>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
+                                        <div v-for="item in mediaLibraryChildList[mediaLibrary.Id]"
+                                            @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
+                                            style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                            <div style="min-width: 115px; min-height: 160px;">
+                                                <img :src="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
+                                            </div>
+                                            <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
+                                        </div>
+                                    </div>
+                                </el-skeleton>
+                            </div>
+                        </el-scrollbar>
+                    </div>
+                </el-scrollbar>
             </el-tab-pane>
         </el-tabs>
     </el-scrollbar>
@@ -90,12 +140,13 @@
 import { ref } from 'vue';
 import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import embyApi, { EmbyPageList, EpisodesItems, SearchItems } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem } from '../../api/embyApi';
 import { useConfig } from '../../store/config';
 import { ElMessage, TabsPaneContext } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
+import invoke from '../../api/invoke';
 
 const router = useRouter()
 const route = useRoute()
@@ -187,6 +238,67 @@ function getFavoriteList(currentPage: number, pageSize: number) {
     }).finally(() => favoriteLoading.value = false)
 }
 
+const mediaLibraryLoading = ref(false)
+const mediaLibraryList = ref<MediaLibraryItem[]>([])
+function getMediaLibraryList() {
+    mediaLibraryLoading.value = true
+    return embyApi.getMediaLibraryList(embyServer).then(async response => {
+        if (response.status_code != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status_code + ' ' + response.status_text
+            })
+            return
+        }
+        let json: EmbyPageList<MediaLibraryItem> = JSON.parse(response.body);
+        mediaLibraryList.value = json.Items
+        for (let item of mediaLibraryList.value) {
+            loadImage(item.Id)
+            getMediaLibraryChildLatest(item.Id)
+        }
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => mediaLibraryLoading.value = false)
+}
+const mediaLibraryChildLoading = ref<{[key: string]: boolean}>({})
+const mediaLibraryChildList = ref<{[key: string]: SearchItems[]}>({})
+function getMediaLibraryChildLatest(parentId: string) {
+    mediaLibraryChildLoading.value[parentId] = true
+    return embyApi.getMediaLibraryChildLatest(embyServer, parentId, 8).then(async response => {
+        if (response.status_code != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status_code + ' ' + response.status_text
+            })
+            return
+        }
+        let json: SearchItems[] = JSON.parse(response.body);
+        mediaLibraryChildList.value[parentId] = json
+        for (let item of mediaLibraryChildList.value[parentId]) {
+            loadImage(item.Id)
+        }
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => mediaLibraryChildLoading.value[parentId] = false)
+}
+
+const images = ref<{[key: string]: string}>({})
+function loadImage(itemId: string) {
+    invoke.loadImage({
+        image_url: embyApi.getImageUrl(embyServer, itemId)!,
+        proxy_url: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id),
+        user_agent: embyServer.user_agent!,
+    }).then(response => {
+        images.value[itemId] = response
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    })
+}
+
 const activePane = ref('ContinuePlay')
 function handlePaneClick(pane: TabsPaneContext, _ev: Event) {
     if (pane.paneName == 'ContinuePlay') {
@@ -202,9 +314,11 @@ function handlePaneClick(pane: TabsPaneContext, _ev: Event) {
         favoriteTotal.value = 0
         getFavoriteList(favoriteCurrentPage.value, favoritePageSize.value)
     } else if (pane.paneName == 'MediaLibrary') {
-
+        mediaLibraryList.value = []
+        getMediaLibraryList()
     }
 }
+
 </script>
 
 <style scoped>

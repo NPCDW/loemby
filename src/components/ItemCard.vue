@@ -139,8 +139,6 @@ const {item, embyServer} = defineProps<{
   embyServer: EmbyServerConfig
 }>()
 
-console.log(item)
-
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
 }

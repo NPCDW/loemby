@@ -75,7 +75,7 @@
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;">
                     <div v-for="i in 5" :key="i" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
                         <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
-                        <p><el-skeleton-item variant="text" style="width: 50%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 60px" /></p>
                     </div>
                 </div>
             </template>
@@ -315,7 +315,7 @@ function handleDialogEpisodesPageChange(page: number) {
 const images = ref<{[key: string]: string}>({})
 function loadImage(itemId: string) {
     invoke.loadImage({
-        image_url: embyServer.base_url + '/Items/' + itemId + '/Images/Primary',
+        image_url: embyApi.getImageUrl(embyServer, itemId)!,
         proxy_url: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id),
         user_agent: embyServer.user_agent!,
     }).then(response => {

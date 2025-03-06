@@ -139,7 +139,7 @@ async function nextUp(embyServer: EmbyServerConfig, seriesId: string, startIndex
 
 /**
  * 首页媒体库列表
- * @returns EmbyPageList<MediaLibrary>
+ * @returns EmbyPageList<MediaLibraryItem>
  */
 async function getMediaLibraryList(embyServer: EmbyServerConfig) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id) {
@@ -161,11 +161,11 @@ async function getMediaLibraryList(embyServer: EmbyServerConfig) {
  * @returns EmbyPageList<SearchItems>
  */
 async function getMediaLibraryChildLatest(embyServer: EmbyServerConfig, parentId: string, limit: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || parentId || !limit) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !parentId || !limit) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/Latest?Limit=${limit}ParentId=${parentId}&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/Latest?Limit=${limit}&ParentId=${parentId}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -387,6 +387,17 @@ function getSubtitleStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSo
 }
 
 /**
+ * 组装图片地址
+ * @returns
+ */
+function getImageUrl(embyServer: EmbyServerConfig, item_id: string, imageType: string = 'Primary') {
+    if (!item_id) {
+        return null;
+    }
+    return embyServer.base_url + `/emby/Items/${item_id}/Images/${imageType}`;
+}
+
+/**
  * 收藏
  * @returns
  */
@@ -469,6 +480,7 @@ async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
 export default {
     getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, getContinuePlayList, nextUp,
     getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
+    getImageUrl,
 }
 
 
@@ -550,7 +562,7 @@ export interface UserData {
     Played: boolean,
 }
 
-export interface MediaLibrary {
+export interface MediaLibraryItem {
     Name: string,
     Id: string,
     Type: string,
