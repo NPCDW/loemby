@@ -36,7 +36,7 @@ tracing-appender = "0.2.3"
 anyhow = "1.0"
 
 time = "0.3.21"
-chrono = { version = "0.4.48", features = ["serde"] }
+chrono = { version = "0.4.40", features = ["serde"] }
 
 md5 = "0.7.0"
 
