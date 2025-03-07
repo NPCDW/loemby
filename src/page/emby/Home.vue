@@ -7,133 +7,131 @@
         </el-input>
     </div>
 
-    <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
-        <el-tabs v-model="activePane" @tab-change="handlePaneChange">
-            <el-tab-pane label="继续观看" name="ContinuePlay">
-                <div>
-                    <el-skeleton :loading="episodesLoading" animated>
-                        <template #template>
-                            <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                                <el-card class="box-item" v-for="i in 5" :key="i">
-                                    <el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" />
-                                    <p><el-skeleton-item variant="text" style="width: 80%" /></p>
-                                    <p><el-skeleton-item variant="text" style="width: 90%" /></p>
-                                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                                    <p><el-skeleton-item variant="button" style="width: 30%" /></p>
-                                </el-card>
-                            </div>
-                        </template>
+    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 52px); padding: 0 20px;">
+        <el-tab-pane label="继续观看" name="ContinuePlay">
+            <el-scrollbar style="height: calc(100vh - 107px);">
+                <el-skeleton :loading="episodesLoading" animated>
+                    <template #template>
                         <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                            <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList">
-                                <template v-if="episodesItem.Type == 'Episode'">
-                                    <el-link :underline="false" @click="gotoSeries(episodesItem.SeriesId)"><h2>{{ episodesItem.SeriesName }}</h2></el-link>
-                                    <p><el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</el-link></p>
-                                </template>
-                                <template v-else>
-                                    <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)"><h2>{{ episodesItem.Name }}</h2></el-link>
-                                </template>
-                                <p><el-progress :percentage="episodesItem.UserData?.Played ? 100 : episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
-                                <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
-                                <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">继续</el-button></p>
+                            <el-card class="box-item" v-for="i in 5" :key="i">
+                                <el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" />
+                                <p><el-skeleton-item variant="text" style="width: 80%" /></p>
+                                <p><el-skeleton-item variant="text" style="width: 90%" /></p>
+                                <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                                <p><el-skeleton-item variant="button" style="width: 30%" /></p>
                             </el-card>
                         </div>
-                        <div style="display: flex;justify-content: center;">
-                            <el-empty v-if="episodesList && episodesList.length == 0" :image-size="200" description="" />
-                        </div>
-                    </el-skeleton>
-                    <el-pagination
-                        v-model:current-page="episodesCurrentPage"
-                        v-model:page-size="episodesPageSize"
-                        layout="total, prev, pager, next, jumper"
-                        :total="episodesTotal"
-                        @current-change="handleContinuePlayPageChange"
-                        hide-on-single-page
-                    />
-                </div>
-            </el-tab-pane>
-            <el-tab-pane label="收藏" name="Favorite">
-                <div>
-                    <el-skeleton :loading="favoriteLoading" animated>
-                        <template #template>
-                            <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                                <el-card class="box-item" v-for="i in 5" :key="i">
-                                    <el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" />
-                                    <p><el-skeleton-item variant="text" style="width: 80%" /></p>
-                                    <p><el-skeleton-item variant="text" style="width: 90%" /></p>
-                                    <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                                    <p><el-skeleton-item variant="button" style="width: 30%" /></p>
-                                </el-card>
-                            </div>
-                        </template>
+                    </template>
+                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                        <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList" :key="episodesItem.Id">
+                            <template v-if="episodesItem.Type == 'Episode'">
+                                <el-link :underline="false" @click="gotoSeries(episodesItem.SeriesId)"><h2>{{ episodesItem.SeriesName }}</h2></el-link>
+                                <p><el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</el-link></p>
+                            </template>
+                            <template v-else>
+                                <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)"><h2>{{ episodesItem.Name }}</h2></el-link>
+                            </template>
+                            <p><el-progress :percentage="episodesItem.UserData?.Played ? 100 : episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
+                            <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
+                            <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">继续</el-button></p>
+                        </el-card>
+                    </div>
+                    <div style="display: flex;justify-content: center;">
+                        <el-empty v-if="episodesList && episodesList.length == 0" :image-size="200" description="" />
+                    </div>
+                </el-skeleton>
+                <el-pagination
+                    v-model:current-page="episodesCurrentPage"
+                    v-model:page-size="episodesPageSize"
+                    layout="total, prev, pager, next, jumper"
+                    :total="episodesTotal"
+                    @current-change="handleContinuePlayPageChange"
+                    hide-on-single-page
+                />
+            </el-scrollbar>
+        </el-tab-pane>
+        <el-tab-pane label="收藏" name="Favorite">
+            <el-scrollbar style="height: calc(100vh - 107px);">
+                <el-skeleton :loading="favoriteLoading" animated>
+                    <template #template>
                         <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                            <ItemCard v-for="favoriteItem in favoriteList" :key="favoriteItem.Id" :item="favoriteItem" :embyServer="embyServer" />
+                            <el-card class="box-item" v-for="i in 5" :key="i">
+                                <el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" />
+                                <p><el-skeleton-item variant="text" style="width: 80%" /></p>
+                                <p><el-skeleton-item variant="text" style="width: 90%" /></p>
+                                <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                                <p><el-skeleton-item variant="button" style="width: 30%" /></p>
+                            </el-card>
                         </div>
-                    </el-skeleton>
-                    <el-pagination
-                        v-model:current-page="favoriteCurrentPage"
-                        v-model:page-size="favoritePageSize"
-                        layout="total, prev, pager, next, jumper"
-                        :total="favoriteTotal"
-                        @current-change="handleFavoritePageChange"
-                        hide-on-single-page
-                    />
+                    </template>
+                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                        <ItemCard v-for="favoriteItem in favoriteList" :key="favoriteItem.Id" :item="favoriteItem" :embyServer="embyServer" />
+                    </div>
+                </el-skeleton>
+                <el-pagination
+                    v-model:current-page="favoriteCurrentPage"
+                    v-model:page-size="favoritePageSize"
+                    layout="total, prev, pager, next, jumper"
+                    :total="favoriteTotal"
+                    @current-change="handleFavoritePageChange"
+                    hide-on-single-page
+                />
+            </el-scrollbar>
+        </el-tab-pane>
+        <el-tab-pane label="媒体库" name="MediaLibrary">
+            <el-scrollbar style="height: calc(100vh - 107px);">
+                <div>
+                    <el-scrollbar>
+                        <el-skeleton :loading="mediaLibraryLoading" animated>
+                            <template #template>
+                                <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
+                                    <div v-for="i in 5" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                        <el-skeleton-item variant="image" style="width: 267px; height: 150px;" />
+                                        <p><el-skeleton-item variant="text" style="width: 100px" /></p>
+                                    </div>
+                                </div>
+                            </template>
+                            <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
+                                <div v-for="item in mediaLibraryList" :key="item.Id" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                    <div style="min-width: 267px; min-height: 150px;">
+                                        <el-image lazy  :src="images[item.Id]" style="max-width: 267px; max-height: 150px;" />
+                                    </div>
+                                    <span>{{ item.Name }}</span>
+                                </div>
+                            </div>
+                        </el-skeleton>
+                    </el-scrollbar>
                 </div>
-            </el-tab-pane>
-            <el-tab-pane label="媒体库" name="MediaLibrary">
-                <el-scrollbar>
-                    <div>
-                        <el-scrollbar>
-                            <el-skeleton :loading="mediaLibraryLoading" animated>
+                <div v-for="mediaLibrary in mediaLibraryList">
+                    <h1>{{ mediaLibrary.Name }}</h1>
+                    <el-scrollbar>
+                        <div style="display: flex;">
+                            <el-skeleton :loading="mediaLibraryChildLoading[mediaLibrary.Id]" animated>
                                 <template #template>
                                     <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
-                                        <div v-for="i in 5" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                                            <el-skeleton-item variant="image" style="width: 267px; height: 150px;" />
-                                            <p><el-skeleton-item variant="text" style="width: 100px" /></p>
+                                        <div v-for="i in 8" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                            <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
+                                            <p><el-skeleton-item variant="text" style="width: 60px" /></p>
                                         </div>
                                     </div>
                                 </template>
                                 <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
-                                    <div v-for="item in mediaLibraryList" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                                        <div style="min-width: 267px; min-height: 150px;">
-                                            <img :src="images[item.Id]" style="max-width: 267px; max-height: 150px;" />
+                                    <div v-for="item in mediaLibraryChildList[mediaLibrary.Id]" :key="item.Id"
+                                        @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
+                                        style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                        <div style="min-width: 115px; min-height: 160px;">
+                                            <el-image lazy scroll-container="#pane-MediaLibrary .el-scrollbar__wrap"  :src="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
                                         </div>
-                                        <span>{{ item.Name }}</span>
+                                        <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
                                     </div>
                                 </div>
                             </el-skeleton>
-                        </el-scrollbar>
-                    </div>
-                    <div v-for="mediaLibrary in mediaLibraryList">
-                        <h1>{{ mediaLibrary.Name }}</h1>
-                        <el-scrollbar>
-                            <div style="display: flex;">
-                                <el-skeleton :loading="mediaLibraryChildLoading[mediaLibrary.Id]" animated>
-                                    <template #template>
-                                        <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
-                                            <div v-for="i in 8" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                                                <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
-                                                <p><el-skeleton-item variant="text" style="width: 60px" /></p>
-                                            </div>
-                                        </div>
-                                    </template>
-                                    <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
-                                        <div v-for="item in mediaLibraryChildList[mediaLibrary.Id]"
-                                            @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
-                                            style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                                            <div style="min-width: 115px; min-height: 160px;">
-                                                <img :src="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
-                                            </div>
-                                            <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
-                                        </div>
-                                    </div>
-                                </el-skeleton>
-                            </div>
-                        </el-scrollbar>
-                    </div>
-                </el-scrollbar>
-            </el-tab-pane>
-        </el-tabs>
-    </el-scrollbar>
+                        </div>
+                    </el-scrollbar>
+                </div>
+            </el-scrollbar>
+        </el-tab-pane>
+    </el-tabs>
 </template>
 
 <script lang="ts" setup>
