@@ -23,7 +23,7 @@
                                     {{ embyServer.server_name }}
                                 </div>
                                 <template #dropdown>
-                                    <el-dropdown-menu split-button>
+                                    <el-dropdown-menu>
                                         <el-dropdown-item @click="reLogin(embyServer)"><i-ep-Promotion /> 重新登录</el-dropdown-item>
                                         <el-dropdown-item @click="editEmbyServer(embyServer)"><i-ep-Edit />编辑</el-dropdown-item>
                                         <el-dropdown-item @click="enabledEmbyServer(embyServer)">
@@ -171,7 +171,7 @@ function addEmbyServer() {
     stepActive.value = 1;
     dialogAddEmbyServerVisible.value = true
     const client = "loemby";
-    const client_version = "0.4.3";
+    const client_version = "0.4.4";
     const user_agent = client + "/" + client_version;
     tmpEmbyServerConfig.value = {
         id: generateGuid(),
