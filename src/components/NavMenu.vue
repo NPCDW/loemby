@@ -11,33 +11,37 @@
                 <el-menu-item @click="addEmbyServer">
                     <el-icon><i-ep-Plus /></el-icon>添加服务器
                 </el-menu-item>
-                <el-menu-item :index="'/nav/emby/' + embyServer.id" v-if="embyServers" v-for="embyServer in embyServers" :disabled="embyServer.disabled">
-                    <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
-                        <div style="height: 100%; width: 100%; display: flex; align-items: center;">
-                            <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
-                            <!-- <el-icon v-else-if="embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
-                            <el-icon v-else-if="embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon> -->
-                            <el-icon v-else size="24"><svg-icon name="emby" /></el-icon>
-                            {{ embyServer.server_name }}
-                        </div>
-                        <template #dropdown>
-                            <el-dropdown-menu split-button>
-                                <el-dropdown-item @click="reLogin(embyServer)"><i-ep-Promotion /> 重新登录</el-dropdown-item>
-                                <el-dropdown-item @click="editEmbyServer(embyServer)"><i-ep-Edit />编辑</el-dropdown-item>
-                                <el-dropdown-item @click="enabledEmbyServer(embyServer)">
-                                    <template v-if="embyServer.disabled">
-                                        <i-ep-CircleCheckFilled /> 启用
-                                    </template>
-                                    <template v-else>
-                                        <i-ep-CircleCloseFilled /> 禁用
-                                    </template>
-                                </el-dropdown-item>
-                                <el-dropdown-item style="color: #E6A23C" @click="logoutEmbyServer(embyServer)"><i-ep-WarnTriangleFilled /> 退出登录</el-dropdown-item>
-                                <el-dropdown-item style="color: #F56C6C" @click="delEmbyServer(embyServer)"><i-ep-Delete /> 删除</el-dropdown-item>
-                            </el-dropdown-menu>
-                        </template>
-                    </el-dropdown>
-                </el-menu-item>
+                <Container @drop="onDrop">  
+                    <Draggable v-for="embyServer in embyServers" :key="embyServer.id">
+                        <el-menu-item :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled">
+                            <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
+                                <div style="height: 100%; width: 100%; display: flex; align-items: center;">
+                                    <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
+                                    <!-- <el-icon v-else-if="embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
+                                    <el-icon v-else-if="embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon> -->
+                                    <el-icon v-else size="24"><svg-icon name="emby" /></el-icon>
+                                    {{ embyServer.server_name }}
+                                </div>
+                                <template #dropdown>
+                                    <el-dropdown-menu split-button>
+                                        <el-dropdown-item @click="reLogin(embyServer)"><i-ep-Promotion /> 重新登录</el-dropdown-item>
+                                        <el-dropdown-item @click="editEmbyServer(embyServer)"><i-ep-Edit />编辑</el-dropdown-item>
+                                        <el-dropdown-item @click="enabledEmbyServer(embyServer)">
+                                            <template v-if="embyServer.disabled">
+                                                <i-ep-CircleCheckFilled /> 启用
+                                            </template>
+                                            <template v-else>
+                                                <i-ep-CircleCloseFilled /> 禁用
+                                            </template>
+                                        </el-dropdown-item>
+                                        <el-dropdown-item style="color: #E6A23C" @click="logoutEmbyServer(embyServer)"><i-ep-WarnTriangleFilled /> 退出登录</el-dropdown-item>
+                                        <el-dropdown-item style="color: #F56C6C" @click="delEmbyServer(embyServer)"><i-ep-Delete /> 删除</el-dropdown-item>
+                                    </el-dropdown-menu>
+                                </template>
+                            </el-dropdown>
+                        </el-menu-item>
+                    </Draggable>
+                </Container>
             </el-menu>
         </el-scrollbar>
         <div style="flex: auto; height: 100vh; width: calc(100% - 200px);">
@@ -134,6 +138,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { generateGuid } from "../util/uuid_util";
 import { getOsInfo } from '../util/os_util'
 import _ from "lodash";
+import { Container, Draggable } from "vue3-smooth-dnd";
 
 const active = ref("");
 const route = useRoute();
@@ -144,18 +149,18 @@ watchEffect(() => {
 
 let config = useConfig().get_config()
 const proxyServers = config.proxy_server ? config.proxy_server : [];
-const embyServers = config?.emby_server ? config.emby_server : []
+const embyServers = ref(config?.emby_server ? config.emby_server : [])
 async function saveEmbyServer(tmp: EmbyServerConfig) {
     let value = _.cloneDeep(tmp);
-    for (let index = 0; index < embyServers.length; index++) {
-        if (embyServers[index].id === value.id) {
-            embyServers[index] = value
-            await useConfig().saveEmbyServer(embyServers)
+    for (let index = 0; index < embyServers.value.length; index++) {
+        if (embyServers.value[index].id === value.id) {
+            embyServers.value[index] = value
+            await useConfig().saveEmbyServer(embyServers.value)
             return
         }
     }
-    embyServers.push(value)
-    await useConfig().saveEmbyServer(embyServers)
+    embyServers.value.push(value)
+    await useConfig().saveEmbyServer(embyServers.value)
 }
 
 
@@ -222,10 +227,10 @@ function delEmbyServer(tmp: EmbyServerConfig) {
       type: 'warning',
     }
   ).then(async () => {
-        for (let index = 0; index < embyServers.length; index++) {
-            if (embyServers[index].id === tmp.id) {
-                embyServers.splice(index, 1)
-                await useConfig().saveEmbyServer(embyServers)
+        for (let index = 0; index < embyServers.value.length; index++) {
+            if (embyServers.value[index].id === tmp.id) {
+                embyServers.value.splice(index, 1)
+                await useConfig().saveEmbyServer(embyServers.value)
                 return
             }
         }
@@ -313,6 +318,12 @@ async function login(embyServerConfig: EmbyServerConfig) {
 async function saveEditEmbyServer() {
     await saveEmbyServer(tmpEmbyServerConfig.value!);
     dialogEditEmbyServerVisible.value = false
+}
+
+async function onDrop(dropResult: {removedIndex: number, addedIndex: number}) {
+    let element = embyServers.value.splice(dropResult.removedIndex, 1);
+    embyServers.value.splice(dropResult.addedIndex, 0, element[0]);
+    await useConfig().saveEmbyServer(embyServers.value)
 }
 </script>
 

@@ -58,7 +58,9 @@
                             <el-button plain type="success" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">从头播放</el-button>
                         </template>
                         <template v-else><el-button plain type="success" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">播放</el-button></template>
-                        <!-- <el-button plain>连播</el-button> -->
+                        <el-button plain @click="continuousPlay = !continuousPlay">
+                            <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
+                        </el-button>
                         <el-button plain :disabled="playedLoading" @click="played()">
                             <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
                             <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
@@ -136,6 +138,7 @@ const videoSelect = ref(-1)
 const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
 
+const continuousPlay = ref(true)
 const playbackInfoLoading = ref(false)
 const play_loading = ref(false)
 
@@ -379,7 +382,7 @@ watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
         //     clearInterval(playingProgressTask.value)
         // }
         updateCurrentEpisodes(true).then(() => {
-            if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
+            if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && continuousPlay.value) {
                 // todo 播放完成后，展示窗口，跳到下一集，继承当前音频和字幕选项
                 ElMessage.success({
                     message: '播放完成，即将播放下一集'
