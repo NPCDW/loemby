@@ -140,17 +140,10 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
     let (recver, mut sender) = conn.split();
     let mut recver = BufReader::new(recver);
 
-    let mut playback_len = Decimal::from_u64(0).unwrap();
     let send_task = tokio_root::spawn(async move {
         let command = r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n";
-        let command2 = r#"{ "command": ["get_property", "duration"], "request_id": 10024 }"#.to_string() + "\n";
         loop {
             let write = sender.write_all(command.as_bytes()).await;
-            if write.is_err() {
-                tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
-                break;
-            }
-            let write = sender.write_all(command2.as_bytes()).await;
             if write.is_err() {
                 tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
                 break;
@@ -178,27 +171,11 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
         }
         let json = json.unwrap();
         if let Some("end-file") = json.event {
-            match json.reason {
-                Some("quit") => {
-                    tracing::debug!("MPV IPC 播放结束");
-                    send_task.abort();
-                    let _ = player.kill().await;
-                    save_playback_progress(&body, &app_handle, last_record_position, 0);
-                    break;
-                }
-                Some("eof") => {
-                    if playback_len * Decimal::from_i64(1000_0000).unwrap() - last_record_position <= Decimal::from_i64(6000_0000).unwrap() {
-                        tracing::debug!("MPV IPC 播放结束");
-                        send_task.abort();
-                        let _ = player.kill().await;
-                        save_playback_progress(&body, &app_handle, last_record_position, 0);
-                        break;
-                    }
-                }
-                _ => {}
-                
-            }
-            continue;
+            tracing::debug!("MPV IPC 播放结束");
+            send_task.abort();
+            let _ = player.kill().await;
+            save_playback_progress(&body, &app_handle, last_record_position, 0);
+            break;
         }
         if let Some(10023) = json.request_id {
             let progress = json.data;
@@ -210,11 +187,6 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
                     last_save_time = chrono::Local::now();
                     save_playback_progress(&body, &app_handle, last_record_position, 1);
                 }
-            }
-        } else if let Some(10024) = json.request_id {
-            let playback_len_data = json.data;
-            if let Some(playback_len_data) = playback_len_data {
-                playback_len = Decimal::from_f64(playback_len_data).unwrap();
             }
         }
     }

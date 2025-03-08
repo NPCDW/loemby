@@ -22,5 +22,8 @@ RUN code-server --install-extension cnbcool.cnb-welcome
 RUN apt-get update && apt-get install -y webkit2gtk-4.1 libwebkit2gtk-4.0-dev build-essential file libxdo-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 RUN apt-get update && apt-get install -y curl wget unzip openssh-server git 
 
+RUN code-server --install-extension donjayamanne.githistory
+RUN code-server --install-extension tauri-apps.tauri-vscode
+
 ENV LANG C.UTF-8
 ENV LANGUAGE C.UTF-8

@@ -42,25 +42,30 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     let mut req_headers = headers.clone();
     req_headers.remove( axum::http::header::HOST);
     req_headers.insert( axum::http::header::USER_AGENT, connect.user_agent.clone().parse().unwrap() );
-    let res = client
-        .get(connect.stream_url.clone())
-        .headers(req_headers)
-        .send()
-        .await;
-    if res.is_err() {
-        tracing::error!("{} 请求媒体流失败 {:?}", &id, res);
-        return (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            axum::http::HeaderMap::new(),
-            axum::body::Body::empty()
-        ).into_response();
+    let mut retry = 0u8;
+    loop {
+        let res = client
+            .get(connect.stream_url.clone())
+            .headers(req_headers.clone())
+            .send()
+            .await;
+        tracing::debug!("stream: {} retry: {} 媒体流响应 {:?}", &id, &retry, res);
+        if res.is_ok() {
+            let res = res.unwrap();
+            return (
+                res.status(),
+                res.headers().clone(),
+                axum::body::Body::from_stream(res.bytes_stream())
+            ).into_response();
+        } else if retry >= 2 {
+            return (
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                axum::http::HeaderMap::new(),
+                axum::body::Body::empty()
+            ).into_response();
+        }
+        retry += 1;
     }
-    let res = res.unwrap();
-    (
-        res.status(),
-        res.headers().clone(),
-        axum::body::Body::from_stream(res.bytes_stream())
-    ).into_response()
 }
 
 #[derive(Clone)]
