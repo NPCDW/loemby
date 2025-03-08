@@ -33,7 +33,10 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: body.path.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
     let video_path = format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid);
 
+    #[cfg(windows)]
     let pipe_name = r"\\.\pipe\mpvsocket";
+    #[cfg(unix)]
+    let pipe_name = r"/tmp/mpvsocket";
     let pipe_name = format!("{}-{}-{}", &pipe_name, &body.server_id, &body.media_source_id);
     let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap());
     command.current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())

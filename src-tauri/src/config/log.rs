@@ -10,7 +10,7 @@ pub fn init(root_dir: &PathBuf, debug: bool) {
         "INFO"
     };
     let logs_dir = root_dir.join("logs/");
-    let file_appender = tracing_appender::rolling::never(logs_dir, "loemby.log");
+    let file_appender = tracing_appender::rolling::daily(logs_dir, "loemby.log");
     let local_time = OffsetTime::new(
         UtcOffset::from_hms(8, 0, 0).unwrap(),
         time::format_description::parse(
