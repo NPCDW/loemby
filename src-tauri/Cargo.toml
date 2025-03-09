@@ -1,6 +1,6 @@
 [package]
 name = "loemby"
-version = "0.4.4"
+version = "0.4.5"
 description = "Emby Client"
 authors = ["NPCDW"]
 edition = "2021"
