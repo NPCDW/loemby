@@ -132,23 +132,20 @@
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="统计" name="MediaLibraryCount">
-            <div style="display: flex; align-items: center; justify-content: center;">
-                <el-statistic title="电影" :value="mediaLibraryCount?.MovieCount">
-                    <template #suffix>
-                        <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
-                    </template>
-                </el-statistic>
-                <el-statistic title="剧" :value="mediaLibraryCount?.SeriesCount">
-                    <template #suffix>
-                        <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
-                    </template>
-                </el-statistic>
-                <el-statistic title="剧集" :value="mediaLibraryCount?.EpisodeCount">
-                    <template #suffix>
-                        <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
-                    </template>
-                </el-statistic>
-            </div>
+            <el-descriptions title="媒体库统计" :column="1" size="large" label-width="40">
+                <el-descriptions-item label="电影">
+                    <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
+                    <span v-else>{{ mediaLibraryCount?.MovieCount.toLocaleString() }}</span>
+                </el-descriptions-item>
+                <el-descriptions-item label="剧">
+                    <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
+                    <span v-else>{{ mediaLibraryCount?.SeriesCount.toLocaleString() }}</span>
+                </el-descriptions-item>
+                <el-descriptions-item label="剧集">
+                    <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
+                    <span v-else>{{ mediaLibraryCount?.EpisodeCount.toLocaleString() }}</span>
+                </el-descriptions-item>
+            </el-descriptions>
         </el-tab-pane>
     </el-tabs>
 </template>
