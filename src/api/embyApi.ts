@@ -158,7 +158,7 @@ async function getMediaLibraryList(embyServer: EmbyServerConfig) {
 
 /**
  * 首页媒体库子项目
- * @returns EmbyPageList<SearchItems>
+ * @returns SearchItems[]
  */
 async function getMediaLibraryChildLatest(embyServer: EmbyServerConfig, parentId: string, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !parentId || !limit) {
@@ -166,6 +166,25 @@ async function getMediaLibraryChildLatest(embyServer: EmbyServerConfig, parentId
     }
     return invoke.httpForward({
         url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/Latest?Limit=${limit}&ParentId=${parentId}`,
+        method: 'GET',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+    });
+}
+
+/**
+ * 剧集数量统计
+ * @returns MediaLibraryCount
+ */
+async function count(embyServer: EmbyServerConfig) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id) {
+        return Promise.reject("参数缺失");
+    }
+    return invoke.httpForward({
+        url: embyServer.base_url + `/emby/Items/Counts?UserId=${embyServer.user_id}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -480,7 +499,7 @@ async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
 export default {
     getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, getContinuePlayList, nextUp,
     getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
-    getImageUrl,
+    getImageUrl, count,
 }
 
 
@@ -566,4 +585,21 @@ export interface MediaLibraryItem {
     Name: string,
     Id: string,
     Type: string,
+}
+
+export interface MediaLibraryCount {
+    MovieCount: number,
+    SeriesCount: number,
+    EpisodeCount: number,
+    GameCount: number,
+    ArtistCount: number,
+    ProgramCount: number,
+    GameSystemCount: number,
+    TrailerCount: number,
+    SongCount: number,
+    AlbumCount: number,
+    MusicVideoCount: number,
+    BoxSetCount: number,
+    BookCount: number,
+    ItemCount: number,
 }

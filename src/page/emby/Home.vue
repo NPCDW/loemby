@@ -131,6 +131,25 @@
                 </div>
             </el-scrollbar>
         </el-tab-pane>
+        <el-tab-pane label="统计" name="MediaLibraryCount">
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <el-statistic title="电影" :value="mediaLibraryCount?.MovieCount">
+                    <template #suffix>
+                        <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
+                    </template>
+                </el-statistic>
+                <el-statistic title="剧" :value="mediaLibraryCount?.SeriesCount">
+                    <template #suffix>
+                        <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
+                    </template>
+                </el-statistic>
+                <el-statistic title="剧集" :value="mediaLibraryCount?.EpisodeCount">
+                    <template #suffix>
+                        <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
+                    </template>
+                </el-statistic>
+            </div>
+        </el-tab-pane>
     </el-tabs>
 </template>
 
@@ -138,7 +157,7 @@
 import { ref } from 'vue';
 import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem, MediaLibraryCount } from '../../api/embyApi';
 import { useConfig } from '../../store/config';
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
@@ -293,6 +312,26 @@ function loadImage(itemId: string) {
     })
 }
 
+const mediaLibraryCountLoading = ref(false)
+const mediaLibraryCount = ref<MediaLibraryCount>()
+function getMediaLibraryCount() {
+    mediaLibraryCountLoading.value = true
+    return embyApi.count(embyServer).then(async response => {
+        if (response.status_code != 200) {
+            ElMessage.error({
+                message: 'response status' + response.status_code + ' ' + response.status_text
+            })
+            return
+        }
+        let json: MediaLibraryCount = JSON.parse(response.body);
+        mediaLibraryCount.value = json
+    }).catch(e => {
+        ElMessage.error({
+            message: e
+        })
+    }).finally(() => mediaLibraryCountLoading.value = false)
+}
+
 const activePane = ref('ContinuePlay')
 function handlePaneChange() {
     if (activePane.value == 'ContinuePlay') {
@@ -310,6 +349,9 @@ function handlePaneChange() {
     } else if (activePane.value == 'MediaLibrary') {
         mediaLibraryList.value = []
         getMediaLibraryList()
+    } else if (activePane.value == 'MediaLibraryCount') {
+        mediaLibraryCount.value = undefined
+        getMediaLibraryCount()
     }
 }
 
