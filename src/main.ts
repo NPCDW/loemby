@@ -9,6 +9,7 @@ import { useConfig } from './store/config'
 import { usePlayback } from './store/playback'
 import svgIcon from "./components/SvgIcon/index.vue";
 import 'virtual:svg-icons-register'
+import VueLazyLoad from 'vue3-lazyload'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -16,6 +17,7 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 app.component('svg-icon', svgIcon)
+app.use(VueLazyLoad, {})
 
 await useConfig().sync_config()
 await usePlayback().listen_playback_progress()

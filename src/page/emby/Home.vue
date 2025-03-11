@@ -94,7 +94,7 @@
                             <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
                                 <div v-for="item in mediaLibraryList" :key="item.Id" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
                                     <div style="min-width: 267px; min-height: 150px;">
-                                        <el-image lazy  :src="images[item.Id]" style="max-width: 267px; max-height: 150px;" />
+                                        <img v-lazy="images[item.Id]" style="max-width: 267px; max-height: 150px;" />
                                     </div>
                                     <span>{{ item.Name }}</span>
                                 </div>
@@ -120,7 +120,7 @@
                                         @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
                                         style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
                                         <div style="min-width: 115px; min-height: 160px;">
-                                            <el-image lazy scroll-container="#pane-MediaLibrary .el-scrollbar__wrap"  :src="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
+                                            <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
                                         </div>
                                         <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
                                     </div>
@@ -275,7 +275,7 @@ const mediaLibraryChildLoading = ref<{[key: string]: boolean}>({})
 const mediaLibraryChildList = ref<{[key: string]: SearchItems[]}>({})
 function getMediaLibraryChildLatest(parentId: string) {
     mediaLibraryChildLoading.value[parentId] = true
-    return embyApi.getMediaLibraryChildLatest(embyServer, parentId, 8).then(async response => {
+    return embyApi.getMediaLibraryChildLatest(embyServer, parentId, 16).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error({
                 message: 'response status' + response.status_code + ' ' + response.status_text
@@ -391,4 +391,5 @@ h2 {
 .el-scrollbar {
   height: 100%;
 }
+
 </style>
