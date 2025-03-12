@@ -103,31 +103,33 @@
                     </el-scrollbar>
                 </div>
                 <div v-for="mediaLibrary in mediaLibraryList">
-                    <h1>{{ mediaLibrary.Name }}</h1>
-                    <el-scrollbar>
-                        <div style="display: flex;">
-                            <el-skeleton :loading="mediaLibraryChildLoading[mediaLibrary.Id]" animated>
-                                <template #template>
+                    <template v-if="mediaLibraryChildList[mediaLibrary.Id] && mediaLibraryChildList[mediaLibrary.Id].length > 0">
+                        <h1>{{ mediaLibrary.Name }}</h1>
+                        <el-scrollbar>
+                            <div style="display: flex;">
+                                <el-skeleton :loading="mediaLibraryChildLoading[mediaLibrary.Id]" animated>
+                                    <template #template>
+                                        <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
+                                            <div v-for="i in 8" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                                <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
+                                                <p><el-skeleton-item variant="text" style="width: 60px" /></p>
+                                            </div>
+                                        </div>
+                                    </template>
                                     <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
-                                        <div v-for="i in 8" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                                            <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
-                                            <p><el-skeleton-item variant="text" style="width: 60px" /></p>
+                                        <div v-for="item in mediaLibraryChildList[mediaLibrary.Id]" :key="item.Id"
+                                            @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
+                                            style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                                            <div style="min-width: 115px; min-height: 160px;">
+                                                <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
+                                            </div>
+                                            <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
                                         </div>
                                     </div>
-                                </template>
-                                <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
-                                    <div v-for="item in mediaLibraryChildList[mediaLibrary.Id]" :key="item.Id"
-                                        @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
-                                        style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                                        <div style="min-width: 115px; min-height: 160px;">
-                                            <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
-                                        </div>
-                                        <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
-                                    </div>
-                                </div>
-                            </el-skeleton>
-                        </div>
-                    </el-scrollbar>
+                                </el-skeleton>
+                            </div>
+                        </el-scrollbar>
+                    </template>
                 </div>
             </el-scrollbar>
         </el-tab-pane>

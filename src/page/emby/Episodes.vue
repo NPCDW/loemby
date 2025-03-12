@@ -27,7 +27,12 @@
                             <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h2>{{ currentEpisodes.SeriesName }}</h2></el-link>
                             <p>{{ 'S' + currentEpisodes.ParentIndexNumber + 'E' + currentEpisodes.IndexNumber + '. ' + currentEpisodes.Name }}</p>
                         </template>
-                        <p><el-progress :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
+                        <div style="display: flex;">
+                            <span>总时长: {{ timeLength }}</span>
+                            <span style="flex: auto; margin-left: 20px;">
+                                <el-progress :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
+                            </span>
+                        </div>
                         <p>
                             版本：
                             <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 840px" :disabled="versionOptions.length <= 1">
@@ -116,7 +121,7 @@
 <script lang="ts" setup>
 import { nextTick, ref, watch } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
-import { formatBytes, formatMbps } from '../../util/str_util'
+import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import invoke from '../../api/invoke';
 import { useConfig } from '../../store/config';
@@ -137,6 +142,7 @@ const versionSelect = ref('')
 const videoSelect = ref(-1)
 const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
+const timeLength = ref('')
 
 const continuousPlay = ref(true)
 const playbackInfoLoading = ref(false)
@@ -229,87 +235,89 @@ function playbackVersionChange(val: string) {
     audioOptions.value = []
     subtitleOptions.value = []
     let currentMediaSources = currentEpisodes.value!.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
-    if (currentMediaSources) {
-        let videoIndex = 0
-        let audioIndex = 0
-        let subtitleIndex = 0
-        for (let mediaStream of currentMediaSources.MediaStreams) {
-            if (mediaStream.Type == 'Video') {
-                videoIndex++
-                videoOptions.value.push({
-                    label: mediaStream.DisplayTitle,
-                    value: videoIndex
-                })
-                if (mediaStream.IsDefault) {
-                    videoSelect.value = videoIndex
-                }
-            } else if (mediaStream.Type == 'Audio') {
-                audioIndex++
-                audioOptions.value.push({
-                    label: mediaStream.DisplayTitle,
-                    value: audioIndex
-                })
-                if (mediaStream.IsDefault) {
-                    audioSelect.value = audioIndex
-                }
-            } else if (mediaStream.Type == 'Subtitle') {
-                subtitleIndex++
-                subtitleOptions.value.push({
-                    label: mediaStream.DisplayTitle,
-                    value: subtitleIndex
-                })
-                if (mediaStream.DisplayLanguage && mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1) {
-                    subtitleSelect.value = subtitleIndex
-                } else if (mediaStream.IsDefault && subtitleSelect.value === -1) {
-                    subtitleSelect.value = subtitleIndex
-                }
+    if (!currentMediaSources) {
+        return
+    }
+    timeLength.value = secondsToHMS(currentMediaSources.RunTimeTicks / 1000_0000)
+    let videoIndex = 0
+    let audioIndex = 0
+    let subtitleIndex = 0
+    for (let mediaStream of currentMediaSources.MediaStreams) {
+        if (mediaStream.Type == 'Video') {
+            videoIndex++
+            videoOptions.value.push({
+                label: mediaStream.DisplayTitle,
+                value: videoIndex
+            })
+            if (mediaStream.IsDefault) {
+                videoSelect.value = videoIndex
+            }
+        } else if (mediaStream.Type == 'Audio') {
+            audioIndex++
+            audioOptions.value.push({
+                label: mediaStream.DisplayTitle,
+                value: audioIndex
+            })
+            if (mediaStream.IsDefault) {
+                audioSelect.value = audioIndex
+            }
+        } else if (mediaStream.Type == 'Subtitle') {
+            subtitleIndex++
+            subtitleOptions.value.push({
+                label: mediaStream.DisplayTitle,
+                value: subtitleIndex
+            })
+            if (mediaStream.DisplayLanguage && mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1) {
+                subtitleSelect.value = subtitleIndex
+            } else if (mediaStream.IsDefault && subtitleSelect.value === -1) {
+                subtitleSelect.value = subtitleIndex
             }
         }
-        if (videoOptions.value.length > 0) {
-            videoOptions.value.push({
-                label: '关闭',
-                value: -1
-            })
-        } else {
-            videoOptions.value.push({
-                label: '自动',
-                value: 0
-            })
-            videoSelect.value = 0
-        }
-        if (audioOptions.value.length > 0) {
-            audioOptions.value.push({
-                label: '关闭',
-                value: -1
-            })
-        } else {
-            audioOptions.value.push({
-                label: '自动',
-                value: 0
-            })
-            audioSelect.value = 0
-        }
-        if (subtitleOptions.value.length > 0) {
-            subtitleOptions.value.push({
-                label: '关闭',
-                value: -1
-            })
-        } else {
-            subtitleOptions.value.push({
-                label: '自动',
-                value: 0
-            })
-            subtitleSelect.value = 0
-        }
-        if (videoSelect.value === -1 && videoOptions.value.length > 1) {
-            videoSelect.value = videoOptions.value[0].value
-        }
-        if (audioSelect.value === -1 && audioOptions.value.length > 1) {
-            audioSelect.value = audioOptions.value[0].value
-        }
-        if (subtitleSelect.value === -1 && subtitleOptions.value.length > 1) {
-            subtitleSelect.value = subtitleOptions.value[0].value
-        }
+    }
+    if (videoOptions.value.length > 0) {
+        videoOptions.value.push({
+            label: '关闭',
+            value: -1
+        })
+    } else {
+        videoOptions.value.push({
+            label: '自动',
+            value: 0
+        })
+        videoSelect.value = 0
+    }
+    if (audioOptions.value.length > 0) {
+        audioOptions.value.push({
+            label: '关闭',
+            value: -1
+        })
+    } else {
+        audioOptions.value.push({
+            label: '自动',
+            value: 0
+        })
+        audioSelect.value = 0
+    }
+    if (subtitleOptions.value.length > 0) {
+        subtitleOptions.value.push({
+            label: '关闭',
+            value: -1
+        })
+    } else {
+        subtitleOptions.value.push({
+            label: '自动',
+            value: 0
+        })
+        subtitleSelect.value = 0
+    }
+    if (videoSelect.value === -1 && videoOptions.value.length > 1) {
+        videoSelect.value = videoOptions.value[0].value
+    }
+    if (audioSelect.value === -1 && audioOptions.value.length > 1) {
+        audioSelect.value = audioOptions.value[0].value
+    }
+    if (subtitleSelect.value === -1 && subtitleOptions.value.length > 1) {
+        subtitleSelect.value = subtitleOptions.value[0].value
     }
 }
 
