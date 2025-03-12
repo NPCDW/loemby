@@ -16,6 +16,15 @@ pub async fn save_config(state: tauri::State<'_, AppState>, config: Config) -> R
     app_config::save_config(state, config).await
 }
 
+#[tauri::command]
+pub async fn get_sys_info() -> Result<String, String> {
+    let hostname = sys_info::hostname();
+    if hostname.is_err() {
+        return Err(hostname.unwrap_err().to_string());
+    }
+    Ok(hostname.unwrap())
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlayVideoParam {
     pub path: String,

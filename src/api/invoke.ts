@@ -9,6 +9,10 @@ async function saveConfig(config: Config) {
     return invoke('save_config', {config});
 }
 
+async function getSysInfo(): Promise<string> {
+    return invoke('get_sys_info');
+}
+
 interface InvokePlayback {
     path: string,
     proxy?: string,
@@ -60,5 +64,5 @@ async function loadImage(param: LoadImageParam): Promise<string> {
 }
 
 export default {
-    getConfig, saveConfig, playback, httpForward, loadImage
+    getConfig, saveConfig, getSysInfo, playback, httpForward, loadImage
 }

@@ -136,9 +136,9 @@ import { useConfig, EmbyServerConfig } from '../store/config'
 import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox } from "element-plus";
 import { generateGuid } from "../util/uuid_util";
-import { getOsInfo } from '../util/os_util'
 import _ from "lodash";
 import { Container, Draggable } from "vue3-smooth-dnd";
+import invoke from "../api/invoke";
 
 const active = ref("");
 const route = useRoute();
@@ -170,21 +170,27 @@ const tmpEmbyServerConfig = ref<EmbyServerConfig>({})
 function addEmbyServer() {
     stepActive.value = 1;
     dialogAddEmbyServerVisible.value = true
-    const client = "loemby";
-    const client_version = "0.4.6";
-    const user_agent = client + "/" + client_version;
-    tmpEmbyServerConfig.value = {
-        id: generateGuid(),
-        server_name: '未完成',
-        disabled: true,
-        user_agent: user_agent,
-        client: client,
-        client_version: client_version,
-        device: getOsInfo().name,
-        device_id: generateGuid(),
-        browse_proxy_id: 'follow',
-        play_proxy_id: 'follow',
-    }
+    invoke.getSysInfo().then(hostname => {
+        const client = "loemby";
+        const client_version = "0.4.6";
+        const user_agent = client + "/" + client_version;
+        tmpEmbyServerConfig.value = {
+            id: generateGuid(),
+            server_name: '未完成',
+            disabled: true,
+            user_agent: user_agent,
+            client: client,
+            client_version: client_version,
+            device: hostname,
+            device_id: hostname,
+            browse_proxy_id: 'follow',
+            play_proxy_id: 'follow',
+        }
+    }).catch(e => {
+        ElMessage.error({
+            message: '获取主机名失败' + e
+        })
+    })
 }
 const dialogEditEmbyServerVisible = ref(false)
 function editEmbyServer(embyServer: EmbyServerConfig) {

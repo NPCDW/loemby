@@ -2249,6 +2249,7 @@ dependencies = [
  "serde",
  "serde-inline-default",
  "serde_json",
+ "sys-info",
  "tauri",
  "tauri-build",
  "tauri-plugin-single-instance",
@@ -4161,6 +4162,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.98",
+]
+
+[[package]]
+name = "sys-info"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b3a0d0aba8bf96a0e1ddfdc352fc53b3df7f39318c71854910c3c4b024ae52c"
+dependencies = [
+ "cc",
+ "libc",
 ]
 
 [[package]]
