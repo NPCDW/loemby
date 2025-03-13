@@ -235,6 +235,19 @@ watchEffect(() => {
 let config = useConfig().get_config()
 const proxyServers = config.proxy_server ? config.proxy_server : [];
 const embyServers = ref(config?.emby_server ? config.emby_server : [])
+for (let index = 0; index < embyServers.value.length; index++) {
+    if (!embyServers.value[index].line || embyServers.value[index].line!.length == 0) {
+        let line = {
+            id: generateGuid(),
+            name: embyServers.value[index].server_name,
+            base_url: embyServers.value[index].base_url,
+            using: true,
+            browse_proxy_id: embyServers.value[index].browse_proxy_id,
+            play_proxy_id: embyServers.value[index].play_proxy_id
+        }
+        embyServers.value[index].line = [line]
+    }
+}
 async function saveEmbyServer(tmp: EmbyServerConfig) {
     let value = _.cloneDeep(tmp);
     for (let index = 0; index < embyServers.value.length; index++) {

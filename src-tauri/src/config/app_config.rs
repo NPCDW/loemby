@@ -46,11 +46,11 @@ pub struct EmbyServer {
     pub auth_token: Option<String>,
     pub user_id: Option<String>,
 
-    pub client: Option<String>,
-    pub device: Option<String>,
-    pub device_id: Option<String>,
-    pub client_version: Option<String>,
-    pub user_agent: Option<String>,
+    pub client: String,
+    pub device: String,
+    pub device_id: String,
+    pub client_version: String,
+    pub user_agent: String,
 
     #[serde_inline_default("follow".to_string())]
     pub browse_proxy_id: String,
@@ -80,7 +80,7 @@ pub struct Config {
     pub mpv_path: Option<String>,
     pub emby_server: Vec<EmbyServer>,
     pub proxy_server: Vec<ProxyServer>,
-    pub global_proxy: Option<GlobalProxy>,
+    pub global_proxy: GlobalProxy,
 }
 
 const APP_CONFIG_PATH: &'static str = "config/app-config.json";

@@ -22,16 +22,18 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let auxm_app_state = state.auxm_app_state.clone();
     let mut app_state = auxm_app_state.read().await.clone();
     let app_state = app_state.as_mut().unwrap();
-    
-    let client = http_pool::get_http_client(body.proxy.clone(), state).await;
-    if client.is_err() {
-        return Err(client.unwrap_err().to_string());
-    }
-    let client = client.unwrap();
 
-    let uuid = uuid::Uuid::new_v4().to_string();
-    app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: body.path.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
-    let video_path = format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid);
+    let client = match http_pool::get_http_client(body.proxy.clone(), state).await {
+        Ok(client) => client,
+        Err(err) => return Err(err.to_string())
+    };
+    let video_path = if body.proxy.is_some() {
+        let uuid = uuid::Uuid::new_v4().to_string();
+        app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: body.path.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
+        format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)
+    } else {
+        body.path.clone()
+    };
 
     #[cfg(windows)]
     let pipe_name = r"\\.\pipe\mpvsocket";
@@ -50,14 +52,24 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg(&video_path);
 
     for audio in &body.external_audio {
-        let uuid = uuid::Uuid::new_v4().to_string();
-        app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: audio.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
-        command.arg(&format!("--audio-file={}", format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)));
+        let audio_path = if body.proxy.is_some() {
+            let uuid = uuid::Uuid::new_v4().to_string();
+            app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: audio.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
+            format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)
+        } else {
+            audio.clone()
+        };
+        command.arg(&format!("--audio-file={}", audio_path));
     }
     for subtitle in &body.external_subtitle {
-        let uuid = uuid::Uuid::new_v4().to_string();
-        app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: subtitle.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
-        command.arg(&format!("--sub-file={}", format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)));
+        let subtitle_path = if body.proxy.is_some() {
+            let uuid = uuid::Uuid::new_v4().to_string();
+            app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: subtitle.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
+            format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)
+        } else {
+            subtitle.clone()
+        };
+        command.arg(&format!("--sub-file={}", subtitle_path));
     }
     if body.vid == -1 {
         command.arg(&format!("--vid=no"));

@@ -1,5 +1,9 @@
 {
     "log_level": "info",
     "emby_server": [],
-    "proxy_server": []
+    "proxy_server": [],
+    "global_proxy": {
+        "browse_proxy_id": "no",
+        "play_proxy_id": "no"
+    }
 }
