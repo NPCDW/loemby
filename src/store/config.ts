@@ -50,12 +50,9 @@ export const useConfig = defineStore('config', () => {
     }
 
     function getBrowseProxyUrl(id?: string) {
-        if (id == 'no' || !config.value.proxy_server) {
-            return
-        }
         if (!id || id == 'follow') {
             if (config.value.global_proxy && config.value.global_proxy.browse_proxy_id) {
-                return getBrowseProxyUrl(config.value.global_proxy.browse_proxy_id)
+                return getProxyUrl(config.value.global_proxy.browse_proxy_id)
             }
             return
         }
@@ -63,9 +60,6 @@ export const useConfig = defineStore('config', () => {
     }
 
     function getPlayProxyUrl(id?: string) {
-        if (id == 'no' || !config.value.proxy_server) {
-            return
-        }
         if (!id || id == 'follow') {
             if (config.value.global_proxy && config.value.global_proxy.play_proxy_id) {
                 return getProxyUrl(config.value.global_proxy.play_proxy_id)
@@ -76,7 +70,7 @@ export const useConfig = defineStore('config', () => {
     }
 
     function getProxyUrl(id: string) {
-        if (!config.value.proxy_server) {
+        if (id == 'no' || !config.value.proxy_server) {
             return
         }
         for (let index = 0; index < config.value.proxy_server.length; index++) {
@@ -104,6 +98,15 @@ export interface ProxyServerConfig {
     location?: string,
 }
 
+export interface ServerLine {
+    id?: string,
+    name?: string,
+    base_url?: string,
+    using?: boolean,
+    browse_proxy_id?: string,
+    play_proxy_id?: string,
+}
+
 export interface EmbyServerConfig {
     id?: string,
 
@@ -124,6 +127,8 @@ export interface EmbyServerConfig {
 
     browse_proxy_id?: string,
     play_proxy_id?: string,
+
+    line?: ServerLine[],
 
     disabled?: boolean,
     // 前端状态字段

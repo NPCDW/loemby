@@ -11,10 +11,10 @@
                 <el-menu-item @click="addEmbyServer">
                     <el-icon><i-ep-Plus /></el-icon>添加服务器
                 </el-menu-item>
-                <Container @drop="onDrop">  
-                    <Draggable v-for="embyServer in embyServers" :key="embyServer.id">
-                        <el-menu-item :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled">
-                            <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
+                <Container @drop="onDrop" style="height: 100%; width: 100%;">  
+                    <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
+                        <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
+                            <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled">
                                 <div style="height: 100%; width: 100%; display: flex; align-items: center;">
                                     <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
                                     <!-- <el-icon v-else-if="embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
@@ -22,24 +22,58 @@
                                     <el-icon v-else size="24"><svg-icon name="emby" /></el-icon>
                                     {{ embyServer.server_name }}
                                 </div>
-                                <template #dropdown>
-                                    <el-dropdown-menu>
-                                        <el-dropdown-item @click="reLogin(embyServer)"><i-ep-Promotion /> 重新登录</el-dropdown-item>
-                                        <el-dropdown-item @click="editEmbyServer(embyServer)"><i-ep-Edit />编辑</el-dropdown-item>
-                                        <el-dropdown-item @click="enabledEmbyServer(embyServer)">
-                                            <template v-if="embyServer.disabled">
-                                                <i-ep-CircleCheckFilled /> 启用
+                            </el-menu-item>
+                            <template #dropdown>
+                                <el-dropdown-menu>
+                                    <el-dropdown-item>
+                                        <el-dropdown placement="right-start" trigger="hover" style="width: 100%; height: 100%;" >
+                                            <span style="width: 100%; height: 100%;">
+                                                <i-ep-Promotion style="position: absolute; left: 10; margin-left: -15px;" />
+                                                <span style="margin-left: 15px;">线路</span>
+                                            </span>
+                                            <template #dropdown>
+                                                <el-dropdown-menu>
+                                                    <el-dropdown-item v-for='line in embyServer.line' @click="configLineChange(line.id!, embyServer)">
+                                                        <i-ep-Select v-if="line.using" style="position: absolute; left: 10;" />
+                                                        <span style="margin-left: 15px;">{{line.name}}</span>
+                                                    </el-dropdown-item>
+                                                    <el-dropdown-item divided @click="configLine(embyServer)">
+                                                        <i-ep-SetUp style="position: absolute; left: 10;" />
+                                                        <span style="margin-left: 15px;">配置</span>
+                                                    </el-dropdown-item>
+                                                </el-dropdown-menu>
                                             </template>
-                                            <template v-else>
-                                                <i-ep-CircleCloseFilled /> 禁用
-                                            </template>
-                                        </el-dropdown-item>
-                                        <el-dropdown-item style="color: #E6A23C" @click="logoutEmbyServer(embyServer)"><i-ep-WarnTriangleFilled /> 退出登录</el-dropdown-item>
-                                        <el-dropdown-item style="color: #F56C6C" @click="delEmbyServer(embyServer)"><i-ep-Delete /> 删除</el-dropdown-item>
-                                    </el-dropdown-menu>
-                                </template>
-                            </el-dropdown>
-                        </el-menu-item>
+                                        </el-dropdown>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item @click="editEmbyServer(embyServer)">
+                                        <i-ep-Edit style="position: absolute; left: 10;" />
+                                        <span style="margin-left: 15px;">编辑</span>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item @click="enabledEmbyServer(embyServer)">
+                                        <template v-if="embyServer.disabled">
+                                            <i-ep-CircleCheckFilled style="position: absolute; left: 10;" />
+                                            <span style="margin-left: 15px;">启用</span>
+                                        </template>
+                                        <template v-else>
+                                            <i-ep-CircleCloseFilled style="position: absolute; left: 10;" />
+                                            <span style="margin-left: 15px;">禁用</span>
+                                        </template>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item divided @click="reLogin(embyServer)">
+                                        <i-ep-Promotion style="position: absolute; left: 10;" />
+                                        <span style="margin-left: 15px;">重新登录</span>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item style="color: #E6A23C" @click="logoutEmbyServer(embyServer)">
+                                        <i-ep-WarnTriangleFilled style="position: absolute; left: 10;" />
+                                        <span style="margin-left: 15px;">退出登录</span>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item style="color: #F56C6C" @click="delEmbyServer(embyServer)">
+                                        <i-ep-Delete style="position: absolute; left: 10;" />
+                                        <span style="margin-left: 15px;">删除</span>
+                                    </el-dropdown-item>
+                                </el-dropdown-menu>
+                            </template>
+                        </el-dropdown>
                     </Draggable>
                 </Container>
             </el-menu>
@@ -59,10 +93,10 @@
     <div v-if="stepActive == 1" style="width: 60%; margin: 25px auto;">
         <el-form label-position="top">
             <el-form-item label="服务器地址">
-                <el-input v-model="tmpEmbyServerConfig.base_url" placeholder="Please input" />
+                <el-input v-model="currentEmbyServerConfig.base_url" placeholder="Please input" />
             </el-form-item>
-            <el-form-item label="服务器地址">
-                <el-select v-model="tmpEmbyServerConfig.browse_proxy_id">
+            <el-form-item label="媒体库代理">
+                <el-select v-model="currentEmbyServerConfig.browse_proxy_id">
                     <el-option key="no" label="不使用代理" value="no"/>
                     <el-option key="follow" label="跟随全局代理" value="follow"/>
                     <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
@@ -78,13 +112,13 @@
     <div v-if="stepActive == 2" style="width: 60%; margin: 25px auto;">
         <el-form label-position="top">
             <el-form-item label="服务器名称">
-                <el-input v-model="tmpEmbyServerConfig.server_name" placeholder="Please input" />
+                <el-input v-model="currentEmbyServerConfig.server_name" placeholder="Please input" />
             </el-form-item>
             <el-form-item label="用户名">
-                <el-input v-model="tmpEmbyServerConfig.username" placeholder="Please input" />
+                <el-input v-model="currentEmbyServerConfig.username" placeholder="Please input" />
             </el-form-item>
             <el-form-item label="密码">
-                <el-input v-model="tmpEmbyServerConfig.password" placeholder="Please input" show-password />
+                <el-input v-model="currentEmbyServerConfig.password" placeholder="Please input" show-password />
             </el-form-item>
             <el-form-item>
                 <div style="width: 100%; display: flex; justify-content: space-between;">
@@ -108,16 +142,16 @@
   <el-dialog v-model="dialogEditEmbyServerVisible" title="Emby Server" width="800">
     <el-form label-position="top" style="width: 60%; margin: 25px auto;">
         <el-form-item label="服务器地址">
-            <el-input v-model="tmpEmbyServerConfig.base_url" placeholder="Please input" />
+            <el-input v-model="currentEmbyServerConfig.base_url" placeholder="Please input" />
         </el-form-item>
         <el-form-item label="服务器名称">
-            <el-input v-model="tmpEmbyServerConfig.server_name" placeholder="Please input" />
+            <el-input v-model="currentEmbyServerConfig.server_name" placeholder="Please input" />
         </el-form-item>
         <el-form-item label="用户名">
-            <el-input v-model="tmpEmbyServerConfig.username" placeholder="Please input" />
+            <el-input v-model="currentEmbyServerConfig.username" placeholder="Please input" />
         </el-form-item>
         <el-form-item label="密码">
-            <el-input v-model="tmpEmbyServerConfig.password" placeholder="Please input" show-password />
+            <el-input v-model="currentEmbyServerConfig.password" placeholder="Please input" show-password />
         </el-form-item>
         <el-form-item>
             <div style="width: 100%; display: flex; justify-content: center;">
@@ -127,12 +161,63 @@
         </el-form-item>
     </el-form>
   </el-dialog>
+  <el-dialog v-model="dialogConfigLineVisible" title="线路配置" width="800">
+    <el-scrollbar style="width: 100%;height: 400px; padding: 20px;">
+        <el-button @click="addLine" type="primary">添加</el-button>
+        <div style="padding-top: 20px;">
+            <el-radio-group v-model="currentEmbyServerConfigLine" @change="configLineChange(currentEmbyServerConfigLine, currentEmbyServerConfig)">
+                <el-radio v-for="line in currentEmbyServerConfig.line" :value="line.id" size="large" border style="height: 100%; margin-bottom: 20px;">
+                    <div style="padding: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            {{ line.name }}
+                            <span>
+                                <el-button type="primary" text @click="editLine(line)"><i-ep-Edit /></el-button>
+                                <el-button type="danger" text @click="delLine(line)"><i-ep-Delete /></el-button>
+                            </span>
+                        </div>
+                        <el-text truncated style="width: 280px;">{{ line.base_url }}</el-text>
+                    </div>
+                </el-radio>
+            </el-radio-group>
+        </div>
+    </el-scrollbar>
+  </el-dialog>
+  <el-dialog v-model="dialogAddLineVisible" title="配置线路" width="800">
+    <el-form label-position="top" style="width: 60%; margin: 25px auto;">
+        <el-form-item label="线路名称">
+            <el-input v-model="currentEmbyServerAddLine.name" placeholder="Please input" />
+        </el-form-item>
+        <el-form-item label="线路地址">
+            <el-input v-model="currentEmbyServerAddLine.base_url" placeholder="Please input" />
+        </el-form-item>
+        <el-form-item label="媒体库代理">
+            <el-select v-model="currentEmbyServerAddLine.browse_proxy_id">
+                <el-option key="no" label="不使用代理" value="no"/>
+                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+            </el-select>
+        </el-form-item>
+        <el-form-item label="媒体流代理">
+            <el-select v-model="currentEmbyServerAddLine.play_proxy_id">
+                <el-option key="no" label="不使用代理" value="no"/>
+                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+            </el-select>
+        </el-form-item>
+        <el-form-item>
+            <div style="width: 100%; display: flex; justify-content: center;">
+                <el-button type="primary" @click="saveCurrentEmbyServerAddLine">保存</el-button>
+                <el-button @click="dialogAddLineVisible = false">取消</el-button>
+            </div>
+        </el-form-item>
+    </el-form>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watchEffect } from "vue";
 import { useRoute } from 'vue-router'
-import { useConfig, EmbyServerConfig } from '../store/config'
+import { useConfig, EmbyServerConfig, ServerLine } from '../store/config'
 import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox } from "element-plus";
 import { generateGuid } from "../util/uuid_util";
@@ -166,7 +251,7 @@ async function saveEmbyServer(tmp: EmbyServerConfig) {
 
 const stepActive = ref(1)
 const dialogAddEmbyServerVisible = ref(false)
-const tmpEmbyServerConfig = ref<EmbyServerConfig>({})
+const currentEmbyServerConfig = ref<EmbyServerConfig>({})
 function addEmbyServer() {
     stepActive.value = 1;
     dialogAddEmbyServerVisible.value = true
@@ -174,7 +259,7 @@ function addEmbyServer() {
         const client = "loemby";
         const client_version = "0.4.6";
         const user_agent = client + "/" + client_version;
-        tmpEmbyServerConfig.value = {
+        currentEmbyServerConfig.value = {
             id: generateGuid(),
             server_name: '未完成',
             disabled: true,
@@ -185,6 +270,7 @@ function addEmbyServer() {
             device_id: hostname,
             browse_proxy_id: 'follow',
             play_proxy_id: 'follow',
+            line: [],
         }
     }).catch(e => {
         ElMessage.error({
@@ -195,7 +281,7 @@ function addEmbyServer() {
 const dialogEditEmbyServerVisible = ref(false)
 function editEmbyServer(embyServer: EmbyServerConfig) {
     dialogEditEmbyServerVisible.value = true
-    tmpEmbyServerConfig.value = _.clone(embyServer)
+    currentEmbyServerConfig.value = _.clone(embyServer)
 }
 async function enabledEmbyServer(embyServer: EmbyServerConfig) {
     if (!embyServer.auth_token && embyServer.disabled) {
@@ -246,11 +332,12 @@ function delEmbyServer(tmp: EmbyServerConfig) {
 const addEmbyServerAddrLoading = ref(false)
 async function addEmbyServerAddr() {
     addEmbyServerAddrLoading.value = true
-    if (!tmpEmbyServerConfig || !tmpEmbyServerConfig.value?.base_url) {
+    if (!currentEmbyServerConfig || !currentEmbyServerConfig.value?.base_url) {
         return
     }
-    await saveEmbyServer(tmpEmbyServerConfig.value);
-    embyApi.getServerInfo(tmpEmbyServerConfig.value).then(async response => {
+    syncModifyLine(currentEmbyServerConfig.value!)
+    await saveEmbyServer(currentEmbyServerConfig.value);
+    embyApi.getServerInfo(currentEmbyServerConfig.value).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error({
                 message: 'response status' + response.status_code + ' ' + response.status_text
@@ -258,9 +345,9 @@ async function addEmbyServerAddr() {
             return
         }
         let json: {ServerName: string, Id: string} = JSON.parse(response.body);
-        tmpEmbyServerConfig.value!.server_name = json['ServerName']
-        tmpEmbyServerConfig.value!.server_id = json['Id']
-        await saveEmbyServer(tmpEmbyServerConfig.value);
+        currentEmbyServerConfig.value!.server_name = json['ServerName']
+        currentEmbyServerConfig.value!.server_id = json['Id']
+        await saveEmbyServer(currentEmbyServerConfig.value);
         stepActive.value = stepActive.value + 1;
     }).catch(e => {
         ElMessage.error({
@@ -276,10 +363,10 @@ function addEmbyServerPrevStep() {
 }
 async function addEmbyServerAuth() {
     addEmbyServerAuthLoading.value = true
-    if (!tmpEmbyServerConfig || !tmpEmbyServerConfig.value?.username) {
+    if (!currentEmbyServerConfig || !currentEmbyServerConfig.value?.username) {
         return
     }
-    login(tmpEmbyServerConfig.value).then(() => {
+    login(currentEmbyServerConfig.value).then(() => {
         stepActive.value = stepActive.value + 1;
     }).catch(e => {
         ElMessage.error({
@@ -322,14 +409,123 @@ async function login(embyServerConfig: EmbyServerConfig) {
     })
 }
 async function saveEditEmbyServer() {
-    await saveEmbyServer(tmpEmbyServerConfig.value!);
+    syncModifyLine(currentEmbyServerConfig.value!)
+    await saveEmbyServer(currentEmbyServerConfig.value!);
     dialogEditEmbyServerVisible.value = false
+}
+function syncModifyLine(embyServer: EmbyServerConfig) {
+    if (!embyServer.line || embyServer.line.length == 0) {
+        let line = {
+            id: generateGuid(),
+            name: embyServer.server_name,
+            base_url: embyServer.base_url,
+            using: true,
+            browse_proxy_id: embyServer.browse_proxy_id,
+            play_proxy_id: embyServer.play_proxy_id
+        }
+        embyServer.line = [line]
+    }
+    for (let index = 0; index < embyServer.line!.length; index++) {
+        if (embyServer.line![index].using) {
+            embyServer.line![index].base_url = embyServer.base_url
+            embyServer.line![index].browse_proxy_id = embyServer.browse_proxy_id
+            embyServer.line![index].play_proxy_id = embyServer.play_proxy_id
+        }
+    }
 }
 
 async function onDrop(dropResult: {removedIndex: number, addedIndex: number}) {
     let element = embyServers.value.splice(dropResult.removedIndex, 1);
     embyServers.value.splice(dropResult.addedIndex, 0, element[0]);
     await useConfig().saveEmbyServer(embyServers.value)
+}
+
+const dialogConfigLineVisible = ref(false)
+const currentEmbyServerConfigLine = ref('')
+function configLine(embyServer: EmbyServerConfig) {
+    currentEmbyServerConfig.value = _.clone(embyServer)
+    if (!embyServer.line || embyServer.line.length == 0) {
+        let line = {
+            id: generateGuid(),
+            name: embyServer.server_name,
+            base_url: embyServer.base_url,
+            using: true,
+            browse_proxy_id: embyServer.browse_proxy_id,
+            play_proxy_id: embyServer.play_proxy_id
+        }
+        currentEmbyServerConfig.value.line = [line]
+    }
+    for (let index = 0; index < currentEmbyServerConfig.value.line!.length; index++) {
+        if (currentEmbyServerConfig.value.line![index].using) {
+            currentEmbyServerConfigLine.value = currentEmbyServerConfig.value.line![index].id!
+        }
+    }
+    dialogConfigLineVisible.value = true
+}
+const dialogAddLineVisible = ref(false)
+const currentEmbyServerAddLine = ref<ServerLine>({})
+function addLine() {
+    currentEmbyServerAddLine.value = {
+        id: generateGuid(),
+        using: false,
+        browse_proxy_id: 'follow',
+        play_proxy_id: 'follow'
+    }
+    console.log(currentEmbyServerAddLine.value)
+    dialogAddLineVisible.value = true
+}
+function editLine(line: ServerLine) {
+    currentEmbyServerAddLine.value = _.clone(line)
+    dialogAddLineVisible.value = true
+}
+function delLine(line: ServerLine) {
+    if (!currentEmbyServerConfig.value.line || currentEmbyServerConfig.value.line.length <= 1) {
+        ElMessage.error({
+            message: '至少保留一个服务器线路'
+        })
+        return
+    }
+    ElMessageBox.confirm(
+        `确认删除服务器「${currentEmbyServerConfig.value.server_name}」的线路「${line.name}」吗`,
+        'Warning',
+        {
+            confirmButtonText: 'OK',
+            cancelButtonText: 'Cancel',
+            type: 'warning',
+        }
+    ).then(async () => {
+        currentEmbyServerConfig.value.line = currentEmbyServerConfig.value.line!.filter(item => item.id != line.id)
+        await saveEmbyServer(currentEmbyServerConfig.value!);
+    })
+}
+async function saveCurrentEmbyServerAddLine() {
+    let value = _.cloneDeep(currentEmbyServerAddLine.value);
+    for (let index = 0; index < currentEmbyServerConfig.value.line!.length; index++) {
+        if (currentEmbyServerConfig.value.line![index].id === value.id) {
+            currentEmbyServerConfig.value.line![index] = value
+            await saveEmbyServer(currentEmbyServerConfig.value!);
+            dialogAddLineVisible.value = false
+            return
+        }
+    }
+    currentEmbyServerConfig.value.line!.push(value)
+    await saveEmbyServer(currentEmbyServerConfig.value!);
+    dialogAddLineVisible.value = false
+}
+async function configLineChange(value: string, embyServer: EmbyServerConfig) {
+    for (let index = 0; index < embyServer.line!.length; index++) {
+        embyServer.line![index].using = false
+        if (embyServer.line![index].id === value) {
+            embyServer.line![index].using = true
+            embyServer.base_url = embyServer.line![index].base_url
+            embyServer.browse_proxy_id = embyServer.line![index].browse_proxy_id
+            embyServer.play_proxy_id = embyServer.line![index].play_proxy_id
+        }
+    }
+    await saveEmbyServer(embyServer!);
+    ElMessage.success({
+        message: "线路切换成功"
+    })
 }
 </script>
 

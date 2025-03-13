@@ -21,6 +21,19 @@ pub struct ProxyServer {
 
 #[serde_inline_default]
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ServerLine {
+    pub id: String,
+    pub name: String,
+    pub base_url: String,
+    pub using: bool,
+    #[serde_inline_default("follow".to_string())]
+    pub browse_proxy_id: String,
+    #[serde_inline_default("follow".to_string())]
+    pub play_proxy_id: String,
+}
+
+#[serde_inline_default]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EmbyServer {
     pub id: String,
 
@@ -39,8 +52,13 @@ pub struct EmbyServer {
     pub client_version: Option<String>,
     pub user_agent: Option<String>,
 
-    pub browse_proxy_id: Option<String>,
-    pub play_proxy_id: Option<String>,
+    #[serde_inline_default("follow".to_string())]
+    pub browse_proxy_id: String,
+    #[serde_inline_default("follow".to_string())]
+    pub play_proxy_id: String,
+
+    #[serde_inline_default(vec![])]
+    pub line: Vec<ServerLine>,
 
     pub disabled: bool,
 }
@@ -48,8 +66,10 @@ pub struct EmbyServer {
 #[serde_inline_default]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GlobalProxy {
-    pub browse_proxy_id: Option<String>,
-    pub play_proxy_id: Option<String>,
+    #[serde_inline_default("no".to_string())]
+    pub browse_proxy_id: String,
+    #[serde_inline_default("no".to_string())]
+    pub play_proxy_id: String,
 }
 
 #[serde_inline_default]
