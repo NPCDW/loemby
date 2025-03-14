@@ -30,7 +30,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let video_path = if body.proxy.is_some() {
         let uuid = uuid::Uuid::new_v4().to_string();
         app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: body.path.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
-        format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)
+        format!("http://127.0.0.1:{}/stream/video/{}", &app_state.port, &uuid)
     } else {
         body.path.clone()
     };
@@ -55,7 +55,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         let audio_path = if body.proxy.is_some() {
             let uuid = uuid::Uuid::new_v4().to_string();
             app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: audio.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
-            format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)
+            format!("http://127.0.0.1:{}/stream/audio/{}", &app_state.port, &uuid)
         } else {
             audio.clone()
         };
@@ -65,7 +65,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         let subtitle_path = if body.proxy.is_some() {
             let uuid = uuid::Uuid::new_v4().to_string();
             app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {stream_url: subtitle.clone(), client: client.clone(), user_agent: body.user_agent.clone()});
-            format!("http://127.0.0.1:{}/stream/{}", &app_state.port, &uuid)
+            format!("http://127.0.0.1:{}/stream/subtitle/{}", &app_state.port, &uuid)
         } else {
             subtitle.clone()
         };

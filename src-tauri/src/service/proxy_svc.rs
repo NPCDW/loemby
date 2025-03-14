@@ -15,7 +15,7 @@ pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>) -
     });
 
     let router = Router::new()
-        .route("/stream/{id}", get(stream))
+        .route("/stream/{types}/{id}", get(stream))
         .with_state(axum_app_state);
 
     axum::serve(listener, router).await?;
@@ -23,49 +23,44 @@ pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>) -
     anyhow::Ok(())
 }
 
-async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path(id): Path<String>) -> axum::response::Response {
-    tracing::debug!("stream: {} {:?}", id, headers);
+async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((types, id)): Path<(String, String)>) -> axum::response::Response {
+    tracing::debug!("stream: {} {} {:?}", types, id, headers);
     let app_state = app_state.read().await.clone().unwrap();
     let connect = app_state.connect.read().await;
-    let connect = connect.get(&id).clone();
-    if connect.is_none() {
-        tracing::error!("没有找到 {} 对应的流媒体", &id);
-        return (
-            axum::http::StatusCode::NOT_FOUND,
-            axum::http::HeaderMap::new(),
-            axum::body::Body::empty()
-        ).into_response();
-    }
-    let connect = connect.unwrap();
+    let connect = match connect.get(&id).clone() {
+        Some(connect) => connect,
+        None => {
+            tracing::error!("没有找到 {} 对应的流媒体", &id);
+            return (
+                axum::http::StatusCode::NOT_FOUND,
+                axum::http::HeaderMap::new(),
+                axum::body::Body::new("没有找到对应的流媒体".to_string())
+            ).into_response();
+        }
+    };
 
     let client = connect.client.clone();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, connect.user_agent.clone().parse().unwrap());
-    let mut retry = 0u8;
-    loop {
-        let res = client
-            .get(connect.stream_url.clone())
-            .headers(req_headers.clone())
-            .send()
-            .await;
-        tracing::debug!("stream: {} retry: {} 媒体流响应 {:?}", &id, &retry, res);
-        if res.is_ok() {
-            let res = res.unwrap();
-            return (
-                res.status(),
-                res.headers().clone(),
-                axum::body::Body::from_stream(res.bytes_stream())
-            ).into_response();
-        } else if retry >= 2 {
-            return (
-                axum::http::StatusCode::SERVICE_UNAVAILABLE,
-                axum::http::HeaderMap::new(),
-                axum::body::Body::empty()
-            ).into_response();
-        }
-        retry += 1;
+    let res = client
+        .get(connect.stream_url.clone())
+        .headers(req_headers.clone())
+        .send()
+        .await;
+    tracing::debug!("stream: {} {} 媒体流响应 {:?}", types, &id, res);
+    match res {
+        Ok(res) => return (
+            res.status(),
+            res.headers().clone(),
+            axum::body::Body::from_stream(res.bytes_stream())
+        ).into_response(),
+        Err(err) => return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(err.to_string())
+        ).into_response(),
     }
 }
 
