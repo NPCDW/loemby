@@ -348,7 +348,7 @@ async function addEmbyServerAddr() {
     if (!currentEmbyServerConfig || !currentEmbyServerConfig.value?.base_url) {
         return
     }
-    syncModifyLine(currentEmbyServerConfig.value!)
+    syncModifyLine(currentEmbyServerConfig.value!, '首次添加')
     await saveEmbyServer(currentEmbyServerConfig.value);
     embyApi.getServerInfo(currentEmbyServerConfig.value).then(async response => {
         if (response.status_code != 200) {
@@ -426,11 +426,11 @@ async function saveEditEmbyServer() {
     await saveEmbyServer(currentEmbyServerConfig.value!);
     dialogEditEmbyServerVisible.value = false
 }
-function syncModifyLine(embyServer: EmbyServerConfig) {
+function syncModifyLine(embyServer: EmbyServerConfig, line_name: string = embyServer.server_name!) {
     if (!embyServer.line || embyServer.line.length == 0) {
         let line = {
             id: generateGuid(),
-            name: embyServer.server_name,
+            name: line_name,
             base_url: embyServer.base_url,
             using: true,
             browse_proxy_id: embyServer.browse_proxy_id,
