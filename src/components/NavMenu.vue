@@ -235,19 +235,6 @@ watchEffect(() => {
 let config = useConfig().get_config()
 const proxyServers = config.proxy_server ? config.proxy_server : [];
 const embyServers = ref(config?.emby_server ? config.emby_server : [])
-for (let index = 0; index < embyServers.value.length; index++) {
-    if (!embyServers.value[index].line || embyServers.value[index].line!.length == 0) {
-        let line = {
-            id: generateGuid(),
-            name: embyServers.value[index].server_name,
-            base_url: embyServers.value[index].base_url,
-            using: true,
-            browse_proxy_id: embyServers.value[index].browse_proxy_id,
-            play_proxy_id: embyServers.value[index].play_proxy_id
-        }
-        embyServers.value[index].line = [line]
-    }
-}
 async function saveEmbyServer(tmp: EmbyServerConfig) {
     let value = _.cloneDeep(tmp);
     for (let index = 0; index < embyServers.value.length; index++) {
@@ -348,7 +335,15 @@ async function addEmbyServerAddr() {
     if (!currentEmbyServerConfig || !currentEmbyServerConfig.value?.base_url) {
         return
     }
-    syncModifyLine(currentEmbyServerConfig.value!, '线路一')
+    let line = {
+        id: generateGuid(),
+        name: '线路一',
+        base_url: currentEmbyServerConfig.value!.base_url,
+        using: true,
+        browse_proxy_id: currentEmbyServerConfig.value!.browse_proxy_id,
+        play_proxy_id: currentEmbyServerConfig.value!.play_proxy_id
+    }
+    currentEmbyServerConfig.value!.line = [line]
     await saveEmbyServer(currentEmbyServerConfig.value);
     embyApi.getServerInfo(currentEmbyServerConfig.value).then(async response => {
         if (response.status_code != 200) {
@@ -422,29 +417,15 @@ async function login(embyServerConfig: EmbyServerConfig) {
     })
 }
 async function saveEditEmbyServer() {
-    syncModifyLine(currentEmbyServerConfig.value!)
+    for (let index = 0; index < currentEmbyServerConfig.value!.line!.length; index++) {
+        if (currentEmbyServerConfig.value!.line![index].using) {
+            currentEmbyServerConfig.value!.line![index].base_url = currentEmbyServerConfig.value!.base_url
+            currentEmbyServerConfig.value!.line![index].browse_proxy_id = currentEmbyServerConfig.value!.browse_proxy_id
+            currentEmbyServerConfig.value!.line![index].play_proxy_id = currentEmbyServerConfig.value!.play_proxy_id
+        }
+    }
     await saveEmbyServer(currentEmbyServerConfig.value!);
     dialogEditEmbyServerVisible.value = false
-}
-function syncModifyLine(embyServer: EmbyServerConfig, line_name: string = embyServer.server_name!) {
-    if (!embyServer.line || embyServer.line.length == 0) {
-        let line = {
-            id: generateGuid(),
-            name: line_name,
-            base_url: embyServer.base_url,
-            using: true,
-            browse_proxy_id: embyServer.browse_proxy_id,
-            play_proxy_id: embyServer.play_proxy_id
-        }
-        embyServer.line = [line]
-    }
-    for (let index = 0; index < embyServer.line!.length; index++) {
-        if (embyServer.line![index].using) {
-            embyServer.line![index].base_url = embyServer.base_url
-            embyServer.line![index].browse_proxy_id = embyServer.browse_proxy_id
-            embyServer.line![index].play_proxy_id = embyServer.play_proxy_id
-        }
-    }
 }
 
 async function onDrop(dropResult: {removedIndex: number, addedIndex: number}) {
@@ -457,17 +438,6 @@ const dialogConfigLineVisible = ref(false)
 const currentEmbyServerConfigLine = ref('')
 function configLine(embyServer: EmbyServerConfig) {
     currentEmbyServerConfig.value = _.clone(embyServer)
-    if (!embyServer.line || embyServer.line.length == 0) {
-        let line = {
-            id: generateGuid(),
-            name: embyServer.server_name,
-            base_url: embyServer.base_url,
-            using: true,
-            browse_proxy_id: embyServer.browse_proxy_id,
-            play_proxy_id: embyServer.play_proxy_id
-        }
-        currentEmbyServerConfig.value.line = [line]
-    }
     for (let index = 0; index < currentEmbyServerConfig.value.line!.length; index++) {
         if (currentEmbyServerConfig.value.line![index].using) {
             currentEmbyServerConfigLine.value = currentEmbyServerConfig.value.line![index].id!

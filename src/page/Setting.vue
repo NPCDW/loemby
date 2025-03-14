@@ -188,17 +188,7 @@ const embyServers = config.emby_server ? config.emby_server : [];
 const embyServerTableData = computed(() => {
     let result = [];
     for (let embyServer of embyServers) {
-        if (!embyServer.line || embyServer.line.length === 0) {
-            embyServer.line = [{
-                id: generateGuid(),
-                name: embyServer.server_name,
-                base_url: embyServer.base_url,
-                using: true,
-                browse_proxy_id: embyServer.browse_proxy_id,
-                play_proxy_id: embyServer.play_proxy_id
-            }];
-        }
-        for (let line of embyServer.line) {
+        for (let line of embyServer.line!) {
             let resultServer = {
                 emby_id: embyServer.id,
                 server_name: embyServer.server_name,

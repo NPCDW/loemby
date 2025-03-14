@@ -9,6 +9,7 @@ pub async fn get_http_client(proxy_url: Option<String>, state: tauri::State<'_, 
         client.unwrap().to_owned()
     } else {
         let mut client = reqwest::Client::builder()
+            //.danger_accept_invalid_certs(true)
             .pool_max_idle_per_host(3)
             .pool_idle_timeout(std::time::Duration::from_secs(90))
             // 该超时时间为从请求开始到响应结束总耗时，如果超过了总耗时，不管是否正在传输数据，都会结束链接，与其他语言库的逻辑不同，其他语言是如果链接有数据传输，有keep-alive就不会超时，
