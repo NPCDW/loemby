@@ -171,8 +171,8 @@
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             {{ line.name }}
                             <span>
-                                <el-button type="primary" text @click="editLine(line)"><i-ep-Edit /></el-button>
-                                <el-button type="danger" text @click="delLine(line)"><i-ep-Delete /></el-button>
+                                <el-button type="primary" text size="small" @click="editLine(line)"><i-ep-Edit /></el-button>
+                                <el-button type="danger" text size="small" @click="delLine(line)"><i-ep-Delete /></el-button>
                             </span>
                         </div>
                         <el-text truncated style="width: 280px;">{{ line.base_url }}</el-text>
