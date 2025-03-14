@@ -23,7 +23,7 @@
             <h1>Emby线路代理配置</h1>
             <el-table :data="embyServerTableData" style="width: 100%" :span-method="lineSpanMethod">
                 <el-table-column prop="server_name" label="Emby" show-overflow-tooltip />
-                <el-table-column prop="line_name" label="Emby" show-overflow-tooltip />
+                <el-table-column prop="line_name" label="线路" show-overflow-tooltip />
                 <el-table-column label="媒体库浏览">
                     <template #header="">
                         <span>媒体库浏览</span><br/>
@@ -222,7 +222,12 @@ interface SpanMethodProps {
 }
 const lineSpanMethod = ({row, rowIndex, columnIndex}: SpanMethodProps) => {
   if (columnIndex === 0) {
-    if (rowIndex === 0 || row.emby_id !== embyServerTableData.value[rowIndex - 1].emby_id) {
+    if (rowIndex !== 0 && row.emby_id === embyServerTableData.value[rowIndex - 1].emby_id) {
+        return {
+            rowspan: 0,
+            colspan: 0,
+        }
+    } else {
         let rowspan = 1;
         for (let i = rowIndex + 1; i < embyServerTableData.value.length; i++) {
             if (embyServerTableData.value[i].emby_id !== row.emby_id) {
@@ -256,7 +261,8 @@ function saveEmbyProxy() {
             line.play_proxy_id = tableLine.play_proxy_id;
         }
     }
-    useConfig().saveEmbyServer(embyServersClone);
+    config.emby_server = embyServersClone;
+    useConfig().save_config(config);
     ElMessage.success('保存成功');
 }
 </script>
