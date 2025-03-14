@@ -348,7 +348,7 @@ async function addEmbyServerAddr() {
     if (!currentEmbyServerConfig || !currentEmbyServerConfig.value?.base_url) {
         return
     }
-    syncModifyLine(currentEmbyServerConfig.value!, '首次添加')
+    syncModifyLine(currentEmbyServerConfig.value!, '线路一')
     await saveEmbyServer(currentEmbyServerConfig.value);
     embyApi.getServerInfo(currentEmbyServerConfig.value).then(async response => {
         if (response.status_code != 200) {
