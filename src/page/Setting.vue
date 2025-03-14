@@ -20,9 +20,10 @@
                 </el-table-column>
             </el-table>
             
-            <h1>Emby服务代理配置</h1>
-            <el-table :data="embyServerTableData" style="width: 100%">
+            <h1>Emby线路代理配置</h1>
+            <el-table :data="embyServerTableData" style="width: 100%" :span-method="lineSpanMethod">
                 <el-table-column prop="server_name" label="Emby" show-overflow-tooltip />
+                <el-table-column prop="line_name" label="Emby" show-overflow-tooltip />
                 <el-table-column label="媒体库浏览">
                     <template #header="">
                         <span>媒体库浏览</span><br/>
@@ -109,9 +110,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useConfig } from '../store/config';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage, ElMessageBox, TableColumnCtx } from 'element-plus';
 import { ProxyServerConfig } from '../store/config';
 import _ from 'lodash';
 import { generateGuid } from '../util/uuid_util';
@@ -183,24 +184,79 @@ function checkProxy(id: string) {
     }).finally(() => checkProxyLoading.value[id] = false);
 }
 
-const embyServerTableData = config.emby_server ? config.emby_server : [];
-for(let embyServer of embyServerTableData) {
-    if (!embyServer.play_proxy_id) {
-        embyServer.play_proxy_id = 'follow'
+const embyServers = config.emby_server ? config.emby_server : [];
+const embyServerTableData = computed(() => {
+    let result = [];
+    for (let embyServer of embyServers) {
+        if (!embyServer.line || embyServer.line.length === 0) {
+            embyServer.line = [{
+                id: generateGuid(),
+                name: embyServer.server_name,
+                base_url: embyServer.base_url,
+                using: true,
+                browse_proxy_id: embyServer.browse_proxy_id,
+                play_proxy_id: embyServer.play_proxy_id
+            }];
+        }
+        for (let line of embyServer.line) {
+            let resultServer = {
+                emby_id: embyServer.id,
+                server_name: embyServer.server_name,
+                line_id: line.id,
+                line_name: line.name,
+                using: line.using,
+                browse_proxy_id: line.browse_proxy_id,
+                play_proxy_id: line.play_proxy_id,
+            }
+            result.push(resultServer);
+        }
     }
-    if (!embyServer.browse_proxy_id) {
-        embyServer.browse_proxy_id = 'follow'
-    }
+    return result
+})
+
+interface SpanMethodProps {
+  row: typeof embyServerTableData.value[0]
+  column: TableColumnCtx<typeof embyServerTableData.value[0]>
+  rowIndex: number
+  columnIndex: number
 }
-const global_browse_proxy_id = ref(config.global_proxy?.browse_proxy_id ? config.global_proxy?.browse_proxy_id : 'no');
-const global_play_proxy_id = ref(config.global_proxy?.play_proxy_id ? config.global_proxy?.play_proxy_id : 'no');
+const lineSpanMethod = ({row, rowIndex, columnIndex}: SpanMethodProps) => {
+  if (columnIndex === 0) {
+    if (rowIndex === 0 || row.emby_id !== embyServerTableData.value[rowIndex - 1].emby_id) {
+        let rowspan = 1;
+        for (let i = rowIndex + 1; i < embyServerTableData.value.length; i++) {
+            if (embyServerTableData.value[i].emby_id !== row.emby_id) {
+                break;
+            }
+            rowspan++;
+        }
+        return {
+            rowspan: rowspan,
+            colspan: 1,
+        }
+    }
+  }
+}
+
+const global_browse_proxy_id = ref(config.global_proxy?.browse_proxy_id!);
+const global_play_proxy_id = ref(config.global_proxy?.play_proxy_id!);
 function saveEmbyProxy() {
     config.global_proxy = {
         browse_proxy_id: global_browse_proxy_id.value,
         play_proxy_id: global_play_proxy_id.value,
     };
-    config.emby_server = embyServerTableData;
-    useConfig().save_config(config);
+    let embyServersClone = _.clone(embyServers);
+    for (let embyServer of embyServersClone) {
+        let line = embyServerTableData.value.find((item) => item.emby_id === embyServer.id && item.using)!;
+        embyServer.browse_proxy_id = line.browse_proxy_id;
+        embyServer.play_proxy_id = line.play_proxy_id;
+        for (let line of embyServer.line!) {
+            let tableLine = embyServerTableData.value.find((item) => item.emby_id === embyServer.id && item.line_id === line.id)!;
+            line.browse_proxy_id = tableLine.browse_proxy_id;
+            line.play_proxy_id = tableLine.play_proxy_id;
+        }
+    }
+    useConfig().saveEmbyServer(embyServersClone);
     ElMessage.success('保存成功');
 }
 </script>
