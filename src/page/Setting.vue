@@ -2,7 +2,7 @@
     <el-scrollbar style="height: 100vh;">
         <div style="padding: 20px;">
             <h1>代理服务器</h1>
-            <el-table :data="proxyServerTableData" style="width: 100%">
+            <el-table :data="proxyServer" style="width: 100%">
                 <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
                 <el-table-column prop="proxy_type" label="Type" width="80" />
                 <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
@@ -21,53 +21,50 @@
             </el-table>
             
             <h1>Emby线路代理配置</h1>
-            <el-table :data="embyServerTableData" style="width: 100%" :span-method="lineSpanMethod">
-                <el-table-column prop="server_name" label="Emby" show-overflow-tooltip />
-                <el-table-column prop="line_name" label="线路" show-overflow-tooltip />
+            <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod">
+                <el-table-column prop="emby_server_name" label="Emby" show-overflow-tooltip />
+                <el-table-column prop="name" label="线路" show-overflow-tooltip />
                 <el-table-column label="媒体库浏览">
                     <template #header="">
                         <span>媒体库浏览</span><br/>
-                        <el-select v-model="global_browse_proxy_id">
+                        <el-select v-model="global_browse_proxy_id" @change="globalBrowseProxyChange">
                             <template #label="{ label }">
                                 <span>全局配置: </span>
                                 <span style="font-weight: bold">{{ label }}</span>
                             </template>
                             <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServerTableData" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </template>
                     <template #default="scope">
-                        <el-select v-model="scope.row.browse_proxy_id">
+                        <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)">
                             <el-option key="no" label="不使用代理" value="no"/>
                             <el-option key="follow" label="跟随全局代理" value="follow"/>
-                            <el-option v-for="proxyServer in proxyServerTableData" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </template>
                 </el-table-column>
                 <el-table-column label="媒体流播放">
                     <template #header="">
                         <span>媒体流播放</span><br/>
-                        <el-select v-model="global_play_proxy_id">
+                        <el-select v-model="global_play_proxy_id" @change="globalPlayProxyChange">
                             <template #label="{ label }">
                                 <span>全局配置: </span>
                                 <span style="font-weight: bold">{{ label }}</span>
                             </template>
                             <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServerTableData" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </template>
                     <template #default="scope">
-                        <el-select v-model="scope.row.play_proxy_id">
+                        <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)">
                             <el-option key="no" label="不使用代理" value="no"/>
                             <el-option key="follow" label="跟随全局代理" value="follow"/>
-                            <el-option v-for="proxyServer in proxyServerTableData" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </template>
                 </el-table-column>
             </el-table>
-            <div>
-                <el-button type="primary" @click="saveEmbyProxy()">保存修改</el-button>
-            </div>
         </div>
     </el-scrollbar>
 
@@ -110,19 +107,26 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
-import { useConfig } from '../store/config';
+import { ref } from 'vue';
 import { ElMessage, ElMessageBox, TableColumnCtx } from 'element-plus';
-import { ProxyServerConfig } from '../store/config';
+import { ProxyServer, useProxyServer } from '../store/db/proxyServer';
 import _ from 'lodash';
 import { generateGuid } from '../util/uuid_util';
 import appApi from '../api/appApi';
+import { useEmbyServer } from '../store/db/embyServer';
+import { EmbyLine, useEmbyLine } from '../store/db/embyLine';
+import { useGlobalConfig } from '../store/db/globalConfig';
 
-const config = useConfig().get_config();
-const proxyServerTableData = config.proxy_server ? config.proxy_server : [];
+const proxyServer = ref<ProxyServer[]>([]);
+function listAllProxyServer() {
+    useProxyServer().listAllProxyServer().then(list => {
+        proxyServer.value = list;
+    })
+}
+listAllProxyServer()
 
 const dialogProxyServerVisible = ref(false);
-const dialogProxyServer = ref<ProxyServerConfig>({})
+const dialogProxyServer = ref<ProxyServer>({})
 
 function addProxy() {
     dialogProxyServerVisible.value = true;
@@ -130,24 +134,26 @@ function addProxy() {
 }
 function editProxy(index: number) {
     dialogProxyServerVisible.value = true;
-    dialogProxyServer.value = _.clone(proxyServerTableData[index]);
+    dialogProxyServer.value = _.clone(proxyServer.value[index]);
 }
 function saveProxyServer() {
+    let savePromise;
     if (dialogProxyServer.value.id) {
-        let index = proxyServerTableData.findIndex((item) => item.id == dialogProxyServer.value.id);
-        proxyServerTableData[index] = dialogProxyServer.value;
+        savePromise = useProxyServer().updateProxyServer(dialogProxyServer.value)
     } else {
         dialogProxyServer.value.id = generateGuid();
-        proxyServerTableData.push(dialogProxyServer.value);
+        savePromise = useProxyServer().addProxyServer(dialogProxyServer.value)
     }
-    config.proxy_server = proxyServerTableData;
-    useConfig().save_config(config);
-    dialogProxyServerVisible.value = false;
-    ElMessage.success('保存成功');
+    savePromise.then(() => {
+        listAllProxyServer()
+        ElMessage.success('保存成功');
+    }).catch(e => {
+        ElMessage.error('保存失败' + e);
+    }).finally(() => dialogProxyServerVisible.value = false)
 }
 function delProxy(index: number) {
     ElMessageBox.confirm(
-    `确认删除代理服务器「${proxyServerTableData[index].name}」吗`,
+    `确认删除代理服务器「${proxyServer.value[index].name}」吗`,
     'Warning',
     {
       confirmButtonText: 'OK',
@@ -155,10 +161,11 @@ function delProxy(index: number) {
       type: 'warning',
     }
   ).then(async () => {
-        proxyServerTableData.splice(index, 1)
-        config.proxy_server = proxyServerTableData;
-        useConfig().save_config(config);
-    })
+        useProxyServer().delProxyServer(proxyServer.value[index].id!).then(() => {
+            listAllProxyServer()
+            ElMessage.success('删除成功');
+        }).catch(e => ElMessage.error('删除失败' + e))
+  })
 }
 
 const checkProxyLoading = ref<{[key: string]: boolean}>({});
@@ -166,61 +173,45 @@ function checkProxy(id: string) {
     checkProxyLoading.value[id] = true;
     appApi.getProxyLocation(id).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json = JSON.parse(response.body);
-        for (let index = 0; index < proxyServerTableData.length; index++) {
-            if (proxyServerTableData[index].id === id) {
-                proxyServerTableData[index].location = json["ip"] + " " + json["country"]["code"];
+        for (let index = 0; index < proxyServer.value.length; index++) {
+            if (proxyServer.value[index].id === id) {
+                proxyServer.value[index].location = json["ip"] + " " + json["country"]["code"];
             }
         }
     }).catch(e => {
-        ElMessage.error({
-            message: e + '    可能是代理配置错误，请检查代理配置'
-        })
+        ElMessage.error('检测代理失败，可能是代理配置错误，请检查代理配置' + e)
     }).finally(() => checkProxyLoading.value[id] = false);
 }
 
-const embyServers = config.emby_server ? config.emby_server : [];
-const embyServerTableData = computed(() => {
-    let result = [];
-    for (let embyServer of embyServers) {
-        for (let line of embyServer.line!) {
-            let resultServer = {
-                emby_id: embyServer.id,
-                server_name: embyServer.server_name,
-                line_id: line.id,
-                line_name: line.name,
-                using: line.using,
-                browse_proxy_id: line.browse_proxy_id,
-                play_proxy_id: line.play_proxy_id,
-            }
-            result.push(resultServer);
-        }
-    }
-    return result
-})
+const embyLines = ref<EmbyLine[]>([]);
+function listAllEmbyLine() {
+    useEmbyLine().listAllEmbyLine().then(list => {
+        embyLines.value = list
+    })
+}
+listAllEmbyLine()
 
 interface SpanMethodProps {
-  row: typeof embyServerTableData.value[0]
-  column: TableColumnCtx<typeof embyServerTableData.value[0]>
+  row: typeof embyLines.value[0]
+  column: TableColumnCtx<typeof embyLines.value[0]>
   rowIndex: number
   columnIndex: number
 }
 const lineSpanMethod = ({row, rowIndex, columnIndex}: SpanMethodProps) => {
   if (columnIndex === 0) {
-    if (rowIndex !== 0 && row.emby_id === embyServerTableData.value[rowIndex - 1].emby_id) {
+    if (rowIndex !== 0 && row.emby_server_id === embyLines.value[rowIndex - 1].emby_server_id) {
         return {
             rowspan: 0,
             colspan: 0,
         }
     } else {
         let rowspan = 1;
-        for (let i = rowIndex + 1; i < embyServerTableData.value.length; i++) {
-            if (embyServerTableData.value[i].emby_id !== row.emby_id) {
+        for (let i = rowIndex + 1; i < embyLines.value.length; i++) {
+            if (embyLines.value[i].emby_server_id !== row.emby_server_id) {
                 break;
             }
             rowspan++;
@@ -233,27 +224,78 @@ const lineSpanMethod = ({row, rowIndex, columnIndex}: SpanMethodProps) => {
   }
 }
 
-const global_browse_proxy_id = ref(config.global_proxy?.browse_proxy_id!);
-const global_play_proxy_id = ref(config.global_proxy?.play_proxy_id!);
-function saveEmbyProxy() {
-    config.global_proxy = {
-        browse_proxy_id: global_browse_proxy_id.value,
-        play_proxy_id: global_play_proxy_id.value,
-    };
-    let embyServersClone = _.clone(embyServers);
-    for (let embyServer of embyServersClone) {
-        let line = embyServerTableData.value.find((item) => item.emby_id === embyServer.id && item.using)!;
-        embyServer.browse_proxy_id = line.browse_proxy_id;
-        embyServer.play_proxy_id = line.play_proxy_id;
-        for (let line of embyServer.line!) {
-            let tableLine = embyServerTableData.value.find((item) => item.emby_id === embyServer.id && item.line_id === line.id)!;
-            line.browse_proxy_id = tableLine.browse_proxy_id;
-            line.play_proxy_id = tableLine.play_proxy_id;
+const global_browse_proxy_id = ref<string>('no');
+const global_play_proxy_id = ref<string>('no');
+function getGlobalBrowseProxy() {
+    useGlobalConfig().getGlobalConfigValue("global_browse_proxy_id").then(value => {
+        global_browse_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取全局浏览代理失败' + e))
+}
+getGlobalBrowseProxy()
+function getGlobalPlayProxy() {
+    useGlobalConfig().getGlobalConfigValue("global_play_proxy_id").then(value => {
+        global_play_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
+}
+getGlobalPlayProxy()
+function globalBrowseProxyChange() {
+    useGlobalConfig().getGlobalConfig("global_browse_proxy_id").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = global_browse_proxy_id.value;
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "global_browse_proxy_id",
+                config_value: global_browse_proxy_id.value
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
         }
-    }
-    config.emby_server = embyServersClone;
-    useConfig().save_config(config);
-    ElMessage.success('保存成功');
+        savePromise.then(() => {
+            getGlobalBrowseProxy()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
+    ElMessage.success('修改成功');
+}
+function globalPlayProxyChange() {
+    useGlobalConfig().getGlobalConfig("global_play_proxy_id").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = global_play_proxy_id.value;
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "global_play_proxy_id",
+                config_value: global_play_proxy_id.value
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getGlobalPlayProxy()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
+    ElMessage.success('修改成功');
+}
+function proxyChange(line: EmbyLine) {
+    useEmbyLine().updateEmbyLine(line).then(() => {
+        listAllEmbyLine();
+        if (line.using) {
+            useEmbyServer().updateEmbyServer({
+                id: line.emby_server_id,
+                browse_proxy_id: line.browse_proxy_id,
+                play_proxy_id: line.play_proxy_id
+            }).catch(e => ElMessage.error('修改失败' + e));
+        }
+        ElMessage.success('修改成功');
+    }).catch(e => ElMessage.error('修改失败' + e));
 }
 </script>
 

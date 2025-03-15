@@ -157,27 +157,33 @@ import { ref } from 'vue';
 import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem, MediaLibraryCount } from '../../api/embyApi';
-import { useConfig } from '../../store/config';
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
 import invoke from '../../api/invoke';
+import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
+import { useProxyServer } from '../../store/db/proxyServer';
 
 const router = useRouter()
 const route = useRoute()
 
-let embyServer = useConfig().getEmbyServer(<string>route.params.id)!
+let embyServer = ref<EmbyServer>({})
+function getEmbyServer(embyId: string) {
+    useEmbyServer().getEmbyServer(embyId).then(value => {
+        embyServer.value = value!;
+    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+}
+getEmbyServer(<string>route.params.embyId)
 
 watch(() => route.params.id, (newId, _oldId) => {
-    embyServer = useConfig().getEmbyServer(<string>newId)!
-
+    getEmbyServer(<string>newId)
     handlePaneChange()
 })
 
 const search_str = ref('')
 const search = async () => {
-    router.push('/nav/emby/' + embyServer.id + '/search?search=' + encodeURIComponent(search_str.value))
+    router.push('/nav/emby/' + embyServer.value.id + '/search?search=' + encodeURIComponent(search_str.value))
 }
 
 const episodesLoading = ref(false)
@@ -194,29 +200,25 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
     episodesLoading.value = true
     episodesCurrentPage.value = currentPage
     episodesPageSize.value = pageSize
-    return embyApi.getContinuePlayList(embyServer, (currentPage - 1) * pageSize, pageSize).then(async response => {
+    return embyApi.getContinuePlayList(embyServer.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => episodesLoading.value = false)
 }
 getContinuePlayList(episodesCurrentPage.value, episodesPageSize.value)
 
 function gotoEpisodes(episodesId: string) {
-    router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
+    router.push('/nav/emby/' + embyServer.value.id + '/episodes/' + episodesId)
 }
 function gotoSeries(seriesId: string) {
-    router.push('/nav/emby/' + embyServer.id + '/series/' + seriesId)
+    router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
 }
 
 const favoriteLoading = ref(false)
@@ -233,20 +235,16 @@ function getFavoriteList(currentPage: number, pageSize: number) {
     favoriteLoading.value = true
     favoriteCurrentPage.value = currentPage
     favoritePageSize.value = pageSize
-    return embyApi.getFavoriteList(embyServer, (currentPage - 1) * pageSize, pageSize).then(async response => {
+    return embyApi.getFavoriteList(embyServer.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<SearchItems> = JSON.parse(response.body);
         favoriteList.value = json.Items
         favoriteTotal.value = json.TotalRecordCount
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => favoriteLoading.value = false)
 }
 
@@ -254,11 +252,9 @@ const mediaLibraryLoading = ref(false)
 const mediaLibraryList = ref<MediaLibraryItem[]>([])
 function getMediaLibraryList() {
     mediaLibraryLoading.value = true
-    return embyApi.getMediaLibraryList(embyServer).then(async response => {
+    return embyApi.getMediaLibraryList(embyServer.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<MediaLibraryItem> = JSON.parse(response.body);
@@ -268,20 +264,16 @@ function getMediaLibraryList() {
             getMediaLibraryChildLatest(item.Id)
         }
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => mediaLibraryLoading.value = false)
 }
 const mediaLibraryChildLoading = ref<{[key: string]: boolean}>({})
 const mediaLibraryChildList = ref<{[key: string]: SearchItems[]}>({})
 function getMediaLibraryChildLatest(parentId: string) {
     mediaLibraryChildLoading.value[parentId] = true
-    return embyApi.getMediaLibraryChildLatest(embyServer, parentId, 16).then(async response => {
+    return embyApi.getMediaLibraryChildLatest(embyServer.value, parentId, 16).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: SearchItems[] = JSON.parse(response.body);
@@ -290,24 +282,25 @@ function getMediaLibraryChildLatest(parentId: string) {
             loadImage(item.Id)
         }
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => mediaLibraryChildLoading.value[parentId] = false)
 }
+
+const browseProxyUrl = ref<string | undefined>()
+useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id).then(response => {
+    browseProxyUrl.value = response
+})
 
 const images = ref<{[key: string]: string}>({})
 function loadImage(itemId: string) {
     invoke.loadImage({
-        image_url: embyApi.getImageUrl(embyServer, itemId)!,
-        proxy_url: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id),
-        user_agent: embyServer.user_agent!,
+        image_url: embyApi.getImageUrl(embyServer.value, itemId)!,
+        proxy_url: browseProxyUrl.value,
+        user_agent: embyServer.value.user_agent!,
     }).then(response => {
         images.value[itemId] = response
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     })
 }
 
@@ -315,19 +308,15 @@ const mediaLibraryCountLoading = ref(false)
 const mediaLibraryCount = ref<MediaLibraryCount>()
 function getMediaLibraryCount() {
     mediaLibraryCountLoading.value = true
-    return embyApi.count(embyServer).then(async response => {
+    return embyApi.count(embyServer.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: MediaLibraryCount = JSON.parse(response.body);
         mediaLibraryCount.value = json
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => mediaLibraryCountLoading.value = false)
 }
 

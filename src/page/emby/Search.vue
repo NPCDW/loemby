@@ -24,13 +24,17 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { useConfig } from '../../store/config';
 import embyApi, { EmbyPageList, SearchItems } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
+import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
+import { ElMessage } from 'element-plus';
 
 const route = useRoute()
 
-let embyServer = useConfig().getEmbyServer(<string>route.params.embyId)!
+let embyServer = ref<EmbyServer>({})
+useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
+    embyServer.value = value!;
+}).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 
 const search_str = ref(<string>route.query.search)
 const search_loading = ref(false)
@@ -38,7 +42,7 @@ const emby_search_result = ref<{success: boolean, message?: string, result?: Emb
 const search = async () => {
     search_loading.value = true
     emby_search_result.value = {success: true}
-    return embyApi.search(embyServer, search_str.value, 0, 30).then(async response => {
+    return embyApi.search(embyServer.value, search_str.value, 0, 30).then(async response => {
         if (response.status_code != 200) {
             emby_search_result.value = {success: false, message: 'response status' + response.status_code + ' ' + response.status_text}
             return

@@ -5,7 +5,6 @@ import './style.css'
 import App from './App.vue'
 import router from './router/router'
 import { createPinia } from 'pinia'
-import { useConfig } from './store/config'
 import { useDb } from './store/db'
 import { usePlayback } from './store/playback'
 import svgIcon from "./components/SvgIcon/index.vue";
@@ -20,7 +19,6 @@ app.use(router)
 app.component('svg-icon', svgIcon)
 app.use(VueLazyLoad, {})
 
-await useConfig().sync_config()
 await useDb().init()
 await usePlayback().listen_playback_progress()
 

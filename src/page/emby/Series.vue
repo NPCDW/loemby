@@ -127,36 +127,36 @@
 
 <script lang="ts" setup>
 import { useRoute, useRouter } from 'vue-router';
-import { useConfig } from '../../store/config';
 import { ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, SeasonsItems, UserData } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import invoke from '../../api/invoke';
+import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
+import { useProxyServer } from '../../store/db/proxyServer';
 
 const router = useRouter()
 const route = useRoute()
 
-let embyServer = useConfig().getEmbyServer(<string>route.params.embyId)!
+let embyServer = ref<EmbyServer>({})
+useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
+    embyServer.value = value!;
+}).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 
 const serieInfoLoading = ref(false)
 const currentSeries = ref<EpisodesItems>()
 function updateCurrentSerie() {
     serieInfoLoading.value = true
-    return embyApi.items(embyServer, <string>route.params.serieId).then(async response => {
+    return embyApi.items(embyServer.value, <string>route.params.serieId).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: EpisodesItems = JSON.parse(response.body);
         currentSeries.value = json
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error('更新当前剧集信息失败' + e)
     }).finally(() => serieInfoLoading.value = false)
 }
 updateCurrentSerie()
@@ -169,23 +169,19 @@ function star() {
     starLoading.value = true
     let fun;
     if (currentSeries.value?.UserData.IsFavorite) {
-        fun = embyApi.unstar(embyServer, currentSeries.value?.Id)
+        fun = embyApi.unstar(embyServer.value, currentSeries.value?.Id)
     } else {
-        fun = embyApi.star(embyServer, currentSeries.value?.Id)
+        fun = embyApi.star(embyServer.value, currentSeries.value?.Id)
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
         currentSeries.value!.UserData!.IsFavorite = json.IsFavorite
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error('标记收藏信息失败' + e)
     }).finally(() => starLoading.value = false)
 }
 
@@ -197,23 +193,19 @@ function played() {
     playedLoading.value = true
     let fun;
     if (currentSeries.value?.UserData.Played) {
-        fun = embyApi.unplayed(embyServer, currentSeries.value?.Id)
+        fun = embyApi.unplayed(embyServer.value, currentSeries.value?.Id)
     } else {
-        fun = embyApi.played(embyServer, currentSeries.value?.Id)
+        fun = embyApi.played(embyServer.value, currentSeries.value?.Id)
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
         currentSeries.value!.UserData!.Played = json.Played
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error('标记播放信息失败' + e)
     }).finally(() => playedLoading.value = false)
 }
 
@@ -221,11 +213,9 @@ const seasonsLoading = ref<boolean>(false)
 const seasonsList = ref<SeasonsItems[]>([])
 async function getSeasons() {
     seasonsLoading.value = true
-    return embyApi.seasons(embyServer, <string>route.params.serieId).then(async response => {
+    return embyApi.seasons(embyServer.value, <string>route.params.serieId).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<SeasonsItems> = JSON.parse(response.body);
@@ -234,9 +224,7 @@ async function getSeasons() {
             loadImage(item.Id)
         })
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error('获取季失败' + e)
     }).finally(() => seasonsLoading.value = false)
 }
 getSeasons()
@@ -248,20 +236,16 @@ const episodesPageSize = ref<number>(6)
 const episodesTotal = ref<number>(0)
 async function getEpisodes() {
     episodesLoading.value = true
-    return embyApi.episodes(embyServer, <string>route.params.serieId, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
+    return embyApi.episodes(embyServer.value, <string>route.params.serieId, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error('获取剧集失败' + e)
     }).finally(() => episodesLoading.value = false)
 }
 getEpisodes()
@@ -270,7 +254,7 @@ function handleEpisodesPageChange(page: number) {
     getEpisodes()
 }
 function gotoEpisodes(episodesId: string) {
-    router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
+    router.push('/nav/emby/' + embyServer.value.id + '/episodes/' + episodesId)
 }
 
 const dialogSeasonsVisible = ref<boolean>(false)
@@ -291,40 +275,35 @@ function showSeasons(season: SeasonsItems) {
 }
 function getDialogEpisodes() {
     dialogEpisodesLoading.value = true
-    return embyApi.episodes(embyServer, currentSeries.value?.Id!, dialogSeasons.value?.Id!, (dialogEpisodesCurrentPage.value - 1) * dialogEpisodesPageSize.value, dialogEpisodesPageSize.value).then(async response => {
+    return embyApi.episodes(embyServer.value, currentSeries.value?.Id!, dialogSeasons.value?.Id!, (dialogEpisodesCurrentPage.value - 1) * dialogEpisodesPageSize.value, dialogEpisodesPageSize.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
         dialogEpisodesList.value = json.Items
         dialogEpisodesTotal.value = json.TotalRecordCount
-    }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
-    }).finally(() => dialogEpisodesLoading.value = false)
+    }).catch(e => ElMessage.error('获取剧集失败' + e)).finally(() => dialogEpisodesLoading.value = false)
 }
 function handleDialogEpisodesPageChange(page: number) {
     dialogEpisodesCurrentPage.value = page
     getDialogEpisodes()
 }
 
+const browseProxyUrl = ref<string | undefined>()
+useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id).then(response => {
+    browseProxyUrl.value = response
+})
+
 const images = ref<{[key: string]: string}>({})
 function loadImage(itemId: string) {
     invoke.loadImage({
-        image_url: embyApi.getImageUrl(embyServer, itemId)!,
-        proxy_url: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id),
-        user_agent: embyServer.user_agent!,
+        image_url: embyApi.getImageUrl(embyServer.value, itemId)!,
+        proxy_url: browseProxyUrl.value,
+        user_agent: embyServer.value.user_agent!,
     }).then(response => {
         images.value[itemId] = response
-    }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
-    })
+    }).catch(e => ElMessage.error('加载图片失败' + e))
 }
 loadImage(<string>route.params.serieId)
 </script>

@@ -48,11 +48,14 @@ CREATE TABLE "emby_line" (
   "id" CHAR(36) NOT NULL PRIMARY KEY,
   "create_time" TIMESTAMP NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),
 	"name" VARCHAR(255) NOT NULL,
+    "emby_server_id" CHAR(36) NOT NULL,
+	"emby_server_name" VARCHAR(255) NOT NULL,
 	"base_url" VARCHAR(255) NOT NULL,
 	"browse_proxy_id" VARCHAR(255) NOT NULL,
 	"play_proxy_id" VARCHAR(255) NOT NULL,
 	"using" int NOT NULL DEFAULT 0
 );
+CREATE INDEX emby_line_emby_server_id ON emby_line;
 "#,
             kind: MigrationKind::Up,
         }

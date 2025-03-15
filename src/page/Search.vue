@@ -22,7 +22,7 @@
                     </div>
                     <div v-else style="text-align: center;">
                         <el-text type="danger" style="word-break: break-all;display: block;">{{ embySearchItem.message }}</el-text>
-                        <el-button type="primary" @click="singleEmbySearch(embySearchItem.embyServer)">重试</el-button>
+                        <el-button type="primary" @click="singleEmbySearch(embySearchItem.embyServer, true)">重试</el-button>
                     </div>
                 </el-collapse-item>
             </el-collapse>
@@ -32,16 +32,18 @@
 
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
-import { useConfig, EmbyServerConfig } from '../store/config'
 import embyApi, { EmbyPageList, SearchItems } from '../api/embyApi'
 import ItemCard from '../components/ItemCard.vue';
+import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
+import { ElMessage } from 'element-plus';
+import { useGlobalConfig } from '../store/db/globalConfig';
 
 const search_loading = ref(false)
 const search_str = ref('')
 const embyServerKeys = ref<string[]>([])
-const mpv_config = ref(false)
+const has_mpv_config = ref(false)
 
-const emby_search_result = ref<{[key: string]: {embyServer: EmbyServerConfig, success: boolean, message?: string, result?: EmbyPageList<SearchItems>}}>({})
+const emby_search_result = ref<{[key: string]: {embyServer: EmbyServer, success: boolean, message?: string, result?: EmbyPageList<SearchItems>}}>({})
 
 const emby_search_result_list = computed(() => {
   return Object.entries(emby_search_result.value).map(([_key, value]) => (value)).sort((a, b) => {
@@ -66,23 +68,38 @@ const emby_search_result_list = computed(() => {
     });
 })
 
+useGlobalConfig().getGlobalConfigValue("mpv_config").then(value => {
+    has_mpv_config.value = value ? true : false;
+}).catch(e => ElMessage.error('获取全局播放代理失败' + e))
+
 async function search() {
-    search_loading.value = true
     embyServerKeys.value = []
     emby_search_result.value = {}
-    let promises = []
-    let config = useConfig().get_config()
-    mpv_config.value = config.mpv_path ? true : false
-    for (let embyServer of config.emby_server!) {
-        if (!embyServer.disabled) {
-            let promise = singleEmbySearch(embyServer)
-            promises.push(promise)
+
+    search_loading.value = true
+    useEmbyServer().listAllEmbyServer().then(list => {
+        let promises = []
+        for (let embyServer of list) {
+            if (!embyServer.disabled) {
+                let promise = singleEmbySearch(embyServer)
+                promises.push(promise)
+            }
         }
-    }
-    Promise.allSettled(promises).then(() => search_loading.value = false);
+        Promise.allSettled(promises).then(() => search_loading.value = false);
+    }).catch(e => {
+        search_loading.value = false
+        ElMessage.error('获取Emby服务器失败' + e)
+    })
 }
-async function singleEmbySearch(embyServer: EmbyServerConfig) {
-    embyServer = useConfig().getEmbyServer(embyServer.id!)!
+async function singleEmbySearch(embyServer: EmbyServer, refresh: boolean = false) {
+    if (refresh) {
+        let tmp = await useEmbyServer().getEmbyServer(embyServer.id!)
+        if (!tmp) {
+            ElMessage.error('Emby服务器不存在')
+            return
+        }
+        embyServer = tmp
+    }
     embyServer.request_status = true
     return embyApi.search(embyServer, search_str.value, 0, 30).then(async response => {
         if (response.status_code != 200) {

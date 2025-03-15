@@ -124,15 +124,19 @@ import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserD
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import invoke from '../../api/invoke';
-import { useConfig } from '../../store/config';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { usePlayback } from '../../store/playback';
+import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
+import { useProxyServer } from '../../store/db/proxyServer';
 
 const router = useRouter()
 const route = useRoute()
 
-let embyServer = useConfig().getEmbyServer(<string>route.params.embyId)!
+let embyServer = ref<EmbyServer>({})
+useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
+    embyServer.value = value!;
+}).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 
 const versionOptions = ref<{label: string, value: string, name: string, size: string, bitrate: string}[]>([])
 const videoOptions = ref<{label: string, value: number}[]>([])
@@ -159,11 +163,9 @@ function updateCurrentEpisodes(silent: boolean = false) {
     if (!silent) {
         playbackInfoLoading.value = true
     }
-    return embyApi.items(embyServer, <string>route.params.episodeId).then(async response => {
+    return embyApi.items(embyServer.value, <string>route.params.episodeId).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: EpisodesItems = JSON.parse(response.body);
@@ -172,9 +174,7 @@ function updateCurrentEpisodes(silent: boolean = false) {
             handleMediaSources(json.MediaSources)
         }
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => playbackInfoLoading.value = false)
 }
 updateCurrentEpisodes()
@@ -186,20 +186,16 @@ const handleNextUpPageChange = (val: number) => {
 
 function nextUp(pageNumber: number) {
     nextUpLoading.value = true
-    return embyApi.nextUp(embyServer, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
+    return embyApi.nextUp(embyServer.value, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
         nextUpList.value = json.Items
         nextUpTotal.value = json.TotalRecordCount
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => nextUpLoading.value = false)
 }
 
@@ -321,37 +317,40 @@ function playbackVersionChange(val: string) {
     }
 }
 
+const playProxyUrl = ref<string | undefined>()
+useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id).then(response => {
+    playProxyUrl.value = response
+})
+
 // const playingProgressTask = ref<NodeJS.Timeout>()
 function playing(item_id: string, playbackPositionTicks: number) {
     play_loading.value = true
-    return embyApi.playbackInfo(embyServer, item_id).then(async response => {
+    return embyApi.playbackInfo(embyServer.value, item_id).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
         let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
         if (currentMediaSources) {
-            let directStreamUrl = embyApi.getDirectStreamUrl(embyServer, currentMediaSources.DirectStreamUrl!)!
+            let directStreamUrl = embyApi.getDirectStreamUrl(embyServer.value, currentMediaSources.DirectStreamUrl!)!
             let externalAudio = []
             let externalSubtitle = []
             for (let mediaStream of currentMediaSources.MediaStreams) {
                 if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
-                    externalAudio.push(embyApi.getAudioStreamUrl(embyServer, currentMediaSources, mediaStream)!)
+                    externalAudio.push(embyApi.getAudioStreamUrl(embyServer.value, currentMediaSources, mediaStream)!)
                 } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
-                    externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer, currentMediaSources, mediaStream)!)
+                    externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer.value, currentMediaSources, mediaStream)!)
                 }
             }
             let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
                  : 'S' + currentEpisodes.value?.ParentIndexNumber + 'E' + currentEpisodes.value?.IndexNumber + '. ' + currentEpisodes.value?.Name
             return invoke.playback({
                 path: directStreamUrl,
-                proxy: useConfig().getPlayProxyUrl(embyServer!.play_proxy_id),
-                title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.server_name,
-                user_agent: embyServer!.user_agent!,
-                server_id: embyServer!.id!,
+                proxy: playProxyUrl.value,
+                title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.value.server_name,
+                user_agent: embyServer.value!.user_agent!,
+                server_id: embyServer.value!.id!,
                 item_id: item_id,
                 media_source_id: currentMediaSources.Id,
                 play_session_id: playbackInfo.PlaySessionId,
@@ -362,12 +361,12 @@ function playing(item_id: string, playbackPositionTicks: number) {
                 external_audio: externalAudio,
                 external_subtitle: externalSubtitle,
             }).then(async () => {
-                embyApi.playing(embyServer!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
+                embyApi.playing(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
                     ElMessage.success({
                         message: '开始播放，请稍候'
                     })
                     // playingProgressTask.value = setInterval(() => {
-                    //     embyApi.playingProgress(embyServer!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks)
+                    //     embyApi.playingProgress(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks)
                     // }, 30000)
                 })
             }).catch(res => {
@@ -377,15 +376,13 @@ function playing(item_id: string, playbackPositionTicks: number) {
             })
         }
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => play_loading.value = false)
 }
 
 const playbackStore = usePlayback()
 watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
-    if (embyServer.id === newValue.server_id && newValue.item_id === currentEpisodes.value?.Id) {
+    if (embyServer.value.id === newValue.server_id && newValue.item_id === currentEpisodes.value?.Id) {
         // if (playingProgressTask.value) {
         //     clearInterval(playingProgressTask.value)
         // }
@@ -398,7 +395,7 @@ watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
                 nextUpCurrentPage.value = 1
                 nextUp(1).then(() => {
                     if (nextUpList.value.length > 0) {
-                        router.replace({path: '/nav/emby/' + embyServer.id + '/episodes/' + nextUpList.value[0].Id, query: {autoplay: 'true'}})
+                        router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {autoplay: 'true'}})
                     } else {
                         ElMessage.warning({
                             message: '已经是最后一集了'
@@ -428,23 +425,19 @@ function star() {
     starLoading.value = true
     let fun;
     if (currentEpisodes.value?.UserData.IsFavorite) {
-        fun = embyApi.unstar(embyServer, currentEpisodes.value?.Id)
+        fun = embyApi.unstar(embyServer.value, currentEpisodes.value?.Id)
     } else {
-        fun = embyApi.star(embyServer, currentEpisodes.value?.Id)
+        fun = embyApi.star(embyServer.value, currentEpisodes.value?.Id)
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
         currentEpisodes.value!.UserData!.IsFavorite = json.IsFavorite
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => starLoading.value = false)
 }
 
@@ -456,31 +449,27 @@ function played() {
     playedLoading.value = true
     let fun;
     if (currentEpisodes.value?.UserData.Played) {
-        fun = embyApi.unplayed(embyServer, currentEpisodes.value?.Id)
+        fun = embyApi.unplayed(embyServer.value, currentEpisodes.value?.Id)
     } else {
-        fun = embyApi.played(embyServer, currentEpisodes.value?.Id)
+        fun = embyApi.played(embyServer.value, currentEpisodes.value?.Id)
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error({
-                message: 'response status' + response.status_code + ' ' + response.status_text
-            })
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
         currentEpisodes.value!.UserData!.Played = json.Played
     }).catch(e => {
-        ElMessage.error({
-            message: e
-        })
+        ElMessage.error(e)
     }).finally(() => playedLoading.value = false)
 }
 
 function gotoEpisodes(episodesId: string) {
-    router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
+    router.push('/nav/emby/' + embyServer.value.id + '/episodes/' + episodesId)
 }
 function gotoSeries(seriesId: string) {
-    router.push('/nav/emby/' + embyServer.id + '/series/' + seriesId)
+    router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
 }
 </script>
 

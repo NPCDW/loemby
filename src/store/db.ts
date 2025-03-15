@@ -6,7 +6,7 @@ export const useDb = defineStore('db', () => {
     const db = ref<Database>()
 
     async function init() {
-        db.value = await Database.load('sqlite:data/loemby.db');
+        db.value = await Database.load('sqlite:loemby.db');
     }
 
     return { init, db }
