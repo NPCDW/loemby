@@ -31,6 +31,7 @@ pub fn run() {
             window.show().expect("Sorry, no window show");
             window.set_focus().expect("Can't Bring Window to Focus");
         }))
+        .plugin(tauri_plugin_sql::Builder::default().add_migrations("sqlite:data/loemby.db", config::db_migrations::migrations()).build())
         .invoke_handler(tauri::generate_handler![get_config, save_config, get_sys_info, play_video, http_forward, load_image])
         .setup(|app| {
             let root_dir = if is_development() {
