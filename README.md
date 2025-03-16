@@ -9,7 +9,14 @@ pnpm i
 
 启动
 ```bash
+# 开发
+pnpm run tauri dev --config src-tauri/tauri.dev.conf.json
+# 测试预览
+pnpm run tauri dev --config src-tauri/tauri.beta.conf.json
+# 测试生产
 pnpm run tauri dev
+# 生产
+pnpm run tauri build
 ```
 
 ## 相关文档
