@@ -129,7 +129,7 @@ import { ElMessage } from 'element-plus';
 import { usePlayback } from '../../store/playback';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
-import * as dayjs from 'dayjs'
+import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import { useGlobalConfig } from '../../store/db/globalConfig';
 

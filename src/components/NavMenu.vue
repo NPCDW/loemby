@@ -21,6 +21,9 @@
                                     <el-icon v-else-if="embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon> -->
                                     <el-icon v-else size="24"><svg-icon name="emby" /></el-icon>
                                     {{ embyServer.server_name }}
+                                    <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
+                                        {{ '+' + keep_alive_days[embyServer.id!] }}
+                                    </el-tag>
                                 </div>
                             </el-menu-item>
                             <template #dropdown>
@@ -215,7 +218,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watchEffect } from "vue";
+import { computed, ref, watchEffect } from "vue";
 import { useRoute } from 'vue-router'
 import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -226,6 +229,8 @@ import invoke from "../api/invoke";
 import { ProxyServer, useProxyServer } from "../store/db/proxyServer";
 import { EmbyServer, useEmbyServer } from "../store/db/embyServer";
 import { EmbyLine, useEmbyLine } from "../store/db/embyLine";
+import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 
 const active = ref("");
 const route = useRoute();
@@ -249,6 +254,16 @@ function listAllEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
+
+const keep_alive_days = computed(() => {
+    let days: {[key: string]: number} = {}
+    for (let embyServer of embyServers.value) {
+        if (embyServer.keep_alive_days) {
+            days[embyServer.id!] = embyServer.keep_alive_days - dayjs().locale('zh-cn').diff(embyServer.last_playback_time, 'day')
+        }
+    }
+    return days
+})
 
 const embyLines = ref<{[key: string]: EmbyLine[]}>({});
 function listAllEmbyLine() {
