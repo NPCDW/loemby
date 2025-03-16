@@ -22,12 +22,14 @@ CREATE TABLE "emby_server" (
 	"device_id" VARCHAR(255) NOT NULL,
 	"client_version" VARCHAR(255) NOT NULL,
 	"user_agent" VARCHAR(255) NOT NULL,
+	"order_by" INTEGER NOT NULL AUTOINCREMENT,
 	"browse_proxy_id" VARCHAR(255) NOT NULL,
 	"play_proxy_id" VARCHAR(255) NOT NULL,
 	"last_playback_time" TIMESTAMP DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),
   "keep_alive_days" int NOT NULL DEFAULT 0,
   "disabled" int NOT NULL DEFAULT 0
 );
+CREATE UNIQUE INDEX emby_server_order on emby_server (order_by);
 CREATE TABLE "global_config" (
   "id" CHAR(36) NOT NULL PRIMARY KEY,
   "create_time" TIMESTAMP NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),

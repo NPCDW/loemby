@@ -33,7 +33,7 @@
                                             </span>
                                             <template #dropdown>
                                                 <el-dropdown-menu>
-                                                    <el-dropdown-item v-for='line in embyServer.line' @click="configLineChange(line.id!, embyServer)">
+                                                    <el-dropdown-item v-for='line in embyLines[embyServer.id!]' @click="configLineChange(line.id!, embyServer)">
                                                         <i-ep-Select v-if="line.using" style="position: absolute; left: 10;" />
                                                         <span style="margin-left: 15px;">{{line.name}}</span>
                                                     </el-dropdown-item>
@@ -165,14 +165,14 @@
     <el-scrollbar style="width: 100%;height: 400px; padding: 20px;">
         <el-button @click="addLine" type="primary">添加</el-button>
         <div style="padding-top: 20px;">
-            <el-radio-group v-model="currentEmbyServerLine" @change="configLineChange(currentEmbyServerLine, currentEmbyServer)">
-                <el-radio v-for="line in currentEmbyServer.line" :value="line.id" size="large" border style="height: 100%; margin-bottom: 20px;">
+            <el-radio-group v-model="currentEmbyServerLineId" @change="configLineChange(currentEmbyServerLineId, currentEmbyServer)">
+                <el-radio v-for="line in currentEmbyServerLines" :value="line.id" size="large" border style="height: 100%; margin-bottom: 20px;">
                     <div style="padding: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             {{ line.name }}
                             <span>
                                 <el-button type="primary" text size="small" @click="editLine(line)"><i-ep-Edit /></el-button>
-                                <el-button type="danger" text size="small" @click="delLine(line)"><i-ep-Delete /></el-button>
+                                <el-button type="danger" :disabled="line.using" text size="small" @click="delLine(line)"><i-ep-Delete /></el-button>
                             </span>
                         </div>
                         <el-text truncated style="width: 280px;">{{ line.base_url }}</el-text>
@@ -225,6 +225,7 @@ import { Container, Draggable } from "vue3-smooth-dnd";
 import invoke from "../api/invoke";
 import { ProxyServer, useProxyServer } from "../store/db/proxyServer";
 import { EmbyServer, useEmbyServer } from "../store/db/embyServer";
+import { EmbyLine, useEmbyLine } from "../store/db/embyLine";
 
 const active = ref("");
 const route = useRoute();
@@ -249,16 +250,41 @@ function listAllEmbyServer() {
 }
 listAllEmbyServer()
 
-function addEmbyServerDb(tmp: EmbyServer) {
-    useEmbyServer().addEmbyServer(tmp).then(() => {
+const embyLines = ref<{[key: string]: EmbyLine[]}>({});
+function listAllEmbyLine() {
+    useEmbyLine().listAllEmbyLine().then(list => {
+        for (let line of list) {
+            if (!embyLines.value[line.emby_server_id!]) {
+                embyLines.value[line.emby_server_id!] = []
+            }
+            embyLines.value[line.emby_server_id!].push(line)
+        }
+    })
+}
+listAllEmbyLine()
+
+async function addEmbyServerDb(tmp: EmbyServer) {
+    return useEmbyServer().addEmbyServer(tmp).then(() => {
         listAllEmbyServer()
     }).catch(e => ElMessage.error('添加Emby服务器失败' + e))
 }
 
-function updateEmbyServerDb(tmp: EmbyServer) {
-    useEmbyServer().updateEmbyServer(tmp).then(() => {
+async function updateEmbyServerDb(tmp: EmbyServer) {
+    return useEmbyServer().updateEmbyServer(tmp).then(() => {
         listAllEmbyServer()
     }).catch(e => ElMessage.error('更新Emby服务器失败' + e))
+}
+
+async function addEmbyLineDb(line: EmbyLine) {
+    return useEmbyLine().addEmbyLine(line).then(() => {
+        listAllEmbyServer()
+    }).catch(e => ElMessage.error('添加Emby线路失败' + e))
+}
+
+async function updateEmbyLineDb(line: EmbyLine) {
+    return useEmbyLine().updateEmbyLine(line).then(() => {
+        listAllEmbyServer()
+    }).catch(e => ElMessage.error('更新Emby线路失败' + e))
 }
 
 const stepActive = ref(1)
@@ -282,7 +308,6 @@ function addEmbyServer() {
             device_id: hostname,
             browse_proxy_id: 'follow',
             play_proxy_id: 'follow',
-            line: [],
         }
     }).catch(e => {
         ElMessage.error({
@@ -334,6 +359,9 @@ function delEmbyServer(tmp: EmbyServer) {
         useEmbyServer().delEmbyServer(tmp.id!).then(() => {
             listAllEmbyServer()
             ElMessage.success('删除成功')
+            useEmbyLine().delEmbyServer(tmp.id!).catch(e => {
+                ElMessage.error('删除Emby线路失败' + e)
+            })
         }).catch(e => {
             ElMessage.error('删除Emby服务器失败' + e)
         })
@@ -354,7 +382,7 @@ async function addEmbyServerAddr() {
         browse_proxy_id: currentEmbyServer.value!.browse_proxy_id,
         play_proxy_id: currentEmbyServer.value!.play_proxy_id
     }
-    currentEmbyServer.value!.line = [line]
+    await addEmbyLineDb(line)
     await addEmbyServerDb(currentEmbyServer.value);
     embyApi.getServerInfo(currentEmbyServer.value).then(async response => {
         if (response.status_code != 200) {
@@ -420,54 +448,76 @@ async function login(embyServerConfig: EmbyServer) {
     })
 }
 async function saveEditEmbyServer() {
-    for (let index = 0; index < currentEmbyServer.value!.line!.length; index++) {
-        if (currentEmbyServer.value!.line![index].using) {
-            currentEmbyServer.value!.line![index].base_url = currentEmbyServer.value!.base_url
-            currentEmbyServer.value!.line![index].browse_proxy_id = currentEmbyServer.value!.browse_proxy_id
-            currentEmbyServer.value!.line![index].play_proxy_id = currentEmbyServer.value!.play_proxy_id
+    await useEmbyLine().getUsingEmbyLine(currentEmbyServer.value!.id!).then(async line => {
+        if (!line) {
+            ElMessage.error('获取正在使用的线路失败')
+            return
         }
-    }
+        line.base_url = currentEmbyServer.value!.base_url
+        line.browse_proxy_id = currentEmbyServer.value!.browse_proxy_id
+        line.play_proxy_id = currentEmbyServer.value!.play_proxy_id
+        await updateEmbyLineDb(line)
+        if (line.emby_server_name != currentEmbyServer.value!.server_name) {
+            await useEmbyLine().updateEmbyServerName(currentEmbyServer.value!.id!, currentEmbyServer.value!.server_name!);
+        }
+    }).catch(e => ElMessage.error('获取正在使用的线路失败' + e))
     await updateEmbyServerDb(currentEmbyServer.value!);
     dialogEditEmbyServerVisible.value = false
 }
 
 async function onDrop(dropResult: {removedIndex: number, addedIndex: number}) {
-    let element = embyServers.value.splice(dropResult.removedIndex, 1);
-    embyServers.value.splice(dropResult.addedIndex, 0, element[0]);
-    await useConfig().saveEmbyServer(embyServers.value)
+    let minIndex = Math.min(dropResult.removedIndex, dropResult.addedIndex)
+    let maxIndex = Math.max(dropResult.removedIndex, dropResult.addedIndex)
+    let orderBy = embyServers.value[minIndex].order_by!
+    useEmbyServer().updateOrder(orderBy).then(() => {
+        updateEmbyServerDb({id: embyServers.value[maxIndex].id!, order_by: orderBy}).then(() => {
+            listAllEmbyServer()
+        }).catch(e => ElMessage.error("排序失败" + e))
+    }).catch(e => ElMessage.error("排序失败" + e))
 }
 
 const dialogConfigLineVisible = ref(false)
-const currentEmbyServerLine = ref('')
+const currentEmbyServerLineId = ref('')
+const currentEmbyServerLines = ref<EmbyLine[]>([])
 function configLine(embyServer: EmbyServer) {
     currentEmbyServer.value = _.clone(embyServer)
-    for (let index = 0; index < currentEmbyServer.value.line!.length; index++) {
-        if (currentEmbyServer.value.line![index].using) {
-            currentEmbyServerLine.value = currentEmbyServer.value.line![index].id!
+    useEmbyLine().getUsingEmbyLine(currentEmbyServer.value!.id!).then(async line => {
+        if (!line) {
+            ElMessage.error('获取正在使用的线路失败')
+            return
         }
-    }
+        currentEmbyServerLineId.value = line.id!
+    }).catch(e => ElMessage.error('获取正在使用的线路失败' + e))
+    useEmbyLine().listEmbyLine(currentEmbyServer.value!.id!).then(async line => {
+        if (!line) {
+            ElMessage.error('获取当前Emby的线路失败')
+            return
+        }
+        currentEmbyServerLines.value = line
+    }).catch(e => ElMessage.error('获取当前Emby的线路失败' + e))
     dialogConfigLineVisible.value = true
 }
 const dialogAddLineVisible = ref(false)
-const currentEmbyServerAddLine = ref<ServerLine>({})
+const currentEmbyServerAddLine = ref<EmbyLine>({})
 function addLine() {
     currentEmbyServerAddLine.value = {
         id: generateGuid(),
         using: false,
+        emby_server_id: currentEmbyServer.value.id!,
+        emby_server_name: currentEmbyServer.value.server_name,
         browse_proxy_id: 'follow',
         play_proxy_id: 'follow'
     }
-    console.log(currentEmbyServerAddLine.value)
     dialogAddLineVisible.value = true
 }
-function editLine(line: ServerLine) {
+function editLine(line: EmbyLine) {
     currentEmbyServerAddLine.value = _.clone(line)
     dialogAddLineVisible.value = true
 }
-function delLine(line: ServerLine) {
-    if (!currentEmbyServer.value.line || currentEmbyServer.value.line.length <= 1) {
+function delLine(line: EmbyLine) {
+    if (line.using) {
         ElMessage.error({
-            message: '至少保留一个服务器线路'
+            message: '不能删除正在使用的服务器线路'
         })
         return
     }
@@ -480,38 +530,48 @@ function delLine(line: ServerLine) {
             type: 'warning',
         }
     ).then(async () => {
-        currentEmbyServer.value.line = currentEmbyServer.value.line!.filter(item => item.id != line.id)
-        await saveEmbyServer(currentEmbyServer.value!);
+        useEmbyLine().delEmbyLine(line.id!).then(async () => {
+            ElMessage.success({
+                message: "删除成功"
+            })
+        }).catch(e => ElMessage.error("删除失败" + e))
     })
 }
 async function saveCurrentEmbyServerAddLine() {
     let value = _.cloneDeep(currentEmbyServerAddLine.value);
-    for (let index = 0; index < currentEmbyServer.value.line!.length; index++) {
-        if (currentEmbyServer.value.line![index].id === value.id) {
-            currentEmbyServer.value.line![index] = value
-            await saveEmbyServer(currentEmbyServer.value!);
-            dialogAddLineVisible.value = false
-            return
-        }
+    let savePromise
+    if (value.id) {
+        savePromise = useEmbyLine().updateEmbyLine(value)
+    } else {
+        savePromise = useEmbyLine().addEmbyLine(value)
     }
-    currentEmbyServer.value.line!.push(value)
-    await saveEmbyServer(currentEmbyServer.value!);
-    dialogAddLineVisible.value = false
+    savePromise.then(async () => {
+        ElMessage.success({
+            message: "保存成功"
+        })
+    }).catch(e => ElMessage.error("保存失败" + e)).finally(() => dialogAddLineVisible.value = false)
 }
 async function configLineChange(value: string, embyServer: EmbyServer) {
-    for (let index = 0; index < embyServer.line!.length; index++) {
-        embyServer.line![index].using = false
-        if (embyServer.line![index].id === value) {
-            embyServer.line![index].using = true
-            embyServer.base_url = embyServer.line![index].base_url
-            embyServer.browse_proxy_id = embyServer.line![index].browse_proxy_id
-            embyServer.play_proxy_id = embyServer.line![index].play_proxy_id
+    useEmbyLine().getEmbyLine(value).then(async line => {
+        if (!line) {
+            ElMessage.error('获取线路失败')
+            return
         }
-    }
-    await saveEmbyServer(embyServer!);
-    ElMessage.success({
-        message: "线路切换成功"
-    })
+        useEmbyLine().updateEmbyUsing(embyServer.id!).then(() => {
+            updateEmbyLineDb({id: value, using: true})
+            let tmpEmbyServer = {
+                id: embyServer.id!,
+                base_url: line.base_url,
+                browse_proxy_id: line.browse_proxy_id,
+                play_proxy_id: line.play_proxy_id,
+            }
+            useEmbyServer().updateEmbyServer(tmpEmbyServer).then(() => {
+                ElMessage.success({
+                    message: "线路切换成功"
+                })
+            }).catch(e => ElMessage.error("切换失败" + e))
+        }).catch(e => ElMessage.error("切换失败" + e))
+    }).catch(e => ElMessage.error('获取线路失败' + e))
 }
 </script>
 

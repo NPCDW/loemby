@@ -45,12 +45,20 @@ export const useEmbyServer = defineStore('embyServer', () => {
         return res?.rowsAffected;
     }
 
+    async function updateOrder(orderNumber: number) {
+        let values: number[] = [];
+        values.push(orderNumber);
+        let sql = `update emby_server set order_by = order_by + 1 where order_by >= $1`;
+        let res = await useDb().db?.execute(sql, values);
+        return res?.rowsAffected;
+    }
+
     async function delEmbyServer(id: string) {
         let res = await useDb().db?.execute('delete from emby_server where id = $1', [id]);
         return res?.rowsAffected;
     }
 
-    return { getEmbyServer, delEmbyServer, addEmbyServer, updateEmbyServer, listAllEmbyServer }
+    return { getEmbyServer, delEmbyServer, addEmbyServer, updateEmbyServer, listAllEmbyServer, updateOrder }
 })
 
 export interface EmbyServer {
@@ -71,6 +79,8 @@ export interface EmbyServer {
     device_id?: string,
     client_version?: string,
     user_agent?: string,
+
+    order_by?: number,
 
     browse_proxy_id?: string,
     play_proxy_id?: string,
