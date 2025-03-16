@@ -1,5 +1,5 @@
+import { useProxyServer } from '../store/db/proxyServer';
 import invoke from './invoke';
-import { useConfig } from '../store/config';
 
 /**
  * 校验代理服务器
@@ -14,7 +14,7 @@ async function getProxyLocation(proxy_id: string) {
         headers: {
             'User-Agent': 'loemby/0.5.0',
         },
-        proxy: useConfig().getProxyUrl(proxy_id)
+        proxy: await useProxyServer().getProxyUrl(proxy_id)
     });
 }
 

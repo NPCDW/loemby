@@ -140,9 +140,17 @@ const router = useRouter()
 const route = useRoute()
 
 let embyServer = ref<EmbyServer>({})
-useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
-    embyServer.value = value!;
-}).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+async function getEmbyServer() {
+    return useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
+        embyServer.value = value!;
+    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+}
+getEmbyServer().then(() => {
+    updateCurrentSerie()
+    getSeasons()
+    getEpisodes()
+    loadImage(<string>route.params.serieId)
+})
 
 const serieInfoLoading = ref(false)
 const currentSeries = ref<EpisodesItems>()
@@ -159,7 +167,6 @@ function updateCurrentSerie() {
         ElMessage.error('更新当前剧集信息失败' + e)
     }).finally(() => serieInfoLoading.value = false)
 }
-updateCurrentSerie()
 
 const starLoading = ref<boolean>(false)
 function star() {
@@ -227,7 +234,6 @@ async function getSeasons() {
         ElMessage.error('获取季失败' + e)
     }).finally(() => seasonsLoading.value = false)
 }
-getSeasons()
 
 const episodesLoading = ref<boolean>(false)
 const episodesList = ref<EpisodesItems[]>([])
@@ -248,7 +254,6 @@ async function getEpisodes() {
         ElMessage.error('获取剧集失败' + e)
     }).finally(() => episodesLoading.value = false)
 }
-getEpisodes()
 function handleEpisodesPageChange(page: number) {
     episodesCurrentPage.value = page
     getEpisodes()
@@ -305,7 +310,6 @@ function loadImage(itemId: string) {
         images.value[itemId] = response
     }).catch(e => ElMessage.error('加载图片失败' + e))
 }
-loadImage(<string>route.params.serieId)
 </script>
 
 <style scoped>

@@ -1,13 +1,4 @@
-import { Config } from "../store/config";
 import { invoke } from '@tauri-apps/api/core';
-
-async function getConfig(): Promise<Config> {
-    return invoke('get_config');
-}
-
-async function saveConfig(config: Config) {
-    return invoke('save_config', {config});
-}
 
 async function getSysInfo(): Promise<string> {
     return invoke('get_sys_info');
@@ -64,5 +55,5 @@ async function loadImage(param: LoadImageParam): Promise<string> {
 }
 
 export default {
-    getConfig, saveConfig, getSysInfo, playback, httpForward, loadImage
+    getSysInfo, playback, httpForward, loadImage
 }

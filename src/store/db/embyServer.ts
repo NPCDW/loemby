@@ -10,6 +10,14 @@ export const useEmbyServer = defineStore('embyServer', () => {
         return embyServer[0];
     }
 
+    async function getMaxOrderBy() {
+        let embyServer = await useDb().db?.select<{max_order_by: number}[]>('select max(order_by) as max_order_by from emby_server');
+        if (!embyServer || embyServer.length == 0) {
+            return;
+        }
+        return embyServer[0].max_order_by;
+    }
+
     async function listAllEmbyServer() {
         let embyServer = await useDb().db?.select<EmbyServer[]>('select * from emby_server');
         if (!embyServer || embyServer.length == 0) {
@@ -21,7 +29,7 @@ export const useEmbyServer = defineStore('embyServer', () => {
     async function addEmbyServer(embyServer: EmbyServer) {
         let fields: string[] = [], values: string[] = [];
         for (const [key, value] of Object.entries(embyServer)) {
-            if (value != null && value != undefined && value != '' && key != 'create_time') {
+            if (value != null && value != undefined && key != 'create_time') {
                 fields.push(key);
                 values.push(value);
             }
@@ -35,11 +43,12 @@ export const useEmbyServer = defineStore('embyServer', () => {
         let fields: string[] = [], values: string[] = [];
         values.push(embyServer.id!);
         for (const [key, value] of Object.entries(embyServer)) {
-            if (value != null && value != undefined && value != '' && key != 'id' && key != 'create_time') {
+            if (value != null && value != undefined && key != 'id' && key != 'create_time') {
                 fields.push(key);
                 values.push(value);
             }
         }
+        console.log(embyServer)
         let sql = `update emby_server set ${fields.map((item, index) => item + ' = $' + (index + 2)).join(',')} where id = $1`;
         let res = await useDb().db?.execute(sql, values);
         return res?.rowsAffected;
@@ -58,7 +67,7 @@ export const useEmbyServer = defineStore('embyServer', () => {
         return res?.rowsAffected;
     }
 
-    return { getEmbyServer, delEmbyServer, addEmbyServer, updateEmbyServer, listAllEmbyServer, updateOrder }
+    return { getEmbyServer, delEmbyServer, addEmbyServer, updateEmbyServer, listAllEmbyServer, updateOrder, getMaxOrderBy }
 })
 
 export interface EmbyServer {
@@ -88,8 +97,5 @@ export interface EmbyServer {
     last_playback_time?: string,
     keep_alive_days?: number,
 
-    disabled?: boolean,
-    // 前端状态字段
-    request_status?: boolean,
-    request_fail?: boolean,
+    disabled?: number,
 }

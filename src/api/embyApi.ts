@@ -1,10 +1,11 @@
+import { EmbyServer } from '../store/db/embyServer';
+import { useProxyServer } from '../store/db/proxyServer';
 import invoke from './invoke';
-import { EmbyServerConfig, useConfig } from '../store/config';
 
 /**
  * 获取服务器信息，无需验证
  */
-async function getServerInfo(embyServer: EmbyServerConfig) {
+async function getServerInfo(embyServer: EmbyServer) {
     if (!embyServer.base_url) {
         return Promise.reject("参数缺失");
     }
@@ -14,14 +15,14 @@ async function getServerInfo(embyServer: EmbyServerConfig) {
         headers: {
             'User-Agent': embyServer.user_agent!,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
 /**
  * 通过用户名密码授权
  */
-async function authenticateByName(embyServer: EmbyServerConfig) {
+async function authenticateByName(embyServer: EmbyServer) {
     if (!embyServer.base_url || !embyServer.username) {
         return Promise.reject("参数缺失");
     }
@@ -37,14 +38,14 @@ async function authenticateByName(embyServer: EmbyServerConfig) {
             "Username": embyServer.username,
             "Pw": !embyServer.password ? null : embyServer.password
         }),
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
 /**
  * 登出
  */
-async function logout(embyServer: EmbyServerConfig) {
+async function logout(embyServer: EmbyServer) {
     if (!embyServer.base_url || !embyServer.auth_token) {
         return Promise.reject("参数缺失");
     }
@@ -57,7 +58,7 @@ async function logout(embyServer: EmbyServerConfig) {
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({}),
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -65,7 +66,7 @@ async function logout(embyServer: EmbyServerConfig) {
  * 搜索，该处问题：当搜索电影时，如果传入了搜索关键字和限制条数，搜索结果的总数会返回0（搜索返回的结果正常），不传这两个值又没办法分页
  * @returns EmbyPageList<SearchItems>
  */
-async function search(embyServer: EmbyServerConfig, search_str: string, startIndex: number, limit: number) {
+async function search(embyServer: EmbyServer, search_str: string, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !search_str || startIndex < 0 || !limit) {
         return Promise.reject("参数缺失");
     }
@@ -76,7 +77,7 @@ async function search(embyServer: EmbyServerConfig, search_str: string, startInd
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -84,8 +85,9 @@ async function search(embyServer: EmbyServerConfig, search_str: string, startInd
  * 首页继续播放列表
  * @returns EmbyPageList<EpisodesItems>
  */
-async function getContinuePlayList(embyServer: EmbyServerConfig, startIndex: number, limit: number) {
+async function getContinuePlayList(embyServer: EmbyServer, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
+        console.log(embyServer);
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
@@ -95,7 +97,7 @@ async function getContinuePlayList(embyServer: EmbyServerConfig, startIndex: num
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -103,7 +105,7 @@ async function getContinuePlayList(embyServer: EmbyServerConfig, startIndex: num
  * 收藏列表
  * @returns EmbyPageList<EpisodesItems>
  */
-async function getFavoriteList(embyServer: EmbyServerConfig, startIndex: number, limit: number) {
+async function getFavoriteList(embyServer: EmbyServer, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
         return Promise.reject("参数缺失");
     }
@@ -114,7 +116,7 @@ async function getFavoriteList(embyServer: EmbyServerConfig, startIndex: number,
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -122,7 +124,7 @@ async function getFavoriteList(embyServer: EmbyServerConfig, startIndex: number,
  * 系列剧集 接下来 应该播放的剧集
  * @returns EmbyPageList<EpisodesItems>
  */
-async function nextUp(embyServer: EmbyServerConfig, seriesId: string, startIndex: number, limit: number) {
+async function nextUp(embyServer: EmbyServer, seriesId: string, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
         return Promise.reject("参数缺失");
     }
@@ -133,7 +135,7 @@ async function nextUp(embyServer: EmbyServerConfig, seriesId: string, startIndex
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -141,7 +143,7 @@ async function nextUp(embyServer: EmbyServerConfig, seriesId: string, startIndex
  * 首页媒体库列表
  * @returns EmbyPageList<MediaLibraryItem>
  */
-async function getMediaLibraryList(embyServer: EmbyServerConfig) {
+async function getMediaLibraryList(embyServer: EmbyServer) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id) {
         return Promise.reject("参数缺失");
     }
@@ -152,7 +154,7 @@ async function getMediaLibraryList(embyServer: EmbyServerConfig) {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -160,7 +162,7 @@ async function getMediaLibraryList(embyServer: EmbyServerConfig) {
  * 首页媒体库子项目
  * @returns SearchItems[]
  */
-async function getMediaLibraryChildLatest(embyServer: EmbyServerConfig, parentId: string, limit: number) {
+async function getMediaLibraryChildLatest(embyServer: EmbyServer, parentId: string, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !parentId || !limit) {
         return Promise.reject("参数缺失");
     }
@@ -171,7 +173,7 @@ async function getMediaLibraryChildLatest(embyServer: EmbyServerConfig, parentId
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -179,7 +181,7 @@ async function getMediaLibraryChildLatest(embyServer: EmbyServerConfig, parentId
  * 剧集数量统计
  * @returns MediaLibraryCount
  */
-async function count(embyServer: EmbyServerConfig) {
+async function count(embyServer: EmbyServer) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id) {
         return Promise.reject("参数缺失");
     }
@@ -190,7 +192,7 @@ async function count(embyServer: EmbyServerConfig) {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -198,7 +200,7 @@ async function count(embyServer: EmbyServerConfig) {
  * 电影详情、剧集详情、季详情、系列详情、合集详情
  * @returns EpisodesItems
  */
-async function items(embyServer: EmbyServerConfig, item_id: string) {
+async function items(embyServer: EmbyServer, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
         return Promise.reject("参数缺失");
     }
@@ -209,7 +211,7 @@ async function items(embyServer: EmbyServerConfig, item_id: string) {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -217,7 +219,7 @@ async function items(embyServer: EmbyServerConfig, item_id: string) {
  * 系列 下的 季列表
  * @returns EmbyPageList<SeasonsItems>
  */
-async function seasons(embyServer: EmbyServerConfig, item_id: string) {
+async function seasons(embyServer: EmbyServer, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !item_id || !embyServer.user_id) {
         return Promise.reject("参数缺失");
     }
@@ -228,7 +230,7 @@ async function seasons(embyServer: EmbyServerConfig, item_id: string) {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -236,7 +238,7 @@ async function seasons(embyServer: EmbyServerConfig, item_id: string) {
  * 季 下的 剧集列表
  * @returns EmbyPageList<EpisodesItems>
  */
-async function episodes(embyServer: EmbyServerConfig, item_id: string, seasonId: string, startIndex: number, limit: number) {
+async function episodes(embyServer: EmbyServer, item_id: string, seasonId: string, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !item_id || startIndex < 0 || !limit) {
         return Promise.reject("参数缺失");
     }
@@ -247,7 +249,7 @@ async function episodes(embyServer: EmbyServerConfig, item_id: string, seasonId:
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -255,7 +257,7 @@ async function episodes(embyServer: EmbyServerConfig, item_id: string, seasonId:
  * 播放流媒体详情
  * @returns PlaybackInfo
  */
-async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
+async function playbackInfo(embyServer: EmbyServer, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
         return Promise.reject("参数缺失");
     }
@@ -285,7 +287,7 @@ async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
                 ]
             }
         }),
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -294,7 +296,7 @@ async function playbackInfo(embyServer: EmbyServerConfig, item_id: string) {
  * @param positionTicks 播放位置 / 一千万 换算成秒 
  * @returns 204
  */
-async function playing(embyServer: EmbyServerConfig, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
+async function playing(embyServer: EmbyServer, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id) {
         return Promise.reject("参数缺失");
     }
@@ -313,7 +315,7 @@ async function playing(embyServer: EmbyServerConfig, item_id: string, media_sour
             "PlaySessionId": `${play_session_id}`,
             "PositionTicks": `${positionTicks}`,
         }),
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -322,7 +324,7 @@ async function playing(embyServer: EmbyServerConfig, item_id: string, media_sour
  * @param positionTicks 播放位置 / 一千万 换算成秒 
  * @returns 204
  */
-async function playingProgress(embyServer: EmbyServerConfig, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
+async function playingProgress(embyServer: EmbyServer, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id) {
         return Promise.reject("参数缺失");
     }
@@ -341,7 +343,7 @@ async function playingProgress(embyServer: EmbyServerConfig, item_id: string, me
             "PlaySessionId": `${play_session_id}`,
             "PositionTicks": `${positionTicks}`,
         }),
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -349,7 +351,7 @@ async function playingProgress(embyServer: EmbyServerConfig, item_id: string, me
  * 结束播放
  * @returns 204
  */
-async function playingStopped(embyServer: EmbyServerConfig, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
+async function playingStopped(embyServer: EmbyServer, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id || !positionTicks) {
         return Promise.reject("参数缺失");
     }
@@ -368,7 +370,7 @@ async function playingStopped(embyServer: EmbyServerConfig, item_id: string, med
             "PlaySessionId": `${play_session_id}`,
             "PositionTicks": `${positionTicks}`,
         }),
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -376,7 +378,7 @@ async function playingStopped(embyServer: EmbyServerConfig, item_id: string, med
  * 组装直连视频流地址
  * @returns
  */
-function getDirectStreamUrl(embyServer: EmbyServerConfig, directStreamUrl: string) {
+function getDirectStreamUrl(embyServer: EmbyServer, directStreamUrl: string) {
     if (!directStreamUrl) {
         return null;
     }
@@ -387,7 +389,7 @@ function getDirectStreamUrl(embyServer: EmbyServerConfig, directStreamUrl: strin
  * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
  * @returns
  */
-function getAudioStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSources, mediaStreams: MediaStreams) {
+function getAudioStreamUrl(embyServer: EmbyServer, mediaSource: MediaSources, mediaStreams: MediaStreams) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
@@ -398,7 +400,7 @@ function getAudioStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSourc
  * 组装字幕流地址，请确保字幕流支持外部流
  * @returns
  */
-function getSubtitleStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSources, mediaStreams: MediaStreams) {
+function getSubtitleStreamUrl(embyServer: EmbyServer, mediaSource: MediaSources, mediaStreams: MediaStreams) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
@@ -409,7 +411,7 @@ function getSubtitleStreamUrl(embyServer: EmbyServerConfig, mediaSource: MediaSo
  * 组装图片地址
  * @returns
  */
-function getImageUrl(embyServer: EmbyServerConfig, item_id: string, imageType: string = 'Primary') {
+function getImageUrl(embyServer: EmbyServer, item_id: string, imageType: string = 'Primary') {
     if (!item_id) {
         return null;
     }
@@ -420,7 +422,7 @@ function getImageUrl(embyServer: EmbyServerConfig, item_id: string, imageType: s
  * 收藏
  * @returns
  */
-async function star(embyServer: EmbyServerConfig, item_id: string) {
+async function star(embyServer: EmbyServer, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
         return Promise.reject("参数缺失");
     }
@@ -433,7 +435,7 @@ async function star(embyServer: EmbyServerConfig, item_id: string) {
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({}),
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -441,7 +443,7 @@ async function star(embyServer: EmbyServerConfig, item_id: string) {
  * 取消收藏
  * @returns
  */
-async function unstar(embyServer: EmbyServerConfig, item_id: string) {
+async function unstar(embyServer: EmbyServer, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
         return Promise.reject("参数缺失");
     }
@@ -452,7 +454,7 @@ async function unstar(embyServer: EmbyServerConfig, item_id: string) {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -460,7 +462,7 @@ async function unstar(embyServer: EmbyServerConfig, item_id: string) {
  * 标记已播放
  * @returns
  */
-async function played(embyServer: EmbyServerConfig, item_id: string) {
+async function played(embyServer: EmbyServer, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
         return Promise.reject("参数缺失");
     }
@@ -473,7 +475,7 @@ async function played(embyServer: EmbyServerConfig, item_id: string) {
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({}),
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 
@@ -481,7 +483,7 @@ async function played(embyServer: EmbyServerConfig, item_id: string) {
  * 取消已播放
  * @returns
  */
-async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
+async function unplayed(embyServer: EmbyServer, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
         return Promise.reject("参数缺失");
     }
@@ -492,7 +494,7 @@ async function unplayed(embyServer: EmbyServerConfig, item_id: string) {
             'User-Agent': embyServer.user_agent!,
             'X-Emby-Token': embyServer.auth_token,
         },
-        proxy: useConfig().getBrowseProxyUrl(embyServer.browse_proxy_id)
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });
 }
 

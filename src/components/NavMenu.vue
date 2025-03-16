@@ -8,13 +8,13 @@
                 <el-menu-item index="/nav/setting">
                     <el-icon><i-ep-Setting /></el-icon>设置
                 </el-menu-item>
-                <el-menu-item @click="addEmbyServer">
+                <el-menu-item index="" @click="addEmbyServer()">
                     <el-icon><i-ep-Plus /></el-icon>添加服务器
                 </el-menu-item>
                 <Container @drop="onDrop" style="height: 100%; width: 100%;">  
                     <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
                         <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
-                            <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled">
+                            <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled ? true : false">
                                 <div style="height: 100%; width: 100%; display: flex; align-items: center;">
                                     <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
                                     <!-- <el-icon v-else-if="embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
@@ -34,7 +34,7 @@
                                             <template #dropdown>
                                                 <el-dropdown-menu>
                                                     <el-dropdown-item v-for='line in embyLines[embyServer.id!]' @click="configLineChange(line.id!, embyServer)">
-                                                        <i-ep-Select v-if="line.using" style="position: absolute; left: 10;" />
+                                                        <i-ep-Select v-if="line.in_use" style="position: absolute; left: 10;" />
                                                         <span style="margin-left: 15px;">{{line.name}}</span>
                                                     </el-dropdown-item>
                                                     <el-dropdown-item divided @click="configLine(embyServer)">
@@ -172,7 +172,7 @@
                             {{ line.name }}
                             <span>
                                 <el-button type="primary" text size="small" @click="editLine(line)"><i-ep-Edit /></el-button>
-                                <el-button type="danger" :disabled="line.using" text size="small" @click="delLine(line)"><i-ep-Delete /></el-button>
+                                <el-button type="danger" :disabled="line.in_use ? true : false" text size="small" @click="delLine(line)"><i-ep-Delete /></el-button>
                             </span>
                         </div>
                         <el-text truncated style="width: 280px;">{{ line.base_url }}</el-text>
@@ -245,7 +245,7 @@ listAllProxyServer()
 const embyServers = ref<EmbyServer[]>([])
 function listAllEmbyServer() {
     useEmbyServer().listAllEmbyServer().then(list => {
-        embyServers.value = list;
+        embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
@@ -253,12 +253,14 @@ listAllEmbyServer()
 const embyLines = ref<{[key: string]: EmbyLine[]}>({});
 function listAllEmbyLine() {
     useEmbyLine().listAllEmbyLine().then(list => {
+        embyLines.value = {}
         for (let line of list) {
             if (!embyLines.value[line.emby_server_id!]) {
                 embyLines.value[line.emby_server_id!] = []
             }
             embyLines.value[line.emby_server_id!].push(line)
         }
+        currentEmbyServerLines.value = embyLines.value[currentEmbyServer.value.id!]
     })
 }
 listAllEmbyLine()
@@ -297,18 +299,21 @@ function addEmbyServer() {
         const client = "loemby";
         const client_version = "0.5.0";
         const user_agent = client + "/" + client_version;
-        currentEmbyServer.value = {
-            id: generateGuid(),
-            server_name: '未完成',
-            disabled: true,
-            user_agent: user_agent,
-            client: client,
-            client_version: client_version,
-            device: hostname,
-            device_id: hostname,
-            browse_proxy_id: 'follow',
-            play_proxy_id: 'follow',
-        }
+        useEmbyServer().getMaxOrderBy().then(max_order_by => {
+            currentEmbyServer.value = {
+                id: generateGuid(),
+                server_name: '未完成',
+                disabled: 1,
+                user_agent: user_agent,
+                client: client,
+                client_version: client_version,
+                device: hostname,
+                device_id: hostname,
+                order_by: max_order_by! + 1,
+                browse_proxy_id: 'follow',
+                play_proxy_id: 'follow',
+            }
+        }).catch(e => ElMessage.error('获取最大排序失败' + e))
     }).catch(e => {
         ElMessage.error({
             message: '获取主机名失败' + e
@@ -327,7 +332,7 @@ async function enabledEmbyServer(embyServer: EmbyServer) {
         })
         return
     }
-    embyServer.disabled = !embyServer.disabled
+    embyServer.disabled = 1 - embyServer.disabled!
     await updateEmbyServerDb({id: embyServer.id, disabled: embyServer.disabled})
 }
 function logoutEmbyServer(embyServer: EmbyServer) {
@@ -341,9 +346,9 @@ function logoutEmbyServer(embyServer: EmbyServer) {
     }
   ).then(async () => {
         await embyApi.logout(embyServer)
-        embyServer.disabled = true
+        embyServer.disabled = 1
         embyServer.auth_token = ''
-        await updateEmbyServerDb({id: embyServer.id, disabled: embyServer.disabled})
+        await updateEmbyServerDb({id: embyServer.id, auth_token: '', disabled: embyServer.disabled})
     })
 }
 function delEmbyServer(tmp: EmbyServer) {
@@ -360,6 +365,7 @@ function delEmbyServer(tmp: EmbyServer) {
             listAllEmbyServer()
             ElMessage.success('删除成功')
             useEmbyLine().delEmbyServer(tmp.id!).catch(e => {
+                listAllEmbyLine()
                 ElMessage.error('删除Emby线路失败' + e)
             })
         }).catch(e => {
@@ -378,7 +384,9 @@ async function addEmbyServerAddr() {
         id: generateGuid(),
         name: '线路一',
         base_url: currentEmbyServer.value!.base_url,
-        using: true,
+        emby_server_id: currentEmbyServer.value.id!,
+        emby_server_name: currentEmbyServer.value.server_name,
+        in_use: 1,
         browse_proxy_id: currentEmbyServer.value!.browse_proxy_id,
         play_proxy_id: currentEmbyServer.value!.play_proxy_id
     }
@@ -443,7 +451,7 @@ async function login(embyServerConfig: EmbyServer) {
         let json: {User: {Id: string}, AccessToken: string} = JSON.parse(response.body);
         embyServerConfig.auth_token = json['AccessToken']
         embyServerConfig.user_id = json["User"]['Id']
-        embyServerConfig.disabled = false
+        embyServerConfig.disabled = 0
         await updateEmbyServerDb(embyServerConfig);
     })
 }
@@ -460,17 +468,26 @@ async function saveEditEmbyServer() {
         if (line.emby_server_name != currentEmbyServer.value!.server_name) {
             await useEmbyLine().updateEmbyServerName(currentEmbyServer.value!.id!, currentEmbyServer.value!.server_name!);
         }
+        listAllEmbyLine()
     }).catch(e => ElMessage.error('获取正在使用的线路失败' + e))
     await updateEmbyServerDb(currentEmbyServer.value!);
+    listAllEmbyServer()
+    ElMessage.success({
+        message: "保存成功"
+    })
     dialogEditEmbyServerVisible.value = false
 }
 
 async function onDrop(dropResult: {removedIndex: number, addedIndex: number}) {
     let minIndex = Math.min(dropResult.removedIndex, dropResult.addedIndex)
     let maxIndex = Math.max(dropResult.removedIndex, dropResult.addedIndex)
+    let id = embyServers.value[maxIndex].id!
     let orderBy = embyServers.value[minIndex].order_by!
+    // 页面操作，防止刷新Emby列表闪烁
+    let element = embyServers.value.splice(dropResult.removedIndex, 1);
+    embyServers.value.splice(dropResult.addedIndex, 0, element[0]);
     useEmbyServer().updateOrder(orderBy).then(() => {
-        updateEmbyServerDb({id: embyServers.value[maxIndex].id!, order_by: orderBy}).then(() => {
+        updateEmbyServerDb({id: id, order_by: orderBy}).then(() => {
             listAllEmbyServer()
         }).catch(e => ElMessage.error("排序失败" + e))
     }).catch(e => ElMessage.error("排序失败" + e))
@@ -488,21 +505,14 @@ function configLine(embyServer: EmbyServer) {
         }
         currentEmbyServerLineId.value = line.id!
     }).catch(e => ElMessage.error('获取正在使用的线路失败' + e))
-    useEmbyLine().listEmbyLine(currentEmbyServer.value!.id!).then(async line => {
-        if (!line) {
-            ElMessage.error('获取当前Emby的线路失败')
-            return
-        }
-        currentEmbyServerLines.value = line
-    }).catch(e => ElMessage.error('获取当前Emby的线路失败' + e))
+    currentEmbyServerLines.value = embyLines.value[embyServer.id!]
     dialogConfigLineVisible.value = true
 }
 const dialogAddLineVisible = ref(false)
 const currentEmbyServerAddLine = ref<EmbyLine>({})
 function addLine() {
     currentEmbyServerAddLine.value = {
-        id: generateGuid(),
-        using: false,
+        in_use: 0,
         emby_server_id: currentEmbyServer.value.id!,
         emby_server_name: currentEmbyServer.value.server_name,
         browse_proxy_id: 'follow',
@@ -515,7 +525,7 @@ function editLine(line: EmbyLine) {
     dialogAddLineVisible.value = true
 }
 function delLine(line: EmbyLine) {
-    if (line.using) {
+    if (line.in_use) {
         ElMessage.error({
             message: '不能删除正在使用的服务器线路'
         })
@@ -531,6 +541,7 @@ function delLine(line: EmbyLine) {
         }
     ).then(async () => {
         useEmbyLine().delEmbyLine(line.id!).then(async () => {
+            listAllEmbyLine()
             ElMessage.success({
                 message: "删除成功"
             })
@@ -538,14 +549,18 @@ function delLine(line: EmbyLine) {
     })
 }
 async function saveCurrentEmbyServerAddLine() {
-    let value = _.cloneDeep(currentEmbyServerAddLine.value);
     let savePromise
-    if (value.id) {
-        savePromise = useEmbyLine().updateEmbyLine(value)
+    if (currentEmbyServerAddLine.value.id) {
+        savePromise = useEmbyLine().updateEmbyLine(currentEmbyServerAddLine.value)
     } else {
-        savePromise = useEmbyLine().addEmbyLine(value)
+        currentEmbyServerAddLine.value.id = generateGuid();
+        savePromise = useEmbyLine().addEmbyLine(currentEmbyServerAddLine.value)
     }
     savePromise.then(async () => {
+        listAllEmbyLine()
+        if (currentEmbyServerAddLine.value.in_use) {
+            listAllEmbyServer()
+        }
         ElMessage.success({
             message: "保存成功"
         })
@@ -558,7 +573,9 @@ async function configLineChange(value: string, embyServer: EmbyServer) {
             return
         }
         useEmbyLine().updateEmbyUsing(embyServer.id!).then(() => {
-            updateEmbyLineDb({id: value, using: true})
+            updateEmbyLineDb({id: value, in_use: 1}).then(() => {
+                listAllEmbyLine()
+            }).catch(e => ElMessage.error("切换失败" + e))
             let tmpEmbyServer = {
                 id: embyServer.id!,
                 base_url: line.base_url,
@@ -569,6 +586,7 @@ async function configLineChange(value: string, embyServer: EmbyServer) {
                 ElMessage.success({
                     message: "线路切换成功"
                 })
+                listAllEmbyServer()
             }).catch(e => ElMessage.error("切换失败" + e))
         }).catch(e => ElMessage.error("切换失败" + e))
     }).catch(e => ElMessage.error('获取线路失败' + e))

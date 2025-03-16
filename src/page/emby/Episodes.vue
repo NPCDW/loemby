@@ -119,7 +119,7 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, ref, watch } from 'vue';
+import { nextTick, ref, watch, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
@@ -129,14 +129,18 @@ import { ElMessage } from 'element-plus';
 import { usePlayback } from '../../store/playback';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
+import * as dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 
 const router = useRouter()
 const route = useRoute()
 
 let embyServer = ref<EmbyServer>({})
-useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
-    embyServer.value = value!;
-}).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+async function getEmbyServer() {
+    return useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
+        embyServer.value = value!;
+    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+}
 
 const versionOptions = ref<{label: string, value: string, name: string, size: string, bitrate: string}[]>([])
 const videoOptions = ref<{label: string, value: number}[]>([])
@@ -158,6 +162,17 @@ const nextUpCurrentPage = ref(1)
 const nextUpPageSize = ref(7)
 const nextUpTotal = ref(0)
 
+watchEffect(async () => {
+    await getEmbyServer()
+    updateCurrentEpisodes().then(() => {
+        if (route.query.autoplay === 'true') {
+            nextTick(() => {
+                playing(<string>route.params.episodeId, 0)
+            })
+        }
+    })
+})
+
 const currentEpisodes = ref<EpisodesItems>()
 function updateCurrentEpisodes(silent: boolean = false) {
     if (!silent) {
@@ -177,7 +192,6 @@ function updateCurrentEpisodes(silent: boolean = false) {
         ElMessage.error(e)
     }).finally(() => playbackInfoLoading.value = false)
 }
-updateCurrentEpisodes()
 
 const handleNextUpPageChange = (val: number) => {
     nextUpCurrentPage.value = val
@@ -365,6 +379,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
                     ElMessage.success({
                         message: '开始播放，请稍候'
                     })
+                    useEmbyServer().updateEmbyServer({id: embyServer.value!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
                     // playingProgressTask.value = setInterval(() => {
                     //     embyApi.playingProgress(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks)
                     // }, 30000)
@@ -406,16 +421,6 @@ watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
         })
     }
 });
-
-watch(() => route.params.episodeId, (_newId, _oldId) => {
-    updateCurrentEpisodes().then(() => {
-        if (route.query.autoplay === 'true') {
-            nextTick(() => {
-                playing(<string>route.params.episodeId, 0)
-            })
-        }
-    })
-})
 
 const starLoading = ref<boolean>(false)
 function star() {

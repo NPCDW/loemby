@@ -287,7 +287,7 @@ function globalPlayProxyChange() {
 function proxyChange(line: EmbyLine) {
     useEmbyLine().updateEmbyLine(line).then(() => {
         listAllEmbyLine();
-        if (line.using) {
+        if (line.in_use) {
             useEmbyServer().updateEmbyServer({
                 id: line.emby_server_id,
                 browse_proxy_id: line.browse_proxy_id,

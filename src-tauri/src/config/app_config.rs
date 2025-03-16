@@ -25,7 +25,7 @@ pub struct ServerLine {
     pub id: String,
     pub name: String,
     pub base_url: String,
-    pub using: bool,
+    pub in_use: bool,
     #[serde_inline_default("follow".to_string())]
     pub browse_proxy_id: String,
     #[serde_inline_default("follow".to_string())]

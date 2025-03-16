@@ -11,8 +11,8 @@
                 <el-collapse-item :title="embySearchItem.embyServer.server_name" :name="embySearchItem.embyServer.id" :disabled="embySearchItem.result?.Items.length == 0" v-for="embySearchItem in emby_search_result_list">
                     <template #icon>
                         <span style="display: flex; align-items: center; margin: auto 18px auto auto;">
-                            <el-icon v-if="embySearchItem.embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
-                            <el-icon v-else-if="embySearchItem.embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
+                            <el-icon v-if="embySearchItem.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
+                            <el-icon v-else-if="!embySearchItem.success" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
                             <el-icon v-else-if="embySearchItem.result?.Items.length == 0" style="color: #909399;">empty</el-icon>
                             <el-icon v-else style="color: #67C23A;"><i-ep-SuccessFilled /></el-icon>
                         </span>
@@ -43,7 +43,7 @@ const search_str = ref('')
 const embyServerKeys = ref<string[]>([])
 const has_mpv_config = ref(false)
 
-const emby_search_result = ref<{[key: string]: {embyServer: EmbyServer, success: boolean, message?: string, result?: EmbyPageList<SearchItems>}}>({})
+const emby_search_result = ref<{[key: string]: {embyServer: EmbyServer, request_status: boolean, success: boolean, message?: string, result?: EmbyPageList<SearchItems>}}>({})
 
 const emby_search_result_list = computed(() => {
   return Object.entries(emby_search_result.value).map(([_key, value]) => (value)).sort((a, b) => {
@@ -100,15 +100,14 @@ async function singleEmbySearch(embyServer: EmbyServer, refresh: boolean = false
         }
         embyServer = tmp
     }
-    embyServer.request_status = true
+    emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: true, success: false}
     return embyApi.search(embyServer, search_str.value, 0, 30).then(async response => {
         if (response.status_code != 200) {
-            emby_search_result.value[embyServer.id!] = {embyServer: embyServer, success: false, message: 'response status' + response.status_code + ' ' + response.status_text}
-            embyServer.request_fail = true
+            emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: false, message: 'response status' + response.status_code + ' ' + response.status_text}
             return
         }
         let json: EmbyPageList<SearchItems> = JSON.parse(response.body);
-        emby_search_result.value[embyServer.id!] = {embyServer: embyServer, success: true, result: json}
+        emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: true, result: json}
         if (json.Items.length > 0) {
             embyServerKeys.value.push(embyServer.id!)
         } else {
@@ -116,11 +115,9 @@ async function singleEmbySearch(embyServer: EmbyServer, refresh: boolean = false
                 embyServerKeys.value.splice(embyServerKeys.value.indexOf(embyServer.id!), 1)
             }
         }
-        embyServer.request_fail = false
     }).catch(e => {
-        emby_search_result.value[embyServer.id!] = {embyServer: embyServer, success: false, message: e}
-        embyServer.request_fail = true
-    }).finally(() => embyServer.request_status = false)
+        emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: false, message: e}
+    })
 }
 </script>
 

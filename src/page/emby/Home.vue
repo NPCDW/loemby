@@ -153,8 +153,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
-import { watch } from 'vue'
+import { ref, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem, MediaLibraryCount } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
@@ -169,15 +168,14 @@ const router = useRouter()
 const route = useRoute()
 
 let embyServer = ref<EmbyServer>({})
-function getEmbyServer(embyId: string) {
-    useEmbyServer().getEmbyServer(embyId).then(value => {
+async function getEmbyServer(embyId: string) {
+    return useEmbyServer().getEmbyServer(embyId).then(value => {
         embyServer.value = value!;
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
-getEmbyServer(<string>route.params.embyId)
 
-watch(() => route.params.id, (newId, _oldId) => {
-    getEmbyServer(<string>newId)
+watchEffect(async () => {
+    await getEmbyServer(<string>route.params.id)
     handlePaneChange()
 })
 
@@ -212,7 +210,6 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
         ElMessage.error(e)
     }).finally(() => episodesLoading.value = false)
 }
-getContinuePlayList(episodesCurrentPage.value, episodesPageSize.value)
 
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.value.id + '/episodes/' + episodesId)

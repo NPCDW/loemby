@@ -11,7 +11,7 @@ export const useEmbyLine = defineStore('embyLine', () => {
     }
 
     async function getUsingEmbyLine(emby_server_id: string) {
-        let embyLine = await useDb().db?.select<EmbyLine[]>('select * from emby_line where emby_server_id = $1 and using = true', [emby_server_id]);
+        let embyLine = await useDb().db?.select<EmbyLine[]>('select * from emby_line where emby_server_id = $1 and in_use = 1', [emby_server_id]);
         if (!embyLine || embyLine.length == 0) {
             return;
         }
@@ -37,7 +37,7 @@ export const useEmbyLine = defineStore('embyLine', () => {
     async function addEmbyLine(embyLine: EmbyLine) {
         let fields: string[] = [], values: string[] = [];
         for (const [key, value] of Object.entries(embyLine)) {
-            if (value != null && value != undefined && value != '' && key != 'create_time') {
+            if (value != null && value != undefined && key != 'create_time') {
                 fields.push(key);
                 values.push(value);
             }
@@ -51,7 +51,7 @@ export const useEmbyLine = defineStore('embyLine', () => {
         let fields: string[] = [], values: string[] = [];
         values.push(embyLine.id!);
         for (const [key, value] of Object.entries(embyLine)) {
-            if (value != null && value != undefined && value != '' && key != 'id' && key != 'create_time') {
+            if (value != null && value != undefined && key != 'id' && key != 'create_time') {
                 fields.push(key);
                 values.push(value);
             }
@@ -73,7 +73,7 @@ export const useEmbyLine = defineStore('embyLine', () => {
     async function updateEmbyUsing(emby_server_id: string) {
         let values: string[] = [];
         values.push(emby_server_id);
-        let sql = `update emby_line set using = false where emby_server_name = $1`;
+        let sql = `update emby_line set in_use = 0 where emby_server_id = $1`;
         let res = await useDb().db?.execute(sql, values);
         return res?.rowsAffected;
     }
@@ -99,7 +99,7 @@ export interface EmbyLine {
     emby_server_id?: string,
     emby_server_name?: string,
     base_url?: string,
-    using?: boolean,
+    in_use?: number,
     browse_proxy_id?: string,
     play_proxy_id?: string,
 }

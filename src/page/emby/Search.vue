@@ -32,9 +32,11 @@ import { ElMessage } from 'element-plus';
 const route = useRoute()
 
 let embyServer = ref<EmbyServer>({})
-useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
-    embyServer.value = value!;
-}).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+async function getEmbyServer() {
+    return useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
+        embyServer.value = value!;
+    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+}
 
 const search_str = ref(<string>route.query.search)
 const search_loading = ref(false)
@@ -53,7 +55,7 @@ const search = async () => {
         emby_search_result.value = {success: false, message: e}
     }).finally(() => search_loading.value = false)
 }
-search()
+getEmbyServer().then(() => search())
 </script>
 
 <style scoped>
