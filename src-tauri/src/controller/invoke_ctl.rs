@@ -1,20 +1,8 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use tauri::State;
 use crate::config::app_state::AppState;
-use crate::config::app_config::{self, Config};
 use crate::service::{http_forward, player_svc};
-
-#[tauri::command]
-pub async fn get_config(state: State<'_, AppState>) -> Result<Config, ()> {
-    Ok(state.app_config.read().await.clone())
-}
-
-#[tauri::command]
-pub async fn save_config(state: tauri::State<'_, AppState>, config: Config) -> Result<(), ()> {
-    app_config::save_config(state, config).await
-}
 
 #[tauri::command]
 pub async fn get_sys_info() -> Result<String, String> {
@@ -27,6 +15,7 @@ pub async fn get_sys_info() -> Result<String, String> {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlayVideoParam {
+    pub mpv_path: String,
     pub path: String,
     pub proxy: Option<String>,
     pub title: String,

@@ -5,6 +5,7 @@ async function getSysInfo(): Promise<string> {
 }
 
 interface InvokePlayback {
+    mpv_path: string,
     path: string,
     proxy?: string,
     title: string,

@@ -8,7 +8,7 @@ mod config;
 mod service;
 mod util;
 
-use controller::invoke_ctl::{get_config, save_config, get_sys_info, play_video, http_forward, load_image};
+use controller::invoke_ctl::{get_sys_info, play_video, http_forward, load_image};
 use config::app_state::AppState;
 
 #[cfg(debug_assertions)]
@@ -32,7 +32,7 @@ pub fn run() {
             window.set_focus().expect("Can't Bring Window to Focus");
         }))
         .plugin(tauri_plugin_sql::Builder::default().add_migrations("sqlite:loemby.db", config::db_migrations::migrations()).build())
-        .invoke_handler(tauri::generate_handler![get_config, save_config, get_sys_info, play_video, http_forward, load_image])
+        .invoke_handler(tauri::generate_handler![get_sys_info, play_video, http_forward, load_image])
         .setup(|app| {
             let root_dir = if is_development() {
                 &format!("loemby-{}", std::env::var("TAURI_DEV_MODE").unwrap_or("dev".to_string()))

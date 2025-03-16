@@ -8,12 +8,8 @@ use tauri::{Emitter, Manager};
 use crate::{config::{app_state::AppState, http_pool}, controller::invoke_ctl::PlayVideoParam, service::proxy_svc::AxumAppStateConnect};
 
 pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
-    let mpv_path = state.app_config.read().await.mpv_path.clone();
-    if mpv_path.is_none() {
-        return Err("未配置 mpv 播放器路径".to_string());
-    }
-
-    let mpv_path = PathBuf::from(mpv_path.as_ref().unwrap());
+    let mpv_path = body.mpv_path.clone();
+    let mpv_path = PathBuf::from(mpv_path);
     if !mpv_path.exists() {
         return Err(format!("mpv 路径不存在: {}", mpv_path.to_str().unwrap()));
     }

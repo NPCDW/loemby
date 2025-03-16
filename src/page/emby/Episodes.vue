@@ -131,6 +131,7 @@ import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
 import * as dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
+import { useGlobalConfig } from '../../store/db/globalConfig';
 
 const router = useRouter()
 const route = useRoute()
@@ -151,6 +152,7 @@ const videoSelect = ref(-1)
 const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
 const timeLength = ref('')
+const mpv_path = ref('')
 
 const continuousPlay = ref(true)
 const playbackInfoLoading = ref(false)
@@ -172,6 +174,10 @@ watchEffect(async () => {
         }
     })
 })
+
+useGlobalConfig().getGlobalConfigValue("mpv_path").then(value => {
+    mpv_path.value = value;
+}).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 
 const currentEpisodes = ref<EpisodesItems>()
 function updateCurrentEpisodes(silent: boolean = false) {
@@ -338,6 +344,10 @@ useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id).then(response =
 
 // const playingProgressTask = ref<NodeJS.Timeout>()
 function playing(item_id: string, playbackPositionTicks: number) {
+    if (!mpv_path) {
+        ElMessage.error('未设置mpv路径')
+        return
+    }
     play_loading.value = true
     return embyApi.playbackInfo(embyServer.value, item_id).then(async response => {
         if (response.status_code != 200) {
@@ -360,6 +370,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
             let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
                  : 'S' + currentEpisodes.value?.ParentIndexNumber + 'E' + currentEpisodes.value?.IndexNumber + '. ' + currentEpisodes.value?.Name
             return invoke.playback({
+                mpv_path: mpv_path.value,
                 path: directStreamUrl,
                 proxy: playProxyUrl.value,
                 title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.value.server_name,

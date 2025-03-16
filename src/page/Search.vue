@@ -36,12 +36,10 @@ import embyApi, { EmbyPageList, SearchItems } from '../api/embyApi'
 import ItemCard from '../components/ItemCard.vue';
 import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
 import { ElMessage } from 'element-plus';
-import { useGlobalConfig } from '../store/db/globalConfig';
 
 const search_loading = ref(false)
 const search_str = ref('')
 const embyServerKeys = ref<string[]>([])
-const has_mpv_config = ref(false)
 
 const emby_search_result = ref<{[key: string]: {embyServer: EmbyServer, request_status: boolean, success: boolean, message?: string, result?: EmbyPageList<SearchItems>}}>({})
 
@@ -67,10 +65,6 @@ const emby_search_result_list = computed(() => {
         }
     });
 })
-
-useGlobalConfig().getGlobalConfigValue("mpv_config").then(value => {
-    has_mpv_config.value = value ? true : false;
-}).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 
 async function search() {
     embyServerKeys.value = []
