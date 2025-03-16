@@ -67,7 +67,7 @@ export default defineConfig(async () => ({
     },
   },
   // 添加有关当前构建目标的额外前缀，使这些 CLI 设置的 Tauri 环境变量可以在客户端代码中访问
-  envPrefix: ['VITE_', 'TAURI_ENV_*'],
+  envPrefix: ['VITE_', 'TAURI_'],
   build: {
     // Tauri 在 Windows 上使用 Chromium，在 macOS 和 Linux 上使用 WebKit
     target: 'chrome130',
