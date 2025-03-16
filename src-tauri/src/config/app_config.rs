@@ -16,8 +16,8 @@ pub struct Config {
 const APP_CONFIG_PATH: &'static str = "config/app-config.json";
 const RESOURCES_CONFIG_PATH: &'static str = "resources/config/app-config.default.json";
 
-pub fn get_config(app: &tauri::App, root_dir: &PathBuf) -> anyhow::Result<Config> {
-    let config_path = root_dir.join(APP_CONFIG_PATH);
+pub fn get_config(app: &tauri::App, config_dir: &PathBuf) -> anyhow::Result<Config> {
+    let config_path = config_dir.join(APP_CONFIG_PATH);
     if !config_path.exists() {
         file_util::mkdir(config_path.parent().unwrap())?;
         let resource_path = app.path().resolve(

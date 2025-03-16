@@ -11,16 +11,6 @@ mod util;
 use controller::invoke_ctl::{get_sys_info, play_video, http_forward, load_image};
 use config::app_state::AppState;
 
-#[cfg(debug_assertions)]
-fn is_development() -> bool {
-    true
-}
-
-#[cfg(not(debug_assertions))]
-fn is_development() -> bool {
-    false
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -34,21 +24,17 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::default().add_migrations("sqlite:loemby.db", config::db_migrations::migrations()).build())
         .invoke_handler(tauri::generate_handler![get_sys_info, play_video, http_forward, load_image])
         .setup(|app| {
-            let root_dir = if is_development() {
-                &format!("loemby-{}", std::env::var("TAURI_DEV_MODE").unwrap_or("dev".to_string()))
-            } else {
-                "loemby"
-            };
-            println!("TAURI_DEV_MODE: {:?}, root_dir: {:?}", std::env::var("TAURI_DEV_MODE"), &root_dir);
-            let root_dir = app.path().resolve(root_dir, tauri::path::BaseDirectory::AppLocalData)?;
-
-            config::log::init(&root_dir, is_development());
-            let config = config::app_config::get_config(app, &root_dir);
+            let config_dir = app.path().resolve("", tauri::path::BaseDirectory::AppConfig)?;
+            let config = config::app_config::get_config(app, &config_dir);
             if config.is_err() {
                 tracing::error!("{:#?}", config);
                 panic!("{}", config.unwrap_err())
             }
+            let config = config.unwrap();
             tracing::debug!("Read Config: {:?}", &config);
+
+            let local_data_dir = app.path().resolve("", tauri::path::BaseDirectory::AppLocalData)?;
+            config::log::init(&local_data_dir, &config.log_level);
 
             let axum_app_state = Arc::new(RwLock::new(None));
 
@@ -61,10 +47,11 @@ pub fn run() {
             });
 
             app.manage(AppState {
-                app_config: RwLock::new(config.unwrap()),
+                app_config: RwLock::new(config),
                 auxm_app_state: axum_app_state,
                 reqwest_pool: RwLock::new(HashMap::new()),
-                root_dir
+                config_dir,
+                local_data_dir
             });
             Ok(())
         })

@@ -11,5 +11,7 @@ pub struct AppState {
     pub auxm_app_state: Arc::<RwLock<Option<AxumAppState>>>,
     pub reqwest_pool: RwLock<HashMap<String, Client>>,
     #[allow(dead_code)]
-    pub root_dir: PathBuf,
+    pub config_dir: PathBuf,
+    #[allow(dead_code)]
+    pub local_data_dir: PathBuf,
 }

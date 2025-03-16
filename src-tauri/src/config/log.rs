@@ -3,13 +3,8 @@ use std::{path::PathBuf, str::FromStr};
 use time::UtcOffset;
 use tracing_subscriber::{filter::LevelFilter, fmt::time::OffsetTime, prelude::*, Layer};
 
-pub fn init(root_dir: &PathBuf, debug: bool) {
-    let log_level = if debug {
-        "DEBUG"
-    } else {
-        "INFO"
-    };
-    let logs_dir = root_dir.join("logs/");
+pub fn init(local_data_dir: &PathBuf, log_level: &str) {
+    let logs_dir = local_data_dir.join("logs/");
     let file_appender = tracing_appender::rolling::daily(logs_dir, "loemby.log");
     let local_time = OffsetTime::new(
         UtcOffset::from_hms(8, 0, 0).unwrap(),
