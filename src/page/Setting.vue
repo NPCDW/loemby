@@ -344,6 +344,9 @@ function handlePaneChange() {
     } else if (activePane.value == 'ProxyServer') {
         listAllProxyServer()
     } else if (activePane.value == 'EmbyLineProxy') {
+        if (proxyServer.value.length == 0) {
+            listAllProxyServer()
+        }
         listAllEmbyLine()
         getGlobalBrowseProxy()
         getGlobalPlayProxy()

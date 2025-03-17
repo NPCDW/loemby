@@ -337,11 +337,6 @@ function playbackVersionChange(val: string) {
     }
 }
 
-const playProxyUrl = ref<string | undefined>()
-useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id).then(response => {
-    playProxyUrl.value = response
-})
-
 // const playingProgressTask = ref<NodeJS.Timeout>()
 function playing(item_id: string, playbackPositionTicks: number) {
     if (!mpv_path) {
@@ -372,7 +367,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
             return invoke.playback({
                 mpv_path: mpv_path.value,
                 path: directStreamUrl,
-                proxy: playProxyUrl.value,
+                proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),
                 title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.value.server_name,
                 user_agent: embyServer.value!.user_agent!,
                 server_id: embyServer.value!.id!,

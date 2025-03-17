@@ -283,16 +283,11 @@ function getMediaLibraryChildLatest(parentId: string) {
     }).finally(() => mediaLibraryChildLoading.value[parentId] = false)
 }
 
-const browseProxyUrl = ref<string | undefined>()
-useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id).then(response => {
-    browseProxyUrl.value = response
-})
-
 const images = ref<{[key: string]: string}>({})
-function loadImage(itemId: string) {
+async function loadImage(itemId: string) {
     invoke.loadImage({
         image_url: embyApi.getImageUrl(embyServer.value, itemId)!,
-        proxy_url: browseProxyUrl.value,
+        proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
         user_agent: embyServer.value.user_agent!,
     }).then(response => {
         images.value[itemId] = response
