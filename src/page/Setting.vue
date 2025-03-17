@@ -1,7 +1,7 @@
 <template>
-    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 52px); padding: 0 20px;">
+    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 10px); padding: 10px 20px 0 20px;">
         <el-tab-pane label="常规" name="Common">
-            <el-scrollbar style="height: calc(100vh - 107px);">
+            <el-scrollbar style="height: calc(100vh - 100px);">
                 <el-form label-position="top">
                     <el-form-item label="MPV路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />
@@ -10,78 +10,74 @@
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="代理服务器" name="ProxyServer">
-            <el-scrollbar style="height: calc(100vh - 107px);">
-                <div style="padding: 20px;">
-                    <h1>代理服务器</h1>
-                    <el-table :data="proxyServer" style="width: 100%">
-                        <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
-                        <el-table-column prop="proxy_type" label="Type" width="80" />
-                        <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
-                        <el-table-column prop="username" label="Username" width="140" />
-                        <el-table-column prop="location" label="Location" show-overflow-tooltip />
-                        <el-table-column fixed="right" label="Operations" width="210">
-                            <template #header>
-                                <el-button type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
-                            </template>
-                            <template #default="scope">
-                                <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkProxy(scope.row.id)">检测</el-button>
-                                <el-button plain type="primary" size="small" @click.prevent="editProxy(scope.$index)">编辑</el-button>
-                                <el-button plain type="danger" size="small" @click.prevent="delProxy(scope.$index)">删除</el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                </div>
+            <el-scrollbar style="height: calc(100vh - 100px);">
+                <h1>代理服务器</h1>
+                <el-table :data="proxyServer" style="width: 100%">
+                    <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
+                    <el-table-column prop="proxy_type" label="Type" width="80" />
+                    <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
+                    <el-table-column prop="username" label="Username" width="140" />
+                    <el-table-column prop="location" label="Location" show-overflow-tooltip />
+                    <el-table-column fixed="right" label="Operations" width="210">
+                        <template #header>
+                            <el-button type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
+                        </template>
+                        <template #default="scope">
+                            <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkProxy(scope.row.id)">检测</el-button>
+                            <el-button plain type="primary" size="small" @click.prevent="editProxy(scope.$index)">编辑</el-button>
+                            <el-button plain type="danger" size="small" @click.prevent="delProxy(scope.$index)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="Emby线路代理" name="EmbyLineProxy">
-            <el-scrollbar style="height: calc(100vh - 107px);">
-                <div>
-                    <h1>Emby线路代理配置</h1>
-                    <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod">
-                        <el-table-column prop="emby_server_name" label="Emby" show-overflow-tooltip />
-                        <el-table-column prop="name" label="线路" show-overflow-tooltip />
-                        <el-table-column label="媒体库浏览">
-                            <template #header="">
-                                <span>媒体库浏览</span><br/>
-                                <el-select v-model="global_browse_proxy_id" @change="globalBrowseProxyChange">
-                                    <template #label="{ label }">
-                                        <span>全局配置: </span>
-                                        <span style="font-weight: bold">{{ label }}</span>
-                                    </template>
-                                    <el-option key="no" label="不使用代理" value="no"/>
-                                    <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                                </el-select>
-                            </template>
-                            <template #default="scope">
-                                <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)">
-                                    <el-option key="no" label="不使用代理" value="no"/>
-                                    <el-option key="follow" label="跟随全局代理" value="follow"/>
-                                    <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                                </el-select>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="媒体流播放">
-                            <template #header="">
-                                <span>媒体流播放</span><br/>
-                                <el-select v-model="global_play_proxy_id" @change="globalPlayProxyChange">
-                                    <template #label="{ label }">
-                                        <span>全局配置: </span>
-                                        <span style="font-weight: bold">{{ label }}</span>
-                                    </template>
-                                    <el-option key="no" label="不使用代理" value="no"/>
-                                    <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                                </el-select>
-                            </template>
-                            <template #default="scope">
-                                <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)">
-                                    <el-option key="no" label="不使用代理" value="no"/>
-                                    <el-option key="follow" label="跟随全局代理" value="follow"/>
-                                    <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                                </el-select>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                </div>
+            <el-scrollbar style="height: calc(100vh - 100px);">
+                <h1>Emby线路代理配置</h1>
+                <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod">
+                    <el-table-column prop="emby_server_name" label="Emby" show-overflow-tooltip />
+                    <el-table-column prop="name" label="线路" show-overflow-tooltip />
+                    <el-table-column label="媒体库浏览">
+                        <template #header="">
+                            <span>媒体库浏览</span><br/>
+                            <el-select v-model="global_browse_proxy_id" @change="globalBrowseProxyChange">
+                                <template #label="{ label }">
+                                    <span>全局配置: </span>
+                                    <span style="font-weight: bold">{{ label }}</span>
+                                </template>
+                                <el-option key="no" label="不使用代理" value="no"/>
+                                <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            </el-select>
+                        </template>
+                        <template #default="scope">
+                            <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)">
+                                <el-option key="no" label="不使用代理" value="no"/>
+                                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                                <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            </el-select>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="媒体流播放">
+                        <template #header="">
+                            <span>媒体流播放</span><br/>
+                            <el-select v-model="global_play_proxy_id" @change="globalPlayProxyChange">
+                                <template #label="{ label }">
+                                    <span>全局配置: </span>
+                                    <span style="font-weight: bold">{{ label }}</span>
+                                </template>
+                                <el-option key="no" label="不使用代理" value="no"/>
+                                <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            </el-select>
+                        </template>
+                        <template #default="scope">
+                            <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)">
+                                <el-option key="no" label="不使用代理" value="no"/>
+                                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                                <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            </el-select>
+                        </template>
+                    </el-table-column>
+                </el-table>
             </el-scrollbar>
         </el-tab-pane>
     </el-tabs>
@@ -141,7 +137,6 @@ function listAllProxyServer() {
         proxyServer.value = list;
     })
 }
-listAllProxyServer()
 
 const dialogProxyServerVisible = ref(false);
 const dialogProxyServer = ref<ProxyServer>({})
@@ -354,6 +349,7 @@ function handlePaneChange() {
         getGlobalPlayProxy()
     }
 }
+getMpvPath()
 </script>
 
 <style scoped>

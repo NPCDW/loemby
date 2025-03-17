@@ -170,7 +170,7 @@
                 <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
             </el-select>
         </el-form-item>
-        <el-form-item label="保活天数">
+        <el-form-item label="播放保活天数">
             <el-input-number v-model="currentEmbyServer.keep_alive_days" />
         </el-form-item>
         <el-form-item>
@@ -434,6 +434,7 @@ async function addEmbyServerAddr() {
         currentEmbyServer.value!.server_name = json['ServerName']
         currentEmbyServer.value!.server_id = json['Id']
         await updateEmbyServerDb(currentEmbyServer.value);
+        useEmbyLine().updateEmbyServerName(currentEmbyServer.value!.id!, currentEmbyServer.value!.server_name!);
         stepActive.value = stepActive.value + 1;
     }).catch(e => {
         ElMessage.error(e)
@@ -446,10 +447,12 @@ function addEmbyServerPrevStep() {
     addEmbyServerAuthLoading.value = false
 }
 async function addEmbyServerAuth() {
-    addEmbyServerAuthLoading.value = true
     if (!currentEmbyServer || !currentEmbyServer.value?.username) {
+        ElMessage.error('请至少填写用户名')
         return
     }
+    useEmbyLine().updateEmbyServerName(currentEmbyServer.value.id!, currentEmbyServer.value.server_name!);
+    addEmbyServerAuthLoading.value = true
     login(currentEmbyServer.value).then(() => {
         stepActive.value = stepActive.value + 1;
     }).catch(e => {

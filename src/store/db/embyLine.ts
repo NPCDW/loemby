@@ -65,7 +65,7 @@ export const useEmbyLine = defineStore('embyLine', () => {
         let values: string[] = [];
         values.push(emby_server_id);
         values.push(emby_server_name);
-        let sql = `update emby_line set emby_server_id = $2 where emby_server_name = $1`;
+        let sql = `update emby_line set emby_server_name = $2 where emby_server_id = $1`;
         let res = await useDb().db?.execute(sql, values);
         return res?.rowsAffected;
     }
