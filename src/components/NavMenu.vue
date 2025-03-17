@@ -156,6 +156,23 @@
         <el-form-item label="密码">
             <el-input v-model="currentEmbyServer.password" placeholder="Please input" show-password />
         </el-form-item>
+        <el-form-item label="媒体库代理">
+            <el-select v-model="currentEmbyServer.browse_proxy_id">
+                <el-option key="no" label="不使用代理" value="no"/>
+                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+            </el-select>
+        </el-form-item>
+        <el-form-item label="媒体流代理">
+            <el-select v-model="currentEmbyServer.play_proxy_id">
+                <el-option key="no" label="不使用代理" value="no"/>
+                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+            </el-select>
+        </el-form-item>
+        <el-form-item label="保活天数">
+            <el-input-number v-model="currentEmbyServer.keep_alive_days" />
+        </el-form-item>
         <el-form-item>
             <div style="width: 100%; display: flex; justify-content: center;">
                 <el-button type="primary" @click="saveEditEmbyServer">保存</el-button>
@@ -319,6 +336,7 @@ function addEmbyServer() {
                 id: generateGuid(),
                 server_name: '未完成',
                 disabled: 1,
+                keep_alive_days: 0,
                 user_agent: user_agent,
                 client: client,
                 client_version: client_version,
