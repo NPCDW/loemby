@@ -25,4 +25,3 @@ main:
             auth_type: https
             username: ${GITHUB_USERNAME}
             password: ${GITHUB_ACCESS_TOKEN}
-            branch: main
