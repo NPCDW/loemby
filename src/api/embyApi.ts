@@ -567,6 +567,8 @@ export interface MediaStreams {
     DisplayLanguage: string,
     // 码率
     BitRate: number,
+    Height: number,
+    Width: number,
     Type: 'Video' | 'Audio' | 'Subtitle',
     Language: string,
     Index: number,

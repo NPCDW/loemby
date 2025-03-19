@@ -37,7 +37,10 @@
                             版本：
                             <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 840px" :disabled="versionOptions.length <= 1">
                                 <template #label="{ label }">
-                                    {{ label.split("$|$")[0] }} <el-tag disable-transitions>{{ label.split("$|$")[1] }}</el-tag> <el-tag disable-transitions>{{ label.split("$|$")[2] }}</el-tag>
+                                    {{ label }}
+                                    <el-tag disable-transitions>{{ mediaSourceSizeTag }}</el-tag>
+                                    <el-tag disable-transitions>{{ mediaSourceBitrateTag }}</el-tag>
+                                    <el-tag disable-transitions>{{ mediaStreamResolutionTag }}</el-tag>
                                 </template>
                                 <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value">
                                     {{ item.name }} <el-tag disable-transitions>{{ item.size }}</el-tag> <el-tag disable-transitions>{{ item.bitrate }}</el-tag>
@@ -122,7 +125,7 @@
 import { nextTick, ref, watch, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
-import { maxMediaSources } from '../../util/play_info_util'
+import { guessResolution, maxMediaSources } from '../../util/play_info_util'
 import invoke from '../../api/invoke';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -219,6 +222,9 @@ function nextUp(pageNumber: number) {
     }).finally(() => nextUpLoading.value = false)
 }
 
+const mediaSourceSizeTag = ref('')
+const mediaSourceBitrateTag = ref('')
+const mediaStreamResolutionTag = ref('Unknown')
 function handleMediaSources(mediaSources: MediaSources[]) {
     if (!mediaSources || mediaSources.length == 0) {
         return
@@ -228,7 +234,7 @@ function handleMediaSources(mediaSources: MediaSources[]) {
     let maxMediaSource = mediaSources[0]
     for (let mediaSource of mediaSources) {
         versionOptions.value.push({
-            label: mediaSource.Name + '$|$' + formatBytes(mediaSource.Size) + '$|$' + formatMbps(mediaSource.Bitrate),
+            label: mediaSource.Name,
             value: mediaSource.Id,
             name: mediaSource.Name,
             size: formatBytes(mediaSource.Size),
@@ -242,18 +248,23 @@ function handleMediaSources(mediaSources: MediaSources[]) {
     playbackVersionChange(maxMediaSource.Id)
 }
 
-function playbackVersionChange(val: string) {
-    versionSelect.value = val
+function playbackVersionChange(mediaSourceId: string) {
+    let currentMediaSources = currentEpisodes.value!.MediaSources!.find(mediaSource => mediaSource.Id == mediaSourceId)
+    if (!currentMediaSources) {
+        return
+    }
+    mediaSourceSizeTag.value = formatBytes(currentMediaSources.Size)
+    mediaSourceBitrateTag.value = formatMbps(currentMediaSources.Bitrate)
+    if (currentMediaSources.MediaStreams && currentMediaSources.MediaStreams.length > 0) {
+        mediaStreamResolutionTag.value = guessResolution(currentMediaSources.MediaStreams[0].Width, currentMediaSources.MediaStreams[0].Height)
+    }
+    versionSelect.value = mediaSourceId
     videoSelect.value = -1
     audioSelect.value = -1
     subtitleSelect.value = -1
     videoOptions.value = []
     audioOptions.value = []
     subtitleOptions.value = []
-    let currentMediaSources = currentEpisodes.value!.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
-    if (!currentMediaSources) {
-        return
-    }
     timeLength.value = secondsToHMS(currentMediaSources.RunTimeTicks / 1000_0000)
     let videoIndex = 0
     let audioIndex = 0
