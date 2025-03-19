@@ -329,7 +329,7 @@ function addEmbyServer() {
     dialogAddEmbyServerVisible.value = true
     invoke.getSysInfo().then(hostname => {
         const client = "loemby";
-        const client_version = "0.6.2";
+        const client_version = "0.6.3";
         const user_agent = client + "/" + client_version;
         useEmbyServer().getMaxOrderBy().then(max_order_by => {
             currentEmbyServer.value = {
