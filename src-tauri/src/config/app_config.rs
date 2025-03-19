@@ -11,6 +11,8 @@ use tauri::Manager;
 pub struct Config {
     #[serde_inline_default("info".to_string())]
     pub log_level: String,
+    #[serde_inline_default(false)]
+    pub danger_accept_invalid_certs: bool,
 }
 
 const APP_CONFIG_PATH: &'static str = "config/app-config.json";

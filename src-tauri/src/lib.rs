@@ -27,11 +27,10 @@ pub fn run() {
             let config_dir = app.path().resolve("", tauri::path::BaseDirectory::AppConfig)?;
             let config = config::app_config::get_config(app, &config_dir);
             if config.is_err() {
-                tracing::error!("{:#?}", config);
-                panic!("{}", config.unwrap_err())
+                panic!("Read Config error: {}", config.unwrap_err())
             }
             let config = config.unwrap();
-            tracing::debug!("Read Config: {:?}", &config);
+            println!("Read Config: {:?}", &config);
 
             let local_data_dir = app.path().resolve("", tauri::path::BaseDirectory::AppLocalData)?;
             config::log::init(&local_data_dir, &config.log_level);
@@ -47,11 +46,9 @@ pub fn run() {
             });
 
             app.manage(AppState {
-                app_config: RwLock::new(config),
+                app_config: config,
                 auxm_app_state: axum_app_state,
                 reqwest_pool: RwLock::new(HashMap::new()),
-                config_dir,
-                local_data_dir
             });
             Ok(())
         })

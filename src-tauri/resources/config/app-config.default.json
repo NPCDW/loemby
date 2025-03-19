@@ -1,3 +1,4 @@
 {
-    "log_level": "info"
+    "log_level": "info",
+    "danger_accept_invalid_certs": false
 }
