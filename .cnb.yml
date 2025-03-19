@@ -14,7 +14,6 @@ $:
         - name: end stage
           script: echo "end stage"
 
-main:
   push:
     - imports: https://cnb.cool/my-codespace/envs/-/blob/main/github-secret.yml
       stages:
