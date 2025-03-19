@@ -34,13 +34,16 @@
                             </span>
                         </div>
                         <p>
+                            标签：
+                            <span>大小：<el-tag disable-transitions>{{ mediaSourceSizeTag }}</el-tag></span>
+                            <span style="margin: 20px;">码率：<el-tag disable-transitions>{{ mediaSourceBitrateTag }}</el-tag></span>
+                            <span style="margin: 20px;">分辨率：<el-tag disable-transitions>{{ mediaStreamResolutionTag }}</el-tag></span>
+                        </p>
+                        <p>
                             版本：
                             <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 840px" :disabled="versionOptions.length <= 1">
                                 <template #label="{ label }">
                                     {{ label }}
-                                    <el-tag disable-transitions>{{ mediaSourceSizeTag }}</el-tag>
-                                    <el-tag disable-transitions>{{ mediaSourceBitrateTag }}</el-tag>
-                                    <el-tag disable-transitions>{{ mediaStreamResolutionTag }}</el-tag>
                                 </template>
                                 <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value">
                                     {{ item.name }} <el-tag disable-transitions>{{ item.size }}</el-tag> <el-tag disable-transitions>{{ item.bitrate }}</el-tag>
@@ -63,9 +66,11 @@
                         </p>
                         <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
                             <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">继续播放</el-button>
-                            <el-button plain type="success" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">从头播放</el-button>
+                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0)">从头播放</el-button>
                         </template>
-                        <template v-else><el-button plain type="success" @click="playing(currentEpisodes.Id, 0)" :loading="play_loading">播放</el-button></template>
+                        <template v-else>
+                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0)">播放</el-button>
+                        </template>
                         <el-button plain @click="continuousPlay = !continuousPlay">
                             <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
                         </el-button>

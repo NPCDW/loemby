@@ -1,6 +1,6 @@
 import { MediaSources } from "../api/embyApi"
 
-export const maxMediaSources = (mediaSources: MediaSources[]) => {
+export const maxMediaSources = (mediaSources?: MediaSources[]) => {
     if (!mediaSources || mediaSources.length == 0) {
         return null
     }

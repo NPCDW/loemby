@@ -10,7 +10,9 @@
             </span>
             <span v-else style="display: flex;justify-content: space-between;align-items: center;">
                 <span>{{ item.ProductionYear }}</span>
-                <el-tag disable-transitions>{{ item.MediaSources ? formatBytes(maxMediaSources(item.MediaSources)?.Size!) : 0 }}</el-tag>
+                <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] }}</el-tag>
+                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[item.Id] }}</el-tag>
+                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[item.Id] }}</el-tag>
             </span>
         </div>
         <div style="display: flex;justify-content: space-between;">
@@ -92,8 +94,10 @@
                             </p>
                             <div style="display: flex;justify-content: space-between;">
                                 <span>
-                                    <span style="margin-right: 10px;">{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
-                                    <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag>
+                                    <span>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
+                                    <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodesItem.Id] }}</el-tag>
+                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] }}</el-tag>
+                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] }}</el-tag>
                                 </span>
                                 <span>
                                     <el-link :underline="false" v-if="episodesItem.UserData" :disabled="starLoading[episodesItem.Id]" @click="star(episodesItem)">
@@ -125,11 +129,11 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import embyApi, { EmbyPageList, EpisodesItems, SearchItems, SeasonsItems, UserData } from '../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItems, MediaSources, SearchItems, SeasonsItems, UserData } from '../api/embyApi';
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus';
-import { formatBytes } from '../util/str_util'
-import { maxMediaSources } from '../util/play_info_util'
+import { formatBytes, formatMbps } from '../util/str_util'
+import { guessResolution, maxMediaSources } from '../util/play_info_util'
 import { EmbyServer } from '../store/db/embyServer';
 
 const router = useRouter()
@@ -138,6 +142,21 @@ const {item, embyServer} = defineProps<{
   item: SearchItems,
   embyServer: EmbyServer
 }>()
+
+const mediaSourceSizeTag = ref<{[key: string]: string}>({})
+const mediaSourceBitrateTag = ref<{[key: string]: string}>({})
+const mediaStreamResolutionTag = ref<{[key: string]: string}>({})
+function getTag(itemId: string, mediaSources?: MediaSources[]) {
+    let maxMediaSource = maxMediaSources(mediaSources);
+    if (maxMediaSource) {
+        mediaSourceSizeTag.value[itemId] = formatBytes(maxMediaSource.Size)
+        mediaSourceBitrateTag.value[itemId] = formatMbps(maxMediaSource.Bitrate)
+        if (maxMediaSource.MediaStreams && maxMediaSource.MediaStreams.length > 0) {
+            mediaStreamResolutionTag.value[itemId] = guessResolution(maxMediaSource.MediaStreams[0].Width, maxMediaSource.MediaStreams[0].Height)
+        }
+    }
+}
+getTag(item.Id, item.MediaSources)
 
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
@@ -256,6 +275,9 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
         episodes_result.value[series_id + '|' + seasons.Id].total = json.TotalRecordCount
         episodes_result.value[series_id + '|' + seasons.Id][currentPage]= json.Items
         dialogEpisodesList.value = json.Items
+        for (let item of json.Items) {
+            getTag(seasons.Id, item.MediaSources)
+        }
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => dialogEpisodesLoading.value = false)
