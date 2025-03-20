@@ -133,7 +133,7 @@ import embyApi, { EmbyPageList, EpisodesItems, MediaSources, SearchItems, Season
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus';
 import { formatBytes, formatMbps } from '../util/str_util'
-import { guessResolution, maxMediaSources } from '../util/play_info_util'
+import { getResolutionFromMediaSources, maxMediaSources } from '../util/play_info_util'
 import { EmbyServer } from '../store/db/embyServer';
 
 const router = useRouter()
@@ -152,7 +152,7 @@ function getTag(itemId: string, mediaSources?: MediaSources[]) {
         mediaSourceSizeTag.value[itemId] = formatBytes(maxMediaSource.Size)
         mediaSourceBitrateTag.value[itemId] = formatMbps(maxMediaSource.Bitrate)
         if (maxMediaSource.MediaStreams && maxMediaSource.MediaStreams.length > 0) {
-            mediaStreamResolutionTag.value[itemId] = guessResolution(maxMediaSource.MediaStreams[0].Width, maxMediaSource.MediaStreams[0].Height)
+            mediaStreamResolutionTag.value[itemId] = getResolutionFromMediaSources(maxMediaSource)
         }
     }
 }
@@ -276,7 +276,7 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
         episodes_result.value[series_id + '|' + seasons.Id][currentPage]= json.Items
         dialogEpisodesList.value = json.Items
         for (let item of json.Items) {
-            getTag(seasons.Id, item.MediaSources)
+            getTag(item.Id, item.MediaSources)
         }
     }).catch(e => {
         ElMessage.error(e)

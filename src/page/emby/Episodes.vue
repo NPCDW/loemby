@@ -46,7 +46,7 @@
                                     {{ label }}
                                 </template>
                                 <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value">
-                                    {{ item.name }} <el-tag disable-transitions>{{ item.size }}</el-tag> <el-tag disable-transitions>{{ item.bitrate }}</el-tag>
+                                    {{ item.name }} <el-tag disable-transitions>{{ item.size }}</el-tag> <el-tag disable-transitions>{{ item.bitrate }}</el-tag> <el-tag disable-transitions>{{ item.resolution }}</el-tag>
                                 </el-option>
                             </el-select>
                         </p>
@@ -130,7 +130,7 @@
 import { nextTick, ref, watch, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
-import { guessResolution, maxMediaSources } from '../../util/play_info_util'
+import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
 import invoke from '../../api/invoke';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -151,7 +151,7 @@ async function getEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 
-const versionOptions = ref<{label: string, value: string, name: string, size: string, bitrate: string}[]>([])
+const versionOptions = ref<{label: string, value: string, name: string, size: string, bitrate: string, resolution: string}[]>([])
 const videoOptions = ref<{label: string, value: number}[]>([])
 const audioOptions = ref<{label: string, value: number}[]>([])
 const subtitleOptions = ref<{label: string, value: number}[]>([])
@@ -244,6 +244,7 @@ function handleMediaSources(mediaSources: MediaSources[]) {
             name: mediaSource.Name,
             size: formatBytes(mediaSource.Size),
             bitrate: formatMbps(mediaSource.Bitrate),
+            resolution: getResolutionFromMediaSources(mediaSource),
         })
         if (max < mediaSource.Size) {
             max = mediaSource.Size
@@ -261,7 +262,7 @@ function playbackVersionChange(mediaSourceId: string) {
     mediaSourceSizeTag.value = formatBytes(currentMediaSources.Size)
     mediaSourceBitrateTag.value = formatMbps(currentMediaSources.Bitrate)
     if (currentMediaSources.MediaStreams && currentMediaSources.MediaStreams.length > 0) {
-        mediaStreamResolutionTag.value = guessResolution(currentMediaSources.MediaStreams[0].Width, currentMediaSources.MediaStreams[0].Height)
+        mediaStreamResolutionTag.value = getResolutionFromMediaSources(currentMediaSources)
     }
     versionSelect.value = mediaSourceId
     videoSelect.value = -1

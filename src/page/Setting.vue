@@ -121,15 +121,16 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { ElMessage, ElMessageBox, TableColumnCtx } from 'element-plus';
 import { ProxyServer, useProxyServer } from '../store/db/proxyServer';
 import _ from 'lodash';
 import { generateGuid } from '../util/uuid_util';
 import appApi from '../api/appApi';
-import { useEmbyServer } from '../store/db/embyServer';
+import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
 import { EmbyLine, useEmbyLine } from '../store/db/embyLine';
 import { useGlobalConfig } from '../store/db/globalConfig';
+import { useEventBus } from '../store/eventBus';
 
 const proxyServer = ref<ProxyServer[]>([]);
 function listAllProxyServer() {
@@ -137,6 +138,7 @@ function listAllProxyServer() {
         proxyServer.value = list;
     })
 }
+useEventBus().on('ProxyServerListChanged', listAllProxyServer)
 
 const dialogProxyServerVisible = ref(false);
 const dialogProxyServer = ref<ProxyServer>({})
@@ -158,7 +160,7 @@ function saveProxyServer() {
         savePromise = useProxyServer().addProxyServer(dialogProxyServer.value)
     }
     savePromise.then(() => {
-        listAllProxyServer()
+        useEventBus().emit('ProxyServerListChanged', {})
         ElMessage.success('保存成功');
     }).catch(e => {
         ElMessage.error('保存失败' + e);
@@ -175,7 +177,7 @@ function delProxy(index: number) {
     }
   ).then(async () => {
         useProxyServer().delProxyServer(proxyServer.value[index].id!).then(() => {
-            listAllProxyServer()
+            useEventBus().emit('ProxyServerListChanged', {})
             ElMessage.success('删除成功');
         }).catch(e => ElMessage.error('删除失败' + e))
   })
@@ -200,12 +202,27 @@ function checkProxy(id: string) {
     }).finally(() => checkProxyLoading.value[id] = false);
 }
 
-const embyLines = ref<EmbyLine[]>([]);
+const embyServers = ref<EmbyServer[]>([])
+function listAllEmbyServer() {
+    useEmbyServer().listAllEmbyServer().then(list => {
+        embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
+    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+}
+listAllEmbyServer()
+useEventBus().on('EmbyServerListChanged', listAllEmbyServer)
+
+const embyLinesOrigin = ref<EmbyLine[]>([]);
+const embyLines = computed(() => {
+    const embyServersSort = embyServers.value.map(item=> item.id)
+    embyLinesOrigin.value.sort((a,b) => embyServersSort.indexOf(a.emby_server_id) - embyServersSort.indexOf(b.emby_server_id))
+    return embyLinesOrigin.value
+})
 function listAllEmbyLine() {
     useEmbyLine().listAllEmbyLine().then(list => {
-        embyLines.value = list
+        embyLinesOrigin.value = list
     })
 }
+useEventBus().on('EmbyLineListChanged', listAllEmbyLine)
 
 interface SpanMethodProps {
   row: typeof embyLines.value[0]
@@ -296,12 +313,14 @@ function globalPlayProxyChange() {
 }
 function proxyChange(line: EmbyLine) {
     useEmbyLine().updateEmbyLine(line).then(() => {
-        listAllEmbyLine();
+        useEventBus().emit('EmbyLineListChanged', {})
         if (line.in_use) {
             useEmbyServer().updateEmbyServer({
                 id: line.emby_server_id,
                 browse_proxy_id: line.browse_proxy_id,
                 play_proxy_id: line.play_proxy_id
+            }).then(() => {
+                useEventBus().emit('EmbyServerListChanged', {})
             }).catch(e => ElMessage.error('修改失败' + e));
         }
         ElMessage.success('修改成功');

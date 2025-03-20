@@ -248,6 +248,7 @@ import { EmbyServer, useEmbyServer } from "../store/db/embyServer";
 import { EmbyLine, useEmbyLine } from "../store/db/embyLine";
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
+import { useEventBus } from "../store/eventBus";
 
 const active = ref("");
 const route = useRoute();
@@ -263,6 +264,7 @@ function listAllProxyServer() {
     })
 }
 listAllProxyServer()
+useEventBus().on('ProxyServerListChanged', listAllProxyServer)
 
 const embyServers = ref<EmbyServer[]>([])
 function listAllEmbyServer() {
@@ -271,6 +273,7 @@ function listAllEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
+useEventBus().on('EmbyServerListChanged', listAllEmbyServer)
 
 const keep_alive_days = computed(() => {
     let days: {[key: string]: number} = {}
@@ -296,29 +299,36 @@ function listAllEmbyLine() {
     })
 }
 listAllEmbyLine()
+useEventBus().on('EmbyLineListChanged', listAllEmbyLine)
 
 async function addEmbyServerDb(tmp: EmbyServer) {
     return useEmbyServer().addEmbyServer(tmp).then(() => {
-        listAllEmbyServer()
+        useEventBus().emit('EmbyServerListChanged', {})
     }).catch(e => ElMessage.error('添加Emby服务器失败' + e))
 }
 
 async function updateEmbyServerDb(tmp: EmbyServer) {
     return useEmbyServer().updateEmbyServer(tmp).then(() => {
-        listAllEmbyServer()
+        useEventBus().emit('EmbyServerListChanged', {})
     }).catch(e => ElMessage.error('更新Emby服务器失败' + e))
 }
 
 async function addEmbyLineDb(line: EmbyLine) {
     return useEmbyLine().addEmbyLine(line).then(() => {
-        listAllEmbyServer()
+        useEventBus().emit('EmbyLineListChanged', {})
     }).catch(e => ElMessage.error('添加Emby线路失败' + e))
 }
 
 async function updateEmbyLineDb(line: EmbyLine) {
     return useEmbyLine().updateEmbyLine(line).then(() => {
-        listAllEmbyServer()
+        useEventBus().emit('EmbyLineListChanged', {})
     }).catch(e => ElMessage.error('更新Emby线路失败' + e))
+}
+
+async function updateEmbyLineServerName(embyId: string, embyName: string) {
+    return useEmbyLine().updateEmbyServerName(embyId, embyName).then(() => {
+        useEventBus().emit('EmbyLineListChanged', {})
+    }).catch(e => ElMessage.error('更新Emby线路服务器名称失败' + e))
 }
 
 const stepActive = ref(1)
@@ -395,10 +405,10 @@ function delEmbyServer(tmp: EmbyServer) {
     }
   ).then(async () => {
         useEmbyServer().delEmbyServer(tmp.id!).then(() => {
-            listAllEmbyServer()
+            useEventBus().emit('EmbyServerListChanged', {})
             ElMessage.success('删除成功')
             useEmbyLine().delEmbyServer(tmp.id!).catch(e => {
-                listAllEmbyLine()
+                useEventBus().emit('EmbyLineListChanged', {})
                 ElMessage.error('删除Emby线路失败' + e)
             })
         }).catch(e => {
@@ -434,7 +444,7 @@ async function addEmbyServerAddr() {
         currentEmbyServer.value!.server_name = json['ServerName']
         currentEmbyServer.value!.server_id = json['Id']
         await updateEmbyServerDb(currentEmbyServer.value);
-        useEmbyLine().updateEmbyServerName(currentEmbyServer.value!.id!, currentEmbyServer.value!.server_name!);
+        updateEmbyLineServerName(currentEmbyServer.value!.id!, currentEmbyServer.value!.server_name!);
         stepActive.value = stepActive.value + 1;
     }).catch(e => {
         ElMessage.error(e)
@@ -451,7 +461,7 @@ async function addEmbyServerAuth() {
         ElMessage.error('请至少填写用户名')
         return
     }
-    useEmbyLine().updateEmbyServerName(currentEmbyServer.value.id!, currentEmbyServer.value.server_name!);
+    updateEmbyLineServerName(currentEmbyServer.value.id!, currentEmbyServer.value.server_name!);
     addEmbyServerAuthLoading.value = true
     login(currentEmbyServer.value).then(() => {
         stepActive.value = stepActive.value + 1;
@@ -502,12 +512,10 @@ async function saveEditEmbyServer() {
         line.play_proxy_id = currentEmbyServer.value!.play_proxy_id
         await updateEmbyLineDb(line)
         if (line.emby_server_name != currentEmbyServer.value!.server_name) {
-            await useEmbyLine().updateEmbyServerName(currentEmbyServer.value!.id!, currentEmbyServer.value!.server_name!);
+            await updateEmbyLineServerName(currentEmbyServer.value!.id!, currentEmbyServer.value!.server_name!);
         }
-        listAllEmbyLine()
     }).catch(e => ElMessage.error('获取正在使用的线路失败' + e))
     await updateEmbyServerDb(currentEmbyServer.value!);
-    listAllEmbyServer()
     ElMessage.success({
         message: "保存成功"
     })
@@ -523,9 +531,7 @@ async function onDrop(dropResult: {removedIndex: number, addedIndex: number}) {
     let element = embyServers.value.splice(dropResult.removedIndex, 1);
     embyServers.value.splice(dropResult.addedIndex, 0, element[0]);
     useEmbyServer().updateOrder(orderBy).then(() => {
-        updateEmbyServerDb({id: id, order_by: orderBy}).then(() => {
-            listAllEmbyServer()
-        }).catch(e => ElMessage.error("排序失败" + e))
+        updateEmbyServerDb({id: id, order_by: orderBy}).catch(e => ElMessage.error("排序失败" + e))
     }).catch(e => ElMessage.error("排序失败" + e))
 }
 
@@ -577,7 +583,7 @@ function delLine(line: EmbyLine) {
         }
     ).then(async () => {
         useEmbyLine().delEmbyLine(line.id!).then(async () => {
-            listAllEmbyLine()
+            useEventBus().emit('EmbyLineListChanged', {})
             ElMessage.success({
                 message: "删除成功"
             })
@@ -587,15 +593,18 @@ function delLine(line: EmbyLine) {
 async function saveCurrentEmbyServerAddLine() {
     let savePromise
     if (currentEmbyServerAddLine.value.id) {
-        savePromise = useEmbyLine().updateEmbyLine(currentEmbyServerAddLine.value)
+        savePromise = updateEmbyLineDb(currentEmbyServerAddLine.value)
     } else {
         currentEmbyServerAddLine.value.id = generateGuid();
-        savePromise = useEmbyLine().addEmbyLine(currentEmbyServerAddLine.value)
+        savePromise = addEmbyLineDb(currentEmbyServerAddLine.value)
     }
     savePromise.then(async () => {
-        listAllEmbyLine()
         if (currentEmbyServerAddLine.value.in_use) {
-            listAllEmbyServer()
+            updateEmbyServerDb({
+                id: currentEmbyServerAddLine.value.emby_server_id,
+                browse_proxy_id: currentEmbyServerAddLine.value.browse_proxy_id,
+                play_proxy_id: currentEmbyServerAddLine.value.play_proxy_id
+            });
         }
         ElMessage.success({
             message: "保存成功"
@@ -609,20 +618,17 @@ async function configLineChange(value: string, embyServer: EmbyServer) {
             return
         }
         useEmbyLine().updateEmbyUsing(embyServer.id!).then(() => {
-            updateEmbyLineDb({id: value, in_use: 1}).then(() => {
-                listAllEmbyLine()
-            }).catch(e => ElMessage.error("切换失败" + e))
+            updateEmbyLineDb({id: value, in_use: 1}).catch(e => ElMessage.error("切换失败" + e))
             let tmpEmbyServer = {
                 id: embyServer.id!,
                 base_url: line.base_url,
                 browse_proxy_id: line.browse_proxy_id,
                 play_proxy_id: line.play_proxy_id,
             }
-            useEmbyServer().updateEmbyServer(tmpEmbyServer).then(() => {
+            updateEmbyServerDb(tmpEmbyServer).then(() => {
                 ElMessage.success({
                     message: "线路切换成功"
                 })
-                listAllEmbyServer()
             }).catch(e => ElMessage.error("切换失败" + e))
         }).catch(e => ElMessage.error("切换失败" + e))
     }).catch(e => ElMessage.error('获取线路失败' + e))

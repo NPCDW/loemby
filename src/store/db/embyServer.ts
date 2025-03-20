@@ -48,7 +48,6 @@ export const useEmbyServer = defineStore('embyServer', () => {
                 values.push(value);
             }
         }
-        console.log(embyServer)
         let sql = `update emby_server set ${fields.map((item, index) => item + ' = $' + (index + 2)).join(',')} where id = $1`;
         let res = await useDb().db?.execute(sql, values);
         return res?.rowsAffected;

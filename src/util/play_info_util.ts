@@ -15,6 +15,13 @@ export const maxMediaSources = (mediaSources?: MediaSources[]) => {
     return maxMediaSource
 }
 
+export const getResolutionFromMediaSources = (mediaSources?: MediaSources) => {
+    if (!mediaSources || !mediaSources.MediaStreams || mediaSources.MediaStreams.length == 0) {
+        return 'Unknown'
+    }
+    return getResolution(mediaSources.MediaStreams[0].Width, mediaSources.MediaStreams[0].Height)
+}
+
 /**
  * 参考 youtube 视频分辨率和宽高比 https://support.google.com/youtube/answer/6375112?hl=zh-Hans&co=GENIE.Platform%3DDesktop#
  * 4320p (8k)：7680x4320
@@ -26,7 +33,7 @@ export const maxMediaSources = (mediaSources?: MediaSources[]) => {
  * 360p（标清）：640x360
  * 240p（标清）：426x240
  */
-export const guessResolution = (width: number, height: number) => {
+export const getResolution = (width: number, height: number) => {
     if (!width || !height) {
         return 'Unknown'
     } else if (width >= 7680 || height >= 4320) {

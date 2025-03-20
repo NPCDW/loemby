@@ -87,7 +87,6 @@ async function search(embyServer: EmbyServer, search_str: string, startIndex: nu
  */
 async function getContinuePlayList(embyServer: EmbyServer, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
-        console.log(embyServer);
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
