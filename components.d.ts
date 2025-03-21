@@ -61,6 +61,7 @@ declare module 'vue' {
     IEpStar: typeof import('~icons/ep/star')['default']
     IEpStarFilled: typeof import('~icons/ep/star-filled')['default']
     IEpSuccessFilled: typeof import('~icons/ep/success-filled')['default']
+    IEpVideoPlay: typeof import('~icons/ep/video-play')['default']
     IEpWarningFilled: typeof import('~icons/ep/warning-filled')['default']
     IEpWarnTriangleFilled: typeof import('~icons/ep/warn-triangle-filled')['default']
     ItemCard: typeof import('./src/components/ItemCard.vue')['default']

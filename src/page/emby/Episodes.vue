@@ -65,15 +65,21 @@
                             </el-select></span>
                         </p>
                         <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">继续播放</el-button>
-                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0)">从头播放</el-button>
+                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">
+                                <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                <span>继续播放</span>
+                            </el-button>
+                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0)">
+                                <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                <span>从头播放</span>
+                            </el-button>
                         </template>
                         <template v-else>
-                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0)">播放</el-button>
+                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0)">
+                                <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                <span>播放</span>
+                            </el-button>
                         </template>
-                        <el-button plain @click="continuousPlay = !continuousPlay">
-                            <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
-                        </el-button>
                         <el-button plain :disabled="playedLoading" @click="played()">
                             <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
                             <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
@@ -88,6 +94,12 @@
                                 <el-icon :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
                                 <span>收藏</span>
                             </template>
+                        </el-button>
+                        <el-button plain @click="continuousPlay = !continuousPlay">
+                            <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
+                        </el-button>
+                        <el-button v-if="continuousPlay" plain @click="rememberSelect = !rememberSelect">
+                            <span>{{ rememberSelect ? '记住选择' : '自动选择' }}</span>
                         </el-button>
                     </div>
                 </div>
@@ -163,6 +175,7 @@ const timeLength = ref('')
 const mpv_path = ref('')
 
 const continuousPlay = ref(true)
+const rememberSelect = ref(route.query.rememberSelect === 'true' ? true : false)
 const playbackInfoLoading = ref(false)
 const play_loading = ref(false)
 
@@ -352,6 +365,11 @@ function playbackVersionChange(mediaSourceId: string) {
     if (subtitleSelect.value === -1 && subtitleOptions.value.length > 1) {
         subtitleSelect.value = subtitleOptions.value[0].value
     }
+    if (rememberSelect.value) {
+        videoSelect.value = Number(<string>route.query.videoSelect)
+        audioSelect.value = Number(<string>route.query.audioSelect)
+        subtitleSelect.value = Number(<string>route.query.subtitleSelect)
+    }
 }
 
 // const playingProgressTask = ref<NodeJS.Timeout>()
@@ -426,14 +444,20 @@ watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
         // }
         updateCurrentEpisodes(true).then(() => {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && continuousPlay.value) {
-                // todo 播放完成后，展示窗口，跳到下一集，继承当前音频和字幕选项
                 ElMessage.success({
                     message: '播放完成，即将播放下一集'
                 })
                 nextUpCurrentPage.value = 1
                 nextUp(1).then(() => {
                     if (nextUpList.value.length > 0) {
-                        router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {autoplay: 'true'}})
+                        router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
+                            autoplay: 'true',
+                            rememberSelect: rememberSelect.value.toString(),
+                            videoSelect: videoSelect.value,
+                            audioSelect: audioSelect.value,
+                            subtitleSelect: subtitleSelect.value,
+                            versionSelect: versionSelect.value,
+                        }})
                     } else {
                         ElMessage.warning({
                             message: '已经是最后一集了'
