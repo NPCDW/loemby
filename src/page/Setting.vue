@@ -121,7 +121,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import { ElMessage, ElMessageBox, TableColumnCtx } from 'element-plus';
 import { ProxyServer, useProxyServer } from '../store/db/proxyServer';
 import _ from 'lodash';
@@ -139,6 +139,9 @@ function listAllProxyServer() {
     })
 }
 useEventBus().on('ProxyServerListChanged', listAllProxyServer)
+onUnmounted(() => {
+    useEventBus().remove('ProxyServerListChanged', listAllProxyServer)
+})
 
 const dialogProxyServerVisible = ref(false);
 const dialogProxyServer = ref<ProxyServer>({})
@@ -210,6 +213,9 @@ function listAllEmbyServer() {
 }
 listAllEmbyServer()
 useEventBus().on('EmbyServerListChanged', listAllEmbyServer)
+onUnmounted(() => {
+    useEventBus().remove('EmbyServerListChanged', listAllEmbyServer)
+})
 
 const embyLinesOrigin = ref<EmbyLine[]>([]);
 const embyLines = computed(() => {
@@ -223,6 +229,9 @@ function listAllEmbyLine() {
     })
 }
 useEventBus().on('EmbyLineListChanged', listAllEmbyLine)
+onUnmounted(() => {
+    useEventBus().remove('EmbyLineListChanged', listAllEmbyLine)
+})
 
 interface SpanMethodProps {
   row: typeof embyLines.value[0]

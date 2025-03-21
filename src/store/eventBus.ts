@@ -11,18 +11,21 @@ export const useEventBus = defineStore('eventBus', () => {
     
     function emit(name: string, data: any) {
         if (eventList.value[name]) {
-            eventList.value[name].forEach((fn) => {
-                console.log('emit', name, data)
-                 fn(data);
-                 })
+            eventList.value[name].forEach((fn) => fn(data))
         }
     }
     
+    function remove(name: string, fn: Function) {
+        if (eventList.value[name] && eventList.value[name].indexOf(fn) > -1) {
+            eventList.value[name].splice(eventList.value[name].indexOf(fn), 1);
+        }
+    }
+
     function off(name: string) {
         if (eventList.value[name]) {
             delete eventList.value[name];
         }
     }
 
-    return { on, emit, off }
+    return { on, emit, off, remove }
 })

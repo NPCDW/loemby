@@ -235,7 +235,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watchEffect } from "vue";
+import { computed, onUnmounted, ref, watchEffect } from "vue";
 import { useRoute } from 'vue-router'
 import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -265,6 +265,9 @@ function listAllProxyServer() {
 }
 listAllProxyServer()
 useEventBus().on('ProxyServerListChanged', listAllProxyServer)
+onUnmounted(() => {
+    useEventBus().remove('ProxyServerListChanged', listAllProxyServer)
+})
 
 const embyServers = ref<EmbyServer[]>([])
 function listAllEmbyServer() {
@@ -274,6 +277,9 @@ function listAllEmbyServer() {
 }
 listAllEmbyServer()
 useEventBus().on('EmbyServerListChanged', listAllEmbyServer)
+onUnmounted(() => {
+    useEventBus().remove('EmbyServerListChanged', listAllEmbyServer)
+})
 
 const keep_alive_days = computed(() => {
     let days: {[key: string]: number} = {}
@@ -300,6 +306,9 @@ function listAllEmbyLine() {
 }
 listAllEmbyLine()
 useEventBus().on('EmbyLineListChanged', listAllEmbyLine)
+onUnmounted(() => {
+    useEventBus().remove('EmbyLineListChanged', listAllEmbyLine)
+})
 
 async function addEmbyServerDb(tmp: EmbyServer) {
     return useEmbyServer().addEmbyServer(tmp).then(() => {

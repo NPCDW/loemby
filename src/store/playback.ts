@@ -14,7 +14,7 @@ export const usePlayback = defineStore('playback', () => {
 
     async function listen_playback_progress() {
         listen<PlaybackProgress>('playback_progress', (event) => {
-            console.log(`playback ${event.payload.progress / 1000 / 10000} second from ${event.payload.server_id} ${event.payload.item_id} ${event.payload.media_source_id}`);
+            console.log(`store playback_progress: playback ${event.payload.progress / 1000 / 10000} second from ${event.payload.server_id} ${event.payload.item_id} ${event.payload.media_source_id}`);
             useEmbyServer().getEmbyServer(event.payload.server_id).then((embyServer) => {
                 if (!embyServer) {
                     console.error(`Emby服务器Id: ${event.payload.server_id} 不存在`);
