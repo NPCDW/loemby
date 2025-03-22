@@ -138,10 +138,8 @@ function listAllProxyServer() {
         proxyServer.value = list;
     })
 }
-useEventBus().on('ProxyServerListChanged', listAllProxyServer)
-onUnmounted(() => {
-    useEventBus().remove('ProxyServerListChanged', listAllProxyServer)
-})
+useEventBus().on('ProxyServerChanged', listAllProxyServer)
+onUnmounted(() => useEventBus().remove('ProxyServerChanged', listAllProxyServer))
 
 const dialogProxyServerVisible = ref(false);
 const dialogProxyServer = ref<ProxyServer>({})
@@ -163,7 +161,7 @@ function saveProxyServer() {
         savePromise = useProxyServer().addProxyServer(dialogProxyServer.value)
     }
     savePromise.then(() => {
-        useEventBus().emit('ProxyServerListChanged', {})
+        useEventBus().emit('ProxyServerChanged', {})
         ElMessage.success('保存成功');
     }).catch(e => {
         ElMessage.error('保存失败' + e);
@@ -180,7 +178,7 @@ function delProxy(index: number) {
     }
   ).then(async () => {
         useProxyServer().delProxyServer(proxyServer.value[index].id!).then(() => {
-            useEventBus().emit('ProxyServerListChanged', {})
+            useEventBus().emit('ProxyServerChanged', {})
             ElMessage.success('删除成功');
         }).catch(e => ElMessage.error('删除失败' + e))
   })
@@ -212,10 +210,8 @@ function listAllEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
-useEventBus().on('EmbyServerListChanged', listAllEmbyServer)
-onUnmounted(() => {
-    useEventBus().remove('EmbyServerListChanged', listAllEmbyServer)
-})
+useEventBus().on('EmbyServerChanged', listAllEmbyServer)
+onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
 
 const embyLinesOrigin = ref<EmbyLine[]>([]);
 const embyLines = computed(() => {
@@ -228,10 +224,8 @@ function listAllEmbyLine() {
         embyLinesOrigin.value = list
     })
 }
-useEventBus().on('EmbyLineListChanged', listAllEmbyLine)
-onUnmounted(() => {
-    useEventBus().remove('EmbyLineListChanged', listAllEmbyLine)
-})
+useEventBus().on('EmbyLineChanged', listAllEmbyLine)
+onUnmounted(() => useEventBus().remove('EmbyLineChanged', listAllEmbyLine))
 
 interface SpanMethodProps {
   row: typeof embyLines.value[0]
@@ -295,7 +289,6 @@ function globalBrowseProxyChange() {
             ElMessage.error('修改失败' + e);
         })
     }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
-    ElMessage.success('修改成功');
 }
 function globalPlayProxyChange() {
     useGlobalConfig().getGlobalConfig("global_play_proxy_id").then(config => {
@@ -318,18 +311,17 @@ function globalPlayProxyChange() {
             ElMessage.error('修改失败' + e);
         })
     }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
-    ElMessage.success('修改成功');
 }
 function proxyChange(line: EmbyLine) {
     useEmbyLine().updateEmbyLine(line).then(() => {
-        useEventBus().emit('EmbyLineListChanged', {})
+        useEventBus().emit('EmbyLineChanged', {})
         if (line.in_use) {
             useEmbyServer().updateEmbyServer({
                 id: line.emby_server_id,
                 browse_proxy_id: line.browse_proxy_id,
                 play_proxy_id: line.play_proxy_id
             }).then(() => {
-                useEventBus().emit('EmbyServerListChanged', {})
+                useEventBus().emit('EmbyServerChanged', {event: 'update', id: line.emby_server_id})
             }).catch(e => ElMessage.error('修改失败' + e));
         }
         ElMessage.success('修改成功');

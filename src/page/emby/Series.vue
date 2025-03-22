@@ -127,7 +127,7 @@
 
 <script lang="ts" setup>
 import { useRoute, useRouter } from 'vue-router';
-import { ref } from 'vue';
+import { onUnmounted, ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, SeasonsItems, UserData } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
@@ -135,6 +135,7 @@ import { maxMediaSources } from '../../util/play_info_util'
 import invoke from '../../api/invoke';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
+import { useEventBus } from '../../store/eventBus';
 
 const router = useRouter()
 const route = useRoute()
@@ -145,6 +146,14 @@ async function getEmbyServer() {
         embyServer.value = value!;
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
+function embyServerChanged(payload?: {event?: string, id?: string}) {
+    if (payload?.id === route.params.embyId) {
+        getEmbyServer()
+    }
+}
+useEventBus().on('EmbyServerChanged', embyServerChanged)
+onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
+
 getEmbyServer().then(() => {
     updateCurrentSerie()
     getSeasons()

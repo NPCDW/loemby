@@ -22,7 +22,7 @@
                     </div>
                     <div v-else style="text-align: center;">
                         <el-text type="danger" style="word-break: break-all;display: block;">{{ embySearchItem.message }}</el-text>
-                        <el-button type="primary" @click="singleEmbySearch(embySearchItem.embyServer, true)">重试</el-button>
+                        <el-button type="primary" @click="singleEmbySearch(embySearchItem.embyServer)">重试</el-button>
                     </div>
                 </el-collapse-item>
             </el-collapse>
@@ -31,11 +31,22 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import embyApi, { EmbyPageList, SearchItems } from '../api/embyApi'
 import ItemCard from '../components/ItemCard.vue';
 import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
 import { ElMessage } from 'element-plus';
+import { useEventBus } from '../store/eventBus';
+
+const embyServers = ref<EmbyServer[]>([])
+function listAllEmbyServer() {
+    useEmbyServer().listAllEmbyServer().then(list => {
+        embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
+    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+}
+listAllEmbyServer()
+useEventBus().on('EmbyServerChanged', listAllEmbyServer)
+onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
 
 const search_loading = ref(false)
 const search_str = ref('')
@@ -44,56 +55,26 @@ const embyServerKeys = ref<string[]>([])
 const emby_search_result = ref<{[key: string]: {embyServer: EmbyServer, request_status: boolean, success: boolean, message?: string, result?: EmbyPageList<SearchItems>}}>({})
 
 const emby_search_result_list = computed(() => {
-  return Object.entries(emby_search_result.value).map(([_key, value]) => (value)).sort((a, b) => {
-        if (a.success && a.result && a.result.Items.length > 0) {
-            if (b.success && b.result && b.result.Items.length > 0) {
-                return 0; // 保持顺序不变
-            }
-            return -1; // a 排在 b 前面
-        } else if (a.success && a.result && a.result.Items.length === 0) {
-            if (b.success && b.result && b.result.Items.length > 0) {
-                return 1; // b 排在 a 前面
-            } else if (b.success && b.result && b.result.Items.length === 0) {
-                return 0; // 保持顺序不变
-            }
-            return -1; // a 排在 b 前面
-        } else {
-            if (b.success) {
-                return 1; // b 排在 a 前面
-            }
-            return 0; // 保持顺序不变
-        }
-    });
+    const embyServersSort = embyServers.value.map(item=> item.id)
+    Object.entries(emby_search_result.value).map(([_key, value]) => (value)).sort((a,b) => embyServersSort.indexOf(a.embyServer.id) - embyServersSort.indexOf(b.embyServer.id))
+    return emby_search_result.value
 })
 
 async function search() {
     embyServerKeys.value = []
     emby_search_result.value = {}
+    let promises = []
 
     search_loading.value = true
-    useEmbyServer().listAllEmbyServer().then(list => {
-        let promises = []
-        for (let embyServer of list) {
-            if (!embyServer.disabled) {
-                let promise = singleEmbySearch(embyServer)
-                promises.push(promise)
-            }
+    for (let embyServer of embyServers.value) {
+        if (!embyServer.disabled) {
+            let promise = singleEmbySearch(embyServer)
+            promises.push(promise)
         }
-        Promise.allSettled(promises).then(() => search_loading.value = false);
-    }).catch(e => {
-        search_loading.value = false
-        ElMessage.error('获取Emby服务器失败' + e)
-    })
-}
-async function singleEmbySearch(embyServer: EmbyServer, refresh: boolean = false) {
-    if (refresh) {
-        let tmp = await useEmbyServer().getEmbyServer(embyServer.id!)
-        if (!tmp) {
-            ElMessage.error('Emby服务器不存在')
-            return
-        }
-        embyServer = tmp
     }
+    Promise.allSettled(promises).then(() => search_loading.value = false);
+}
+async function singleEmbySearch(embyServer: EmbyServer) {
     emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: true, success: false}
     return embyApi.search(embyServer, search_str.value, 0, 30).then(async response => {
         if (response.status_code != 200) {

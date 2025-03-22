@@ -139,7 +139,7 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, ref, watch, watchEffect } from 'vue';
+import { nextTick, onUnmounted, ref, watch, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
@@ -152,6 +152,7 @@ import { useProxyServer } from '../../store/db/proxyServer';
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import { useGlobalConfig } from '../../store/db/globalConfig';
+import { useEventBus } from '../../store/eventBus';
 
 const router = useRouter()
 const route = useRoute()
@@ -162,6 +163,13 @@ async function getEmbyServer() {
         embyServer.value = value!;
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
+function embyServerChanged(payload?: {event?: string, id?: string}) {
+    if (payload?.id === route.params.embyId) {
+        getEmbyServer()
+    }
+}
+useEventBus().on('EmbyServerChanged', embyServerChanged)
+onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 const versionOptions = ref<{label: string, value: string, name: string, size: string, bitrate: string, resolution: string}[]>([])
 const videoOptions = ref<{label: string, value: number}[]>([])
@@ -421,6 +429,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
                         message: '开始播放，请稍候'
                     })
                     useEmbyServer().updateEmbyServer({id: embyServer.value!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
+                        .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer.value!.id!}))
                     // playingProgressTask.value = setInterval(() => {
                     //     embyApi.playingProgress(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks)
                     // }, 30000)

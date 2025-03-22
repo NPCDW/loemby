@@ -264,10 +264,8 @@ function listAllProxyServer() {
     })
 }
 listAllProxyServer()
-useEventBus().on('ProxyServerListChanged', listAllProxyServer)
-onUnmounted(() => {
-    useEventBus().remove('ProxyServerListChanged', listAllProxyServer)
-})
+useEventBus().on('ProxyServerChanged', listAllProxyServer)
+onUnmounted(() => useEventBus().remove('ProxyServerChanged', listAllProxyServer))
 
 const embyServers = ref<EmbyServer[]>([])
 function listAllEmbyServer() {
@@ -276,10 +274,8 @@ function listAllEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
-useEventBus().on('EmbyServerListChanged', listAllEmbyServer)
-onUnmounted(() => {
-    useEventBus().remove('EmbyServerListChanged', listAllEmbyServer)
-})
+useEventBus().on('EmbyServerChanged', listAllEmbyServer)
+onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
 
 const keep_alive_days = computed(() => {
     let days: {[key: string]: number} = {}
@@ -305,38 +301,36 @@ function listAllEmbyLine() {
     })
 }
 listAllEmbyLine()
-useEventBus().on('EmbyLineListChanged', listAllEmbyLine)
-onUnmounted(() => {
-    useEventBus().remove('EmbyLineListChanged', listAllEmbyLine)
-})
+useEventBus().on('EmbyLineChanged', listAllEmbyLine)
+onUnmounted(() => useEventBus().remove('EmbyLineChanged', listAllEmbyLine))
 
 async function addEmbyServerDb(tmp: EmbyServer) {
     return useEmbyServer().addEmbyServer(tmp).then(() => {
-        useEventBus().emit('EmbyServerListChanged', {})
+        useEventBus().emit('EmbyServerChanged', {event: 'add', id: tmp.id})
     }).catch(e => ElMessage.error('添加Emby服务器失败' + e))
 }
 
 async function updateEmbyServerDb(tmp: EmbyServer) {
     return useEmbyServer().updateEmbyServer(tmp).then(() => {
-        useEventBus().emit('EmbyServerListChanged', {})
+        useEventBus().emit('EmbyServerChanged', {event: 'update', id: tmp.id})
     }).catch(e => ElMessage.error('更新Emby服务器失败' + e))
 }
 
 async function addEmbyLineDb(line: EmbyLine) {
     return useEmbyLine().addEmbyLine(line).then(() => {
-        useEventBus().emit('EmbyLineListChanged', {})
+        useEventBus().emit('EmbyLineChanged', {})
     }).catch(e => ElMessage.error('添加Emby线路失败' + e))
 }
 
 async function updateEmbyLineDb(line: EmbyLine) {
     return useEmbyLine().updateEmbyLine(line).then(() => {
-        useEventBus().emit('EmbyLineListChanged', {})
+        useEventBus().emit('EmbyLineChanged', {})
     }).catch(e => ElMessage.error('更新Emby线路失败' + e))
 }
 
 async function updateEmbyLineServerName(embyId: string, embyName: string) {
     return useEmbyLine().updateEmbyServerName(embyId, embyName).then(() => {
-        useEventBus().emit('EmbyLineListChanged', {})
+        useEventBus().emit('EmbyLineChanged', {})
     }).catch(e => ElMessage.error('更新Emby线路服务器名称失败' + e))
 }
 
@@ -414,10 +408,10 @@ function delEmbyServer(tmp: EmbyServer) {
     }
   ).then(async () => {
         useEmbyServer().delEmbyServer(tmp.id!).then(() => {
-            useEventBus().emit('EmbyServerListChanged', {})
+            useEventBus().emit('EmbyServerChanged', {event: 'del', id: tmp.id})
             ElMessage.success('删除成功')
             useEmbyLine().delEmbyServer(tmp.id!).catch(e => {
-                useEventBus().emit('EmbyLineListChanged', {})
+                useEventBus().emit('EmbyLineChanged', {})
                 ElMessage.error('删除Emby线路失败' + e)
             })
         }).catch(e => {
@@ -592,7 +586,7 @@ function delLine(line: EmbyLine) {
         }
     ).then(async () => {
         useEmbyLine().delEmbyLine(line.id!).then(async () => {
-            useEventBus().emit('EmbyLineListChanged', {})
+            useEventBus().emit('EmbyLineChanged', {})
             ElMessage.success({
                 message: "删除成功"
             })

@@ -153,7 +153,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watchEffect } from 'vue';
+import { onUnmounted, ref, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem, MediaLibraryCount } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
@@ -163,6 +163,7 @@ import ItemCard from '../../components/ItemCard.vue';
 import invoke from '../../api/invoke';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
+import { useEventBus } from '../../store/eventBus';
 
 const router = useRouter()
 const route = useRoute()
@@ -173,6 +174,13 @@ async function getEmbyServer(embyId: string) {
         embyServer.value = value!;
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
+function embyServerChanged(payload?: {event?: string, id?: string}) {
+    if (payload?.id === route.params.embyId) {
+        getEmbyServer(payload?.id)
+    }
+}
+useEventBus().on('EmbyServerChanged', embyServerChanged)
+onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 watchEffect(async () => {
     await getEmbyServer(<string>route.params.id)

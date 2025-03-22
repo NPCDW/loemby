@@ -22,12 +22,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import embyApi, { EmbyPageList, SearchItems } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { ElMessage } from 'element-plus';
+import { useEventBus } from '../../store/eventBus';
 
 const route = useRoute()
 
@@ -37,6 +38,13 @@ async function getEmbyServer() {
         embyServer.value = value!;
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
+function embyServerChanged(payload?: {event?: string, id?: string}) {
+    if (payload?.id === route.params.embyId) {
+        getEmbyServer()
+    }
+}
+useEventBus().on('EmbyServerChanged', embyServerChanged)
+onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 const search_str = ref(<string>route.query.search)
 const search_loading = ref(false)
