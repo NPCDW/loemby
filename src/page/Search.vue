@@ -42,6 +42,11 @@ const embyServers = ref<EmbyServer[]>([])
 function listAllEmbyServer() {
     useEmbyServer().listAllEmbyServer().then(list => {
         embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
+        embyServers.value.forEach(item => {
+            if (emby_search_result.value[item.id!]) {
+                emby_search_result.value[item.id!].embyServer = item
+            }
+        })
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
