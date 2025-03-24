@@ -26,20 +26,21 @@ pub async fn forward(param: HttpForwardParam, state: tauri::State<'_, AppState>)
 }
 
 pub async fn load_image(body: LoadImageParam, state: tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let app_state = state.auxm_app_state.clone();
+    let auxm_app_state = state.auxm_app_state.clone();
+    let app_state = auxm_app_state.read().await.clone();
+    let app_state = app_state.as_ref().unwrap();
 
     let client = http_pool::get_http_client(body.proxy_url.clone(), state).await?;
 
-    let uuid = md5::compute(format!("{}{:?}{}", &body.image_url, &body.proxy_url, &body.user_agent));
-    let uuid = format!("{:x}", uuid);
-    app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {
+    let digest = sha256::digest(&body.image_url);
+    app_state.connect.write().await.insert(digest.clone(), AxumAppStateConnect {
         stream_url: body.image_url.clone(),
         client: client,
         user_agent: body.user_agent.clone(),
         read_from_cache: true,
         write_to_cache: true,
     });
-    let image_path = format!("http://127.0.0.1:{}/stream/image/{}", &app_state.port, &uuid);
+    let image_path = format!("http://127.0.0.1:{}/stream/image/{}", &app_state.port, &digest);
 
     anyhow::Ok(image_path)
 }

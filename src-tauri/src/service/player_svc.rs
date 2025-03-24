@@ -15,7 +15,9 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     }
     let mpv_parent_path = mpv_path.parent().unwrap();
 
-    let app_state = state.auxm_app_state.clone();
+    let auxm_app_state = state.auxm_app_state.clone();
+    let app_state = auxm_app_state.read().await.clone();
+    let app_state = app_state.as_ref().unwrap();
 
     let client = match http_pool::get_http_client(body.proxy.clone(), state).await {
         Ok(client) => client,

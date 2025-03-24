@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use service::proxy_svc;
 use tauri::{async_runtime::RwLock, Manager};
@@ -12,12 +12,7 @@ use controller::invoke_ctl::{get_sys_info, play_video, http_forward, load_image}
 use config::app_state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub async fn run() {
-    let axum_app_state = match proxy_svc::init_proxy_svc().await {
-        Ok(state) => state,
-        Err(err) => panic!("axum init fail: {:#?}", err),
-    };
-
+pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let window = app.webview_windows();
@@ -40,7 +35,15 @@ pub async fn run() {
             let local_data_dir = app.path().resolve("", tauri::path::BaseDirectory::AppLocalData)?;
             config::log::init(&local_data_dir, &config.log_level);
 
-            *axum_app_state.app.blocking_write() = Some(app.app_handle().clone());
+            let axum_app_state = Arc::new(RwLock::new(None));
+            let axum_app_state_clone = axum_app_state.clone();
+            let app_handle = app.app_handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let res = proxy_svc::init_proxy_svc(axum_app_state_clone, app_handle).await;
+                if res.is_err() {
+                    tracing::error!("{:#?}", res);
+                }
+            });
 
             app.manage(AppState {
                 app_config: config,

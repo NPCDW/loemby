@@ -40,7 +40,7 @@ anyhow = "1.0"
 time = "0.3.21"
 chrono = { version = "0.4.40", features = ["serde"] }
 
-md5 = "0.7.0"
+sha256 = "1.6.0"
 
 uuid = { version = "1.15.1", features = ["v4"] }
 
