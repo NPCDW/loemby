@@ -118,9 +118,9 @@ async function getUserInfo() {
 /**
  * 开始播放
  */
-async function start(type: 'episode' | 'movie', trakt: number, imdb: string, tmdb: number, progress: number) {
+async function start(param: any) {
     let access_token = await getCacheAccessToken()
-    if ((!trakt && !imdb && !tmdb) || !type || progress || access_token) {
+    if (access_token) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
@@ -133,16 +133,7 @@ async function start(type: 'episode' | 'movie', trakt: number, imdb: string, tmd
             'trakt-api-version': '2',
             'trakt-api-key': client_id
         },
-        body: JSON.stringify({
-            [type]: {
-              "ids": {
-                "trakt": trakt,
-                "imdb": imdb,
-                "tmdb": tmdb
-              }
-            },
-            "progress": progress
-        }),
+        body: JSON.stringify(param),
         proxy: await useProxyServer().getTraktProxyUrl()
     });
 }
@@ -150,9 +141,9 @@ async function start(type: 'episode' | 'movie', trakt: number, imdb: string, tmd
 /**
  * 停止播放
  */
-async function stop(type: 'episode' | 'movie', trakt: number, imdb: string, tmdb: number, progress: number) {
+async function stop(param: any) {
     let access_token = await getCacheAccessToken()
-    if ((!trakt && !imdb && !tmdb) || !type || progress || access_token) {
+    if (access_token) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
@@ -165,16 +156,7 @@ async function stop(type: 'episode' | 'movie', trakt: number, imdb: string, tmdb
             'trakt-api-version': '2',
             'trakt-api-key': client_id
         },
-        body: JSON.stringify({
-            [type]: {
-              "ids": {
-                "trakt": trakt,
-                "imdb": imdb,
-                "tmdb": tmdb
-              }
-            },
-            "progress": progress
-        }),
+        body: JSON.stringify(param),
         proxy: await useProxyServer().getTraktProxyUrl()
     });
 }

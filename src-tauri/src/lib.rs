@@ -8,7 +8,7 @@ mod config;
 mod service;
 mod util;
 
-use controller::invoke_ctl::{get_sys_info, play_video, http_forward, load_image, go_trakt_auth};
+use controller::invoke_ctl::{get_sys_info, play_video, http_forward, load_image, go_trakt_auth, open_url};
 use config::app_state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -22,7 +22,7 @@ pub fn run() {
             window.set_focus().expect("Can't Bring Window to Focus");
         }))
         .plugin(tauri_plugin_sql::Builder::default().add_migrations("sqlite:loemby.db", config::db_migrations::migrations()).build())
-        .invoke_handler(tauri::generate_handler![get_sys_info, play_video, http_forward, load_image, go_trakt_auth])
+        .invoke_handler(tauri::generate_handler![get_sys_info, play_video, http_forward, load_image, go_trakt_auth, open_url])
         .setup(|app| {
             let config_dir = app.path().resolve("", tauri::path::BaseDirectory::AppConfig)?;
             let config = config::app_config::get_config(app, &config_dir);

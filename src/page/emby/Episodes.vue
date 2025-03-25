@@ -27,6 +27,12 @@
                             <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h2>{{ currentEpisodes.SeriesName }}</h2></el-link>
                             <p>{{ 'S' + currentEpisodes.ParentIndexNumber + 'E' + currentEpisodes.IndexNumber + '. ' + currentEpisodes.Name }}</p>
                         </template>
+                        <p>
+                            <span>外部链接：</span>
+                            <el-tooltip v-for="externalUrl in currentEpisodes.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
+                                <el-button round @click="invoke.open_url(externalUrl.Url)"><i-ep-Link /> {{ externalUrl.Name }}</el-button>
+                            </el-tooltip>
+                        </p>
                         <div style="display: flex;">
                             <span>总时长: {{ timeLength }}</span>
                             <span style="flex: auto; margin-left: 20px;">
@@ -153,6 +159,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import { useGlobalConfig } from '../../store/db/globalConfig';
 import { useEventBus } from '../../store/eventBus';
+import traktApi from '../../api/traktApi';
 
 const router = useRouter()
 const route = useRoute()
@@ -180,6 +187,7 @@ const videoSelect = ref(-1)
 const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
 const timeLength = ref('')
+const runTimeTicks = ref(0)
 const mpv_path = ref('')
 
 const continuousPlay = ref(true)
@@ -292,6 +300,7 @@ function playbackVersionChange(mediaSourceId: string) {
     videoOptions.value = []
     audioOptions.value = []
     subtitleOptions.value = []
+    runTimeTicks.value = currentMediaSources.RunTimeTicks
     timeLength.value = secondsToHMS(currentMediaSources.RunTimeTicks / 1000_0000)
     let videoIndex = 0
     let audioIndex = 0
@@ -380,6 +389,45 @@ function playbackVersionChange(mediaSourceId: string) {
     }
 }
 
+function scrobbleTrakt(playbackPositionTicks: number, event: 'start' | 'stop') {
+    const type = currentEpisodes.value!.Type == 'Movie' ? 'movie' : 'episode'
+    const progress = (playbackPositionTicks / (runTimeTicks.value / 100)).toFixed(2)
+    let param: any = {[type]: {ids: {}}, progress}
+    let update = false
+    for (let externalUrl of currentEpisodes.value!.ExternalUrls) {
+        if (externalUrl.Url.startsWith("https://www.imdb.com")) {
+            let url = new URL(externalUrl.Url)
+            if (!url.pathname.endsWith("/")) {
+                param[type].ids.imdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
+                if (param[type].ids.imdb) {
+                    update = true
+                }
+            }
+        } else if (externalUrl.Url.startsWith("https://www.themoviedb.org")) {
+            let url = new URL(externalUrl.Url)
+            if (!url.pathname.endsWith("/")) {
+                param[type].ids.tmdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
+                if (param[type].ids.tmdb) {
+                    update = true
+                }
+            }
+        } else if (externalUrl.Url.startsWith("https://trakt.tv")) {
+            // let url = new URL(externalUrl.Url)
+            // if (!url.pathname.endsWith("/")) {
+            //     tmdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
+            // }
+        }
+    }
+    if (update) {
+        let promise;
+        if (event === 'start') {
+            promise = traktApi.start(param);
+        } else {
+            promise = traktApi.stop(param);
+        }
+    }
+}
+
 // const playingProgressTask = ref<NodeJS.Timeout>()
 function playing(item_id: string, playbackPositionTicks: number) {
     if (!mpv_path) {
@@ -428,6 +476,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
                     ElMessage.success({
                         message: '开始播放，请稍候'
                     })
+                    scrobbleTrakt(playbackPositionTicks, 'start')
                     useEmbyServer().updateEmbyServer({id: embyServer.value!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
                         .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer.value!.id!}))
                     // playingProgressTask.value = setInterval(() => {

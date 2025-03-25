@@ -59,6 +59,10 @@ async function go_trakt_auth(): Promise<void> {
     return invoke('go_trakt_auth');
 }
 
+async function open_url(url: string): Promise<string> {
+    return invoke('open_url', {url: url});
+}
+
 export default {
-    getSysInfo, playback, httpForward, loadImage, go_trakt_auth
+    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url
 }

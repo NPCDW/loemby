@@ -541,6 +541,7 @@ export interface EpisodesItems {
     UserData?: UserData,
     Overview: string,
     ProductionYear: string,
+    ExternalUrls: ExternalUrl[]
 }
 
 export interface PlaybackInfo {
@@ -605,4 +606,9 @@ export interface MediaLibraryCount {
     BoxSetCount: number,
     BookCount: number,
     ItemCount: number,
+}
+
+export interface ExternalUrl {
+    Url: string,
+    Name: string,
 }
