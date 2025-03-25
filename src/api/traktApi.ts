@@ -87,7 +87,7 @@ async function token(code?: string, refresh_token?: string) {
         body: JSON.stringify({
             "code": code,
             "refresh_token": refresh_token,
-            "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
+            "redirect_uri": "http://127.0.0.1/trakt_auth",
         }),
         proxy: await useProxyServer().getTraktProxyUrl()
     });

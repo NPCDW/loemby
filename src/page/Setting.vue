@@ -9,7 +9,7 @@
                     <el-form-item label="Trakt" v-if="trakt_info.username">
                         <el-text>{{ trakt_info.username }}</el-text>
                     </el-form-item>
-                    <el-form-item label="Trakt" v-else>
+                    <el-form-item label="Trakt">
                         <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()">{{ traktAuthStatus }}</el-button>
                     </el-form-item>
                 </el-form>
@@ -271,16 +271,19 @@ const lineSpanMethod = ({row, rowIndex, columnIndex}: SpanMethodProps) => {
   }
 }
 
-const traktAuthStatus = ref('去授权')
 const traktAuthLoading = ref(false)
 const trakt_info = ref<{access_token?: string, refresh_token?: string, expires_in?: number, username?: string}>({});
+const traktAuthStatus = ref('去授权')
 function getTraktInfo() {
-    useGlobalConfig().getGlobalConfigValue("trakt_info").then(value => {
+    return useGlobalConfig().getGlobalConfigValue("trakt_info").then(value => {
         trakt_info.value = value ? JSON.parse(value) : {};
+        if (!traktAuthLoading.value) {
+            traktAuthStatus.value = trakt_info.value.username ? '重新授权' : '去授权'
+        }
     }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
 }
-function saveTraktInfo() {
-    useGlobalConfig().getGlobalConfig("trakt_info").then(config => {
+async function saveTraktInfo() {
+    return useGlobalConfig().getGlobalConfig("trakt_info").then(config => {
         let savePromise;
         if (config) {
             config.config_value = JSON.stringify(trakt_info.value);
@@ -293,13 +296,12 @@ function saveTraktInfo() {
             }
             savePromise = useGlobalConfig().addGlobalConfig(config);
         }
-        savePromise.then(() => {
+        return savePromise.then(() => {
             getTraktInfo()
-            ElMessage.success('保存成功');
         }).catch(e => {
             ElMessage.error('保存失败' + e);
-        })
-    }).catch(e => ElMessage.error('保存Trakt信息失败' + e))
+        }).catch(e => ElMessage.error('保存Trakt信息失败' + e))
+    }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
 }
 function goAuthTrakt() {
     traktAuthLoading.value = true
@@ -332,7 +334,12 @@ listen<string>('trakt_auth', (event) => {
             let json: {user: {username: string}} = JSON.parse(response.body);
             trakt_info.value.username = json.user.username;
             saveTraktInfo()
-        }).catch(e => ElMessage.error('获取Trakt信息失败' + e)).finally(() => traktAuthLoading.value = false)
+            traktAuthLoading.value = false
+            traktAuthStatus.value = '重新授权'
+        }).catch(e => {
+            ElMessage.error('获取Trakt用户信息失败' + e)
+            traktAuthStatus.value = '获取Trakt用户信息失败'
+        })
     }).catch(e => ElMessage.error('授权Trakt失败' + e))
 });
 

@@ -37,17 +37,33 @@ pub struct TraktAuthParam {
     pub state: String,
 }
 
-async fn trakt_auth(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(params): Query<TraktAuthParam>) {
+async fn trakt_auth(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(params): Query<TraktAuthParam>) -> axum::response::Response {
     tracing::debug!("trakt_auth: {:?} {:?}", params, headers);
     let app_state = app_state.read().await.clone().unwrap();
     if !app_state.trakt_auth_state.read().await.contains(&params.state) {
         tracing::error!("trakt_auth: {} 无效的 state", &params.state);
-        return;
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("trakt_auth: {} 无效的 state", &params.state))
+        ).into_response();
     }
-    let res = app_state.app.emit("trakt_auth", params.code);
+    let app_handle = app_state.app;
+    let res = app_handle.emit("trakt_auth", params.code);
     if let Err(err) = res {
         tracing::error!("trakt_auth: 向前台发送事件失败 {}", err);
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("trakt_auth: 向前台发送事件失败 {}", err))
+        ).into_response();
     }
+    let window = app_handle.webview_windows();
+    let window = window.values().next().expect("Sorry, no window found");
+    window.unminimize().expect("Sorry, no window unminimize");
+    window.show().expect("Sorry, no window show");
+    window.set_focus().expect("Can't Bring Window to Focus");
+    axum::response::Html("<html><body style='background-color: #1D1E1F;'>授权成功，您可以关闭网页，并返回应用了</body></html>").into_response()
 }
 
 async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((types, id)): Path<(String, String)>) -> axum::response::Response {
