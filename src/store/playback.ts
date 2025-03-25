@@ -3,15 +3,10 @@ import _ from 'lodash';
 import { defineStore } from 'pinia'
 import embyApi from '../api/embyApi';
 import { ElMessage } from 'element-plus';
-import { ref } from 'vue';
 import { useEmbyServer } from './db/embyServer';
+import { useEventBus } from './eventBus';
 
 export const usePlayback = defineStore('playback', () => {
-    const playingStopped = ref({
-        server_id: '',
-        item_id: '',
-    });
-
     async function listen_playback_progress() {
         listen<PlaybackProgress>('playback_progress', (event) => {
             console.log(`store playback_progress: playback ${event.payload.progress / 1000 / 10000} second from ${event.payload.server_id} ${event.payload.item_id} ${event.payload.media_source_id}`);
@@ -25,8 +20,7 @@ export const usePlayback = defineStore('playback', () => {
                         ElMessage.success({
                             message: '播放结束'
                         })
-                        playingStopped.value = { server_id: event.payload.server_id, item_id: event.payload.item_id }
-                        console.log('store playingStopped', playingStopped.value);
+                        useEventBus().emit('playingStopped', event.payload)
                     })
                 } else {
                     embyApi.playingProgress(embyServer!, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, event.payload.progress)
@@ -35,7 +29,7 @@ export const usePlayback = defineStore('playback', () => {
         });
     }
     
-    return { listen_playback_progress, playingStopped }
+    return { listen_playback_progress }
 })
 
 export type PlaybackProgress = {

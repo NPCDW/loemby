@@ -6,7 +6,7 @@
                     <el-form-item label="MPV路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />
                     </el-form-item>
-                    <el-form-item label="Trakt">
+                    <el-form-item label="Trakt （只有播放完成的才会在网页端有记录，播放中的只能调接口查到记录）">
                         <el-text v-if="trakt_info.username">{{ trakt_info.username }}</el-text>
                         <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
                     </el-form-item>

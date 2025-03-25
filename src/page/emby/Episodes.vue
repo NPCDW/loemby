@@ -33,7 +33,7 @@
                                 <el-button round @click="invoke.open_url(externalUrl.Url)"><i-ep-Link /> {{ externalUrl.Name }}</el-button>
                             </el-tooltip>
                         </p>
-                        <div style="display: flex;">
+                        <div style="display: flex;align-items: center;">
                             <span>总时长: {{ timeLength }}</span>
                             <span style="flex: auto; margin-left: 20px;">
                                 <el-progress :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
@@ -107,6 +107,7 @@
                         <el-button v-if="continuousPlay" plain @click="rememberSelect = !rememberSelect">
                             <span>{{ rememberSelect ? '记住选择' : '自动选择' }}</span>
                         </el-button>
+                        <el-button @click="nextUp(1)">接下来</el-button>
                     </div>
                 </div>
             </el-skeleton>
@@ -120,8 +121,8 @@
                 <h1 v-if="nextUpList && nextUpList.length == 1 && nextUpCurrentPage == 1">已经是最后一集了</h1>
                 <h1 v-if="nextUpList && nextUpList.length > 1">接下来</h1>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row; justify-content: space-between;">
-                    <template  v-for="(nextUpItem, index) in nextUpList">
-                        <el-card style="width: 300px; margin-bottom: 7px;" v-if="index != 0 || nextUpCurrentPage != 1">
+                    <template  v-for="nextUpItem in nextUpList">
+                        <el-card style="width: 300px; margin-bottom: 7px;">
                             <el-link :underline="false" @click="gotoEpisodes(nextUpItem.Id)">
                                 <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
                             </el-link>
@@ -145,14 +146,14 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onUnmounted, ref, watch, watchEffect } from 'vue';
+import { nextTick, onUnmounted, ref, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
 import invoke from '../../api/invoke';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { usePlayback } from '../../store/playback';
+import { PlaybackProgress } from '../../store/playback';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
 import dayjs from 'dayjs'
@@ -198,7 +199,7 @@ const play_loading = ref(false)
 const nextUpLoading = ref(false)
 const nextUpList = ref<EpisodesItems[]>([])
 const nextUpCurrentPage = ref(1)
-const nextUpPageSize = ref(7)
+const nextUpPageSize = ref(6)
 const nextUpTotal = ref(0)
 
 watchEffect(async () => {
@@ -391,39 +392,37 @@ function playbackVersionChange(mediaSourceId: string) {
 
 function scrobbleTrakt(playbackPositionTicks: number, event: 'start' | 'stop') {
     const type = currentEpisodes.value!.Type == 'Movie' ? 'movie' : 'episode'
-    const progress = (playbackPositionTicks / (runTimeTicks.value / 100)).toFixed(2)
+    const progress = Number((playbackPositionTicks / (runTimeTicks.value / 100)).toFixed(2))
     let param: any = {[type]: {ids: {}}, progress}
-    let update = false
     for (let externalUrl of currentEpisodes.value!.ExternalUrls) {
         if (externalUrl.Url.startsWith("https://www.imdb.com")) {
             let url = new URL(externalUrl.Url)
             if (!url.pathname.endsWith("/")) {
                 param[type].ids.imdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
-                if (param[type].ids.imdb) {
-                    update = true
-                }
             }
         } else if (externalUrl.Url.startsWith("https://www.themoviedb.org")) {
             let url = new URL(externalUrl.Url)
             if (!url.pathname.endsWith("/")) {
                 param[type].ids.tmdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
-                if (param[type].ids.tmdb) {
-                    update = true
-                }
             }
-        } else if (externalUrl.Url.startsWith("https://trakt.tv")) {
-            // let url = new URL(externalUrl.Url)
-            // if (!url.pathname.endsWith("/")) {
-            //     tmdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
-            // }
+        } else if (externalUrl.Url.startsWith("https://thetvdb.com")) {
+            let url = new URL(externalUrl.Url)
+            if (url.searchParams.get("id")) {
+                param[type].ids.tvdb = url.searchParams.get("id")
+            }
+        } else if (externalUrl.Url.startsWith("https://trakt.tv/search/")) {
+            let url = new URL(externalUrl.Url)
+            const path = url.pathname.split('/')
+            if (path.length === 3) {
+                param[type].ids[path[1]] = path[2]
+            }
         }
     }
-    if (update) {
-        let promise;
+    if (param[type].ids.imdb || param[type].ids.tmdb || param[type].ids.tvdb || param[type].ids.trakt) {
         if (event === 'start') {
-            promise = traktApi.start(param);
+            traktApi.start(param);
         } else {
-            promise = traktApi.stop(param);
+            traktApi.stop(param);
         }
     }
 }
@@ -479,9 +478,6 @@ function playing(item_id: string, playbackPositionTicks: number) {
                     scrobbleTrakt(playbackPositionTicks, 'start')
                     useEmbyServer().updateEmbyServer({id: embyServer.value!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
                         .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer.value!.id!}))
-                    // playingProgressTask.value = setInterval(() => {
-                    //     embyApi.playingProgress(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks)
-                    // }, 30000)
                 })
             }).catch(res => {
                 ElMessage.error({
@@ -494,16 +490,10 @@ function playing(item_id: string, playbackPositionTicks: number) {
     }).finally(() => play_loading.value = false)
 }
 
-const playbackStore = usePlayback()
-watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
-    if (embyServer.value.id === newValue.server_id && newValue.item_id === currentEpisodes.value?.Id) {
-        // if (playingProgressTask.value) {
-        //     clearInterval(playingProgressTask.value)
-        // }
+function playingStopped(payload: PlaybackProgress) {
+    if (embyServer.value.id === payload.server_id && payload.item_id === currentEpisodes.value?.Id) {
         updateCurrentEpisodes(true).then(() => {
-            if (currentEpisodes.value!.UserData && currentEpisodes.value!.UserData.PlaybackPositionTicks != undefined) {
-                scrobbleTrakt(currentEpisodes.value!.UserData.PlaybackPositionTicks, 'stop')
-            }
+            scrobbleTrakt(payload.progress, 'stop')
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && continuousPlay.value) {
                 ElMessage.success({
                     message: '播放完成，即将播放下一集'
@@ -528,7 +518,9 @@ watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
             }
         })
     }
-});
+}
+useEventBus().on('playingStopped', playingStopped)
+onUnmounted(() => useEventBus().remove('playingStopped', playingStopped))
 
 const starLoading = ref<boolean>(false)
 function star() {

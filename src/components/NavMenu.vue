@@ -170,7 +170,7 @@
                 <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
             </el-select>
         </el-form-item>
-        <el-form-item label="播放保活天数">
+        <el-form-item label="播放保活天数（仅显示剩余天数，无自动保活功能）">
             <el-input-number v-model="currentEmbyServer.keep_alive_days" />
         </el-form-item>
         <el-form-item>

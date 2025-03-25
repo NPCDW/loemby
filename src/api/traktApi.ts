@@ -35,7 +35,7 @@ async function saveAccessToken(token_response: {access_token: string, refresh_to
 async function getCacheAccessToken() {
     let trakt_info = await useGlobalConfig().getGlobalConfigValue('trakt_info');
     if (!trakt_info) {
-        return Promise.reject("获取失败");
+        return Promise.reject("Trakt 未授权");
     }
     let json: {access_token: string, refresh_token: string, expires_in: number} = JSON.parse(trakt_info);
     let currentTime = new Date().getTime() / 1000;
