@@ -120,7 +120,7 @@ async function getUserInfo() {
  */
 async function start(param: any) {
     let access_token = await getCacheAccessToken()
-    if (access_token) {
+    if (!access_token) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({
@@ -143,7 +143,7 @@ async function start(param: any) {
  */
 async function stop(param: any) {
     let access_token = await getCacheAccessToken()
-    if (access_token) {
+    if (!access_token) {
         return Promise.reject("参数缺失");
     }
     return invoke.httpForward({

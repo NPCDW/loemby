@@ -501,6 +501,9 @@ watch(() => playbackStore.playingStopped, (newValue, _oldValue) => {
         //     clearInterval(playingProgressTask.value)
         // }
         updateCurrentEpisodes(true).then(() => {
+            if (currentEpisodes.value!.UserData && currentEpisodes.value!.UserData.PlaybackPositionTicks != undefined) {
+                scrobbleTrakt(currentEpisodes.value!.UserData.PlaybackPositionTicks, 'stop')
+            }
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && continuousPlay.value) {
                 ElMessage.success({
                     message: '播放完成，即将播放下一集'
