@@ -2,7 +2,7 @@ import { useGlobalConfig } from '../store/db/globalConfig';
 import { useProxyServer } from '../store/db/proxyServer';
 import invoke from './invoke';
 
-const userAgent = 'loemby/0.6.7'
+const userAgent = 'loemby/0.7.0'
 const client_id = '05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572'
 
 async function saveAccessToken(token_response: {access_token: string, refresh_token: string, expires_in: number, created_at: number}) {
