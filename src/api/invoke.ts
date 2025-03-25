@@ -55,6 +55,10 @@ async function loadImage(param: LoadImageParam): Promise<string> {
     return invoke('load_image', {body: param});
 }
 
+async function go_trakt_auth(): Promise<void> {
+    return invoke('go_trakt_auth');
+}
+
 export default {
-    getSysInfo, playback, httpForward, loadImage
+    getSysInfo, playback, httpForward, loadImage, go_trakt_auth
 }

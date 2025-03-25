@@ -86,3 +86,21 @@ pub async fn load_image(body: LoadImageParam, state: tauri::State<'_, AppState>)
     }
     Ok(res.unwrap())
 }
+
+#[tauri::command]
+pub async fn go_trakt_auth(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let auxm_app_state = state.auxm_app_state.clone();
+    let auxm_app_state = auxm_app_state.read().await.clone();
+    let auxm_app_state = auxm_app_state.as_ref().unwrap();
+
+    let client_id = "05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572";
+    let redirect_uri = format!("http://127.0.0.1:{}/trakt_auth", auxm_app_state.port);
+    let state = uuid::Uuid::new_v4().to_string();
+    let url = format!("https://api.trakt.tv/oauth/authorize?response_type=code&client_id={}&redirect_uri={}&state={}", client_id, redirect_uri, state);
+    auxm_app_state.trakt_auth_state.write().await.push(state);
+    let res = webbrowser::open(&url);
+    if let Err(err) = res {
+        return Err(format!("打开浏览器失败: {} 您可尝试手动复制链接到浏览器中打开 {}", err.to_string(), &url));
+    }
+    Ok(())
+}

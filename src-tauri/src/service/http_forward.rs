@@ -4,7 +4,7 @@ use reqwest::{header::{HeaderMap, HeaderName, HeaderValue}, Method, Response};
 
 use crate::{config::{app_state::AppState, http_pool}, controller::invoke_ctl::{HttpForwardParam, LoadImageParam}};
 
-use super::proxy_svc::AxumAppStateConnect;
+use super::proxy_svc::AxumAppStateRequest;
 
 pub async fn forward(param: HttpForwardParam, state: tauri::State<'_, AppState>) -> anyhow::Result<Response> {
     let mut headers = HeaderMap::new();
@@ -33,7 +33,7 @@ pub async fn load_image(body: LoadImageParam, state: tauri::State<'_, AppState>)
     let client = http_pool::get_http_client(body.proxy_url.clone(), state).await?;
 
     let digest = sha256::digest(&body.image_url);
-    app_state.connect.write().await.insert(digest.clone(), AxumAppStateConnect {
+    app_state.request.write().await.insert(digest.clone(), AxumAppStateRequest {
         stream_url: body.image_url.clone(),
         client: client,
         user_agent: body.user_agent.clone(),

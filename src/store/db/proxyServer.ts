@@ -89,6 +89,15 @@ export const useProxyServer = defineStore('proxyServer', () => {
         return getProxyUrl(id)
     }
 
+    async function getTraktProxyUrl() {
+        return useGlobalConfig().getGlobalConfigValue('trakt_proxy_id').then(value => {
+            if (value) {
+                return getProxyUrl(value)
+            }
+            return
+        })
+    }
+
     async function getProxyUrl(id: string) {
         if (id == 'no') {
             return
@@ -103,7 +112,7 @@ export const useProxyServer = defineStore('proxyServer', () => {
         return proxyServer.proxy_type + "://" + auth + proxyServer.addr
     }
 
-    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, getBrowseProxyUrl, getPlayProxyUrl, getProxyUrl }
+    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, getBrowseProxyUrl, getPlayProxyUrl, getTraktProxyUrl, getProxyUrl }
 })
 
 export interface ProxyServer {

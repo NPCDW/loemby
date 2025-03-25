@@ -5,7 +5,7 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 
-use crate::{config::{app_state::AppState, http_pool}, controller::invoke_ctl::PlayVideoParam, service::proxy_svc::AxumAppStateConnect};
+use crate::{config::{app_state::AppState, http_pool}, controller::invoke_ctl::PlayVideoParam, service::proxy_svc::AxumAppStateRequest};
 
 pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = body.mpv_path.clone();
@@ -25,7 +25,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     };
     let video_path = if body.proxy.is_some() {
         let uuid = uuid::Uuid::new_v4().to_string();
-        app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {
+        app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
             stream_url: body.path.clone(),
             client: client.clone(),
             user_agent: body.user_agent.clone(),
@@ -47,6 +47,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg(&format!("--input-ipc-server={}", pipe_name))
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
+        // .arg("--force-seekable=yes")  // 某些视频格式在没缓存到的情况下不支持跳转，需要打开此配置，测试后发现强制跳转到没有缓存的位置后，mpv会从头开始缓存，一直缓存到跳转位置，与打开此设置的初衷相违背
         .arg(&format!("--user-agent={}", &body.user_agent))
         .arg(&format!("--title={}", &body.title))
         .arg(&format!("--force-media-title={}", &body.title))
@@ -56,7 +57,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     for audio in &body.external_audio {
         let audio_path = if body.proxy.is_some() {
             let uuid = uuid::Uuid::new_v4().to_string();
-            app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {
+            app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
                 stream_url: audio.clone(),
                 client: client.clone(),
                 user_agent: body.user_agent.clone(),
@@ -72,7 +73,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     for subtitle in &body.external_subtitle {
         let subtitle_path = if body.proxy.is_some() {
             let uuid = uuid::Uuid::new_v4().to_string();
-            app_state.connect.write().await.insert(uuid.clone(), AxumAppStateConnect {
+            app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
                 stream_url: subtitle.clone(),
                 client: client.clone(),
                 user_agent: body.user_agent.clone(),

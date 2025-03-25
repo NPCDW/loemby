@@ -6,6 +6,12 @@
                     <el-form-item label="MPV路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />
                     </el-form-item>
+                    <el-form-item label="Trakt" v-if="trakt_info.username">
+                        <el-text>{{ trakt_info.username }}</el-text>
+                    </el-form-item>
+                    <el-form-item label="Trakt" v-else>
+                        <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()">{{ traktAuthStatus }}</el-button>
+                    </el-form-item>
                 </el-form>
             </el-scrollbar>
         </el-tab-pane>
@@ -34,21 +40,38 @@
         <el-tab-pane label="Emby线路代理" name="EmbyLineProxy">
             <el-scrollbar style="height: calc(100vh - 100px);">
                 <h1>Emby线路代理配置</h1>
+                <el-form label-position="top">
+                    <el-form-item label="媒体库浏览">
+                        <el-select v-model="global_browse_proxy_id" @change="globalBrowseProxyChange">
+                            <template #label="{ label }">
+                                <span>全局配置: </span>
+                                <span style="font-weight: bold">{{ label }}</span>
+                            </template>
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="媒体流播放">
+                        <el-select v-model="global_play_proxy_id" @change="globalPlayProxyChange">
+                            <template #label="{ label }">
+                                <span>全局配置: </span>
+                                <span style="font-weight: bold">{{ label }}</span>
+                            </template>
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="Trakt">
+                        <el-select v-model="trakt_proxy_id" @change="traktProxyChange">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                </el-form>
                 <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod">
                     <el-table-column prop="emby_server_name" label="Emby" show-overflow-tooltip />
                     <el-table-column prop="name" label="线路" show-overflow-tooltip />
                     <el-table-column label="媒体库浏览">
-                        <template #header="">
-                            <span>媒体库浏览</span><br/>
-                            <el-select v-model="global_browse_proxy_id" @change="globalBrowseProxyChange">
-                                <template #label="{ label }">
-                                    <span>全局配置: </span>
-                                    <span style="font-weight: bold">{{ label }}</span>
-                                </template>
-                                <el-option key="no" label="不使用代理" value="no"/>
-                                <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                            </el-select>
-                        </template>
                         <template #default="scope">
                             <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)">
                                 <el-option key="no" label="不使用代理" value="no"/>
@@ -58,17 +81,6 @@
                         </template>
                     </el-table-column>
                     <el-table-column label="媒体流播放">
-                        <template #header="">
-                            <span>媒体流播放</span><br/>
-                            <el-select v-model="global_play_proxy_id" @change="globalPlayProxyChange">
-                                <template #label="{ label }">
-                                    <span>全局配置: </span>
-                                    <span style="font-weight: bold">{{ label }}</span>
-                                </template>
-                                <el-option key="no" label="不使用代理" value="no"/>
-                                <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                            </el-select>
-                        </template>
                         <template #default="scope">
                             <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)">
                                 <el-option key="no" label="不使用代理" value="no"/>
@@ -131,6 +143,9 @@ import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
 import { EmbyLine, useEmbyLine } from '../store/db/embyLine';
 import { useGlobalConfig } from '../store/db/globalConfig';
 import { useEventBus } from '../store/eventBus';
+import invoke from '../api/invoke';
+import { listen } from '@tauri-apps/api/event';
+import traktApi from '../api/traktApi';
 
 const proxyServer = ref<ProxyServer[]>([]);
 function listAllProxyServer() {
@@ -256,17 +271,104 @@ const lineSpanMethod = ({row, rowIndex, columnIndex}: SpanMethodProps) => {
   }
 }
 
+const traktAuthStatus = ref('去授权')
+const traktAuthLoading = ref(false)
+const trakt_info = ref<{access_token?: string, refresh_token?: string, expires_in?: number, username?: string}>({});
+function getTraktInfo() {
+    useGlobalConfig().getGlobalConfigValue("trakt_info").then(value => {
+        trakt_info.value = value ? JSON.parse(value) : {};
+    }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
+}
+function saveTraktInfo() {
+    useGlobalConfig().getGlobalConfig("trakt_info").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = JSON.stringify(trakt_info.value);
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "trakt_info",
+                config_value: JSON.stringify(trakt_info.value)
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getTraktInfo()
+            ElMessage.success('保存成功');
+        }).catch(e => {
+            ElMessage.error('保存失败' + e);
+        })
+    }).catch(e => ElMessage.error('保存Trakt信息失败' + e))
+}
+function goAuthTrakt() {
+    traktAuthLoading.value = true
+    traktAuthStatus.value = '等待授权回调'
+    invoke.go_trakt_auth().then(() => {
+        ElMessage.success('打开浏览器成功，您也可以手动复制地址，去其他浏览器授权');
+    }).catch(e => ElMessage.error('授权Trakt失败' + e))
+}
+listen<string>('trakt_auth', (event) => {
+    console.log(`trakt_auth: code: ${event.payload}`);
+    traktAuthStatus.value = '授权成功，正在获取授权信息'
+    traktApi.token(event.payload).then(async response => {
+        if (response.status_code != 200) {
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            return
+        }
+        let json: {access_token: string, refresh_token: string, expires_in: number, created_at: number} = JSON.parse(response.body);
+        trakt_info.value = {
+            access_token: json.access_token,
+            refresh_token: json.refresh_token,
+            expires_in: json.expires_in + json.created_at,
+        };
+        await saveTraktInfo()
+        traktAuthStatus.value = '正在获取用户信息'
+        traktApi.getUserInfo().then(response => {
+            if (response.status_code != 200) {
+                console.log('response status' + response.status_code + ' ' + response.status_text)
+                return
+            }
+            let json: {user: {username: string}} = JSON.parse(response.body);
+            trakt_info.value.username = json.user.username;
+            saveTraktInfo()
+        }).catch(e => ElMessage.error('获取Trakt信息失败' + e)).finally(() => traktAuthLoading.value = false)
+    }).catch(e => ElMessage.error('授权Trakt失败' + e))
+});
+
+const trakt_proxy_id = ref<string>('no');
+function getTraktProxy() {
+    useGlobalConfig().getGlobalConfigValue("trakt_proxy_id").then(value => {
+        trakt_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
+}
+function traktProxyChange() {
+    useGlobalConfig().getGlobalConfig("trakt_proxy_id").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = trakt_proxy_id.value;
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "trakt_proxy_id",
+                config_value: trakt_proxy_id.value
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getTraktProxy()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
+}
 const global_browse_proxy_id = ref<string>('no');
 function getGlobalBrowseProxy() {
     useGlobalConfig().getGlobalConfigValue("global_browse_proxy_id").then(value => {
         global_browse_proxy_id.value = value ? value : "no";
     }).catch(e => ElMessage.error('获取全局浏览代理失败' + e))
-}
-const global_play_proxy_id = ref<string>('no');
-function getGlobalPlayProxy() {
-    useGlobalConfig().getGlobalConfigValue("global_play_proxy_id").then(value => {
-        global_play_proxy_id.value = value ? value : "no";
-    }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 }
 function globalBrowseProxyChange() {
     useGlobalConfig().getGlobalConfig("global_browse_proxy_id").then(config => {
@@ -289,6 +391,12 @@ function globalBrowseProxyChange() {
             ElMessage.error('修改失败' + e);
         })
     }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
+}
+const global_play_proxy_id = ref<string>('no');
+function getGlobalPlayProxy() {
+    useGlobalConfig().getGlobalConfigValue("global_play_proxy_id").then(value => {
+        global_play_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 }
 function globalPlayProxyChange() {
     useGlobalConfig().getGlobalConfig("global_play_proxy_id").then(config => {
@@ -361,6 +469,8 @@ const activePane = ref('Common')
 function handlePaneChange() {
     if (activePane.value == 'Common') {
         getMpvPath()
+        getTraktProxy()
+        getTraktInfo()
     } else if (activePane.value == 'ProxyServer') {
         listAllProxyServer()
     } else if (activePane.value == 'EmbyLineProxy') {
@@ -373,6 +483,8 @@ function handlePaneChange() {
     }
 }
 getMpvPath()
+getTraktProxy()
+getTraktInfo()
 </script>
 
 <style scoped>

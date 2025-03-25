@@ -50,3 +50,5 @@ reqwest = { version = "0.12.12", features = ["json", "stream", "socks"] }
 
 sys-info = "0.9"
 tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
+
+webbrowser = "1.0.4"
