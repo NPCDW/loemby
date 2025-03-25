@@ -63,7 +63,7 @@ async fn trakt_auth(headers: axum::http::HeaderMap, State(app_state): State<Arc<
     window.unminimize().expect("Sorry, no window unminimize");
     window.show().expect("Sorry, no window show");
     window.set_focus().expect("Can't Bring Window to Focus");
-    axum::response::Html("<html><body style='background-color: #1D1E1F;'>授权成功，您可以关闭网页，并返回应用了</body></html>").into_response()
+    axum::response::Html("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>授权成功，您可以关闭网页，并返回应用了</body></html>").into_response()
 }
 
 async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((types, id)): Path<(String, String)>) -> axum::response::Response {

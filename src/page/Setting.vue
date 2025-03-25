@@ -6,11 +6,9 @@
                     <el-form-item label="MPV路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />
                     </el-form-item>
-                    <el-form-item label="Trakt" v-if="trakt_info.username">
-                        <el-text>{{ trakt_info.username }}</el-text>
-                    </el-form-item>
                     <el-form-item label="Trakt">
-                        <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()">{{ traktAuthStatus }}</el-button>
+                        <el-text v-if="trakt_info.username">{{ trakt_info.username }}</el-text>
+                        <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
                     </el-form-item>
                 </el-form>
             </el-scrollbar>
