@@ -8,6 +8,7 @@
                     </el-form-item>
                     <el-form-item label="Trakt （只有播放完成的才会在网页端有记录，播放中的只能调接口查到记录）">
                         <el-text v-if="trakt_info.username">{{ trakt_info.username }}</el-text>
+                        <el-switch v-if="trakt_info.username" v-model="trakt_sync_switch" @change="traktSyncSwitchChange" active-value="on" inactive-value="off" inline-prompt style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
                         <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
                     </el-form-item>
                 </el-form>
@@ -267,6 +268,35 @@ const lineSpanMethod = ({row, rowIndex, columnIndex}: SpanMethodProps) => {
         }
     }
   }
+}
+
+const trakt_sync_switch = ref("on")
+function getTraktSyncSwitch() {
+    return useGlobalConfig().getGlobalConfigValue("trakt_sync_switch").then(value => {
+        trakt_sync_switch.value = value ? value : "on";
+    }).catch(e => ElMessage.error('获取Trakt同步开关失败' + e))
+}
+function traktSyncSwitchChange() {
+    useGlobalConfig().getGlobalConfig("trakt_sync_switch").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = trakt_sync_switch.value;
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "trakt_sync_switch",
+                config_value: trakt_sync_switch.value
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getTraktSyncSwitch()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改Trakt同步开关失败' + e))
 }
 
 const traktAuthLoading = ref(false)

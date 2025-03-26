@@ -410,7 +410,18 @@ function playbackVersionChange(mediaSourceId: string) {
     }
 }
 
+const trakt_sync_switch = ref("on")
+function getTraktSyncSwitch() {
+    return useGlobalConfig().getGlobalConfigValue("trakt_sync_switch").then(value => {
+        trakt_sync_switch.value = value ? value : "on";
+    }).catch(e => ElMessage.error('获取Trakt同步开关失败' + e))
+}
+getTraktSyncSwitch()
+
 function getScrobbleTraktParam(playbackPositionTicks: number) {
+    if (trakt_sync_switch.value == 'off') {
+        return
+    }
     const type = currentEpisodes.value!.Type == 'Movie' ? 'movie' : 'episode'
     const progress = Number((playbackPositionTicks / (runTimeTicks.value / 100)).toFixed(2))
     let param: any = {[type]: {}, progress}
