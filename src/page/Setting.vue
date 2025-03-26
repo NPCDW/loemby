@@ -276,7 +276,7 @@ function getTraktInfo() {
     return useGlobalConfig().getGlobalConfigValue("trakt_info").then(value => {
         trakt_info.value = value ? JSON.parse(value) : {};
         if (!traktAuthLoading.value) {
-            traktAuthStatus.value = trakt_info.value.username ? '重新授权' : '去授权'
+            traktAuthStatus.value = trakt_info.value.username ? '换个账户？授权失效？' : '去授权'
         }
     }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
 }
@@ -333,7 +333,7 @@ listen<string>('trakt_auth', (event) => {
             trakt_info.value.username = json.user.username;
             saveTraktInfo()
             traktAuthLoading.value = false
-            traktAuthStatus.value = '重新授权'
+            traktAuthStatus.value = '换个账户？授权失效？'
         }).catch(e => {
             ElMessage.error('获取Trakt用户信息失败' + e)
             traktAuthStatus.value = '获取Trakt用户信息失败'

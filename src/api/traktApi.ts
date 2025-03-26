@@ -1,3 +1,4 @@
+import { ElMessageBox } from 'element-plus';
 import { useGlobalConfig } from '../store/db/globalConfig';
 import { useProxyServer } from '../store/db/proxyServer';
 import invoke from './invoke';
@@ -90,6 +91,11 @@ async function token(code?: string, refresh_token?: string) {
             "redirect_uri": "http://127.0.0.1/trakt_auth",
         }),
         proxy: await useProxyServer().getTraktProxyUrl()
+    }).then(response => {
+        if (response.status_code == 401) {
+            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
+        }
+        return response
     });
 }
 
@@ -112,6 +118,11 @@ async function getUserInfo() {
             'trakt-api-key': client_id
         },
         proxy: await useProxyServer().getTraktProxyUrl()
+    }).then(response => {
+        if (response.status_code == 401) {
+            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
+        }
+        return response
     });
 }
 
@@ -135,6 +146,11 @@ async function start(param: any) {
         },
         body: JSON.stringify(param),
         proxy: await useProxyServer().getTraktProxyUrl()
+    }).then(response => {
+        if (response.status_code == 401) {
+            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
+        }
+        return response
     });
 }
 
@@ -158,6 +174,11 @@ async function stop(param: any) {
         },
         body: JSON.stringify(param),
         proxy: await useProxyServer().getTraktProxyUrl()
+    }).then(response => {
+        if (response.status_code == 401) {
+            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
+        }
+        return response
     });
 }
 
