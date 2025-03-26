@@ -10,6 +10,7 @@
                         <el-text v-if="trakt_info.username">{{ trakt_info.username }}</el-text>
                         <el-switch v-if="trakt_info.username" v-model="trakt_sync_switch" @change="traktSyncSwitchChange" active-value="on" inactive-value="off" inline-prompt style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
                         <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
+                        <el-button type="danger" @click="delAuthTrakt()" size="small">删除授权</el-button>
                     </el-form-item>
                 </el-form>
             </el-scrollbar>
@@ -330,6 +331,22 @@ async function saveTraktInfo() {
             ElMessage.error('保存失败' + e);
         }).catch(e => ElMessage.error('保存Trakt信息失败' + e))
     }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
+}
+function delAuthTrakt() {
+  ElMessageBox.confirm(
+    `确认删除 Trakt 授权吗`,
+    'Warning',
+    {
+      confirmButtonText: 'OK',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    }
+  ).then(async () => {
+        useGlobalConfig().delGlobalConfig("trakt_info").then(() => {
+            getTraktInfo()
+            ElMessageBox.alert('删除成功，但此授权信息仍能使用，如果泄露，建议前往 Trakt 官网吊销应用授权，再对该应用重新授权即可，官网地址: https://trakt.tv/oauth/authorized_applications')
+        })
+    })
 }
 function goAuthTrakt() {
     traktAuthLoading.value = true
