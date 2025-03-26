@@ -229,12 +229,32 @@ function updateCurrentEpisodes(silent: boolean = false) {
         }
         let json: EpisodesItems = JSON.parse(response.body);
         currentEpisodes.value = json
+        if (json.SeriesId && !currentSeries.value) {
+            getCurrentSeries()
+        }
         if (!silent && json.MediaSources) {
             handleMediaSources(json.MediaSources)
         }
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => playbackInfoLoading.value = false)
+}
+
+const currentSeries = ref<EpisodesItems>()
+async function getCurrentSeries() {
+    if (!currentEpisodes.value || !currentEpisodes.value.SeriesId) {
+        return
+    }
+    return embyApi.items(embyServer.value, currentEpisodes.value.SeriesId).then(async response => {
+        if (response.status_code != 200) {
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            return
+        }
+        let json: EpisodesItems = JSON.parse(response.body);
+        currentSeries.value = json
+    }).catch(e => {
+        ElMessage.error(e)
+    })
 }
 
 const handleNextUpPageChange = (val: number) => {
@@ -393,43 +413,58 @@ function playbackVersionChange(mediaSourceId: string) {
 function getScrobbleTraktParam(playbackPositionTicks: number) {
     const type = currentEpisodes.value!.Type == 'Movie' ? 'movie' : 'episode'
     const progress = Number((playbackPositionTicks / (runTimeTicks.value / 100)).toFixed(2))
-    let param: any = {[type]: {ids: {}}, progress}
-    for (const [key, value] of Object.entries(currentEpisodes.value!.ProviderIds)) {
-        let provider = key.toLowerCase()
-        switch (provider) {
-            case 'imdb': param[type].ids.imdb = value; break;
-            case 'tmdb': param[type].ids.tmdb = value; break;
-            case 'tvdb': param[type].ids.tvdb = value; break;
-            case 'trakt': param[type].ids.trakt = value; break;
+    let param: any = {[type]: {}, progress}
+    let ids = getScrobbleTraktIdsParam(currentEpisodes.value!)
+    if (ids.imdb || ids.tmdb || ids.tvdb || ids.trakt) {
+        param[type].ids = ids
+        return param
+    }
+    if (currentSeries.value && currentEpisodes.value?.IndexNumber != undefined && currentEpisodes.value?.ParentIndexNumber != undefined) {
+        ids = getScrobbleTraktIdsParam(currentSeries.value!)
+        if (ids.imdb || ids.tmdb || ids.tvdb || ids.trakt) {
+            param.show = {ids}
+            param[type].season = currentEpisodes.value?.ParentIndexNumber
+            param[type].number = currentEpisodes.value?.IndexNumber
+            return param
         }
     }
-    for (let externalUrl of currentEpisodes.value!.ExternalUrls) {
+}
+function getScrobbleTraktIdsParam(item: EpisodesItems) {
+    let ids: {[key in 'imdb' | 'tmdb' | 'tvdb' | 'trakt']?: string} = {}
+    for (const [key, value] of Object.entries(item.ProviderIds)) {
+        let provider = key.toLowerCase()
+        switch (provider) {
+            case 'imdb': ids.imdb = value; break;
+            case 'tmdb': ids.tmdb = value; break;
+            case 'tvdb': ids.tvdb = value; break;
+            case 'trakt': ids.trakt = value; break;
+        }
+    }
+    for (let externalUrl of item.ExternalUrls) {
         if (externalUrl.Url.startsWith("https://www.imdb.com")) {
             let url = new URL(externalUrl.Url)
-            if (!url.pathname.endsWith("/") && !param[type].ids.imdb) {
-                param[type].ids.imdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
+            if (!url.pathname.endsWith("/") && !ids.imdb) {
+                ids.imdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
             }
         } else if (externalUrl.Url.startsWith("https://www.themoviedb.org")) {
             let url = new URL(externalUrl.Url)
-            if (!url.pathname.endsWith("/") && !param[type].ids.tmdb) {
-                param[type].ids.tmdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
+            if (!url.pathname.endsWith("/") && !ids.tmdb) {
+                ids.tmdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
             }
         } else if (externalUrl.Url.startsWith("https://thetvdb.com")) {
             let url = new URL(externalUrl.Url)
-            if (url.searchParams.get("id") && !param[type].ids.tvdb) {
-                param[type].ids.tvdb = url.searchParams.get("id")
+            if (url.searchParams.get("id") && !ids.tvdb) {
+                ids.tvdb = url.searchParams.get("id")!
             }
         } else if (externalUrl.Url.startsWith("https://trakt.tv/search/")) {
             let url = new URL(externalUrl.Url)
             const path = url.pathname.split('/')
-            if (path.length === 4 && !param[type].ids[2]) {
-                param[type].ids[path[2]] = path[3]
+            if (path.length === 4 && ['imdb', 'tmdb', 'tvdb', 'trakt'].indexOf(path[2]) !== -1 && !ids[path[2] as 'imdb' | 'tmdb' | 'tvdb' | 'trakt']) {
+                ids[path[2] as 'imdb' | 'tmdb' | 'tvdb' | 'trakt'] = path[3]
             }
         }
     }
-    if (param[type].ids.imdb || param[type].ids.tmdb || param[type].ids.tvdb || param[type].ids.trakt) {
-        return param
-    }
+    return ids
 }
 
 // const playingProgressTask = ref<NodeJS.Timeout>()

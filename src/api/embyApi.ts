@@ -541,7 +541,7 @@ export interface EpisodesItems {
     UserData?: UserData,
     Overview: string,
     ProductionYear: string,
-    ProviderIds: {[key: string]: string}[]
+    ProviderIds: {[key: string]: string}
     ExternalUrls: ExternalUrl[]
 }
 
