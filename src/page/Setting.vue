@@ -6,11 +6,13 @@
                     <el-form-item label="MPV路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />
                     </el-form-item>
-                    <el-form-item label="Trakt （只有播放完成的才会在网页端有记录，播放中的只能调接口查到记录）">
-                        <el-text v-if="trakt_info.username">{{ trakt_info.username }}</el-text>
-                        <el-switch v-if="trakt_info.username" v-model="trakt_sync_switch" @change="traktSyncSwitchChange" active-value="on" inactive-value="off" inline-prompt style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
+                    <el-form-item label="Trakt （剧集或电影播放完成时可以在网页端看到记录，未播放完成的可以通过接口查询记录）">
+                        <div v-if="trakt_info.username">
+                            <el-text>{{ trakt_info.username }}</el-text>
+                            <el-switch v-model="trakt_sync_switch" @change="traktSyncSwitchChange" active-value="on" inactive-value="off" inline-prompt style="margin-left: 10px; --el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
+                            <el-button type="danger" @click="delAuthTrakt()" size="small" style="margin: 0 10px;">删除授权</el-button>
+                        </div>
                         <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
-                        <el-button type="danger" @click="delAuthTrakt()" size="small">删除授权</el-button>
                     </el-form-item>
                 </el-form>
             </el-scrollbar>
@@ -334,7 +336,7 @@ async function saveTraktInfo() {
 }
 function delAuthTrakt() {
   ElMessageBox.confirm(
-    `确认删除 Trakt 授权吗`,
+    `确认删除 Trakt 授权吗？同时建议前往 Trakt 官网吊销应用授权，这将删除该应用获取的所有授权，官网地址: https://trakt.tv/oauth/authorized_applications`,
     'Warning',
     {
       confirmButtonText: 'OK',
@@ -344,7 +346,7 @@ function delAuthTrakt() {
   ).then(async () => {
         useGlobalConfig().delGlobalConfig("trakt_info").then(() => {
             getTraktInfo()
-            ElMessageBox.alert('删除成功，但此授权信息仍能使用，如果泄露，建议前往 Trakt 官网吊销应用授权，再对该应用重新授权即可，官网地址: https://trakt.tv/oauth/authorized_applications')
+            ElMessageBox.alert('删除成功，同时建议前往 Trakt 官网吊销应用授权，这将删除该应用获取的所有授权，官网地址: https://trakt.tv/oauth/authorized_applications')
         })
     })
 }

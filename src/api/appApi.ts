@@ -12,7 +12,7 @@ async function getProxyLocation(proxy_id: string) {
         url: 'https://api.my-ip.io/v2/ip.json',
         method: 'GET',
         headers: {
-            'User-Agent': 'loemby/0.7.0',
+            'User-Agent': 'loemby/0.7.1',
         },
         proxy: await useProxyServer().getProxyUrl(proxy_id)
     });
