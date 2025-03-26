@@ -5,6 +5,7 @@ import embyApi from '../api/embyApi';
 import { ElMessage } from 'element-plus';
 import { useEmbyServer } from './db/embyServer';
 import { useEventBus } from './eventBus';
+import traktApi from '../api/traktApi';
 
 export const usePlayback = defineStore('playback', () => {
     async function listen_playback_progress() {
@@ -22,6 +23,12 @@ export const usePlayback = defineStore('playback', () => {
                         })
                         useEventBus().emit('playingStopped', event.payload)
                     })
+                    if (event.payload.scrobble_trakt_param) {
+                        const progress = Number((event.payload.progress / (event.payload.run_time_ticks / 100)).toFixed(2))
+                        let scrobbleTraktParam = JSON.parse(event.payload.scrobble_trakt_param)
+                        scrobbleTraktParam.progress = progress
+                        traktApi.stop(scrobbleTraktParam)
+                    }
                 } else {
                     embyApi.playingProgress(embyServer!, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, event.payload.progress)
                 }
@@ -38,5 +45,7 @@ export type PlaybackProgress = {
     media_source_id: string;
     play_session_id: string;
     progress: number;
+    run_time_ticks: number;
+    scrobble_trakt_param?: string;
     playback_status: number;
 };

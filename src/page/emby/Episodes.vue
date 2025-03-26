@@ -390,40 +390,45 @@ function playbackVersionChange(mediaSourceId: string) {
     }
 }
 
-function scrobbleTrakt(playbackPositionTicks: number, event: 'start' | 'stop') {
+function getScrobbleTraktParam(playbackPositionTicks: number) {
     const type = currentEpisodes.value!.Type == 'Movie' ? 'movie' : 'episode'
     const progress = Number((playbackPositionTicks / (runTimeTicks.value / 100)).toFixed(2))
     let param: any = {[type]: {ids: {}}, progress}
+    for (const [key, value] of Object.entries(currentEpisodes.value!.ProviderIds)) {
+        let provider = key.toLowerCase()
+        switch (provider) {
+            case 'imdb': param[type].ids.imdb = value; break;
+            case 'tmdb': param[type].ids.tmdb = value; break;
+            case 'tvdb': param[type].ids.tvdb = value; break;
+            case 'trakt': param[type].ids.trakt = value; break;
+        }
+    }
     for (let externalUrl of currentEpisodes.value!.ExternalUrls) {
         if (externalUrl.Url.startsWith("https://www.imdb.com")) {
             let url = new URL(externalUrl.Url)
-            if (!url.pathname.endsWith("/")) {
+            if (!url.pathname.endsWith("/") && !param[type].ids.imdb) {
                 param[type].ids.imdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
             }
         } else if (externalUrl.Url.startsWith("https://www.themoviedb.org")) {
             let url = new URL(externalUrl.Url)
-            if (!url.pathname.endsWith("/")) {
+            if (!url.pathname.endsWith("/") && !param[type].ids.tmdb) {
                 param[type].ids.tmdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
             }
         } else if (externalUrl.Url.startsWith("https://thetvdb.com")) {
             let url = new URL(externalUrl.Url)
-            if (url.searchParams.get("id")) {
+            if (url.searchParams.get("id") && !param[type].ids.tvdb) {
                 param[type].ids.tvdb = url.searchParams.get("id")
             }
         } else if (externalUrl.Url.startsWith("https://trakt.tv/search/")) {
             let url = new URL(externalUrl.Url)
             const path = url.pathname.split('/')
-            if (path.length === 3) {
-                param[type].ids[path[1]] = path[2]
+            if (path.length === 4 && !param[type].idspath[2]) {
+                param[type].ids[path[2]] = path[3]
             }
         }
     }
     if (param[type].ids.imdb || param[type].ids.tmdb || param[type].ids.tvdb || param[type].ids.trakt) {
-        if (event === 'start') {
-            traktApi.start(param);
-        } else {
-            traktApi.stop(param);
-        }
+        return param
     }
 }
 
@@ -454,6 +459,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
             }
             let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
                  : 'S' + currentEpisodes.value?.ParentIndexNumber + 'E' + currentEpisodes.value?.IndexNumber + '. ' + currentEpisodes.value?.Name
+            const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
             return invoke.playback({
                 mpv_path: mpv_path.value,
                 path: directStreamUrl,
@@ -465,20 +471,24 @@ function playing(item_id: string, playbackPositionTicks: number) {
                 media_source_id: currentMediaSources.Id,
                 play_session_id: playbackInfo.PlaySessionId,
                 playback_position_ticks: playbackPositionTicks,
+                run_time_ticks: runTimeTicks.value,
                 vid: videoSelect.value,
                 aid: audioSelect.value,
                 sid: subtitleSelect.value,
                 external_audio: externalAudio,
                 external_subtitle: externalSubtitle,
+                scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
             }).then(async () => {
                 embyApi.playing(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
                     ElMessage.success({
                         message: '开始播放，请稍候'
                     })
-                    scrobbleTrakt(playbackPositionTicks, 'start')
                     useEmbyServer().updateEmbyServer({id: embyServer.value!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
                         .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer.value!.id!}))
                 })
+                if (scrobbleTraktParam) {
+                    traktApi.start(scrobbleTraktParam)
+                }
             }).catch(res => {
                 ElMessage.error({
                     message: res
@@ -493,7 +503,6 @@ function playing(item_id: string, playbackPositionTicks: number) {
 function playingStopped(payload: PlaybackProgress) {
     if (embyServer.value.id === payload.server_id && payload.item_id === currentEpisodes.value?.Id) {
         updateCurrentEpisodes(true).then(() => {
-            scrobbleTrakt(payload.progress, 'stop')
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && continuousPlay.value) {
                 ElMessage.success({
                     message: '播放完成，即将播放下一集'

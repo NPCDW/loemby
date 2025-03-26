@@ -237,6 +237,8 @@ fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHandle, 
         media_source_id: &body.media_source_id,
         play_session_id: &body.play_session_id,
         progress: last_record_position,
+        run_time_ticks: body.run_time_ticks,
+        scrobble_trakt_param: body.scrobble_trakt_param.clone(),
         playback_status: playback_status,
     }).unwrap();
 }
@@ -258,6 +260,8 @@ struct PlaybackProgress<'a> {
     media_source_id: &'a str,
     play_session_id: &'a str,
     progress: Decimal,
+    pub run_time_ticks: u64,
+    pub scrobble_trakt_param: Option<String>,
     // 0 停止  1 播放中
     playback_status: u32,
 }

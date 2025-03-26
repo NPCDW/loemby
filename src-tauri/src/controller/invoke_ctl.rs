@@ -24,12 +24,14 @@ pub struct PlayVideoParam {
     pub item_id: String,
     pub media_source_id: String,
     pub playback_position_ticks: u64,
+    pub run_time_ticks: u64,
     pub play_session_id: String,
     pub vid: i32,
     pub aid: i32,
     pub sid: i32,
     pub external_audio: Vec<String>,
     pub external_subtitle: Vec<String>,
+    pub scrobble_trakt_param: Option<String>,
 }
 
 #[tauri::command]

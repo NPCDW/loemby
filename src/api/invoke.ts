@@ -15,11 +15,13 @@ interface InvokePlayback {
     media_source_id: string,
     play_session_id: string,
     playback_position_ticks: number,
+    run_time_ticks: number,
     vid: number,
     aid: number,
     sid: number,
     external_audio: string[],
     external_subtitle: string[],
+    scrobble_trakt_param?: string,
 }
 
 async function playback(param: InvokePlayback): Promise<string> {
