@@ -311,7 +311,7 @@ function goAuthTrakt() {
 listen<string>('trakt_auth', (event) => {
     console.log(`trakt_auth: code: ${event.payload}`);
     traktAuthStatus.value = '授权成功，正在获取授权信息'
-    traktApi.token(event.payload).then(async response => {
+    traktApi.token({code: event.payload}).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return

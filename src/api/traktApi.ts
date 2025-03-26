@@ -47,7 +47,7 @@ async function getCacheAccessToken() {
     // 如果离过期时间大于1分钟小于6小时，后台刷新token，并立即返回旧token
     else if (currentTime < json.expires_in - 60 && currentTime > json.expires_in - 6 * 60 * 60) {
         console.log("trakt token 不足6小时，后台重新获取");
-        token('', json.refresh_token).then(response => {
+        token({refresh_token: json.refresh_token}).then(response => {
             if (response.status_code != 200) {
                 console.log('response status' + response.status_code + ' ' + response.status_text)
                 return
@@ -60,7 +60,7 @@ async function getCacheAccessToken() {
     // 如果离过期时间不足1分钟，立即刷新token，并返回新token
     else {
         console.log("trakt token 过期，重新获取");
-        let response = await token('', json.refresh_token)
+        let response = await token({refresh_token: json.refresh_token})
         if (response.status_code != 200) {
             console.log('response status' + response.status_code + ' ' + response.status_text)
             return
@@ -74,7 +74,7 @@ async function getCacheAccessToken() {
 /**
  * 获取 token
  */
-async function token(code?: string, refresh_token?: string) {
+async function token({code, refresh_token}: {code?: string, refresh_token?: string}) {
     if ((!code && !refresh_token)) {
         return Promise.reject("参数缺失");
     }

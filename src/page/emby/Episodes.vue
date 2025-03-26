@@ -422,7 +422,7 @@ function getScrobbleTraktParam(playbackPositionTicks: number) {
         } else if (externalUrl.Url.startsWith("https://trakt.tv/search/")) {
             let url = new URL(externalUrl.Url)
             const path = url.pathname.split('/')
-            if (path.length === 4 && !param[type].idspath[2]) {
+            if (path.length === 4 && !param[type].ids[2]) {
                 param[type].ids[path[2]] = path[3]
             }
         }
