@@ -3,8 +3,8 @@ import { useGlobalConfig } from '../store/db/globalConfig';
 import { useProxyServer } from '../store/db/proxyServer';
 import invoke from './invoke';
 
-const userAgent = 'loemby/0.7.1'
-const client_id = '05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572'
+const USER_AGENT = 'loemby/' + import.meta.env.VITE_APP_VERSION
+const CLIENT_ID = '05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572'
 
 async function saveAccessToken(token_response: {access_token: string, refresh_token: string, expires_in: number, created_at: number}) {
     let trakt_info = {
@@ -82,7 +82,7 @@ async function token({code, refresh_token}: {code?: string, refresh_token?: stri
         url: 'https://token-exchange.003021.xyz/trakt',
         method: 'POST',
         headers: {
-            'User-Agent': userAgent,
+            'User-Agent': USER_AGENT,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -111,11 +111,11 @@ async function getUserInfo() {
         url: 'https://api.trakt.tv/users/settings',
         method: 'GET',
         headers: {
-            'User-Agent': userAgent,
+            'User-Agent': USER_AGENT,
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${access_token}`,
             'trakt-api-version': '2',
-            'trakt-api-key': client_id
+            'trakt-api-key': CLIENT_ID
         },
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(response => {
@@ -138,11 +138,11 @@ async function start(param: any) {
         url: 'https://api.trakt.tv/scrobble/start',
         method: 'POST',
         headers: {
-            'User-Agent': userAgent,
+            'User-Agent': USER_AGENT,
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${access_token}`,
             'trakt-api-version': '2',
-            'trakt-api-key': client_id
+            'trakt-api-key': CLIENT_ID
         },
         body: JSON.stringify(param),
         proxy: await useProxyServer().getTraktProxyUrl()
@@ -166,11 +166,11 @@ async function stop(param: any) {
         url: 'https://api.trakt.tv/scrobble/stop',
         method: 'POST',
         headers: {
-            'User-Agent': userAgent,
+            'User-Agent': USER_AGENT,
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${access_token}`,
             'trakt-api-version': '2',
-            'trakt-api-key': client_id
+            'trakt-api-key': CLIENT_ID
         },
         body: JSON.stringify(param),
         proxy: await useProxyServer().getTraktProxyUrl()

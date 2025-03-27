@@ -2411,12 +2411,13 @@ dependencies = [
 
 [[package]]
 name = "loemby"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "axum",
  "chrono",
  "interprocess",
+ "regex",
  "reqwest",
  "rust_decimal",
  "serde",
