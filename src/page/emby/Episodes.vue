@@ -150,7 +150,7 @@ import { nextTick, onUnmounted, ref, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
-import invoke from '../../api/invoke';
+import invoke from '../../api/invokeApi';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { PlaybackProgress } from '../../store/playback';

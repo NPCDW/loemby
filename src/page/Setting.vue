@@ -69,6 +69,12 @@
                             <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
+                    <el-form-item label="应用数据代理（图标、自动更新等）">
+                        <el-select v-model="app_proxy_id" @change="appProxyChange">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
                 </el-form>
                 <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod">
                     <el-table-column prop="emby_server_name" label="Emby" show-overflow-tooltip />
@@ -93,6 +99,25 @@
                     </el-table-column>
                 </el-table>
             </el-scrollbar>
+        </el-tab-pane>
+        <el-tab-pane label="Emby图标库" name="EmbyIconLibrary">
+            <!-- <el-scrollbar style="height: calc(100vh - 100px);">
+                <h1>Emby图标库</h1>
+                <el-table :data="embyIconLibrary" style="width: 100%">
+                    <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
+                    <el-table-column prop="url" label="Url" show-overflow-tooltip />
+                    <el-table-column fixed="right" label="Operations" width="210">
+                        <template #header>
+                            <el-button type="primary" size="small" @click.prevent="addEmbyIconLibrary()">添加图标库</el-button>
+                        </template>
+                        <template #default="scope">
+                            <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="updateEmbyIconLibrary(scope.row.id)">更新</el-button>
+                            <el-button plain type="primary" size="small" @click.prevent="editEmbyIconLibrary(scope.$index)">编辑</el-button>
+                            <el-button plain type="danger" size="small" @click.prevent="delEmbyIconLibrary(scope.$index)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-scrollbar> -->
         </el-tab-pane>
     </el-tabs>
 
@@ -145,7 +170,7 @@ import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
 import { EmbyLine, useEmbyLine } from '../store/db/embyLine';
 import { useGlobalConfig } from '../store/db/globalConfig';
 import { useEventBus } from '../store/eventBus';
-import invoke from '../api/invoke';
+import invoke from '../api/invokeApi';
 import { listen } from '@tauri-apps/api/event';
 import traktApi from '../api/traktApi';
 
@@ -418,6 +443,34 @@ function traktProxyChange() {
         })
     }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
 }
+const app_proxy_id = ref<string>('no');
+function getAppProxy() {
+    useGlobalConfig().getGlobalConfigValue("app_proxy_id").then(value => {
+        app_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
+}
+function appProxyChange() {
+    useGlobalConfig().getGlobalConfig("app_proxy_id").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = app_proxy_id.value;
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "app_proxy_id",
+                config_value: app_proxy_id.value
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getAppProxy()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
+}
 const global_browse_proxy_id = ref<string>('no');
 function getGlobalBrowseProxy() {
     useGlobalConfig().getGlobalConfigValue("global_browse_proxy_id").then(value => {
@@ -523,7 +576,6 @@ const activePane = ref('Common')
 function handlePaneChange() {
     if (activePane.value == 'Common') {
         getMpvPath()
-        getTraktProxy()
         getTraktInfo()
     } else if (activePane.value == 'ProxyServer') {
         listAllProxyServer()
@@ -534,10 +586,20 @@ function handlePaneChange() {
         listAllEmbyLine()
         getGlobalBrowseProxy()
         getGlobalPlayProxy()
+        getTraktProxy()
+        getAppProxy()
+    } else if (activePane.value == 'EmbyIconLibrary') {
+        if (proxyServer.value.length == 0) {
+            listAllProxyServer()
+        }
+        listAllEmbyLine()
+        getGlobalBrowseProxy()
+        getGlobalPlayProxy()
+        getTraktProxy()
+        getAppProxy()
     }
 }
 getMpvPath()
-getTraktProxy()
 getTraktInfo()
 </script>
 

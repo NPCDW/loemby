@@ -1,6 +1,6 @@
 [package]
 name = "loemby"
-version = "0.7.1"
+version = "0.8.0"
 description = "Emby Client"
 authors = ["NPCDW"]
 edition = "2021"
@@ -15,41 +15,44 @@ name = "loemby_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2.1.0", features = [] }
 regex = "1.11.1"
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2.4.0", features = [] }
 tauri-plugin-single-instance = "2.2.2"
 
-tokio = { version = "1.43.0", features = ["full"] }
+tokio = { version = "1.44.1", features = ["full"] }
 tokio-util = "0.7.14"
 tokio-stream = "0.1.17"
-interprocess = { version = "2.2.2", features = ["tokio"] }
+interprocess = { version = "2.2.3", features = ["tokio"] }
 axum = "0.8.1"
 
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-serde-inline-default = "0.2.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+serde-inline-default = "0.2.3"
 
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "time", "local-time"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "time", "local-time"] }
 tracing-appender = "0.2.3"
 
-anyhow = "1.0"
+anyhow = "1.0.97"
 
-time = "0.3.21"
+time = "0.3.41"
 chrono = { version = "0.4.40", features = ["serde"] }
 
 sha256 = "1.6.0"
 
-uuid = { version = "1.15.1", features = ["v4"] }
+uuid = { version = "1.16.0", features = ["v4"] }
 
-rust_decimal = "1.36"
+rust_decimal = "1.37.1"
 
-reqwest = { version = "0.12.12", features = ["json", "stream", "socks"] }
+reqwest = { version = "0.12.15", features = ["json", "stream", "socks"] }
 
-sys-info = "0.9"
+sys-info = "0.9.1"
 tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
 
 webbrowser = "1.0.4"
+
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-updater = "2.6.1"

@@ -1,5 +1,7 @@
 name: Build
 
+# 参考 https://v2.tauri.app/distribute/pipelines/github/
+
 on:
   push:
     tags: "*"
@@ -12,7 +14,13 @@ permissions:
 
 jobs:
   binaries:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+    runs-on: ${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v4
     - name: Install Nodejs
@@ -25,10 +33,14 @@ jobs:
         cache: false
     - name: Build release
       shell: bash
-      run: npm install -g pnpm && pnpm i && pnpm run tauri build
-    - name: Release
-      uses: softprops/action-gh-release@v2
+      run: npm install -g pnpm && pnpm i
+    - uses: tauri-apps/tauri-action@v0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: |
-          src-tauri/target/release/bundle/msi/*.msi
-          src-tauri/target/release/bundle/nsis/*.exe
+        tagName: loemby-__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
+        releaseName: 'loemby __VERSION__'
+        releaseBody: 'See the assets to download this version and install.'
+        releaseDraft: true
+        prerelease: false
+        args: ${{ matrix.args }}

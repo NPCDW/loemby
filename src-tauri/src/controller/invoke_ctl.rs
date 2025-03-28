@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use crate::config::app_state::AppState;
-use crate::service::{http_forward, player_svc};
+use crate::service::{http_forward_svc, player_svc, updater_svc};
 
 #[tauri::command]
 pub async fn get_sys_info() -> Result<String, String> {
@@ -58,7 +58,7 @@ pub struct HttpForwardResult {
 
 #[tauri::command]
 pub async fn http_forward(param: HttpForwardParam, state: tauri::State<'_, AppState>) -> Result<HttpForwardResult, String> {
-    let res = http_forward::forward(param, state).await;
+    let res = http_forward_svc::forward(param, state).await;
     if res.is_err() {
         return Err(res.unwrap_err().to_string());
     }
@@ -82,7 +82,7 @@ pub struct LoadImageParam {
 
 #[tauri::command]
 pub async fn load_image(body: LoadImageParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = http_forward::load_image(body, state).await;
+    let res = http_forward_svc::load_image(body, state).await;
     if res.is_err() {
         return Err(res.unwrap_err().to_string());
     }
@@ -114,4 +114,24 @@ pub async fn open_url(url: String) -> Result<(), String> {
         return Err(format!("打开浏览器失败: {} ", err.to_string()));
     }
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UpdaterParam {
+    pub proxy_url: Option<String>,
+    pub user_agent: String,
+}
+
+#[tauri::command]
+pub async fn updater(body: UpdaterParam, app_handle: tauri::AppHandle) -> Result<bool, String> {
+    let res = updater_svc::update(body, app_handle).await;
+    if let Err(err) = res {
+        return Err(format!("更新失败: {} ", err.to_string()));
+    }
+    Ok(res.unwrap())
+}
+
+#[tauri::command]
+pub async fn restart_app(app_handle: tauri::AppHandle) {
+    app_handle.restart()
 }

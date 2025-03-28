@@ -1,7 +1,7 @@
 import { ElMessageBox } from 'element-plus';
 import { useGlobalConfig } from '../store/db/globalConfig';
 import { useProxyServer } from '../store/db/proxyServer';
-import invoke from './invoke';
+import invoke from './invokeApi';
 
 const USER_AGENT = 'loemby/' + import.meta.env.VITE_APP_VERSION
 const CLIENT_ID = '05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572'

@@ -7,6 +7,20 @@ pub fn migrations() -> Vec<Migration> {
             version: 1,
             description: "create_initial_tables",
             sql: r#"
+CREATE TABLE "emby_icon_library" (
+  "id" CHAR(36) NOT NULL PRIMARY KEY,
+  "create_time" TIMESTAMP NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),
+  "name" VARCHAR(255) NOT NULL,
+	"url" VARCHAR(255) NOT NULL
+);
+ALTER TABLE emby_server ADD COLUMN icon_url VARCHAR(255);
+			"#,
+			kind: MigrationKind::Up,
+		},
+        Migration {
+            version: 1,
+            description: "create_initial_tables",
+            sql: r#"
 CREATE TABLE "emby_server" (
   "id" CHAR(36) NOT NULL PRIMARY KEY,
   "create_time" TIMESTAMP NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),

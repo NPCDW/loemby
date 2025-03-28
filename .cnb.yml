@@ -5,6 +5,7 @@ $:
       services:
         - vscode
         - docker
+      imports: https://cnb.cool/my-codespace/envs/-/blob/main/loemby-updater.yml
       # 开发环境启动后会执行的任务
       stages:
         - name: install dep

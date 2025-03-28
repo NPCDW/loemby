@@ -1,6 +1,6 @@
 import { EmbyServer } from '../store/db/embyServer';
 import { useProxyServer } from '../store/db/proxyServer';
-import invoke from './invoke';
+import invoke from './invokeApi';
 
 /**
  * 获取服务器信息，无需验证

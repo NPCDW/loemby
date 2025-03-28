@@ -1,5 +1,5 @@
 import { useProxyServer } from '../store/db/proxyServer';
-import invoke from './invoke';
+import invoke from './invokeApi';
 
 const USER_AGENT = 'loemby/' + import.meta.env.VITE_APP_VERSION
 

@@ -160,7 +160,7 @@ import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
-import invoke from '../../api/invoke';
+import invoke from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
 import { useEventBus } from '../../store/eventBus';

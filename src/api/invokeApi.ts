@@ -65,6 +65,19 @@ async function open_url(url: string): Promise<string> {
     return invoke('open_url', {url: url});
 }
 
+interface UpdaterParam {
+    proxy_url?: String,
+    user_agent: String,
+}
+
+async function updater(param: UpdaterParam): Promise<boolean> {
+    return invoke('updater', {body: param});
+}
+
+async function restartApp(): Promise<boolean> {
+    return invoke('restart_app', {});
+}
+
 export default {
-    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url
+    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url, updater, restartApp
 }
