@@ -4,8 +4,8 @@ pub fn migrations() -> Vec<Migration> {
     vec![
         // Define your migrations here
         Migration {
-            version: 1,
-            description: "create_initial_tables",
+            version: 2,
+            description: "emby_icon_library",
             sql: r#"
 CREATE TABLE "emby_icon_library" (
   "id" CHAR(36) NOT NULL PRIMARY KEY,
