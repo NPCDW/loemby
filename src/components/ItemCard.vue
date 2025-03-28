@@ -44,7 +44,7 @@
                 <el-scrollbar>
                     <el-skeleton :loading="dialogSeasonsLoading" animated>
                         <template #template>
-                            <div class="note-item" v-for="i in 5" :key="i">
+                            <div class="box-item" v-for="i in 5" :key="i">
                                 <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
                                 <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                             </div>
@@ -52,7 +52,7 @@
                         <div
                             v-for="seasonsItem in dialogSeasonsList"
                             :key="seasonsItem.Id"
-                            class="note-item"
+                            class="box-item"
                             :class="{ active: dialogSeasons?.Id === seasonsItem.Id }"
                             @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)"
                         >
@@ -81,12 +81,12 @@
                 <el-scrollbar>
                     <el-skeleton :loading="dialogEpisodesLoading" animated>
                         <template #template>
-                            <div class="note-item" v-for="i in 5" :key="i">
+                            <div class="box-item" v-for="i in 5" :key="i">
                                 <p><el-skeleton-item variant="text" style="width: 50%" /></p>
                                 <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                             </div>
                         </template>
-                        <div v-for="episodesItem in dialogEpisodesList" class="note-item">
+                        <div v-for="episodesItem in dialogEpisodesList" class="box-item">
                             <p>
                                 <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">
                                     {{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}
@@ -301,17 +301,17 @@ async function handleEpisodesPageChange(val: number, embyServer: EmbyServer, ser
   overflow-y: auto;
 }
 
-.note-item {
+.box-item {
   padding: 3px 10px;
   cursor: pointer;
   border-bottom: 1px solid #18222C;
 }
 
-.note-item:hover {
+.box-item:hover {
   background-color: #18222C;
 }
 
-.note-item.active {
+.box-item.active {
   color: #409EFF;
 }
 

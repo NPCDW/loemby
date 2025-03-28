@@ -1,16 +1,16 @@
 <template>
     <div style="display: flex; flex-direction: row;">
-        <el-scrollbar style="height: 100vh; flex: none; width: 200px;">
-            <el-menu style="height: 100%; min-height: 100vh;" class="el-menu" :collapse="true" :router="true" :default-active="active">
-                <el-menu-item index="/nav/search">
-                    <el-icon><i-ep-Search /></el-icon>聚合搜索
-                </el-menu-item>
-                <el-menu-item index="/nav/setting">
-                    <el-icon><i-ep-Setting /></el-icon>设置
-                </el-menu-item>
-                <el-menu-item index="" @click="addEmbyServer()">
-                    <el-icon><i-ep-Plus /></el-icon>添加服务器
-                </el-menu-item>
+        <el-menu style="height: 100%; width: 200px; min-height: 100vh;" class="el-menu" :collapse="true" :router="true" :default-active="active">
+            <el-menu-item index="/nav/search">
+                <el-icon><i-ep-Search /></el-icon>聚合搜索
+            </el-menu-item>
+            <el-menu-item index="/nav/setting">
+                <el-icon><i-ep-Setting /></el-icon>设置
+            </el-menu-item>
+            <el-menu-item index="" @click="addEmbyServer()">
+                <el-icon><i-ep-Plus /></el-icon>添加服务器
+            </el-menu-item>
+            <el-scrollbar style="height: calc(100vh - 168px); flex: none;">
                 <Container @drop="onDrop" style="height: 100%; width: 100%;">  
                     <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
                         <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
@@ -79,11 +79,11 @@
                         </el-dropdown>
                     </Draggable>
                 </Container>
-            </el-menu>
-        </el-scrollbar>
-        <div style="flex: auto; height: 100vh; width: calc(100% - 200px);">
+            </el-scrollbar>
+        </el-menu>
+        <el-scrollbar style="flex: auto; height: 100vh; width: calc(100% - 200px);">
             <router-view></router-view>
-        </div>
+        </el-scrollbar>
     </div>
   <el-dialog v-model="dialogAddEmbyServerVisible" title="Emby Server" width="800">
     <el-steps :active="stepActive" align-center>
@@ -98,8 +98,15 @@
             <el-form-item label="服务器地址">
                 <el-input v-model="currentEmbyServer.base_url" placeholder="Please input" />
             </el-form-item>
-            <el-form-item label="媒体库代理">
+            <el-form-item label="媒体库浏览代理">
                 <el-select v-model="currentEmbyServer.browse_proxy_id">
+                    <el-option key="no" label="不使用代理" value="no"/>
+                    <el-option key="follow" label="跟随全局代理" value="follow"/>
+                    <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="媒体流播放代理">
+                <el-select v-model="currentEmbyServer.play_proxy_id">
                     <el-option key="no" label="不使用代理" value="no"/>
                     <el-option key="follow" label="跟随全局代理" value="follow"/>
                     <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
@@ -426,18 +433,21 @@ async function addEmbyServerAddr() {
     if (!currentEmbyServer || !currentEmbyServer.value?.base_url) {
         return
     }
-    let line = {
-        id: generateGuid(),
-        name: '线路一',
-        base_url: currentEmbyServer.value!.base_url,
-        emby_server_id: currentEmbyServer.value.id!,
-        emby_server_name: currentEmbyServer.value.server_name,
-        in_use: 1,
-        browse_proxy_id: currentEmbyServer.value!.browse_proxy_id,
-        play_proxy_id: currentEmbyServer.value!.play_proxy_id
+    let embyServer = await useEmbyServer().getEmbyServer(currentEmbyServer.value.id!)
+    if (!embyServer) {
+        let line = {
+            id: generateGuid(),
+            name: '线路一',
+            base_url: currentEmbyServer.value!.base_url,
+            emby_server_id: currentEmbyServer.value.id!,
+            emby_server_name: currentEmbyServer.value.server_name,
+            in_use: 1,
+            browse_proxy_id: currentEmbyServer.value!.browse_proxy_id,
+            play_proxy_id: currentEmbyServer.value!.play_proxy_id
+        }
+        await addEmbyLineDb(line)
+        await addEmbyServerDb(currentEmbyServer.value);
     }
-    await addEmbyLineDb(line)
-    await addEmbyServerDb(currentEmbyServer.value);
     embyApi.getServerInfo(currentEmbyServer.value).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
@@ -525,17 +535,13 @@ async function saveEditEmbyServer() {
     dialogEditEmbyServerVisible.value = false
 }
 
-async function onDrop(dropResult: {removedIndex: number, addedIndex: number}) {
-    let minIndex = Math.min(dropResult.removedIndex, dropResult.addedIndex)
-    let maxIndex = Math.max(dropResult.removedIndex, dropResult.addedIndex)
-    let id = embyServers.value[maxIndex].id!
-    let orderBy = embyServers.value[minIndex].order_by!
-    // 页面操作，防止刷新Emby列表闪烁
-    let element = embyServers.value.splice(dropResult.removedIndex, 1);
-    embyServers.value.splice(dropResult.addedIndex, 0, element[0]);
-    useEmbyServer().updateOrder(orderBy).then(() => {
-        updateEmbyServerDb({id: id, order_by: orderBy}).catch(e => ElMessage.error("排序失败" + e))
+async function onDrop({removedIndex, addedIndex}: {removedIndex: number, addedIndex: number}) {
+    useEmbyServer().updateOrder(embyServers.value[removedIndex].id!, embyServers.value[removedIndex].order_by!, embyServers.value[addedIndex].order_by!).then(() => {
+        useEventBus().emit('EmbyServerChanged', {})
     }).catch(e => ElMessage.error("排序失败" + e))
+    // 页面操作，防止刷新Emby列表闪烁
+    let element = embyServers.value.splice(removedIndex, 1);
+    embyServers.value.splice(addedIndex, 0, element[0]);
 }
 
 const dialogConfigLineVisible = ref(false)

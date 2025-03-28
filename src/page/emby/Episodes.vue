@@ -113,7 +113,7 @@
             </el-skeleton>
             <el-skeleton :loading="nextUpLoading" animated>
                 <template #template>
-                    <div class="note-item" v-for="i in 3" :key="i">
+                    <div class="box-item" v-for="i in 3" :key="i">
                         <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
                         <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                     </div>

@@ -49,7 +49,7 @@
         <el-skeleton :loading="episodesLoading" animated>
             <template #template>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row;padding: 20px;padding-top: 0;">
-                    <el-card class="box-item" v-for="i in 5" :key="i">
+                    <el-card style="width: 300px; margin: 5px;" v-for="i in 5" :key="i">
                         <p><el-skeleton-item variant="text" style="width: 90%" /></p>
                         <p><el-skeleton-item variant="text" style="width: 60%" /></p>
                     </el-card>
@@ -95,22 +95,17 @@
         :title="dialogSeasons?.Name"
         width="800"
     >
-        <el-scrollbar>
-            <h1>{{ dialogSeasons?.Name }}</h1>
-            <p>{{ dialogSeasons?.Overview }}</p>
+        <el-scrollbar style="padding: 0 20px;">
             <el-skeleton :loading="dialogEpisodesLoading" animated>
                 <template #template>
-                    <div class="note-item" v-for="i in 5" :key="i">
+                    <div class="box-item" v-for="i in 5" :key="i">
                         <p><el-skeleton-item variant="text" style="width: 50%" /></p>
                         <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                     </div>
                 </template>
-                <div v-for="episodesItem in dialogEpisodesList" class="note-item" style="display: flex;justify-content: space-between; align-items: center;">
-                    <div>
-                        <p>{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p>
-                        <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
-                    </div>
-                    <el-button @click="gotoEpisodes(episodesItem.Id)" type="success" plain circle><el-icon><i-ep-ArrowRightBold /></el-icon></el-button>
+                <div v-for="episodesItem in dialogEpisodesList" class="box-item">
+                    <p><el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</el-link></p>
+                    <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
                 </div>
             </el-skeleton>
             <el-pagination
@@ -318,7 +313,7 @@ async function loadImage(itemId: string) {
 
 <style scoped>
 .box-item {
-    width: 300px; margin: 5px;
+    padding: 5px 20px;
 }
 
 .box-item:hover {

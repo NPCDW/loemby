@@ -53,11 +53,22 @@ export const useEmbyServer = defineStore('embyServer', () => {
         return res?.rowsAffected;
     }
 
-    async function updateOrder(orderNumber: number) {
+    async function updateOrder(removedId: string, removedIndex: number, addedIndex: number) {
         let values: number[] = [];
-        values.push(orderNumber);
-        let sql = `update emby_server set order_by = order_by + 1 where order_by >= $1`;
+        let sql
+        if (removedIndex > addedIndex) {
+            sql = `update emby_server set order_by = order_by + 1 where order_by >= $1 and order_by < $2`;
+            values.push(addedIndex);
+            values.push(removedIndex);
+        } else {
+            sql = `update emby_server set order_by = order_by - 1 where order_by > $1 and order_by <= $2`;
+            values.push(removedIndex);
+            values.push(addedIndex);
+        }
         let res = await useDb().db?.execute(sql, values);
+        if (res) {
+            await updateEmbyServer({id: removedId, order_by: addedIndex})
+        }
         return res?.rowsAffected;
     }
 
