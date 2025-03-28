@@ -18,9 +18,14 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.1.0", features = [] }
 regex = "1.11.1"
 
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-updater = "2.6.1"
+
 [dependencies]
 tauri = { version = "2.4.0", features = [] }
 tauri-plugin-single-instance = "2.2.2"
+tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
+tauri-plugin = "2.1.0"
 
 tokio = { version = "1.44.1", features = ["full"] }
 tokio-util = "0.7.14"
@@ -50,9 +55,5 @@ rust_decimal = "1.37.1"
 reqwest = { version = "0.12.15", features = ["json", "stream", "socks"] }
 
 sys-info = "0.9.1"
-tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
 
 webbrowser = "1.0.4"
-
-[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
-tauri-plugin-updater = "2.6.1"
