@@ -3,6 +3,9 @@
         <el-tab-pane label="常规" name="Common">
             <el-scrollbar style="height: calc(100vh - 100px);">
                 <el-form label-position="top">
+                    <el-form-item label="应用更新">
+                        <el-button type="primary" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
+                    </el-form-item>
                     <el-form-item label="MPV路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />
                     </el-form-item>
@@ -160,8 +163,8 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onUnmounted, ref } from 'vue';
-import { ElMessage, ElMessageBox, TableColumnCtx } from 'element-plus';
+import { computed, h, onUnmounted, ref } from 'vue';
+import { ElButton, ElMessage, ElMessageBox, ElNotification, TableColumnCtx } from 'element-plus';
 import { ProxyServer, useProxyServer } from '../store/db/proxyServer';
 import _ from 'lodash';
 import { generateGuid } from '../util/uuid_util';
@@ -173,6 +176,7 @@ import { useEventBus } from '../store/eventBus';
 import invoke from '../api/invokeApi';
 import { listen } from '@tauri-apps/api/event';
 import traktApi from '../api/traktApi';
+import invokeApi from '../api/invokeApi';
 
 const proxyServer = ref<ProxyServer[]>([]);
 function listAllProxyServer() {
@@ -243,6 +247,31 @@ function checkProxy(id: string) {
     }).catch(e => {
         ElMessage.error('检测代理失败，可能是代理配置错误，请检查代理配置' + e)
     }).finally(() => checkProxyLoading.value[id] = false);
+}
+
+const checkUpdateLoading = ref<boolean>(false);
+function checkUpdate() {
+    checkUpdateLoading.value = true;
+    invokeApi.updater().then(res => {
+        if (!res) {
+            ElNotification.success({
+                title: '新版本准备就绪',
+                message: h('p', {'style': "display: flex; justify-content: space-between; align-items: center;"}, [
+                  h('span', null, '重启应用生效'),
+                  h(ElButton, {
+                    'size': 'small',
+                    'type': 'success',
+                    onClick: () => {
+                      invokeApi.restartApp()
+                    },
+                  }, "现在重启"),
+                ]),
+                position: 'bottom-right',
+            })
+        } else {
+            ElMessage.success('已经是最新版本')
+        }
+    }).finally(() => checkUpdateLoading.value = false);
 }
 
 const embyServers = ref<EmbyServer[]>([])

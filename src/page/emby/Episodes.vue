@@ -491,6 +491,13 @@ function playing(item_id: string, playbackPositionTicks: number) {
             return
         }
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
+        for (const mediaSource of currentEpisodes.value!.MediaSources!) {
+            if (!mediaSource.MediaStreams || mediaSource.MediaStreams.length == 0) {
+                currentEpisodes.value!.MediaSources = playbackInfo.MediaSources;
+                handleMediaSources(playbackInfo.MediaSources)
+                break
+            }
+        }
         let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
         if (currentMediaSources) {
             let directStreamUrl = embyApi.getDirectStreamUrl(embyServer.value, currentMediaSources.DirectStreamUrl!)!

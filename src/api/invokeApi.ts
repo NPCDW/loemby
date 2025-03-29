@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { useProxyServer } from '../store/db/proxyServer';
 
 async function getSysInfo(): Promise<string> {
     return invoke('get_sys_info');
@@ -65,13 +66,11 @@ async function open_url(url: string): Promise<string> {
     return invoke('open_url', {url: url});
 }
 
-interface UpdaterParam {
-    proxy_url?: String,
-    user_agent: String,
-}
-
-async function updater(param: UpdaterParam): Promise<boolean> {
-    return invoke('updater', {body: param});
+async function updater(): Promise<boolean> {
+    return invoke('updater', {body: {
+        proxy_url: await useProxyServer().getTraktProxyUrl(),
+        user_agent: 'loemby/' + import.meta.env.VITE_APP_VERSION,
+    }});
 }
 
 async function restartApp(): Promise<boolean> {
