@@ -58,7 +58,7 @@ interface LoadImageParam {
 
 function loadImage(param: LoadImageParam): string {
     let port = useRuntimeConfig().runtimeConfig!.axum_port;
-    let url = `http://127.0.0.1:${port}/image?image_url=${encodeURIComponent(param.image_url)}&user_agent=${encodeURIComponent(param.user_agent)}&cache_prefix=${encodeURIComponent(param.cache_prefix.join(","))}`;
+    let url = `http://127.0.0.1:${port}/image?image_url=${encodeURIComponent(param.image_url)}&user_agent=${encodeURIComponent(param.user_agent)}&cache_prefix=${encodeURIComponent(param.cache_prefix.join("/"))}`;
     if (param.proxy_url) {
         url += `&proxy_url=${encodeURIComponent(param.proxy_url)}`
     }

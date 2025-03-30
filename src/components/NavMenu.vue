@@ -347,7 +347,7 @@ const currentEmbyServer = ref<EmbyServer>({})
 function addEmbyServer() {
     stepActive.value = 1;
     dialogAddEmbyServerVisible.value = true
-    invoke.getSysInfo().then(hostname => {
+    invokeApi.getSysInfo().then(hostname => {
         const client = "loemby";
         const client_version = import.meta.env.VITE_APP_VERSION;
         const user_agent = client + "/" + client_version;

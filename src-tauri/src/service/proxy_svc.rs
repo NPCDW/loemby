@@ -114,7 +114,7 @@ pub struct ImageParam {
     pub image_url: String,
     pub proxy_url: Option<String>,
     pub user_agent: String,
-    pub cache_prefix: Vec<String>,
+    pub cache_prefix: String,
 }
 
 async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<ImageParam>) -> axum::response::Response {
@@ -122,7 +122,7 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
     let axum_app_state = app_state.read().await.clone().unwrap();
 
     let cache_digest = sha256::digest(&param.image_url);
-    let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}", param.cache_prefix.join("/"), cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+    let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}", param.cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
     if cache_file_path.exists() {
         tracing::debug!("image: {:?} 从缓存读取", param);
         let file = match tokio::fs::File::open(cache_file_path).await {
