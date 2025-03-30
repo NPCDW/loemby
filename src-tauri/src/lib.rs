@@ -22,7 +22,7 @@ pub fn run() {
             window.set_focus().expect("Can't Bring Window to Focus");
         }))
         .plugin(tauri_plugin_sql::Builder::default().add_migrations("sqlite:loemby.db", config::db_migrations::migrations()).build())
-        .invoke_handler(tauri::generate_handler![get_sys_info, play_video, http_forward, load_image, go_trakt_auth, open_url, updater, restart_app, get_runtime_config])
+        .invoke_handler(tauri::generate_handler![get_sys_info, play_video, http_forward, go_trakt_auth, open_url, updater, restart_app, get_runtime_config])
         .setup(|app| {
             let config_dir = app.path().resolve("", tauri::path::BaseDirectory::AppConfig)?;
             let config = config::app_config::get_config(app, &config_dir);

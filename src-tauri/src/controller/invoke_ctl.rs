@@ -130,5 +130,5 @@ pub async fn restart_app(app_handle: tauri::AppHandle) {
 
 #[tauri::command]
 pub async fn get_runtime_config(state: tauri::State<'_, AppState>) -> Result<runtime_config::RuntimeConfig, ()> {
-    runtime_config::get_runtime_config(state)
+    runtime_config::get_runtime_config(state).await
 }

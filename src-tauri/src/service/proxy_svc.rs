@@ -7,7 +7,7 @@ use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
-use crate::config::http_pool;
+use crate::config::{app_state::AppState, http_pool};
 
 pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -24,7 +24,7 @@ pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, a
 
     let router = Router::new()
         .route("/stream/{types}/{id}", get(stream))
-        .route("/image", get(stream))
+        .route("/image", get(image))
         .route("/trakt_auth", get(trakt_auth))
         .with_state(axum_app_state);
 
@@ -140,8 +140,15 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
         ).into_response();
     }
 
-    let app_state = axum_app_state.app.state().clone();
-    let client = http_pool::get_http_client(param.proxy_url.clone(), app_state).await?;
+    let app_state = axum_app_state.app.state::<AppState>().clone();
+    let client = match http_pool::get_http_client(param.proxy_url.clone(), app_state).await {
+        Ok(client) => client,
+        Err(err) => return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("http连接池获取失败 {}", err))
+        ).into_response(),
+    };
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::USER_AGENT);
