@@ -30,7 +30,7 @@
                         <p>
                             <span>外部链接：</span>
                             <el-tooltip v-for="externalUrl in currentEpisodes.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
-                                <el-button round @click="invoke.open_url(externalUrl.Url)"><i-ep-Link /> {{ externalUrl.Name }}</el-button>
+                                <el-button round @click="invokeApi.open_url(externalUrl.Url)"><i-ep-Link /> {{ externalUrl.Name }}</el-button>
                             </el-tooltip>
                         </p>
                         <div style="display: flex;align-items: center;">
@@ -150,7 +150,7 @@ import { nextTick, onUnmounted, ref, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
-import invoke from '../../api/invokeApi';
+import invokeApi from '../../api/invokeApi';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { PlaybackProgress } from '../../store/playback';
@@ -513,7 +513,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
             let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
                  : 'S' + currentEpisodes.value?.ParentIndexNumber + 'E' + currentEpisodes.value?.IndexNumber + '. ' + currentEpisodes.value?.Name
             const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
-            return invoke.playback({
+            return invokeApi.playback({
                 mpv_path: mpv_path.value,
                 path: directStreamUrl,
                 proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),

@@ -160,7 +160,7 @@ import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
-import invoke from '../../api/invokeApi';
+import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
 import { useEventBus } from '../../store/eventBus';
@@ -293,15 +293,12 @@ function getMediaLibraryChildLatest(parentId: string) {
 
 const images = ref<{[key: string]: string}>({})
 async function loadImage(itemId: string) {
-    invoke.loadImage({
-        image_url: embyApi.getImageUrl(embyServer.value, itemId)!,
-        proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
-        user_agent: embyServer.value.user_agent!,
-    }).then(response => {
-        images.value[itemId] = response
-    }).catch(e => {
-        ElMessage.error(e)
-    })
+  images.value[itemId] = invokeApi.loadImage({
+    image_url: embyApi.getImageUrl(embyServer.value, itemId)!,
+    proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
+    user_agent: embyServer.value.user_agent!,
+    cache_prefix: ['image', embyServer.value.id!],
+  })
 }
 
 const mediaLibraryCountLoading = ref(false)

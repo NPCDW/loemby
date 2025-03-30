@@ -29,8 +29,6 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
             stream_url: body.path.clone(),
             client: client.clone(),
             user_agent: body.user_agent.clone(),
-            read_from_cache: false,
-            write_to_cache: false,
         });
         format!("http://127.0.0.1:{}/stream/video/{}", &app_state.port, &uuid)
     } else {
@@ -61,8 +59,6 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
                 stream_url: audio.clone(),
                 client: client.clone(),
                 user_agent: body.user_agent.clone(),
-                read_from_cache: false,
-                write_to_cache: false,
             });
             format!("http://127.0.0.1:{}/stream/audio/{}", &app_state.port, &uuid)
         } else {
@@ -77,8 +73,6 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
                 stream_url: subtitle.clone(),
                 client: client.clone(),
                 user_agent: body.user_agent.clone(),
-                read_from_cache: false,
-                write_to_cache: false,
             });
             format!("http://127.0.0.1:{}/stream/subtitle/{}", &app_state.port, &uuid)
         } else {

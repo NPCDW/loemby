@@ -127,7 +127,7 @@ import embyApi, { EmbyPageList, EpisodesItems, SeasonsItems, UserData } from '..
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'
-import invoke from '../../api/invokeApi';
+import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
 import { useEventBus } from '../../store/eventBus';
@@ -301,13 +301,12 @@ function handleDialogEpisodesPageChange(page: number) {
 
 const images = ref<{[key: string]: string}>({})
 async function loadImage(itemId: string) {
-    invoke.loadImage({
-        image_url: embyApi.getImageUrl(embyServer.value, itemId)!,
-        proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
-        user_agent: embyServer.value.user_agent!,
-    }).then(response => {
-        images.value[itemId] = response
-    }).catch(e => ElMessage.error('加载图片失败' + e))
+  images.value[itemId] = invokeApi.loadImage({
+    image_url: embyApi.getImageUrl(embyServer.value, itemId)!,
+    proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
+    user_agent: embyServer.value.user_agent!,
+    cache_prefix: ['image', embyServer.value.id!],
+  })
 }
 </script>
 

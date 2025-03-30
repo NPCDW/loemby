@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use crate::config::app_state::AppState;
+use crate::config::runtime_config;
 use crate::service::{http_forward_svc, player_svc, updater_svc};
 
 #[tauri::command]
@@ -81,15 +82,6 @@ pub struct LoadImageParam {
 }
 
 #[tauri::command]
-pub async fn load_image(body: LoadImageParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = http_forward_svc::load_image(body, state).await;
-    if res.is_err() {
-        return Err(res.unwrap_err().to_string());
-    }
-    Ok(res.unwrap())
-}
-
-#[tauri::command]
 pub async fn go_trakt_auth(state: tauri::State<'_, AppState>) -> Result<(), String> {
     let auxm_app_state = state.auxm_app_state.clone();
     let auxm_app_state = auxm_app_state.read().await.clone();
@@ -137,7 +129,6 @@ pub async fn restart_app(app_handle: tauri::AppHandle) {
 }
 
 #[tauri::command]
-pub async fn version() -> Result<String, ()> {
-    let version = env!("CARGO_PKG_VERSION").to_string();
-    Ok(version)
+pub async fn get_runtime_config(state: tauri::State<'_, AppState>) -> Result<runtime_config::RuntimeConfig, ()> {
+    runtime_config::get_runtime_config(state)
 }

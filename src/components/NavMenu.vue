@@ -249,7 +249,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { generateGuid } from "../util/uuid_util";
 import _ from "lodash";
 import { Container, Draggable } from "vue3-smooth-dnd";
-import invoke from "../api/invokeApi";
+import invokeApi from "../api/invokeApi";
 import { ProxyServer, useProxyServer } from "../store/db/proxyServer";
 import { EmbyServer, useEmbyServer } from "../store/db/embyServer";
 import { EmbyLine, useEmbyLine } from "../store/db/embyLine";

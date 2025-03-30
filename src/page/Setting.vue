@@ -174,13 +174,12 @@ import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
 import { EmbyLine, useEmbyLine } from '../store/db/embyLine';
 import { useGlobalConfig } from '../store/db/globalConfig';
 import { useEventBus } from '../store/eventBus';
-import invoke from '../api/invokeApi';
+import invokeApi from '../api/invokeApi';
 import { listen } from '@tauri-apps/api/event';
 import traktApi from '../api/traktApi';
-import invokeApi from '../api/invokeApi';
+import {useRuntimeConfig} from "../store/runtimeConfig.ts";
 
-const version = ref("")
-invokeApi.version().then(response => version.value == response)
+const version = ref(useRuntimeConfig().runtimeConfig?.version)
 
 const proxyServer = ref<ProxyServer[]>([]);
 function listAllProxyServer() {
@@ -411,7 +410,7 @@ function delAuthTrakt() {
 function goAuthTrakt() {
     traktAuthLoading.value = true
     traktAuthStatus.value = '等待授权回调'
-    invoke.go_trakt_auth().then(() => {
+    invokeApi.go_trakt_auth().then(() => {
         ElMessage.success('打开浏览器成功，您也可以手动复制地址，去其他浏览器授权');
     }).catch(e => ElMessage.error('授权Trakt失败' + e))
 }

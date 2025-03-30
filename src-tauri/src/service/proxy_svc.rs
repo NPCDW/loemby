@@ -7,6 +7,7 @@ use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
+use crate::config::http_pool;
 
 pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -23,6 +24,7 @@ pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, a
 
     let router = Router::new()
         .route("/stream/{types}/{id}", get(stream))
+        .route("/image", get(stream))
         .route("/trakt_auth", get(trakt_auth))
         .with_state(axum_app_state);
 
@@ -82,26 +84,6 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         }
     };
 
-    let cache_file_path = app_state.app.path().resolve(&format!("cache/{}/{}", types, id), tauri::path::BaseDirectory::AppLocalData).unwrap();
-    if request.read_from_cache {
-        tracing::debug!("stream: {} {} 从缓存读取", types, id);
-        if cache_file_path.exists() {
-            let file = match tokio::fs::File::open(cache_file_path).await {
-                Ok(file) => file,
-                Err(err) => return (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    axum::http::HeaderMap::new(),
-                    axum::body::Body::new(format!("从缓存读取失败 {}", err))
-                ).into_response(),
-            };
-            return (
-                axum::http::StatusCode::OK,
-                axum::http::HeaderMap::new(),
-                axum::body::Body::from_stream(FramedRead::new(file, BytesCodec::new()))
-            ).into_response();
-        }
-    }
-
     let client = request.client.clone();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
@@ -113,6 +95,63 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         .send()
         .await;
     tracing::debug!("stream: {} {} 媒体流响应 {:?}", types, &id, res);
+    match res {
+        Err(err) => (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(err.to_string())
+        ).into_response(),
+        Ok(response) => (
+            response.status(),
+            response.headers().clone(),
+            axum::body::Body::from_stream(response.bytes_stream())
+        ).into_response(),
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ImageParam {
+    pub image_url: String,
+    pub proxy_url: Option<String>,
+    pub user_agent: String,
+    pub cache_prefix: Vec<String>,
+}
+
+async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<ImageParam>) -> axum::response::Response {
+    tracing::debug!("image: {:?}", param);
+    let axum_app_state = app_state.read().await.clone().unwrap();
+
+    let cache_digest = sha256::digest(&param.image_url);
+    let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}", param.cache_prefix.join("/"), cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+    if cache_file_path.exists() {
+        tracing::debug!("image: {:?} 从缓存读取", param);
+        let file = match tokio::fs::File::open(cache_file_path).await {
+            Ok(file) => file,
+            Err(err) => return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                axum::http::HeaderMap::new(),
+                axum::body::Body::new(format!("从缓存读取失败 {}", err))
+            ).into_response(),
+        };
+        return (
+            axum::http::StatusCode::OK,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::from_stream(FramedRead::new(file, BytesCodec::new()))
+        ).into_response();
+    }
+
+    let app_state = axum_app_state.app.state().clone();
+    let client = http_pool::get_http_client(param.proxy_url.clone(), app_state).await?;
+    let mut req_headers = headers.clone();
+    req_headers.remove(axum::http::header::HOST);
+    req_headers.remove(axum::http::header::USER_AGENT);
+    req_headers.insert(axum::http::header::USER_AGENT, param.user_agent.clone().parse().unwrap());
+    let res = client
+        .get(param.image_url.clone())
+        .headers(req_headers.clone())
+        .send()
+        .await;
+    tracing::debug!("image: {:?} 媒体流响应 {:?}", param, res);
     if let Err(err) = res {
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
@@ -121,35 +160,28 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         ).into_response()
     }
     let response = res.unwrap();
-    if request.write_to_cache {
-        if !cache_file_path.parent().unwrap().exists() {
-            std::fs::create_dir_all(cache_file_path.parent().unwrap()).unwrap();
-        }
-        let mut file = File::create(cache_file_path).await.unwrap();
-        let status = response.status();
-        let header = response.headers().clone();
-        let mut stream = response.bytes_stream();
-
-        let (sender, receiver) = tokio::sync::mpsc::channel(32);
-        tokio::spawn(async move {
-            while let Some(chunk) = stream.next().await {
-                let chunk = chunk.unwrap();
-                file.write_all(&chunk).await.unwrap();
-                sender.send(chunk).await.unwrap();
-            }
-        });
-        let receiver_stream = ReceiverStream::new(receiver);
-        let mapped_stream = receiver_stream.map(|chunk| Ok::<_, std::io::Error>(chunk));
-        return (
-            status,
-            header,
-            axum::body::Body::from_stream(mapped_stream)
-        ).into_response()
+    if !cache_file_path.parent().unwrap().exists() {
+        std::fs::create_dir_all(cache_file_path.parent().unwrap()).unwrap();
     }
-    return (
-        response.status(),
-        response.headers().clone(),
-        axum::body::Body::from_stream(response.bytes_stream())
+    let mut file = File::create(cache_file_path).await.unwrap();
+    let status = response.status();
+    let header = response.headers().clone();
+    let mut stream = response.bytes_stream();
+
+    let (sender, receiver) = tokio::sync::mpsc::channel(32);
+    tokio::spawn(async move {
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.unwrap();
+            file.write_all(&chunk).await.unwrap();
+            sender.send(chunk).await.unwrap();
+        }
+    });
+    let receiver_stream = ReceiverStream::new(receiver);
+    let mapped_stream = receiver_stream.map(|chunk| Ok::<_, std::io::Error>(chunk));
+    (
+        status,
+        header,
+        axum::body::Body::from_stream(mapped_stream)
     ).into_response()
 }
 
@@ -158,8 +190,6 @@ pub struct AxumAppStateRequest {
     pub stream_url: String,
     pub client: reqwest::Client,
     pub user_agent: String,
-    pub read_from_cache: bool,
-    pub write_to_cache: bool,
 }
 
 #[derive(Clone)]

@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useProxyServer } from '../store/db/proxyServer';
+import {RuntimeConfig, useRuntimeConfig} from "../store/runtimeConfig.ts";
 
 async function getSysInfo(): Promise<string> {
     return invoke('get_sys_info');
@@ -49,13 +50,19 @@ async function httpForward(param: HttpForwardParam): Promise<HttpForwardResult> 
 }
 
 interface LoadImageParam {
-    image_url: String,
-    proxy_url?: String,
-    user_agent: String,
+    image_url: string,
+    proxy_url?: string,
+    user_agent: string,
+    cache_prefix: string[],
 }
 
-async function loadImage(param: LoadImageParam): Promise<string> {
-    return invoke('load_image', {body: param});
+function loadImage(param: LoadImageParam): string {
+    let port = useRuntimeConfig().runtimeConfig!.axum_port;
+    let url = `http://127.0.0.1:${port}/image?image_url=${encodeURIComponent(param.image_url)}&user_agent=${encodeURIComponent(param.user_agent)}&cache_prefix=${encodeURIComponent(param.cache_prefix.join(","))}`;
+    if (param.proxy_url) {
+        url += `&proxy_url=${encodeURIComponent(param.proxy_url)}`
+    }
+    return url
 }
 
 async function go_trakt_auth(): Promise<void> {
@@ -77,10 +84,10 @@ async function restartApp(): Promise<boolean> {
     return invoke('restart_app', {});
 }
 
-async function version(): Promise<string> {
-    return invoke('version', {});
+async function get_runtime_config(): Promise<RuntimeConfig> {
+    return invoke('get_runtime_config', {});
 }
 
 export default {
-    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url, updater, restartApp, version
+    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url, updater, restartApp, get_runtime_config
 }
