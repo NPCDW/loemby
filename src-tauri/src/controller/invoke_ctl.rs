@@ -135,3 +135,9 @@ pub async fn updater(body: UpdaterParam, app_handle: tauri::AppHandle) -> Result
 pub async fn restart_app(app_handle: tauri::AppHandle) {
     app_handle.restart()
 }
+
+#[tauri::command]
+pub async fn version() -> Result<String, ()> {
+    let version = env!("CARGO_PKG_VERSION").to_string();
+    Ok(version)
+}

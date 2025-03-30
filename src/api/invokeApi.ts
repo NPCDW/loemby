@@ -77,6 +77,10 @@ async function restartApp(): Promise<boolean> {
     return invoke('restart_app', {});
 }
 
+async function version(): Promise<string> {
+    return invoke('version', {});
+}
+
 export default {
-    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url, updater, restartApp
+    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url, updater, restartApp, version
 }

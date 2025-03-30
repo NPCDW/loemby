@@ -4,6 +4,7 @@
             <el-scrollbar style="height: calc(100vh - 100px);">
                 <el-form label-position="top">
                     <el-form-item label="应用更新">
+                        <span>当前版本: {{ version }}</span>
                         <el-button type="primary" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
                     </el-form-item>
                     <el-form-item label="MPV路径">
@@ -177,6 +178,9 @@ import invoke from '../api/invokeApi';
 import { listen } from '@tauri-apps/api/event';
 import traktApi from '../api/traktApi';
 import invokeApi from '../api/invokeApi';
+
+const version = ref("")
+invokeApi.version().then(response => version.value == response)
 
 const proxyServer = ref<ProxyServer[]>([]);
 function listAllProxyServer() {
