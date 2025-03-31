@@ -20,6 +20,23 @@ async function getProxyLocation(proxy_id: string) {
     });
 }
 
+/**
+ * 校验代理服务器
+ */
+async function getEmbyIconLibrary(url: string) {
+    if (!url) {
+        return Promise.reject("参数缺失");
+    }
+    return invokeApi.httpForward({
+        url,
+        method: 'GET',
+        headers: {
+            'User-Agent': USER_AGENT,
+        },
+        proxy: await useProxyServer().getAppProxyUrl()
+    });
+}
+
 export default {
-    getProxyLocation
+    getProxyLocation, getEmbyIconLibrary
 }

@@ -56,10 +56,7 @@
                 </div>
             </template>
             <div v-if="episodesList && episodesList.length > 0" style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;">
-                <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList">
-                    <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)"><p>{{ 'S' + episodesItem.ParentIndexNumber + 'E' + episodesItem.IndexNumber + '. ' + episodesItem.Name }}</p></el-link>
-                    <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
-                </el-card>
+                <ItemCard v-for="episodesItem in episodesList" :key="episodesItem.Id" :item="episodesItem" :embyServer="embyServer" />
                 <el-pagination
                     v-model:current-page="episodesCurrentPage"
                     v-model:page-size="episodesPageSize"
@@ -124,6 +121,7 @@
 import { useRoute, useRouter } from 'vue-router';
 import { onUnmounted, ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, SeasonsItems, UserData } from '../../api/embyApi';
+import ItemCard from '../../components/ItemCard.vue';
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { maxMediaSources } from '../../util/play_info_util'

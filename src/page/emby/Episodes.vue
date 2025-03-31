@@ -111,6 +111,8 @@
                     </div>
                 </div>
             </el-skeleton>
+        </div>
+        <div>
             <el-skeleton :loading="nextUpLoading" animated>
                 <template #template>
                     <div class="box-item" v-for="i in 3" :key="i">
@@ -120,17 +122,8 @@
                 </template>
                 <h1 v-if="nextUpList && nextUpList.length == 1 && nextUpCurrentPage == 1">已经是最后一集了</h1>
                 <h1 v-if="nextUpList && nextUpList.length > 1">接下来</h1>
-                <div style="display: flex; flex-wrap: wrap; flex-direction: row; justify-content: space-between;">
-                    <template  v-for="nextUpItem in nextUpList">
-                        <el-card style="width: 300px; margin-bottom: 7px;">
-                            <el-link :underline="false" @click="gotoEpisodes(nextUpItem.Id)">
-                                <p>{{ 'S' + nextUpItem.ParentIndexNumber + 'E' + nextUpItem.IndexNumber + '. ' + nextUpItem.Name }}</p>
-                            </el-link>
-                            <p>{{ nextUpItem.PremiereDate ? nextUpItem.PremiereDate.substring(0, 10) : '' }}
-                                <el-tag disable-transitions>{{ nextUpItem.MediaSources ? formatBytes(maxMediaSources(nextUpItem.MediaSources)?.Size!) : 0 }}</el-tag>
-                            </p>
-                        </el-card>
-                    </template>
+                <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                    <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServer="embyServer" />
                 </div>
             </el-skeleton>
             <el-pagination
@@ -149,7 +142,8 @@
 import { nextTick, onUnmounted, ref, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
-import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
+import { getResolutionFromMediaSources } from '../../util/play_info_util'
+import ItemCard from '../../components/ItemCard.vue';
 import invokeApi from '../../api/invokeApi';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -632,9 +626,6 @@ function played() {
     }).finally(() => playedLoading.value = false)
 }
 
-function gotoEpisodes(episodesId: string) {
-    router.push('/nav/emby/' + embyServer.value.id + '/episodes/' + episodesId)
-}
 function gotoSeries(seriesId: string) {
     router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
 }

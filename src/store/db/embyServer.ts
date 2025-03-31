@@ -100,6 +100,7 @@ export interface EmbyServer {
     user_agent?: string,
 
     order_by?: number,
+    icon_url?: string,
 
     browse_proxy_id?: string,
     play_proxy_id?: string,

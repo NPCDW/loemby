@@ -105,7 +105,7 @@
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="Emby图标库" name="EmbyIconLibrary">
-            <!-- <el-scrollbar style="height: calc(100vh - 100px);">
+            <el-scrollbar style="height: calc(100vh - 100px);">
                 <h1>Emby图标库</h1>
                 <el-table :data="embyIconLibrary" style="width: 100%">
                     <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
@@ -115,19 +115,18 @@
                             <el-button type="primary" size="small" @click.prevent="addEmbyIconLibrary()">添加图标库</el-button>
                         </template>
                         <template #default="scope">
-                            <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="updateEmbyIconLibrary(scope.row.id)">更新</el-button>
                             <el-button plain type="primary" size="small" @click.prevent="editEmbyIconLibrary(scope.$index)">编辑</el-button>
                             <el-button plain type="danger" size="small" @click.prevent="delEmbyIconLibrary(scope.$index)">删除</el-button>
                         </template>
                     </el-table-column>
                 </el-table>
-            </el-scrollbar> -->
+            </el-scrollbar>
         </el-tab-pane>
     </el-tabs>
 
     <el-dialog
         v-model="dialogProxyServerVisible"
-        title="添加代理服务器"
+        title="代理服务器"
         width="800"
     >
         <el-scrollbar>
@@ -161,6 +160,28 @@
             </el-form>
         </el-scrollbar>
     </el-dialog>
+    <el-dialog
+        v-model="dialogEmbyIconLibraryVisible"
+        title="Emby图标库"
+        width="800"
+    >
+        <el-scrollbar>
+            <el-form label-position="top">
+                <el-form-item label="名称">
+                    <el-input v-model="dialogEmbyIconLibrary.name" placeholder="图标库名称" />
+                </el-form-item>
+                <el-form-item label="地址">
+                    <el-input v-model="dialogEmbyIconLibrary.url" placeholder="图标库 http 地址" />
+                </el-form-item>
+                <el-form-item>
+                    <div style="width: 100%; display: flex; justify-content: end;">
+                        <el-button @click="saveEmbyIconLibrary" type="primary">保存</el-button>
+                        <el-button @click="dialogEmbyIconLibraryVisible = false">取消</el-button>
+                    </div>
+                </el-form-item>
+            </el-form>
+        </el-scrollbar>
+    </el-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -178,6 +199,7 @@ import invokeApi from '../api/invokeApi';
 import { listen } from '@tauri-apps/api/event';
 import traktApi from '../api/traktApi';
 import {useRuntimeConfig} from "../store/runtimeConfig.ts";
+import { EmbyIconLibrary, useEmbyIconLibrary } from '../store/db/embyIconLibrary.ts';
 
 const version = ref(useRuntimeConfig().runtimeConfig?.version)
 
@@ -228,6 +250,52 @@ function delProxy(index: number) {
   ).then(async () => {
         useProxyServer().delProxyServer(proxyServer.value[index].id!).then(() => {
             useEventBus().emit('ProxyServerChanged', {})
+            ElMessage.success('删除成功');
+        }).catch(e => ElMessage.error('删除失败' + e))
+  })
+}
+
+const dialogEmbyIconLibraryVisible = ref(false);
+const dialogEmbyIconLibrary = ref<EmbyIconLibrary>({})
+const embyIconLibrary = ref<EmbyIconLibrary[]>([]);
+function listAllEmbyIconLibrary() {
+    useEmbyIconLibrary().listAllEmbyIconLibrary().then(list => {
+        embyIconLibrary.value = list;
+    })
+}
+function addEmbyIconLibrary() {
+    dialogEmbyIconLibraryVisible.value = true;
+    dialogEmbyIconLibrary.value = {};
+}
+function editEmbyIconLibrary(index: number) {
+    dialogEmbyIconLibraryVisible.value = true;
+    dialogEmbyIconLibrary.value = _.clone(embyIconLibrary.value[index]);
+}
+function saveEmbyIconLibrary() {
+    let savePromise;
+    if (dialogEmbyIconLibrary.value.id) {
+        savePromise = useEmbyIconLibrary().updateEmbyIconLibrary(dialogEmbyIconLibrary.value)
+    } else {
+        dialogEmbyIconLibrary.value.id = generateGuid();
+        savePromise = useEmbyIconLibrary().addEmbyIconLibrary(dialogEmbyIconLibrary.value)
+    }
+    savePromise.then(() => {
+        ElMessage.success('保存成功');
+    }).catch(e => {
+        ElMessage.error('保存失败' + e);
+    }).finally(() => dialogEmbyIconLibraryVisible.value = false)
+}
+function delEmbyIconLibrary(index: number) {
+    ElMessageBox.confirm(
+    `确认删除图标库「${embyIconLibrary.value[index].name}」吗`,
+    'Warning',
+    {
+      confirmButtonText: 'OK',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    }
+  ).then(async () => {
+        useEmbyIconLibrary().delEmbyIconLibrary(embyIconLibrary.value[index].id!).then(() => {
             ElMessage.success('删除成功');
         }).catch(e => ElMessage.error('删除失败' + e))
   })
@@ -621,14 +689,7 @@ function handlePaneChange() {
         getTraktProxy()
         getAppProxy()
     } else if (activePane.value == 'EmbyIconLibrary') {
-        if (proxyServer.value.length == 0) {
-            listAllProxyServer()
-        }
-        listAllEmbyLine()
-        getGlobalBrowseProxy()
-        getGlobalPlayProxy()
-        getTraktProxy()
-        getAppProxy()
+        listAllEmbyIconLibrary()
     }
 }
 getMpvPath()

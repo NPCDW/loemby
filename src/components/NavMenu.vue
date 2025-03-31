@@ -17,8 +17,7 @@
                             <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled ? true : false">
                                 <div style="height: 100%; width: 100%; display: flex; align-items: center;">
                                     <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
-                                    <!-- <el-icon v-else-if="embyServer.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
-                                    <el-icon v-else-if="embyServer.request_fail" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon> -->
+                                    <el-icon v-else-if="embyServer.icon_url" size="24"><img :src="embyServer.icon_url"></el-icon>
                                     <el-icon v-else size="24"><svg-icon name="emby" /></el-icon>
                                     {{ embyServer.server_name }}
                                     <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
@@ -47,6 +46,10 @@
                                                 </el-dropdown-menu>
                                             </template>
                                         </el-dropdown>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item @click="editEmbyIcon(embyServer)">
+                                        <i-ep-Edit style="position: absolute; left: 10;" />
+                                        <span style="margin-left: 15px;">修改图标</span>
                                     </el-dropdown-item>
                                     <el-dropdown-item @click="editEmbyServer(embyServer)">
                                         <i-ep-Edit style="position: absolute; left: 10;" />
@@ -239,6 +242,19 @@
         </el-form-item>
     </el-form>
   </el-dialog>
+  <el-dialog v-model="dialogEditEmbyIconVisible" title="Emby Icon" width="800">
+    <el-select v-model="selectedEmbyIconLibrary" @change="embyIconLibraryChange">
+      <el-option
+        v-for="item in embyIconLibrary"
+        :key="item.id"
+        :label="item.name"
+        :value="item.url"
+      />
+    </el-select>
+    <div style="display: flex; flex-wrap: wrap; flex-direction: row;" v-loading="embyIconListLoading">
+        <el-icon :size="24" v-for="embyIcon in embyIconList" @click="updateEmbyIcon(embyIcon.url)"><img v-lazy="embyIcon.url" style="max-height: 24px; max-width: 24px;" /></el-icon>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -256,6 +272,8 @@ import { EmbyLine, useEmbyLine } from "../store/db/embyLine";
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import { useEventBus } from "../store/eventBus";
+import { EmbyIconLibrary, useEmbyIconLibrary } from "../store/db/embyIconLibrary";
+import appApi from "../api/appApi";
 
 const active = ref("");
 const route = useRoute();
@@ -641,6 +659,47 @@ async function configLineChange(value: string, embyServer: EmbyServer) {
             }).catch(e => ElMessage.error("切换失败" + e))
         }).catch(e => ElMessage.error("切换失败" + e))
     }).catch(e => ElMessage.error('获取线路失败' + e))
+}
+
+const dialogEditEmbyIconVisible = ref(false)
+const selectedEmbyIconLibrary = ref('')
+const embyIconLibrary = ref<EmbyIconLibrary[]>([]);
+const embyIconList = ref<{name: string, url: string}[]>([])
+const embyIconListLoading = ref(false)
+async function listAllEmbyIconLibrary() {
+    return useEmbyIconLibrary().listAllEmbyIconLibrary().then(list => {
+        embyIconLibrary.value = list;
+        return list
+    })
+}
+async function editEmbyIcon(embyServer: EmbyServer) {
+    dialogEditEmbyIconVisible.value = true
+    listAllEmbyIconLibrary().then(list => {
+        if (list && list.length > 0) {
+            selectedEmbyIconLibrary.value = list[0].id!
+        }
+    })
+    currentEmbyServer.value = _.clone(embyServer)
+}
+function embyIconLibraryChange() {
+    embyIconListLoading.value = true
+    embyIconList.value = []
+    const lib = embyIconLibrary.value.find(item => item.id === selectedEmbyIconLibrary.value)
+    appApi.getEmbyIconLibrary(lib!.url!).then(response => {
+        if (response.status_code != 200) {
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            return
+        }
+        let json: {name: string, icons:{name: string, url: string}[]} = JSON.parse(response.body);
+        embyIconList.value = json.icons
+    }).catch(e => ElMessage.error(e)).finally(() => embyIconListLoading.value = false)
+}
+function updateEmbyIcon(url: string) {
+    let tmp = {
+        id: currentEmbyServer.value.id!,
+        icon_url: url
+    }
+    updateEmbyLineDb(tmp)
 }
 </script>
 

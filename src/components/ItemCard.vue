@@ -2,13 +2,19 @@
     <el-card style="width: 300px; margin: 5px;">
         <template #header>
             <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)">{{ item.Name }}</el-link>
-            <el-link v-else :underline="false" @click="gotoEpisodes(item.Id)">{{ item.Name }}</el-link>
+            <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)">
+                <p>{{ 'S' + (item as EpisodesItems).ParentIndexNumber + 'E' + (item as EpisodesItems).IndexNumber + '. ' + item.Name }}</p>
+            </el-link>
+            <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)">{{ item.Name }}</el-link>
         </template>
         <div style="margin-bottom: 10px;">
             <span v-if="item.Type == 'Series'">
-                {{ item.ProductionYear + (item.EndDate && item.EndDate.substring(0, 4) != item.ProductionYear + '' ? '-' + item.EndDate.substring(0, 4) : '') }}
+                {{ item.ProductionYear + ((item as SearchItems).EndDate && (item as SearchItems).EndDate.substring(0, 4) != item.ProductionYear + '' ? '-' + (item as SearchItems).EndDate.substring(0, 4) : '') }}
             </span>
-            <span v-else style="display: flex;justify-content: space-between;align-items: center;">
+            <span v-else-if="item.Type == 'Episode'">
+                {{ (item as EpisodesItems).PremiereDate ? (item as EpisodesItems).PremiereDate.substring(0, 10) : '' }}
+            </span>
+            <span v-else-if="item.Type == 'Movie'" style="display: flex;justify-content: space-between;align-items: center;">
                 <span>{{ item.ProductionYear }}</span>
                 <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] }}</el-tag>
                 <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[item.Id] }}</el-tag>
@@ -28,7 +34,7 @@
             </span>
             <span>
                 <el-badge :value="item.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
-                    <el-button v-if="item.Type == 'Series'" @click="getSeasons(item)" type="primary" plain>剧集</el-button>
+                    <el-button v-if="item.Type == 'Series'" @click="getSeasons(item as SearchItems)" type="primary" plain>剧集</el-button>
                 </el-badge>
             </span>
         </div>
@@ -139,7 +145,7 @@ import { EmbyServer } from '../store/db/embyServer';
 const router = useRouter()
 
 const {item, embyServer} = defineProps<{
-  item: SearchItems,
+  item: SearchItems | EpisodesItems,
   embyServer: EmbyServer
 }>()
 
