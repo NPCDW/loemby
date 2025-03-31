@@ -1,6 +1,6 @@
 <template>
     <el-scrollbar style="height: 100vh;">
-        <div style="padding: 20px 40px;">
+        <div style="padding: 20px 32px;">
             <el-skeleton :loading="playbackInfoLoading" animated>
                 <template #template>
                     <div style="width: 100%;padding: 10px;">
@@ -111,8 +111,6 @@
                     </div>
                 </div>
             </el-skeleton>
-        </div>
-        <div>
             <el-skeleton :loading="nextUpLoading" animated>
                 <template #template>
                     <div class="box-item" v-for="i in 3" :key="i">
@@ -139,14 +137,14 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onUnmounted, ref, watchEffect } from 'vue';
+import { h, nextTick, onUnmounted, ref, VNode, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItems, MediaSources, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { getResolutionFromMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
 import invokeApi from '../../api/invokeApi';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElNotification } from 'element-plus';
 import { PlaybackProgress } from '../../store/playback';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
@@ -540,13 +538,17 @@ function playing(item_id: string, playbackPositionTicks: number) {
                             return
                         }
                         const json: {movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
-                        let message = 'Trakt 同步成功'
+                        let message: VNode[] = []
                         if (json.movie) {
-                            message = '「' + json.movie.title + ' (' + json.movie.year + ')」'
+                            message = [h('p', null, `${json.movie.title} (${json.movie.year})`)]
                         } else if (json.episode) {
-                            message = '「' + json.show?.title + '」「' + 'S' + json.episode.season + 'E' + json.episode.number + ' ' + json.episode.title + '」'
+                            message = [h('p', null, `${json.show?.title} (${json.show?.year})`), h('p', null, `S${json.episode.season}E${json.episode.number} ${json.episode.title}`)]
                         }
-                        ElMessage.success(message)
+                        ElNotification.success({
+                            title: 'Trakt 同步播放开始',
+                            message: h('div', null, message),
+                            position: 'bottom-right',
+                        })
                     }).catch(e => ElMessage.error("Trakt 同步失败：" + e))
                 }
             }).catch(res => {

@@ -326,7 +326,7 @@ const checkUpdateLoading = ref<boolean>(false);
 function checkUpdate() {
     checkUpdateLoading.value = true;
     invokeApi.updater().then(res => {
-        if (!res) {
+        if (res) {
             ElNotification.success({
                 title: '新版本准备就绪',
                 message: h('p', {'style': "display: flex; justify-content: space-between; align-items: center;"}, [

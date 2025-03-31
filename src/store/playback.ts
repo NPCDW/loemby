@@ -2,10 +2,11 @@ import { listen } from '@tauri-apps/api/event';
 import _ from 'lodash';
 import { defineStore } from 'pinia'
 import embyApi from '../api/embyApi';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElNotification } from 'element-plus';
 import { useEmbyServer } from './db/embyServer';
 import { useEventBus } from './eventBus';
 import traktApi from '../api/traktApi';
+import { h, VNode } from 'vue';
 
 export const usePlayback = defineStore('playback', () => {
     async function listen_playback_progress() {
@@ -33,13 +34,17 @@ export const usePlayback = defineStore('playback', () => {
                                 return
                             }
                             const json: {movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
-                            let message = 'Trakt 同步成功'
+                            let message: VNode[] = []
                             if (json.movie) {
-                                message = '「' + json.movie.title + ' (' + json.movie.year + ')」'
+                                message = [h('p', null, `${json.movie.title} (${json.movie.year})`)]
                             } else if (json.episode) {
-                                message = '「' + json.show?.title + '」「' + 'S' + json.episode.season + 'E' + json.episode.number + ' ' + json.episode.title + '」'
+                                message = [h('p', null, `${json.show?.title} (${json.show?.year})`), h('p', null, `S${json.episode.season}E${json.episode.number} ${json.episode.title}`)]
                             }
-                            ElMessage.success(message)
+                            ElNotification.success({
+                                title: 'Trakt 同步播放结束',
+                                message: h('div', null, message),
+                                position: 'bottom-right',
+                            })
                         }).catch(e => ElMessage.error("Trakt 同步失败：" + e))
                     }
                 } else {
