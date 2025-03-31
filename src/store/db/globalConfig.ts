@@ -14,6 +14,16 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
         cacheGlobalConfig.value[key] = config.config_value!;
     }
 
+    async function initCache() {
+        let globalConfigList = await useDb().db?.select<GlobalConfig[]>('select * from global_config');
+        if (!globalConfigList || globalConfigList.length == 0) {
+            return;
+        }
+        for (const globalConfig of globalConfigList) {
+            cacheGlobalConfig.value[globalConfig.config_key!] = globalConfig.config_value!;
+        }
+    }
+
     async function getGlobalConfigValue(config_key: string) {
         if (!cacheGlobalConfig.value[config_key]) {
             await refreshCache(config_key);
@@ -60,7 +70,7 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
         return res?.rowsAffected;
     }
 
-    return { getGlobalConfigValue, getGlobalConfig, delGlobalConfig, addGlobalConfig, updateGlobalConfig }
+    return { getGlobalConfigValue, getGlobalConfig, delGlobalConfig, addGlobalConfig, updateGlobalConfig, initCache }
 })
 
 export interface GlobalConfig {

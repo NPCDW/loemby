@@ -201,7 +201,7 @@ import traktApi from '../api/traktApi';
 import {useRuntimeConfig} from "../store/runtimeConfig.ts";
 import { EmbyIconLibrary, useEmbyIconLibrary } from '../store/db/embyIconLibrary.ts';
 
-const version = ref(useRuntimeConfig().runtimeConfig?.version)
+const version = useRuntimeConfig().runtimeConfig?.version
 
 const proxyServer = ref<ProxyServer[]>([]);
 function listAllProxyServer() {
@@ -281,6 +281,7 @@ function saveEmbyIconLibrary() {
     }
     savePromise.then(() => {
         ElMessage.success('保存成功');
+        listAllEmbyIconLibrary()
     }).catch(e => {
         ElMessage.error('保存失败' + e);
     }).finally(() => dialogEmbyIconLibraryVisible.value = false)
@@ -297,6 +298,7 @@ function delEmbyIconLibrary(index: number) {
   ).then(async () => {
         useEmbyIconLibrary().delEmbyIconLibrary(embyIconLibrary.value[index].id!).then(() => {
             ElMessage.success('删除成功');
+            listAllEmbyIconLibrary()
         }).catch(e => ElMessage.error('删除失败' + e))
   })
 }

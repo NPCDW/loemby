@@ -17,8 +17,8 @@
                             <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled ? true : false">
                                 <div style="height: 100%; width: 100%; display: flex; align-items: center;">
                                     <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
-                                    <el-icon v-else-if="embyServer.icon_url" size="24"><img :src="embyServer.icon_url"></el-icon>
-                                    <el-icon v-else size="24"><svg-icon name="emby" /></el-icon>
+                                    <el-icon v-else-if="embyServer.icon_url" size="24" style="width: 24px; height: 24px;"><img :src="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;"></el-icon>
+                                    <el-icon v-else size="24" style="width: 24px; height: 3624pxpx;"><svg-icon name="emby" /></el-icon>
                                     {{ embyServer.server_name }}
                                     <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
                                         {{ '+' + keep_alive_days[embyServer.id!] }}
@@ -242,18 +242,28 @@
         </el-form-item>
     </el-form>
   </el-dialog>
-  <el-dialog v-model="dialogEditEmbyIconVisible" title="Emby Icon" width="800">
+  <el-dialog v-model="dialogEditEmbyIconVisible" title="Emby Icon" width="400" style="height: 400px;">
     <el-select v-model="selectedEmbyIconLibrary" @change="embyIconLibraryChange">
       <el-option
         v-for="item in embyIconLibrary"
         :key="item.id"
         :label="item.name"
-        :value="item.url"
+        :value="item.id"
       />
     </el-select>
-    <div style="display: flex; flex-wrap: wrap; flex-direction: row;" v-loading="embyIconListLoading">
-        <el-icon :size="24" v-for="embyIcon in embyIconList" @click="updateEmbyIcon(embyIcon.url)"><img v-lazy="embyIcon.url" style="max-height: 24px; max-width: 24px;" /></el-icon>
-    </div>
+    <el-input v-model="searchEmbyIconName" placeholder="搜索图标" style="margin-top: 5px;" />
+    <el-scrollbar style="height: 240px; padding: 10px;">
+        <div style="display: flex; flex-wrap: wrap; flex-direction: row;" v-loading="embyIconListLoading">
+            <template v-for="embyIcon in embyIconList">
+                <div style="display: flex; flex-direction: column; align-items: center; margin: 5px; width: 75px;" v-if="embyIcon.name.toLowerCase().includes(searchEmbyIconName.toLowerCase())">
+                        <el-icon :size="48" @click="updateEmbyIcon(embyIcon.url)" style="max-height: 48px; max-width: 48px;">
+                            <img v-lazy="embyIcon.local_url" style="max-height: 48px; max-width: 48px;" />
+                        </el-icon>
+                        <span style="word-break: break-all; font-size: small; max-width: 60px; text-align: center;">{{ embyIcon.name }}</span>
+                </div>
+            </template>
+        </div>
+    </el-scrollbar>
   </el-dialog>
 </template>
 
@@ -296,11 +306,21 @@ const embyServers = ref<EmbyServer[]>([])
 function listAllEmbyServer() {
     useEmbyServer().listAllEmbyServer().then(list => {
         embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
+        getEmbyIconLocalUrl()
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
 useEventBus().on('EmbyServerChanged', listAllEmbyServer)
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
+
+const embyIconLocalUrl = ref<{[key: string]: string}>({})
+function getEmbyIconLocalUrl() {
+    for (const emby of embyServers.value) {
+        if (emby.icon_url) {
+            loadImage(emby.icon_url).then(local_url => embyIconLocalUrl.value[emby.id!] = local_url)
+        }
+    }
+}
 
 const keep_alive_days = computed(() => {
     let days: {[key: string]: number} = {}
@@ -664,8 +684,9 @@ async function configLineChange(value: string, embyServer: EmbyServer) {
 const dialogEditEmbyIconVisible = ref(false)
 const selectedEmbyIconLibrary = ref('')
 const embyIconLibrary = ref<EmbyIconLibrary[]>([]);
-const embyIconList = ref<{name: string, url: string}[]>([])
+const embyIconList = ref<{name: string, url: string, local_url?: string}[]>([])
 const embyIconListLoading = ref(false)
+const searchEmbyIconName = ref('')
 async function listAllEmbyIconLibrary() {
     return useEmbyIconLibrary().listAllEmbyIconLibrary().then(list => {
         embyIconLibrary.value = list;
@@ -677,6 +698,7 @@ async function editEmbyIcon(embyServer: EmbyServer) {
     listAllEmbyIconLibrary().then(list => {
         if (list && list.length > 0) {
             selectedEmbyIconLibrary.value = list[0].id!
+            embyIconLibraryChange()
         }
     })
     currentEmbyServer.value = _.clone(embyServer)
@@ -692,6 +714,9 @@ function embyIconLibraryChange() {
         }
         let json: {name: string, icons:{name: string, url: string}[]} = JSON.parse(response.body);
         embyIconList.value = json.icons
+        for (const icon of embyIconList.value) {
+            loadImage(icon.url!).then(local_url => icon.local_url = local_url)
+        }
     }).catch(e => ElMessage.error(e)).finally(() => embyIconListLoading.value = false)
 }
 function updateEmbyIcon(url: string) {
@@ -699,7 +724,16 @@ function updateEmbyIcon(url: string) {
         id: currentEmbyServer.value.id!,
         icon_url: url
     }
-    updateEmbyLineDb(tmp)
+    updateEmbyServerDb(tmp)
+}
+
+async function loadImage(icon_url: string) {
+  return invokeApi.loadImage({
+    image_url: icon_url,
+    proxy_url: await useProxyServer().getAppProxyUrl(),
+    user_agent: 'loemby/' + import.meta.env.VITE_APP_VERSION,
+    cache_prefix: ['icon'],
+  })
 }
 </script>
 
