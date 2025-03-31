@@ -534,7 +534,20 @@ function playing(item_id: string, playbackPositionTicks: number) {
                         .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer.value!.id!}))
                 })
                 if (scrobbleTraktParam) {
-                    traktApi.start(scrobbleTraktParam)
+                    traktApi.start(scrobbleTraktParam).then(response => {
+                        if (response.status_code != 201) {
+                            ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
+                            return
+                        }
+                        const json: {movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
+                        let message = 'Trakt 同步成功'
+                        if (json.movie) {
+                            message = '「' + json.movie.title + ' (' + json.movie.year + ')」'
+                        } else if (json.episode) {
+                            message = '「' + json.show?.title + '」「' + 'S' + json.episode.season + 'E' + json.episode.number + ' ' + json.episode.title + '」'
+                        }
+                        ElMessage.success(message)
+                    }).catch(e => ElMessage.error("Trakt 同步失败：" + e))
                 }
             }).catch(res => {
                 ElMessage.error({

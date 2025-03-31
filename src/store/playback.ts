@@ -27,7 +27,20 @@ export const usePlayback = defineStore('playback', () => {
                         const progress = Number((event.payload.progress / (event.payload.run_time_ticks / 100)).toFixed(2))
                         let scrobbleTraktParam = JSON.parse(event.payload.scrobble_trakt_param)
                         scrobbleTraktParam.progress = progress
-                        traktApi.stop(scrobbleTraktParam)
+                        traktApi.stop(scrobbleTraktParam).then(response => {
+                            if (response.status_code != 201) {
+                                ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
+                                return
+                            }
+                            const json: {movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
+                            let message = 'Trakt 同步成功'
+                            if (json.movie) {
+                                message = '「' + json.movie.title + ' (' + json.movie.year + ')」'
+                            } else if (json.episode) {
+                                message = '「' + json.show?.title + '」「' + 'S' + json.episode.season + 'E' + json.episode.number + ' ' + json.episode.title + '」'
+                            }
+                            ElMessage.success(message)
+                        }).catch(e => ElMessage.error("Trakt 同步失败：" + e))
                     }
                 } else {
                     embyApi.playingProgress(embyServer!, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, event.payload.progress)

@@ -4,8 +4,8 @@
             <el-scrollbar style="height: calc(100vh - 100px);">
                 <el-form label-position="top">
                     <el-form-item label="应用更新">
-                        <span>当前版本: {{ version }}</span>
-                        <el-button type="primary" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
+                        <span style="margin-right: 10px;">当前版本: {{ version }}</span>
+                        <el-button type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
                     </el-form-item>
                     <el-form-item label="MPV路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />

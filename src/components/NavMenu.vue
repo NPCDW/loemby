@@ -21,7 +21,7 @@
                                     <el-icon v-else size="24" style="width: 24px; height: 3624pxpx;"><svg-icon name="emby" /></el-icon>
                                     {{ embyServer.server_name }}
                                     <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
-                                        {{ '+' + keep_alive_days[embyServer.id!] }}
+                                        {{ keep_alive_days[embyServer.id!] >= 0 ? '+' + keep_alive_days[embyServer.id!] : keep_alive_days[embyServer.id!] }}
                                     </el-tag>
                                 </div>
                             </el-menu-item>
@@ -48,7 +48,7 @@
                                         </el-dropdown>
                                     </el-dropdown-item>
                                     <el-dropdown-item @click="editEmbyIcon(embyServer)">
-                                        <i-ep-Edit style="position: absolute; left: 10;" />
+                                        <i-ep-PriceTag style="position: absolute; left: 10;" />
                                         <span style="margin-left: 15px;">修改图标</span>
                                     </el-dropdown-item>
                                     <el-dropdown-item @click="editEmbyServer(embyServer)">
