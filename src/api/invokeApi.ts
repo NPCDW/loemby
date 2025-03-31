@@ -75,7 +75,7 @@ async function open_url(url: string): Promise<string> {
 
 async function updater(): Promise<boolean> {
     return invoke('updater', {body: {
-        proxy_url: await useProxyServer().getTraktProxyUrl(),
+        proxy_url: await useProxyServer().getAppProxyUrl(),
         user_agent: 'loemby/' + import.meta.env.VITE_APP_VERSION,
     }});
 }

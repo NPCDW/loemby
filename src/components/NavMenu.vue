@@ -253,7 +253,7 @@
     </el-select>
     <el-input v-model="searchEmbyIconName" placeholder="搜索图标" style="margin-top: 5px;" />
     <el-scrollbar style="height: 240px; padding: 10px;">
-        <div style="display: flex; flex-wrap: wrap; flex-direction: row;" v-loading="embyIconListLoading">
+        <div style="display: flex; flex-wrap: wrap; flex-direction: row; height: 240px;" v-loading="embyIconListLoading">
             <template v-for="embyIcon in embyIconList">
                 <div style="display: flex; flex-direction: column; align-items: center; margin: 5px; width: 75px;" v-if="embyIcon.name.toLowerCase().includes(searchEmbyIconName.toLowerCase())">
                         <el-icon :size="48" @click="updateEmbyIcon(embyIcon.url)" style="max-height: 48px; max-width: 48px;">

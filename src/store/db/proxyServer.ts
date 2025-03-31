@@ -121,7 +121,7 @@ export const useProxyServer = defineStore('proxyServer', () => {
         return proxyServer.proxy_type + "://" + auth + proxyServer.addr
     }
 
-    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, getBrowseProxyUrl, getPlayProxyUrl, getTraktProxyUrl, getProxyUrl, getAppProxyUrl }
+    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, getBrowseProxyUrl, getPlayProxyUrl, getTraktProxyUrl, getProxyUrl, getAppProxyUrl, refreshCache }
 })
 
 export interface ProxyServer {

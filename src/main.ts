@@ -13,6 +13,7 @@ import VueLazyLoad from 'vue3-lazyload'
 import updaer_util from './util/updater_util'
 import {useRuntimeConfig} from "./store/runtimeConfig.ts";
 import { useGlobalConfig } from './store/db/globalConfig.ts'
+import { useProxyServer } from './store/db/proxyServer.ts'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -24,8 +25,10 @@ app.use(VueLazyLoad, {})
 
 await useDb().init()
 useGlobalConfig().initCache()
-useRuntimeConfig().getRuntimeConfig()
-usePlayback().listen_playback_progress()
-updaer_util.getUpdate()
+useProxyServer().refreshCache()
+await useRuntimeConfig().getRuntimeConfig()
 
 app.mount('#app')
+
+usePlayback().listen_playback_progress()
+updaer_util.getUpdate()
