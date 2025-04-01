@@ -484,7 +484,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
         }
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
         for (const mediaSource of currentEpisodes.value!.MediaSources!) {
-            if (!mediaSource.MediaStreams || mediaSource.MediaStreams.length == 0) {
+            if (!mediaSource.MediaStreams || mediaSource.MediaStreams.length == 0 || !mediaSource.MediaStreams.find(mediaStream => mediaStream.Type == 'Video')) {
                 currentEpisodes.value!.MediaSources = playbackInfo.MediaSources;
                 handleMediaSources(playbackInfo.MediaSources)
                 break

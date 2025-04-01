@@ -1,24 +1,31 @@
 <template>
     <el-card style="width: 300px; margin: 5px;">
-        <template #header>
+        <div>
             <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)">{{ item.Name }}</el-link>
             <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)">
-                <p>{{ 'S' + (item as EpisodesItems).ParentIndexNumber + 'E' + (item as EpisodesItems).IndexNumber + '. ' + item.Name }}</p>
+                {{ 'S' + (item as EpisodesItems).ParentIndexNumber + 'E' + (item as EpisodesItems).IndexNumber + '. ' + item.Name }}
             </el-link>
             <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)">{{ item.Name }}</el-link>
-        </template>
-        <div style="margin-bottom: 10px;">
+        </div>
+        <div style="margin: 10px 0;">
             <span v-if="item.Type == 'Series'">
                 {{ item.ProductionYear + ((item as SearchItems).EndDate && (item as SearchItems).EndDate.substring(0, 4) != item.ProductionYear + '' ? '-' + (item as SearchItems).EndDate.substring(0, 4) : '') }}
             </span>
-            <span v-else-if="item.Type == 'Episode'">
-                {{ (item as EpisodesItems).PremiereDate ? (item as EpisodesItems).PremiereDate.substring(0, 10) : '' }}
+            <span v-else-if="item.Type == 'Episode'" style="display: flex;justify-content: space-between;align-items: center;">
+                <span>{{ (item as EpisodesItems).PremiereDate ? (item as EpisodesItems).PremiereDate.substring(0, 10) : '' }}</span>
+                <span>
+                    <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] }}</el-tag>
+                    <!-- <el-tag disable-transitions>{{ mediaSourceBitrateTag[item.Id] }}</el-tag> -->
+                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[item.Id] || 'Unknown' }}</el-tag>
+                </span>
             </span>
             <span v-else-if="item.Type == 'Movie'" style="display: flex;justify-content: space-between;align-items: center;">
                 <span>{{ item.ProductionYear }}</span>
-                <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] }}</el-tag>
-                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[item.Id] }}</el-tag>
-                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[item.Id] }}</el-tag>
+                <span>
+                    <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] }}</el-tag>
+                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[item.Id] }}</el-tag>
+                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[item.Id] || 'Unknown' }}</el-tag>
+                </span>
             </span>
         </div>
         <div style="display: flex;justify-content: space-between;">
@@ -32,9 +39,9 @@
                     <el-icon :size="24" :class="playedLoading[item.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                 </el-link>
             </span>
-            <span>
+            <span v-if="item.Type == 'Series'">
                 <el-badge :value="item.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
-                    <el-button v-if="item.Type == 'Series'" @click="getSeasons(item as SearchItems)" type="primary" plain>剧集</el-button>
+                    <el-button @click="getSeasons(item as SearchItems)" type="primary" plain>剧集</el-button>
                 </el-badge>
             </span>
         </div>

@@ -1,4 +1,4 @@
-import { ElMessageBox } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { useGlobalConfig } from '../store/db/globalConfig';
 import { useProxyServer } from '../store/db/proxyServer';
 import invokeApi from './invokeApi';
@@ -20,7 +20,7 @@ async function saveAccessToken(token_response: {access_token: string, refresh_to
     await useGlobalConfig().updateGlobalConfig(config);
     getUserInfo().then(response => {
         if (response.status_code != 200) {
-            console.log('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let json: {user: {username: string}} = JSON.parse(response.body);
@@ -49,7 +49,7 @@ async function getCacheAccessToken() {
         console.log("trakt token 不足6小时，后台重新获取");
         token({refresh_token: json.refresh_token}).then(response => {
             if (response.status_code != 200) {
-                console.log('response status' + response.status_code + ' ' + response.status_text)
+                ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
                 return
             }
             let rejson: {access_token: string, refresh_token: string, expires_in: number, created_at: number} = JSON.parse(response.body);
@@ -62,7 +62,7 @@ async function getCacheAccessToken() {
         console.log("trakt token 过期，重新获取");
         let response = await token({refresh_token: json.refresh_token})
         if (response.status_code != 200) {
-            console.log('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
         let rejson: {access_token: string, refresh_token: string, expires_in: number, created_at: number} = JSON.parse(response.body);

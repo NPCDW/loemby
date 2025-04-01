@@ -502,7 +502,7 @@ listen<string>('trakt_auth', (event) => {
         traktAuthStatus.value = '正在获取用户信息'
         traktApi.getUserInfo().then(response => {
             if (response.status_code != 200) {
-                console.log('response status' + response.status_code + ' ' + response.status_text)
+                ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
                 return
             }
             let json: {user: {username: string}} = JSON.parse(response.body);
