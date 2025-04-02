@@ -32,7 +32,12 @@
                                 <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)"><h2>{{ episodesItem.Name }}</h2></el-link>
                             </template>
                             <p><el-progress :percentage="episodesItem.UserData?.Played ? 100 : episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
-                            <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
+                            <p>
+                                {{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}
+                                <el-tag disable-transitions>{{ mediaSourceSizeTag[episodesItem.Id] }}</el-tag>
+                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] }}</el-tag>
+                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
+                            </p>
                             <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">继续</el-button></p>
                         </el-card>
                     </div>
@@ -155,10 +160,10 @@
 <script lang="ts" setup>
 import { onUnmounted, ref, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
-import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem, MediaLibraryCount } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem, MediaLibraryCount, MediaSources } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
-import { formatBytes } from '../../util/str_util'
-import { maxMediaSources } from '../../util/play_info_util'
+import { formatBytes, formatMbps } from '../../util/str_util'
+import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
 import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
@@ -187,6 +192,20 @@ watchEffect(async () => {
     handlePaneChange()
 })
 
+const mediaSourceSizeTag = ref<{[key: string]: string}>({})
+const mediaSourceBitrateTag = ref<{[key: string]: string}>({})
+const mediaStreamResolutionTag = ref<{[key: string]: string}>({})
+function getTag(itemId: string, mediaSources?: MediaSources[]) {
+    let maxMediaSource = maxMediaSources(mediaSources);
+    if (maxMediaSource) {
+        mediaSourceSizeTag.value[itemId] = formatBytes(maxMediaSource.Size)
+        mediaSourceBitrateTag.value[itemId] = formatMbps(maxMediaSource.Bitrate)
+        if (maxMediaSource.MediaStreams && maxMediaSource.MediaStreams.length > 0) {
+            mediaStreamResolutionTag.value[itemId] = getResolutionFromMediaSources(maxMediaSource)
+        }
+    }
+}
+
 const search_str = ref('')
 const search = async () => {
     router.push('/nav/emby/' + embyServer.value.id + '/search?search=' + encodeURIComponent(search_str.value))
@@ -214,6 +233,9 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
         let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
+        for (const item of json.Items) {
+            getTag(item.Id, item.MediaSources)
+        }
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => episodesLoading.value = false)

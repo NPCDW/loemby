@@ -102,7 +102,12 @@
                 </template>
                 <div v-for="episodesItem in dialogEpisodesList" class="box-item">
                     <p><el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</el-link></p>
-                    <p>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }} <el-tag disable-transitions>{{ episodesItem.MediaSources ? formatBytes(maxMediaSources(episodesItem.MediaSources)?.Size!) : 0 }}</el-tag></p>
+                    <p>
+                        {{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}
+                        <el-tag disable-transitions>{{ mediaSourceSizeTag[episodesItem.Id] }}</el-tag>
+                        <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] }}</el-tag>
+                        <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
+                    </p>
                 </div>
             </el-skeleton>
             <el-pagination
@@ -120,11 +125,11 @@
 <script lang="ts" setup>
 import { useRoute, useRouter } from 'vue-router';
 import { onUnmounted, ref } from 'vue';
-import embyApi, { EmbyPageList, EpisodesItems, SeasonsItems, UserData } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItems, MediaSources, SeasonsItems, UserData } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
 import { ElMessage } from 'element-plus';
-import { formatBytes } from '../../util/str_util'
-import { maxMediaSources } from '../../util/play_info_util'
+import { formatBytes, formatMbps } from '../../util/str_util'
+import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
 import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
@@ -153,6 +158,20 @@ getEmbyServer().then(() => {
     getEpisodes()
     loadImage(<string>route.params.serieId)
 })
+
+const mediaSourceSizeTag = ref<{[key: string]: string}>({})
+const mediaSourceBitrateTag = ref<{[key: string]: string}>({})
+const mediaStreamResolutionTag = ref<{[key: string]: string}>({})
+function getTag(itemId: string, mediaSources?: MediaSources[]) {
+    let maxMediaSource = maxMediaSources(mediaSources);
+    if (maxMediaSource) {
+        mediaSourceSizeTag.value[itemId] = formatBytes(maxMediaSource.Size)
+        mediaSourceBitrateTag.value[itemId] = formatMbps(maxMediaSource.Bitrate)
+        if (maxMediaSource.MediaStreams && maxMediaSource.MediaStreams.length > 0) {
+            mediaStreamResolutionTag.value[itemId] = getResolutionFromMediaSources(maxMediaSource)
+        }
+    }
+}
 
 const serieInfoLoading = ref(false)
 const currentSeries = ref<EpisodesItems>()
@@ -290,6 +309,9 @@ function getDialogEpisodes() {
         let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
         dialogEpisodesList.value = json.Items
         dialogEpisodesTotal.value = json.TotalRecordCount
+        for (const item of json.Items) {
+            getTag(item.Id, item.MediaSources)
+        }
     }).catch(e => ElMessage.error('获取剧集失败' + e)).finally(() => dialogEpisodesLoading.value = false)
 }
 function handleDialogEpisodesPageChange(page: number) {

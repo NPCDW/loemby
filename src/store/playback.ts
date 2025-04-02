@@ -33,7 +33,7 @@ export const usePlayback = defineStore('playback', () => {
                                 ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
                                 return
                             }
-                            const json: {movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
+                            const json: {progress: number, movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
                             let message: VNode[] = []
                             if (json.movie) {
                                 message = [h('p', null, `${json.movie.title} (${json.movie.year})`)]
@@ -41,7 +41,7 @@ export const usePlayback = defineStore('playback', () => {
                                 message = [h('p', null, `${json.show?.title} (${json.show?.year})`), h('p', null, `S${json.episode.season}E${json.episode.number} ${json.episode.title}`)]
                             }
                             ElNotification.success({
-                                title: 'Trakt 同步播放结束',
+                                title: 'Trakt 同步播放进度' + json.progress + '%',
                                 message: h('div', null, message),
                                 position: 'bottom-right',
                             })

@@ -113,9 +113,11 @@
             </el-skeleton>
             <el-skeleton :loading="nextUpLoading" animated>
                 <template #template>
-                    <div class="box-item" v-for="i in 3" :key="i">
-                        <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
-                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;padding: 20px;padding-top: 0;">
+                        <el-card style="width: 300px; margin: 5px;" v-for="i in 5" :key="i">
+                            <p><el-skeleton-item variant="text" style="width: 90%" /></p>
+                            <p><el-skeleton-item variant="text" style="width: 60%" /></p>
+                        </el-card>
                     </div>
                 </template>
                 <h1 v-if="nextUpList && nextUpList.length == 1 && nextUpCurrentPage == 1">已经是最后一集了</h1>
@@ -537,7 +539,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
                             ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
                             return
                         }
-                        const json: {movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
+                        const json: {progress: number, movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
                         let message: VNode[] = []
                         if (json.movie) {
                             message = [h('p', null, `${json.movie.title} (${json.movie.year})`)]
@@ -545,7 +547,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
                             message = [h('p', null, `${json.show?.title} (${json.show?.year})`), h('p', null, `S${json.episode.season}E${json.episode.number} ${json.episode.title}`)]
                         }
                         ElNotification.success({
-                            title: 'Trakt 同步播放开始',
+                            title: 'Trakt 同步播放',
                             message: h('div', null, message),
                             position: 'bottom-right',
                         })

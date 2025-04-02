@@ -13,6 +13,8 @@ use config::app_state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    std::env::set_var("APPCONFIG", r"C:\App\loemby");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let window = app.webview_windows();
