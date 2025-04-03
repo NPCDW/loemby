@@ -94,7 +94,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         .headers(req_headers.clone())
         .send()
         .await;
-    tracing::debug!("stream: {} {} 媒体流响应 {:?}", types, &id, res);
+    tracing::debug!("stream: {} {} {} 媒体流响应 {:?}", types, &id, request.user_agent, res);
     match res {
         Err(err) => (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
