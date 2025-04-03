@@ -111,17 +111,18 @@
                     </div>
                 </div>
             </el-skeleton>
+            <h1 v-if="nextUpLoading">接下来</h1>
             <el-skeleton :loading="nextUpLoading" animated>
                 <template #template>
-                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;padding: 20px;padding-top: 0;">
+                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                         <el-card style="width: 300px; margin: 5px;" v-for="i in 5" :key="i">
                             <p><el-skeleton-item variant="text" style="width: 90%" /></p>
                             <p><el-skeleton-item variant="text" style="width: 60%" /></p>
                         </el-card>
                     </div>
                 </template>
-                <h1 v-if="nextUpList && nextUpList.length == 1 && nextUpCurrentPage == 1">已经是最后一集了</h1>
-                <h1 v-if="nextUpList && nextUpList.length > 1">接下来</h1>
+                <h1 v-if="nextUpList && nextUpList.length >= 1">接下来</h1>
+                <h1 v-if="nextUpList && nextUpList.length < 1">已经是最后一集了</h1>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServer="embyServer" />
                 </div>

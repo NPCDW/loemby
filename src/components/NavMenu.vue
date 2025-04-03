@@ -158,7 +158,10 @@
             <el-input v-model="currentEmbyServer.base_url" placeholder="Please input" />
         </el-form-item>
         <el-form-item label="服务器名称">
-            <el-input v-model="currentEmbyServer.server_name" placeholder="Please input" />
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <el-input v-model="currentEmbyServer.server_name" placeholder="Please input" />
+                <el-button :loading="serverInfoLoading" @click="getServerInfo(currentEmbyServer)" style="margin-left: 5px;">获取</el-button>
+            </div>
         </el-form-item>
         <el-form-item label="用户名">
             <el-input v-model="currentEmbyServer.username" placeholder="Please input" />
@@ -500,6 +503,21 @@ async function addEmbyServerAddr() {
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => addEmbyServerAddrLoading.value = false)
+}
+const serverInfoLoading = ref(false)
+function getServerInfo(embyServer: EmbyServer) {
+    serverInfoLoading.value = true
+    embyApi.getServerInfo(embyServer).then(async response => {
+        if (response.status_code != 200) {
+            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            return
+        }
+        let json: {ServerName: string, Id: string} = JSON.parse(response.body);
+        embyServer.server_name = json['ServerName']
+        embyServer.server_id = json['Id']
+    }).catch(e => {
+        ElMessage.error(e)
+    }).finally(() => serverInfoLoading.value = false)
 }
 const addEmbyServerAuthLoading = ref(false)
 function addEmbyServerPrevStep() {
