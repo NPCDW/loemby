@@ -679,6 +679,7 @@ function handlePaneChange() {
     if (activePane.value == 'Common') {
         getMpvPath()
         getTraktInfo()
+        getTraktSyncSwitch()
     } else if (activePane.value == 'ProxyServer') {
         listAllProxyServer()
     } else if (activePane.value == 'EmbyLineProxy') {
@@ -694,8 +695,7 @@ function handlePaneChange() {
         listAllEmbyIconLibrary()
     }
 }
-getMpvPath()
-getTraktInfo()
+handlePaneChange()
 </script>
 
 <style scoped>
