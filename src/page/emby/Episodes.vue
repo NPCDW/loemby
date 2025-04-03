@@ -111,9 +111,9 @@
                     </div>
                 </div>
             </el-skeleton>
-            <h1 v-if="nextUpLoading">接下来</h1>
-            <el-skeleton :loading="nextUpLoading" animated>
+            <el-skeleton :loading="nextUpLoading" animated v-if="nextUpShow">
                 <template #template>
+                    <h1>接下来</h1>
                     <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                         <el-card style="width: 300px; margin: 5px;" v-for="i in 5" :key="i">
                             <p><el-skeleton-item variant="text" style="width: 90%" /></p>
@@ -191,6 +191,7 @@ const rememberSelect = ref(route.query.rememberSelect === 'true' ? true : false)
 const playbackInfoLoading = ref(false)
 const play_loading = ref(false)
 
+const nextUpShow = ref(false)
 const nextUpLoading = ref(false)
 const nextUpList = ref<EpisodesItems[]>([])
 const nextUpCurrentPage = ref(1)
@@ -258,6 +259,7 @@ const handleNextUpPageChange = (val: number) => {
 }
 
 function nextUp(pageNumber: number) {
+    nextUpShow.value = true
     nextUpLoading.value = true
     return embyApi.nextUp(embyServer.value, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
         if (response.status_code != 200) {
