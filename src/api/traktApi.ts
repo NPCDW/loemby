@@ -150,6 +150,12 @@ async function start(param: any) {
         if (response.status_code == 401) {
             ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
         }
+        if (response.status_code == 429) {
+            ElMessage.warning("Trakt Api 请求太多或太快，1秒钟后重试");
+            return setTimeout(() => {
+                return start(param)
+            }, 1000)
+        }
         return response
     });
 }
@@ -177,6 +183,12 @@ async function stop(param: any) {
     }).then(response => {
         if (response.status_code == 401) {
             ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
+        }
+        if (response.status_code == 429) {
+            ElMessage.warning("Trakt Api 请求太多或太快，1秒钟后重试");
+            return setTimeout(() => {
+                return stop(param)
+            }, 1000)
         }
         return response
     });
