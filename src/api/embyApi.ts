@@ -388,22 +388,22 @@ function getDirectStreamUrl(embyServer: EmbyServer, directStreamUrl: string) {
  * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
  * @returns
  */
-function getAudioStreamUrl(embyServer: EmbyServer, mediaSource: MediaSources, mediaStreams: MediaStreams) {
+function getAudioStreamUrl(embyServer: EmbyServer, item: EpisodesItems, mediaSource: MediaSources, mediaStreams: MediaStreams) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
-    return embyServer.base_url + `/emby/Audio/${mediaSource.ItemId}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
+    return embyServer.base_url + `/emby/Audio/${mediaSource.ItemId || item.Id}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
 }
 
 /**
  * 组装字幕流地址，请确保字幕流支持外部流
  * @returns
  */
-function getSubtitleStreamUrl(embyServer: EmbyServer, mediaSource: MediaSources, mediaStreams: MediaStreams) {
+function getSubtitleStreamUrl(embyServer: EmbyServer, item: EpisodesItems, mediaSource: MediaSources, mediaStreams: MediaStreams) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
-    return embyServer.base_url + `/emby/Videos/${mediaSource.ItemId}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
+    return embyServer.base_url + `/emby/Videos/${mediaSource.ItemId || item.Id}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
 }
 
 /**

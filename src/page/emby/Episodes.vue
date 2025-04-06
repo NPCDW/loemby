@@ -502,9 +502,9 @@ function playing(item_id: string, playbackPositionTicks: number) {
             let externalSubtitle = []
             for (let mediaStream of currentMediaSources.MediaStreams) {
                 if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
-                    externalAudio.push(embyApi.getAudioStreamUrl(embyServer.value, currentMediaSources, mediaStream)!)
+                    externalAudio.push(embyApi.getAudioStreamUrl(embyServer.value, currentEpisodes.value!, currentMediaSources, mediaStream)!)
                 } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
-                    externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer.value, currentMediaSources, mediaStream)!)
+                    externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer.value, currentEpisodes.value!, currentMediaSources, mediaStream)!)
                 }
             }
             let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
