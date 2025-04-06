@@ -29,6 +29,9 @@ export const usePlayback = defineStore('playback', () => {
                         let scrobbleTraktParam = JSON.parse(event.payload.scrobble_trakt_param)
                         scrobbleTraktParam.progress = progress
                         traktApi.stop(scrobbleTraktParam).then(response => {
+                            if (response.status_code == 401 || response.status_code == 429) {
+                                return
+                            }
                             if (response.status_code != 201) {
                                 ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
                                 return

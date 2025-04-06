@@ -151,8 +151,8 @@ async function start(param: any) {
             ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         if (response.status_code == 429) {
-            ElMessage.warning("Trakt Api 请求太多或太快，1秒钟后重试");
-            return setTimeout(() => {
+            ElMessage.warning("Trakt Api 请求太多或太快，将在 1 秒钟后重试");
+            setTimeout(() => {
                 return start(param)
             }, 1000)
         }
@@ -185,8 +185,8 @@ async function stop(param: any) {
             ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         if (response.status_code == 429) {
-            ElMessage.warning("Trakt Api 请求太多或太快，1秒钟后重试");
-            return setTimeout(() => {
+            ElMessage.warning("Trakt Api 请求太多或太快，将在 1 秒钟后重试");
+            setTimeout(() => {
                 return stop(param)
             }, 1000)
         }

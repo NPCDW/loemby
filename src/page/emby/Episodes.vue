@@ -538,6 +538,9 @@ function playing(item_id: string, playbackPositionTicks: number) {
                 })
                 if (scrobbleTraktParam) {
                     traktApi.start(scrobbleTraktParam).then(response => {
+                        if (response.status_code == 401 || response.status_code == 429) {
+                            return
+                        }
                         if (response.status_code != 201) {
                             ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
                             return
