@@ -388,7 +388,7 @@ function getDirectStreamUrl(embyServer: EmbyServer, directStreamUrl: string) {
  * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
  * @returns
  */
-function getAudioStreamUrl(embyServer: EmbyServer, item: EpisodesItems, mediaSource: MediaSources, mediaStreams: MediaStreams) {
+function getAudioStreamUrl(embyServer: EmbyServer, item: EpisodesItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
@@ -399,7 +399,7 @@ function getAudioStreamUrl(embyServer: EmbyServer, item: EpisodesItems, mediaSou
  * 组装字幕流地址，请确保字幕流支持外部流
  * @returns
  */
-function getSubtitleStreamUrl(embyServer: EmbyServer, item: EpisodesItems, mediaSource: MediaSources, mediaStreams: MediaStreams) {
+function getSubtitleStreamUrl(embyServer: EmbyServer, item: EpisodesItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
@@ -509,59 +509,54 @@ export interface EmbyPageList<T> {
     Items: T[]
 }
 
-export interface SearchItems {
-    Name: string,
+export interface BaseItem {
     Id: string,
-    ProductionYear: number,
-    EndDate: string,
+    Name: string,
     Type: string,
-    MediaSources?: MediaSources[],
-    UserData?: UserData
-}
-
-export interface SeasonsItems {
-    Name: string,
-    Id: string,
-    Overview: string,
     ProductionYear: number,
-    IndexNumber: number,
-    UserData?: UserData
+    UserData?: UserData,
 }
 
-export interface EpisodesItems {
-    Name: string,
-    Id: string,
+export interface SeriesItem extends BaseItem {
+    EndDate: string,
+}
+
+export interface SeasonsItem extends BaseItem {
+    Overview: string,
+    IndexNumber: number,
+}
+
+export interface EpisodesItem extends BaseItem {
     SeriesName: string,
     PremiereDate: string,
     ParentIndexNumber: number,
     IndexNumber: number,
-    MediaSources?: MediaSources[],
+    MediaSources?: MediaSource[],
     SeriesId: string,
-    Type: string,
-    UserData?: UserData,
     Overview: string,
-    ProductionYear: string,
     ProviderIds: {[key: string]: string}
     ExternalUrls: ExternalUrl[]
 }
 
+export type SearchItem = SeriesItem | SeasonsItem | EpisodesItem
+
 export interface PlaybackInfo {
     PlaySessionId: string,
-    MediaSources: MediaSources[],
+    MediaSources: MediaSource[],
 }
 
-export interface MediaSources {
+export interface MediaSource {
     Id: string,
-    ItemId: string, // 电影和剧集的id，一个剧集有多个媒体源，但每个媒体源的itemid不一样，但是用不同的itemid能查询到同一个剧集
+    ItemId?: string, // 电影和剧集的id，一个剧集有多个媒体源，但每个媒体源的itemid不一样，但是用不同的itemid能查询到同一个剧集   ++nya无此字段
     Name: string,
     RunTimeTicks: number,
     Size: number,
     Bitrate: number,
     DirectStreamUrl: string,
-    MediaStreams: MediaStreams[]
+    MediaStreams: MediaStream[]
 }
 
-export interface MediaStreams {
+export interface MediaStream {
     // 视频、音频、字幕编码
     Codec: string,
     DisplayTitle: string,
@@ -586,6 +581,11 @@ export interface UserData {
     Played: boolean,
 }
 
+export interface ExternalUrl {
+    Url: string,
+    Name: string,
+}
+
 export interface MediaLibraryItem {
     Name: string,
     Id: string,
@@ -607,9 +607,4 @@ export interface MediaLibraryCount {
     BoxSetCount: number,
     BookCount: number,
     ItemCount: number,
-}
-
-export interface ExternalUrl {
-    Url: string,
-    Name: string,
 }

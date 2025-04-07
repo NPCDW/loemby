@@ -160,7 +160,7 @@
 <script lang="ts" setup>
 import { onUnmounted, ref, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
-import embyApi, { EmbyPageList, EpisodesItems, SearchItems, MediaLibraryItem, MediaLibraryCount, MediaSources } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItem, SearchItem, MediaLibraryItem, MediaLibraryCount, MediaSource } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
 import { formatBytes, formatMbps } from '../../util/str_util'
 import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
@@ -195,7 +195,7 @@ watchEffect(async () => {
 const mediaSourceSizeTag = ref<{[key: string]: string}>({})
 const mediaSourceBitrateTag = ref<{[key: string]: string}>({})
 const mediaStreamResolutionTag = ref<{[key: string]: string}>({})
-function getTag(itemId: string, mediaSources?: MediaSources[]) {
+function getTag(itemId: string, mediaSources?: MediaSource[]) {
     let maxMediaSource = maxMediaSources(mediaSources);
     if (maxMediaSource) {
         mediaSourceSizeTag.value[itemId] = formatBytes(maxMediaSource.Size)
@@ -212,7 +212,7 @@ const search = async () => {
 }
 
 const episodesLoading = ref(false)
-const episodesList = ref<EpisodesItems[]>([])
+const episodesList = ref<EpisodesItem[]>([])
 const episodesCurrentPage = ref(1)
 const episodesPageSize = ref(6)
 const episodesTotal = ref(0)
@@ -230,7 +230,7 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
+        let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
         for (const item of json.Items) {
@@ -249,7 +249,7 @@ function gotoSeries(seriesId: string) {
 }
 
 const favoriteLoading = ref(false)
-const favoriteList = ref<SearchItems[]>([])
+const favoriteList = ref<SearchItem[]>([])
 const favoriteCurrentPage = ref(1)
 const favoritePageSize = ref(6)
 const favoriteTotal = ref(0)
@@ -267,7 +267,7 @@ function getFavoriteList(currentPage: number, pageSize: number) {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<SearchItems> = JSON.parse(response.body);
+        let json: EmbyPageList<SearchItem> = JSON.parse(response.body);
         favoriteList.value = json.Items
         favoriteTotal.value = json.TotalRecordCount
     }).catch(e => {
@@ -295,7 +295,7 @@ function getMediaLibraryList() {
     }).finally(() => mediaLibraryLoading.value = false)
 }
 const mediaLibraryChildLoading = ref<{[key: string]: boolean}>({})
-const mediaLibraryChildList = ref<{[key: string]: SearchItems[]}>({})
+const mediaLibraryChildList = ref<{[key: string]: SearchItem[]}>({})
 function getMediaLibraryChildLatest(parentId: string) {
     mediaLibraryChildLoading.value[parentId] = true
     return embyApi.getMediaLibraryChildLatest(embyServer.value, parentId, 16).then(async response => {
@@ -303,7 +303,7 @@ function getMediaLibraryChildLatest(parentId: string) {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let json: SearchItems[] = JSON.parse(response.body);
+        let json: SearchItem[] = JSON.parse(response.body);
         mediaLibraryChildList.value[parentId] = json
         for (let item of mediaLibraryChildList.value[parentId]) {
             loadImage(item.Id)

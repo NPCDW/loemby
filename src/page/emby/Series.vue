@@ -131,7 +131,7 @@
 <script lang="ts" setup>
 import { useRoute, useRouter } from 'vue-router';
 import { onUnmounted, ref } from 'vue';
-import embyApi, { EmbyPageList, EpisodesItems, MediaSources, SeasonsItems, UserData } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItem, MediaSource, SeasonsItem, UserData } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
 import { ElMessage } from 'element-plus';
 import { formatBytes, formatMbps } from '../../util/str_util'
@@ -168,7 +168,7 @@ getEmbyServer().then(() => {
 const mediaSourceSizeTag = ref<{[key: string]: string}>({})
 const mediaSourceBitrateTag = ref<{[key: string]: string}>({})
 const mediaStreamResolutionTag = ref<{[key: string]: string}>({})
-function getTag(itemId: string, mediaSources?: MediaSources[]) {
+function getTag(itemId: string, mediaSources?: MediaSource[]) {
     let maxMediaSource = maxMediaSources(mediaSources);
     if (maxMediaSource) {
         mediaSourceSizeTag.value[itemId] = formatBytes(maxMediaSource.Size)
@@ -180,7 +180,7 @@ function getTag(itemId: string, mediaSources?: MediaSources[]) {
 }
 
 const serieInfoLoading = ref(false)
-const currentSeries = ref<EpisodesItems>()
+const currentSeries = ref<EpisodesItem>()
 function updateCurrentSerie() {
     serieInfoLoading.value = true
     return embyApi.items(embyServer.value, <string>route.params.serieId).then(async response => {
@@ -188,7 +188,7 @@ function updateCurrentSerie() {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EpisodesItems = JSON.parse(response.body);
+        let json: EpisodesItem = JSON.parse(response.body);
         currentSeries.value = json
     }).catch(e => {
         ElMessage.error('更新当前剧集信息失败' + e)
@@ -244,7 +244,7 @@ function played() {
 }
 
 const seasonsLoading = ref<boolean>(false)
-const seasonsList = ref<SeasonsItems[]>([])
+const seasonsList = ref<SeasonsItem[]>([])
 async function getSeasons() {
     seasonsLoading.value = true
     return embyApi.seasons(embyServer.value, <string>route.params.serieId).then(async response => {
@@ -252,7 +252,7 @@ async function getSeasons() {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<SeasonsItems> = JSON.parse(response.body);
+        let json: EmbyPageList<SeasonsItem> = JSON.parse(response.body);
         seasonsList.value = json.Items
         json.Items.forEach(item => {
             loadImage(item.Id)
@@ -263,7 +263,7 @@ async function getSeasons() {
 }
 
 const episodesLoading = ref<boolean>(false)
-const episodesList = ref<EpisodesItems[]>([])
+const episodesList = ref<EpisodesItem[]>([])
 const episodesCurrentPage = ref<number>(1)
 const episodesPageSize = ref<number>(6)
 const episodesTotal = ref<number>(0)
@@ -274,7 +274,7 @@ async function getEpisodes() {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
+        let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
     }).catch(e => {
@@ -290,13 +290,13 @@ function gotoEpisodes(episodesId: string) {
 }
 
 const dialogSeasonsVisible = ref<boolean>(false)
-const dialogSeasons = ref<SeasonsItems>()
+const dialogSeasons = ref<SeasonsItem>()
 const dialogEpisodesLoading = ref<boolean>(false)
-const dialogEpisodesList = ref<EpisodesItems[]>([])
+const dialogEpisodesList = ref<EpisodesItem[]>([])
 const dialogEpisodesCurrentPage = ref<number>(1)
 const dialogEpisodesPageSize = ref<number>(6)
 const dialogEpisodesTotal = ref<number>(0)
-function showSeasons(season: SeasonsItems) {
+function showSeasons(season: SeasonsItem) {
     dialogSeasonsVisible.value = true
     dialogSeasons.value = season
     dialogEpisodesCurrentPage.value = 1
@@ -312,7 +312,7 @@ function getDialogEpisodes() {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
+        let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
         dialogEpisodesList.value = json.Items
         dialogEpisodesTotal.value = json.TotalRecordCount
         for (const item of json.Items) {

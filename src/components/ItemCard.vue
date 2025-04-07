@@ -3,16 +3,16 @@
         <div>
             <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)">{{ item.Name }}</el-link>
             <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)">
-                {{ 'S' + (item as EpisodesItems).ParentIndexNumber + 'E' + (item as EpisodesItems).IndexNumber + '. ' + item.Name }}
+                {{ 'S' + (item as EpisodesItem).ParentIndexNumber + 'E' + (item as EpisodesItem).IndexNumber + '. ' + item.Name }}
             </el-link>
             <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)">{{ item.Name }}</el-link>
         </div>
         <div style="margin: 10px 0;">
             <span v-if="item.Type == 'Series'">
-                {{ item.ProductionYear + ((item as SearchItems).EndDate && (item as SearchItems).EndDate.substring(0, 4) != item.ProductionYear + '' ? '-' + (item as SearchItems).EndDate.substring(0, 4) : '') }}
+                {{ item.ProductionYear + ((item as SeriesItem).EndDate && (item as SeriesItem).EndDate.substring(0, 4) != item.ProductionYear + '' ? '-' + (item as SeriesItem).EndDate.substring(0, 4) : '') }}
             </span>
             <span v-else-if="item.Type == 'Episode'" style="display: flex;justify-content: space-between;align-items: center;">
-                <span>{{ (item as EpisodesItems).PremiereDate ? (item as EpisodesItems).PremiereDate.substring(0, 10) : '' }}</span>
+                <span>{{ (item as EpisodesItem).PremiereDate ? (item as EpisodesItem).PremiereDate.substring(0, 10) : '' }}</span>
                 <span>
                     <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] }}</el-tag>
                     <!-- <el-tag disable-transitions>{{ mediaSourceBitrateTag[item.Id] }}</el-tag> -->
@@ -41,7 +41,7 @@
             </span>
             <span v-if="item.Type == 'Series'">
                 <el-badge :value="item.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
-                    <el-button @click="getSeasons(item as SearchItems)" type="primary" plain>剧集</el-button>
+                    <el-button @click="getSeasons(item as SeriesItem)" type="primary" plain>剧集</el-button>
                 </el-badge>
             </span>
         </div>
@@ -142,7 +142,7 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import embyApi, { EmbyPageList, EpisodesItems, MediaSources, SearchItems, SeasonsItems, UserData } from '../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItem, MediaSource, SearchItem, SeasonsItem, SeriesItem, UserData } from '../api/embyApi';
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus';
 import { formatBytes, formatMbps } from '../util/str_util'
@@ -152,14 +152,14 @@ import { EmbyServer } from '../store/db/embyServer';
 const router = useRouter()
 
 const {item, embyServer} = defineProps<{
-  item: SearchItems | EpisodesItems,
+  item: SearchItem,
   embyServer: EmbyServer
 }>()
 
 const mediaSourceSizeTag = ref<{[key: string]: string}>({})
 const mediaSourceBitrateTag = ref<{[key: string]: string}>({})
 const mediaStreamResolutionTag = ref<{[key: string]: string}>({})
-function getTag(itemId: string, mediaSources?: MediaSources[]) {
+function getTag(itemId: string, mediaSources?: MediaSource[]) {
     let maxMediaSource = maxMediaSources(mediaSources);
     if (maxMediaSource) {
         mediaSourceSizeTag.value[itemId] = formatBytes(maxMediaSource.Size)
@@ -169,7 +169,7 @@ function getTag(itemId: string, mediaSources?: MediaSources[]) {
         }
     }
 }
-getTag(item.Id, item.MediaSources)
+getTag(item.Id, (item as EpisodesItem).MediaSources)
 
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
@@ -179,7 +179,7 @@ function gotoSeries(seriesId: string) {
 }
 
 const starLoading = ref<{[key: string]: boolean}>({})
-function star(item: SearchItems | SeasonsItems | EpisodesItems) {
+function star(item: SearchItem | SeasonsItem | EpisodesItem) {
     if (!item.UserData) {
         return
     }
@@ -203,7 +203,7 @@ function star(item: SearchItems | SeasonsItems | EpisodesItems) {
 }
 
 const playedLoading = ref<{[key: string]: boolean}>({})
-function played(item: SearchItems | SeasonsItems | EpisodesItems) {
+function played(item: SearchItem | SeasonsItem | EpisodesItem) {
     if (!item.UserData) {
         return
     }
@@ -226,21 +226,21 @@ function played(item: SearchItems | SeasonsItems | EpisodesItems) {
     }).finally(() => playedLoading.value[item.Id] = false)
 }
 
-const seasons_result = ref<{[key: string]: EmbyPageList<SeasonsItems>}>({})
-const episodes_result = ref<{[key: string]: {total: number, [key: number]: EpisodesItems[]}}>({})
+const seasons_result = ref<{[key: string]: EmbyPageList<SeasonsItem>}>({})
+const episodes_result = ref<{[key: string]: {total: number, [key: number]: EpisodesItem[]}}>({})
 
 const dialogSeriesVisible = ref(false)
 const dialogEmbyServer = ref<EmbyServer>()
-const dialogSeries = ref<SearchItems>()
-const dialogSeasons = ref<SeasonsItems>()
-const dialogSeasonsList = ref<SeasonsItems[]>([])
-const dialogEpisodesList = ref<EpisodesItems[]>([])
+const dialogSeries = ref<SearchItem>()
+const dialogSeasons = ref<SeasonsItem>()
+const dialogSeasonsList = ref<SeasonsItem[]>([])
+const dialogEpisodesList = ref<EpisodesItem[]>([])
 const dialogEpisodesCurrentPage = ref(1)
 const dialogEpisodesPageSize = ref(10)
 const dialogSeasonsLoading = ref(false)
 const dialogEpisodesLoading = ref(false)
 
-async function getSeasons(series: SearchItems) {
+async function getSeasons(series: SeriesItem) {
     dialogSeasons.value = undefined
     dialogSeasonsLoading.value = true
     dialogSeasonsList.value = []
@@ -258,14 +258,14 @@ async function getSeasons(series: SearchItems) {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<SeasonsItems> = JSON.parse(response.body);
+        let json: EmbyPageList<SeasonsItem> = JSON.parse(response.body);
         seasons_result.value[series.Id] = json
         dialogSeasonsList.value = json.Items
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => dialogSeasonsLoading.value = false)
 }
-async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: SeasonsItems, currentPage: number, pageSize: number) {
+async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: SeasonsItem, currentPage: number, pageSize: number) {
     dialogEpisodesLoading.value = true
     dialogEpisodesList.value = []
     dialogEpisodesCurrentPage.value = currentPage
@@ -284,7 +284,7 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<EpisodesItems> = JSON.parse(response.body);
+        let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
         episodes_result.value[series_id + '|' + seasons.Id].total = json.TotalRecordCount
         episodes_result.value[series_id + '|' + seasons.Id][currentPage]= json.Items
         dialogEpisodesList.value = json.Items
@@ -295,7 +295,7 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
         ElMessage.error(e)
     }).finally(() => dialogEpisodesLoading.value = false)
 }
-async function handleEpisodesPageChange(val: number, embyServer: EmbyServer, series_id: string, seasons: SeasonsItems) {
+async function handleEpisodesPageChange(val: number, embyServer: EmbyServer, series_id: string, seasons: SeasonsItem) {
     await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
 }
 

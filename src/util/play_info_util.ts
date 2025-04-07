@@ -1,10 +1,10 @@
-import { MediaSources } from "../api/embyApi"
+import { MediaSource } from "../api/embyApi"
 
-export const maxMediaSources = (mediaSources?: MediaSources[]) => {
+export const maxMediaSources = (mediaSources?: MediaSource[]) => {
     if (!mediaSources || mediaSources.length == 0) {
         return null
     }
-    let maxMediaSource: MediaSources = mediaSources[0]
+    let maxMediaSource: MediaSource = mediaSources[0]
     let max = 0
     for (let mediaSource of mediaSources) {
         if (mediaSource.Size > max) {
@@ -15,7 +15,7 @@ export const maxMediaSources = (mediaSources?: MediaSources[]) => {
     return maxMediaSource
 }
 
-export const getResolutionFromMediaSources = (mediaSources?: MediaSources) => {
+export const getResolutionFromMediaSources = (mediaSources?: MediaSource) => {
     if (!mediaSources || !mediaSources.MediaStreams || mediaSources.MediaStreams.length == 0) {
         return 'Unknown'
     }

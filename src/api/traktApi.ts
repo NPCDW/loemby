@@ -6,7 +6,7 @@ import invokeApi from './invokeApi';
 const USER_AGENT = 'loemby/' + import.meta.env.VITE_APP_VERSION
 const CLIENT_ID = '05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572'
 
-async function saveAccessToken(token_response: {access_token: string, refresh_token: string, expires_in: number, created_at: number}) {
+async function saveAccessToken(token_response: TokenResult) {
     let trakt_info = {
         access_token: token_response.access_token,
         refresh_token: token_response.refresh_token,
@@ -52,7 +52,7 @@ async function getCacheAccessToken() {
                 ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
                 return
             }
-            let rejson: {access_token: string, refresh_token: string, expires_in: number, created_at: number} = JSON.parse(response.body);
+            let rejson: TokenResult = JSON.parse(response.body);
             saveAccessToken(rejson);
         })
         return json.access_token;
@@ -65,16 +65,28 @@ async function getCacheAccessToken() {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
             return
         }
-        let rejson: {access_token: string, refresh_token: string, expires_in: number, created_at: number} = JSON.parse(response.body);
+        let rejson: TokenResult = JSON.parse(response.body);
         saveAccessToken(rejson);
         return rejson.access_token;
     }
 }
 
+interface TokenParam {
+    code?: string,
+    refresh_token?: string
+}
+
+interface TokenResult {
+    access_token: string,
+    refresh_token: string,
+    expires_in: number,
+    created_at: number
+}
+
 /**
  * 获取 token
  */
-async function token({code, refresh_token}: {code?: string, refresh_token?: string}) {
+async function token({code, refresh_token}: TokenParam) {
     if ((!code && !refresh_token)) {
         return Promise.reject("参数缺失");
     }

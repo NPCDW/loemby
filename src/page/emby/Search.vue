@@ -24,7 +24,7 @@
 <script lang="ts" setup>
 import { onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import embyApi, { EmbyPageList, SearchItems } from '../../api/embyApi';
+import embyApi, { EmbyPageList, SearchItem } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { ElMessage } from 'element-plus';
@@ -48,7 +48,7 @@ onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 const search_str = ref(<string>route.query.search)
 const search_loading = ref(false)
-const emby_search_result = ref<{success: boolean, message?: string, result?: EmbyPageList<SearchItems>}>({success: true})
+const emby_search_result = ref<{success: boolean, message?: string, result?: EmbyPageList<SearchItem>}>({success: true})
 const search = async () => {
     search_loading.value = true
     emby_search_result.value = {success: true}
@@ -57,7 +57,7 @@ const search = async () => {
             emby_search_result.value = {success: false, message: 'response status' + response.status_code + ' ' + response.status_text}
             return
         }
-        let json: EmbyPageList<SearchItems> = JSON.parse(response.body);
+        let json: EmbyPageList<SearchItem> = JSON.parse(response.body);
         emby_search_result.value = {success: true, result: json}
     }).catch(e => {
         emby_search_result.value = {success: false, message: e}

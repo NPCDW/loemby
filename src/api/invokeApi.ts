@@ -6,7 +6,7 @@ async function getSysInfo(): Promise<string> {
     return invoke('get_sys_info');
 }
 
-interface InvokePlayback {
+interface PlaybackParam {
     mpv_path: string,
     path: string,
     proxy?: string,
@@ -26,7 +26,7 @@ interface InvokePlayback {
     scrobble_trakt_param?: string,
 }
 
-async function playback(param: InvokePlayback): Promise<string> {
+async function playback(param: PlaybackParam): Promise<string> {
     return invoke('play_video', {body: param});
 }
 

@@ -32,7 +32,7 @@
 
 <script lang="ts" setup>
 import { computed, onUnmounted, ref } from 'vue'
-import embyApi, { EmbyPageList, SearchItems } from '../api/embyApi'
+import embyApi, { EmbyPageList, SearchItem } from '../api/embyApi'
 import ItemCard from '../components/ItemCard.vue';
 import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
 import { ElMessage } from 'element-plus';
@@ -57,7 +57,7 @@ const search_loading = ref(false)
 const search_str = ref('')
 const embyServerKeys = ref<string[]>([])
 
-const emby_search_result = ref<{[key: string]: {embyServer: EmbyServer, request_status: boolean, success: boolean, message?: string, result?: EmbyPageList<SearchItems>}}>({})
+const emby_search_result = ref<{[key: string]: {embyServer: EmbyServer, request_status: boolean, success: boolean, message?: string, result?: EmbyPageList<SearchItem>}}>({})
 
 const emby_search_result_list = computed(() => {
     const embyServersSort = embyServers.value.map(item=> item.id)
@@ -86,7 +86,7 @@ async function singleEmbySearch(embyServer: EmbyServer) {
             emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: false, message: 'response status' + response.status_code + ' ' + response.status_text}
             return
         }
-        let json: EmbyPageList<SearchItems> = JSON.parse(response.body);
+        let json: EmbyPageList<SearchItem> = JSON.parse(response.body);
         emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: true, result: json}
         if (json.Items.length > 0) {
             embyServerKeys.value.push(embyServer.id!)
