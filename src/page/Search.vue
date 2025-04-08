@@ -31,7 +31,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import embyApi, { EmbyPageList, SearchItem } from '../api/embyApi'
 import ItemCard from '../components/ItemCard.vue';
 import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
@@ -50,7 +50,7 @@ function listAllEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
-useEventBus().on('EmbyServerChanged', listAllEmbyServer)
+onMounted(() => useEventBus().on('EmbyServerChanged', listAllEmbyServer))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
 
 const search_loading = ref(false)

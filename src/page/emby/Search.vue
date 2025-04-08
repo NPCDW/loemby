@@ -22,7 +22,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import embyApi, { EmbyPageList, SearchItem } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
@@ -32,7 +32,7 @@ import { useEventBus } from '../../store/eventBus';
 
 const route = useRoute()
 
-let embyServer = ref<EmbyServer>({})
+const embyServer = ref<EmbyServer>({})
 async function getEmbyServer() {
     return useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
         embyServer.value = value!;
@@ -43,7 +43,7 @@ function embyServerChanged(payload?: {event?: string, id?: string}) {
         getEmbyServer()
     }
 }
-useEventBus().on('EmbyServerChanged', embyServerChanged)
+onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 const search_str = ref(<string>route.query.search)

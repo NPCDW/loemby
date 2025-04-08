@@ -41,12 +41,27 @@
                         </template>
                     </el-table-column>
                 </el-table>
+                <h1>应用代理</h1>
+                <el-form label-position="top">
+                    <el-form-item label="Trakt">
+                        <el-select v-model="trakt_proxy_id" @change="traktProxyChange">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="应用数据代理（图标、自动更新等）">
+                        <el-select v-model="app_proxy_id" @change="appProxyChange">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                </el-form>
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="Emby线路代理" name="EmbyLineProxy">
             <el-scrollbar style="height: calc(100vh - 100px);">
                 <h1>Emby线路代理配置</h1>
-                <el-form label-position="top">
+                <el-form :inline="true">
                     <el-form-item label="媒体库浏览">
                         <el-select v-model="global_browse_proxy_id" @change="globalBrowseProxyChange">
                             <template #label="{ label }">
@@ -63,18 +78,6 @@
                                 <span>全局配置: </span>
                                 <span style="font-weight: bold">{{ label }}</span>
                             </template>
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                    <el-form-item label="Trakt">
-                        <el-select v-model="trakt_proxy_id" @change="traktProxyChange">
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                    <el-form-item label="应用数据代理（图标、自动更新等）">
-                        <el-select v-model="app_proxy_id" @change="appProxyChange">
                             <el-option key="no" label="不使用代理" value="no"/>
                             <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
@@ -185,7 +188,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, h, onUnmounted, ref } from 'vue';
+import { computed, h, onMounted, onUnmounted, ref } from 'vue';
 import { ElButton, ElMessage, ElMessageBox, ElNotification, TableColumnCtx } from 'element-plus';
 import { ProxyServer, useProxyServer } from '../store/db/proxyServer';
 import _ from 'lodash';
@@ -209,7 +212,7 @@ function listAllProxyServer() {
         proxyServer.value = list;
     })
 }
-useEventBus().on('ProxyServerChanged', listAllProxyServer)
+onMounted(() => useEventBus().on('ProxyServerChanged', listAllProxyServer))
 onUnmounted(() => useEventBus().remove('ProxyServerChanged', listAllProxyServer))
 
 const dialogProxyServerVisible = ref(false);
@@ -354,7 +357,7 @@ function listAllEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
-useEventBus().on('EmbyServerChanged', listAllEmbyServer)
+onMounted(() => useEventBus().on('EmbyServerChanged', listAllEmbyServer))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
 
 const embyLinesOrigin = ref<EmbyLine[]>([]);
@@ -368,7 +371,7 @@ function listAllEmbyLine() {
         embyLinesOrigin.value = list
     })
 }
-useEventBus().on('EmbyLineChanged', listAllEmbyLine)
+onMounted(() => useEventBus().on('EmbyLineChanged', listAllEmbyLine))
 onUnmounted(() => useEventBus().remove('EmbyLineChanged', listAllEmbyLine))
 
 interface SpanMethodProps {

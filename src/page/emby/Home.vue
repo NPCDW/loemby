@@ -158,7 +158,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onUnmounted, ref, watchEffect } from 'vue';
+import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, EpisodesItem, SearchItem, MediaLibraryItem, MediaLibraryCount, MediaSource } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
@@ -173,18 +173,18 @@ import { useEventBus } from '../../store/eventBus';
 const router = useRouter()
 const route = useRoute()
 
-let embyServer = ref<EmbyServer>({})
+const embyServer = ref<EmbyServer>({})
 async function getEmbyServer(embyId: string) {
     return useEmbyServer().getEmbyServer(embyId).then(value => {
         embyServer.value = value!;
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 function embyServerChanged(payload?: {event?: string, id?: string}) {
-    if (payload?.id === route.params.embyId) {
+    if (payload?.id === route.params.id) {
         getEmbyServer(payload?.id)
     }
 }
-useEventBus().on('EmbyServerChanged', embyServerChanged)
+onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 watchEffect(async () => {

@@ -271,7 +271,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watchEffect } from "vue";
+import { computed, onMounted, onUnmounted, ref, watchEffect } from "vue";
 import { useRoute } from 'vue-router'
 import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -302,7 +302,7 @@ function listAllProxyServer() {
     })
 }
 listAllProxyServer()
-useEventBus().on('ProxyServerChanged', listAllProxyServer)
+onMounted(() => useEventBus().on('ProxyServerChanged', listAllProxyServer))
 onUnmounted(() => useEventBus().remove('ProxyServerChanged', listAllProxyServer))
 
 const embyServers = ref<EmbyServer[]>([])
@@ -313,7 +313,7 @@ function listAllEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
-useEventBus().on('EmbyServerChanged', listAllEmbyServer)
+onMounted(() => useEventBus().on('EmbyServerChanged', listAllEmbyServer))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
 
 const embyIconLocalUrl = ref<{[key: string]: string}>({})
@@ -349,7 +349,7 @@ function listAllEmbyLine() {
     })
 }
 listAllEmbyLine()
-useEventBus().on('EmbyLineChanged', listAllEmbyLine)
+onMounted(() => useEventBus().on('EmbyLineChanged', listAllEmbyLine))
 onUnmounted(() => useEventBus().remove('EmbyLineChanged', listAllEmbyLine))
 
 async function addEmbyServerDb(tmp: EmbyServer) {

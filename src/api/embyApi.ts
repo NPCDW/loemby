@@ -531,7 +531,7 @@ export interface EpisodesItem extends BaseItem {
     PremiereDate: string,
     ParentIndexNumber: number,
     IndexNumber: number,
-    MediaSources?: MediaSource[],
+    MediaSources?: MediaSource[],    // 搜索时，zdz无媒体源字段
     SeriesId: string,
     Overview: string,
     ProviderIds: {[key: string]: string}

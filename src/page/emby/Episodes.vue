@@ -140,7 +140,7 @@
 </template>
 
 <script lang="ts" setup>
-import { h, nextTick, onUnmounted, ref, VNode, watchEffect } from 'vue';
+import { h, nextTick, onMounted, onUnmounted, ref, VNode, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodesItem, MediaSource, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { getResolutionFromMediaSources } from '../../util/play_info_util'
@@ -160,7 +160,7 @@ import traktApi from '../../api/traktApi';
 const router = useRouter()
 const route = useRoute()
 
-let embyServer = ref<EmbyServer>({})
+const embyServer = ref<EmbyServer>({})
 async function getEmbyServer() {
     return useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
         embyServer.value = value!;
@@ -171,7 +171,7 @@ function embyServerChanged(payload?: {event?: string, id?: string}) {
         getEmbyServer()
     }
 }
-useEventBus().on('EmbyServerChanged', embyServerChanged)
+onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 const versionOptions = ref<{label: string, value: string, name: string, size: string, bitrate: string, resolution: string}[]>([])
@@ -598,7 +598,7 @@ function playingStopped(payload: PlaybackProgress) {
         })
     }
 }
-useEventBus().on('playingStopped', playingStopped)
+onMounted(() => useEventBus().on('playingStopped', playingStopped))
 onUnmounted(() => useEventBus().remove('playingStopped', playingStopped))
 
 const starLoading = ref<boolean>(false)
