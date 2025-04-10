@@ -22,9 +22,9 @@
                 </template>
                 <div v-if="currentEpisodes">
                     <div style="width: 100%;">
-                        <h2 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h2>
+                        <h1 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h1>
                         <template v-else>
-                            <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h2>{{ currentEpisodes.SeriesName }}</h2></el-link>
+                            <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
                             <p>{{ 'S' + currentEpisodes.ParentIndexNumber + 'E' + currentEpisodes.IndexNumber + '. ' + currentEpisodes.Name }}</p>
                         </template>
                         <p>
@@ -122,7 +122,7 @@
                     </div>
                 </div>
             </el-skeleton>
-            <div v-if="currentEpisodes?.Type === 'Series'">
+            <div v-if="currentEpisodes?.SeriesId">
                 <h1>接下来</h1>
                 <el-button plain @click="continuousPlay = !continuousPlay">
                     <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
@@ -145,7 +145,7 @@
                     </div>
                 </template>
                 <h2 v-if="nextUpList.length == 0 || (nextUpList.length == 1 && nextUpList[0].Id === currentEpisodes?.Id)">已经是最后一集了</h2>
-                <div v-else style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                <div v-else style="display: flex; flex-wrap: wrap; flex-direction: row; margin-left: -5px;">
                     <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServer="embyServer" />
                 </div>
             </el-skeleton>
