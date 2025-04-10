@@ -100,6 +100,7 @@
         </el-tab-pane>
         <el-tab-pane label="Emby图标库" name="EmbyIconLibrary">
             <el-scrollbar style="height: calc(100vh - 100px);">
+                <h1>Emby图标库</h1>
                 <el-form :inline="true">
                     <el-form-item label="应用数据代理（图标、自动更新等）">
                         <el-select v-model="app_proxy_id" @change="appProxyChange" style="width: 220px;">
@@ -108,7 +109,6 @@
                         </el-select>
                     </el-form-item>
                 </el-form>
-                <h1>Emby图标库</h1>
                 <el-table :data="embyIconLibrary" style="width: 100%">
                     <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
                     <el-table-column prop="url" label="Url" show-overflow-tooltip />

@@ -2404,7 +2404,7 @@ dependencies = [
 
 [[package]]
 name = "loemby"
-version = "0.9.10"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "axum",
