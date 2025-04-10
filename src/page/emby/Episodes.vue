@@ -119,19 +119,24 @@
                                 <span>收藏</span>
                             </template>
                         </el-button>
-                        <el-button plain @click="continuousPlay = !continuousPlay">
-                            <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
-                        </el-button>
-                        <el-button v-if="continuousPlay" plain @click="rememberSelect = !rememberSelect">
-                            <span>{{ rememberSelect ? '记住选择' : '自动选择' }}</span>
-                        </el-button>
-                        <el-button @click="nextUp(1)">接下来</el-button>
                     </div>
                 </div>
             </el-skeleton>
+            <div v-if="currentEpisodes?.Type === 'Series'">
+                <h1>接下来</h1>
+                <el-button plain @click="continuousPlay = !continuousPlay">
+                    <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
+                </el-button>
+                <el-button v-if="continuousPlay" plain @click="rememberSelect = !rememberSelect">
+                    <span>{{ rememberSelect ? '记住选择' : '自动选择' }}</span>
+                </el-button>
+                <el-button v-if="continuousPlay && supportDirectLink" plain @click="useDirectLink = (useDirectLink + 1) % 2">
+                    <span>{{ useDirectLink == 2 ? '直链播放？' : useDirectLink == 1 ? '使用直链' : '不使用直链' }}</span>
+                </el-button>
+                <el-button @click="nextUp(1)">接下来</el-button>
+            </div>
             <el-skeleton :loading="nextUpLoading" animated v-if="nextUpShow">
                 <template #template>
-                    <h1>接下来</h1>
                     <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                         <el-card style="width: 300px; margin: 5px;" v-for="i in 5" :key="i">
                             <p><el-skeleton-item variant="text" style="width: 90%" /></p>
@@ -139,9 +144,8 @@
                         </el-card>
                     </div>
                 </template>
-                <h1 v-if="nextUpList && nextUpList.length >= 1">接下来</h1>
-                <h1 v-if="nextUpList && nextUpList.length < 1">已经是最后一集了</h1>
-                <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                <h2 v-if="nextUpList.length == 0 || (nextUpList.length == 1 && nextUpList[0].Id === currentEpisodes?.Id)">已经是最后一集了</h2>
+                <div v-else style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServer="embyServer" />
                 </div>
             </el-skeleton>
@@ -296,6 +300,7 @@ const mediaSourceSizeTag = ref('')
 const mediaSourceBitrateTag = ref('')
 const mediaStreamResolutionTag = ref('Unknown')
 const supportDirectLink = ref(false)
+const useDirectLink = ref(2)
 function handleMediaSources(mediaSources: MediaSource[]) {
     if (!mediaSources || mediaSources.length == 0) {
         return
@@ -504,6 +509,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
         return
     }
     play_loading.value = true
+    useDirectLink.value = directLink ? 1 : 0
     return embyApi.playbackInfo(embyServer.value, item_id).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
@@ -609,7 +615,7 @@ function playingStopped(payload: PlaybackProgress) {
                     if (nextUpList.value.length > 0) {
                         router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
                             autoplay: 'true',
-                            directLink: supportDirectLink.value.toString(),
+                            directLink: useDirectLink.value.toString(),
                             rememberSelect: rememberSelect.value.toString(),
                             videoSelect: videoSelect.value,
                             audioSelect: audioSelect.value,
