@@ -553,7 +553,9 @@ export interface MediaSource {
     Size: number,
     Bitrate: number,
     DirectStreamUrl: string,
-    MediaStreams: MediaStream[]
+    MediaStreams: MediaStream[],
+    IsRemote: boolean,
+    Path: string,
 }
 
 export interface MediaStream {

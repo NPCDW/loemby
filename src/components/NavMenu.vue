@@ -16,12 +16,11 @@
                         <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
                             <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled ? true : false">
                                 <div style="height: 100%; width: 100%; display: flex; align-items: center;">
-                                    <el-icon v-if="embyServer.disabled" style="color: #909399;"><i-ep-CircleCloseFilled /></el-icon>
-                                    <el-icon v-else-if="embyServer.icon_url" size="24" style="width: 24px; height: 24px;"><img :src="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;"></el-icon>
+                                    <el-icon v-if="embyServer.icon_url" size="24" style="width: 24px; height: 24px;"><img v-lazy="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;"></el-icon>
                                     <el-icon v-else size="24" style="width: 24px; height: 3624pxpx;"><svg-icon name="emby" /></el-icon>
                                     {{ embyServer.server_name }}
                                     <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
-                                        {{ keep_alive_days[embyServer.id!] >= 0 ? '+' + keep_alive_days[embyServer.id!] : keep_alive_days[embyServer.id!] }}
+                                        {{ keep_alive_days[embyServer.id!] }}
                                     </el-tag>
                                 </div>
                             </el-menu-item>

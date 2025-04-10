@@ -18,6 +18,12 @@
                         </div>
                         <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
                     </el-form-item>
+                    <el-form-item label="Trakt代理">
+                        <el-select v-model="trakt_proxy_id" @change="traktProxyChange" style="width: 220px;">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
                 </el-form>
             </el-scrollbar>
         </el-tab-pane>
@@ -41,29 +47,14 @@
                         </template>
                     </el-table-column>
                 </el-table>
-                <h1>应用代理</h1>
-                <el-form label-position="top">
-                    <el-form-item label="Trakt">
-                        <el-select v-model="trakt_proxy_id" @change="traktProxyChange">
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                    <el-form-item label="应用数据代理（图标、自动更新等）">
-                        <el-select v-model="app_proxy_id" @change="appProxyChange">
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                </el-form>
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="Emby线路代理" name="EmbyLineProxy">
             <el-scrollbar style="height: calc(100vh - 100px);">
                 <h1>Emby线路代理配置</h1>
                 <el-form :inline="true">
-                    <el-form-item label="媒体库浏览">
-                        <el-select v-model="global_browse_proxy_id" @change="globalBrowseProxyChange">
+                    <el-form-item label="全局媒体库浏览">
+                        <el-select v-model="global_browse_proxy_id" @change="globalBrowseProxyChange" style="width: 220px;">
                             <template #label="{ label }">
                                 <span>全局配置: </span>
                                 <span style="font-weight: bold">{{ label }}</span>
@@ -72,8 +63,8 @@
                             <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
-                    <el-form-item label="媒体流播放">
-                        <el-select v-model="global_play_proxy_id" @change="globalPlayProxyChange">
+                    <el-form-item label="全局媒体流播放">
+                        <el-select v-model="global_play_proxy_id" @change="globalPlayProxyChange" style="width: 220px;">
                             <template #label="{ label }">
                                 <span>全局配置: </span>
                                 <span style="font-weight: bold">{{ label }}</span>
@@ -109,6 +100,14 @@
         </el-tab-pane>
         <el-tab-pane label="Emby图标库" name="EmbyIconLibrary">
             <el-scrollbar style="height: calc(100vh - 100px);">
+                <el-form :inline="true">
+                    <el-form-item label="应用数据代理（图标、自动更新等）">
+                        <el-select v-model="app_proxy_id" @change="appProxyChange" style="width: 220px;">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                </el-form>
                 <h1>Emby图标库</h1>
                 <el-table :data="embyIconLibrary" style="width: 100%">
                     <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
@@ -212,6 +211,7 @@ function listAllProxyServer() {
         proxyServer.value = list;
     })
 }
+listAllProxyServer()
 onMounted(() => useEventBus().on('ProxyServerChanged', listAllProxyServer))
 onUnmounted(() => useEventBus().remove('ProxyServerChanged', listAllProxyServer))
 
@@ -684,11 +684,7 @@ function handlePaneChange() {
         getTraktInfo()
         getTraktSyncSwitch()
     } else if (activePane.value == 'ProxyServer') {
-        listAllProxyServer()
     } else if (activePane.value == 'EmbyLineProxy') {
-        if (proxyServer.value.length == 0) {
-            listAllProxyServer()
-        }
         listAllEmbyLine()
         getGlobalBrowseProxy()
         getGlobalPlayProxy()

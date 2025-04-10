@@ -71,20 +71,38 @@
                             </el-select></span>
                         </p>
                         <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">
+                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, false)">
                                 <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                 <span>继续播放</span>
                             </el-button>
-                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0)">
+                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, false)">
                                 <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                 <span>从头播放</span>
                             </el-button>
                         </template>
                         <template v-else>
-                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0)">
+                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, false)">
                                 <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                 <span>播放</span>
                             </el-button>
+                        </template>
+                        <template v-if="supportDirectLink">
+                            <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
+                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, true)">
+                                    <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                    <span>直链继续播放</span>
+                                </el-button>
+                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, true)">
+                                    <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                    <span>直链从头播放</span>
+                                </el-button>
+                            </template>
+                            <template v-else>
+                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, true)">
+                                    <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                    <span>直链播放</span>
+                                </el-button>
+                            </template>
                         </template>
                         <el-button plain :disabled="playedLoading" @click="played()">
                             <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
@@ -203,7 +221,7 @@ watchEffect(async () => {
     updateCurrentEpisodes().then(() => {
         if (route.query.autoplay === 'true') {
             nextTick(() => {
-                playing(<string>route.params.episodeId, 0)
+                playing(<string>route.params.episodeId, 0, Boolean(JSON.parse(<string>route.query.directLink)))
             })
         }
     })
@@ -277,6 +295,7 @@ function nextUp(pageNumber: number) {
 const mediaSourceSizeTag = ref('')
 const mediaSourceBitrateTag = ref('')
 const mediaStreamResolutionTag = ref('Unknown')
+const supportDirectLink = ref(false)
 function handleMediaSources(mediaSources: MediaSource[]) {
     if (!mediaSources || mediaSources.length == 0) {
         return
@@ -310,6 +329,9 @@ function playbackVersionChange(mediaSourceId: string) {
     mediaSourceBitrateTag.value = formatMbps(currentMediaSources.Bitrate)
     if (currentMediaSources.MediaStreams && currentMediaSources.MediaStreams.length > 0) {
         mediaStreamResolutionTag.value = getResolutionFromMediaSources(currentMediaSources)
+    }
+    if (currentMediaSources.IsRemote && currentMediaSources.Path && currentMediaSources.Path.indexOf('://') !== -1) {
+        supportDirectLink.value = true
     }
     versionSelect.value = mediaSourceId
     videoSelect.value = -1
@@ -476,7 +498,7 @@ function getScrobbleTraktIdsParam(item: EpisodesItem) {
 }
 
 // const playingProgressTask = ref<NodeJS.Timeout>()
-function playing(item_id: string, playbackPositionTicks: number) {
+function playing(item_id: string, playbackPositionTicks: number, directLink: boolean) {
     if (!mpv_path) {
         ElMessage.error('未设置mpv路径')
         return
@@ -497,7 +519,12 @@ function playing(item_id: string, playbackPositionTicks: number) {
         }
         let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
         if (currentMediaSources) {
-            let directStreamUrl = embyApi.getDirectStreamUrl(embyServer.value, currentMediaSources.DirectStreamUrl!)!
+            let playUrl
+            if (directLink && supportDirectLink.value) {
+                playUrl = currentMediaSources.Path
+            } else {
+                playUrl = embyApi.getDirectStreamUrl(embyServer.value, currentMediaSources.DirectStreamUrl!)!
+            }
             let externalAudio = []
             let externalSubtitle = []
             for (let mediaStream of currentMediaSources.MediaStreams) {
@@ -512,7 +539,7 @@ function playing(item_id: string, playbackPositionTicks: number) {
             const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
             return invokeApi.playback({
                 mpv_path: mpv_path.value,
-                path: directStreamUrl,
+                path: playUrl,
                 proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),
                 title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.value.server_name,
                 user_agent: embyServer.value!.user_agent!,
@@ -582,6 +609,7 @@ function playingStopped(payload: PlaybackProgress) {
                     if (nextUpList.value.length > 0) {
                         router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
                             autoplay: 'true',
+                            directLink: supportDirectLink.value.toString(),
                             rememberSelect: rememberSelect.value.toString(),
                             videoSelect: videoSelect.value,
                             audioSelect: audioSelect.value,
