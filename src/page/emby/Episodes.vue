@@ -70,60 +70,62 @@
                                 <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select></span>
                         </p>
-                        <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, false)">
-                                <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
-                                <span>继续播放</span>
-                            </el-button>
-                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, false)">
-                                <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
-                                <span>从头播放</span>
-                            </el-button>
-                        </template>
-                        <template v-else>
-                            <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, false)">
-                                <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
-                                <span>播放</span>
-                            </el-button>
-                        </template>
-                        <template v-if="supportDirectLink">
+                        <div>
                             <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, true)">
+                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, false)">
                                     <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
-                                    <span>直链继续播放</span>
+                                    <span>继续播放</span>
                                 </el-button>
-                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, true)">
+                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, false)">
                                     <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
-                                    <span>直链从头播放</span>
+                                    <span>从头播放</span>
                                 </el-button>
                             </template>
                             <template v-else>
-                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, true)">
+                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, false)">
                                     <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
-                                    <span>直链播放</span>
+                                    <span>播放</span>
                                 </el-button>
                             </template>
-                        </template>
-                        <el-button plain :disabled="playedLoading" @click="played()">
-                            <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
-                            <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
-                            <span>已播放</span>
-                        </el-button>
-                        <el-button plain :disabled="starLoading" @click="star()">
-                            <template v-if="currentEpisodes.UserData?.IsFavorite">
-                                <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
-                                <span>取消收藏</span>
+                            <el-button plain :disabled="playedLoading" @click="played()">
+                                <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                                <span>已播放</span>
+                            </el-button>
+                            <el-button plain :disabled="starLoading" @click="star()">
+                                <template v-if="currentEpisodes.UserData?.IsFavorite">
+                                    <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
+                                    <span>取消收藏</span>
+                                </template>
+                                <template v-else>
+                                    <el-icon :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
+                                    <span>收藏</span>
+                                </template>
+                            </el-button>
+                            <template v-if="supportDirectLink">
+                                <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
+                                    <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, true)">
+                                        <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                        <span>直链继续播放</span>
+                                    </el-button>
+                                    <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, true)">
+                                        <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                        <span>直链从头播放</span>
+                                    </el-button>
+                                </template>
+                                <template v-else>
+                                    <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, true)">
+                                        <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                        <span>直链播放</span>
+                                    </el-button>
+                                </template>
                             </template>
-                            <template v-else>
-                                <el-icon :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
-                                <span>收藏</span>
-                            </template>
-                        </el-button>
+                        </div>
                     </div>
                 </div>
             </el-skeleton>
-            <div v-if="currentEpisodes?.SeriesId">
-                <h1>接下来</h1>
+            <h1>接下来</h1>
+            <div v-if="currentEpisodes?.SeriesId" style="margin: 0 0 10px 5px;">
                 <el-button plain @click="continuousPlay = !continuousPlay">
                     <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
                 </el-button>
@@ -145,7 +147,7 @@
                     </div>
                 </template>
                 <h2 v-if="nextUpList.length == 0 || (nextUpList.length == 1 && nextUpList[0].Id === currentEpisodes?.Id)">已经是最后一集了</h2>
-                <div v-else style="display: flex; flex-wrap: wrap; flex-direction: row; margin-left: -5px;">
+                <div v-else style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServer="embyServer" />
                 </div>
             </el-skeleton>

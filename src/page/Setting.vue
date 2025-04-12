@@ -683,14 +683,14 @@ function handlePaneChange() {
         getMpvPath()
         getTraktInfo()
         getTraktSyncSwitch()
+        getTraktProxy()
     } else if (activePane.value == 'ProxyServer') {
     } else if (activePane.value == 'EmbyLineProxy') {
         listAllEmbyLine()
         getGlobalBrowseProxy()
         getGlobalPlayProxy()
-        getTraktProxy()
-        getAppProxy()
     } else if (activePane.value == 'EmbyIconLibrary') {
+        getAppProxy()
         listAllEmbyIconLibrary()
     }
 }
