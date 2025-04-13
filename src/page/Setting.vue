@@ -21,6 +21,8 @@
                     <el-form-item label="Trakt代理">
                         <el-select v-model="trakt_proxy_id" @change="traktProxyChange" style="width: 220px;">
                             <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="followBrowse" label="跟随全局媒体库浏览代理" value="followBrowse"/>
+                            <el-option key="followPlay" label="跟随全局媒体流播放代理" value="followPlay"/>
                             <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
@@ -105,6 +107,8 @@
                     <el-form-item label="应用数据代理（图标、自动更新等）">
                         <el-select v-model="app_proxy_id" @change="appProxyChange" style="width: 220px;">
                             <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="followBrowse" label="跟随全局媒体库浏览代理" value="followBrowse"/>
+                            <el-option key="followPlay" label="跟随全局媒体流播放代理" value="followPlay"/>
                             <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
@@ -520,7 +524,7 @@ listen<string>('trakt_auth', (event) => {
     }).catch(e => ElMessage.error('授权Trakt失败' + e))
 });
 
-const trakt_proxy_id = ref<string>('no');
+const trakt_proxy_id = ref<string>('followBrowse');
 function getTraktProxy() {
     useGlobalConfig().getGlobalConfigValue("trakt_proxy_id").then(value => {
         trakt_proxy_id.value = value ? value : "no";
@@ -548,7 +552,7 @@ function traktProxyChange() {
         })
     }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
 }
-const app_proxy_id = ref<string>('no');
+const app_proxy_id = ref<string>('followBrowse');
 function getAppProxy() {
     useGlobalConfig().getGlobalConfigValue("app_proxy_id").then(value => {
         app_proxy_id.value = value ? value : "no";

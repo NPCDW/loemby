@@ -91,19 +91,45 @@ export const useProxyServer = defineStore('proxyServer', () => {
 
     async function getTraktProxyUrl() {
         return useGlobalConfig().getGlobalConfigValue('trakt_proxy_id').then(value => {
-            if (value) {
-                return getProxyUrl(value)
+            if (!value || value == 'followBrowse') {
+                return useGlobalConfig().getGlobalConfigValue('global_browse_proxy_id').then(value => {
+                    if (value) {
+                        return getProxyUrl(value)
+                    }
+                    return
+                })
             }
-            return
+            if (value == 'followPlay') {
+                return useGlobalConfig().getGlobalConfigValue('global_play_proxy_id').then(value => {
+                    if (value) {
+                        return getProxyUrl(value)
+                    }
+                    return
+                })
+            }
+            return getProxyUrl(value)
         })
     }
 
     async function getAppProxyUrl() {
         return useGlobalConfig().getGlobalConfigValue('app_proxy_id').then(value => {
-            if (value) {
-                return getProxyUrl(value)
+            if (!value || value == 'followBrowse') {
+                return useGlobalConfig().getGlobalConfigValue('global_browse_proxy_id').then(value => {
+                    if (value) {
+                        return getProxyUrl(value)
+                    }
+                    return
+                })
             }
-            return
+            if (value == 'followPlay') {
+                return useGlobalConfig().getGlobalConfigValue('global_play_proxy_id').then(value => {
+                    if (value) {
+                        return getProxyUrl(value)
+                    }
+                    return
+                })
+            }
+            return getProxyUrl(value)
         })
     }
 
