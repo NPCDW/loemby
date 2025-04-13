@@ -38,7 +38,7 @@ interface HttpForwardParam {
     proxy?: string,
 }
 
-interface HttpForwardResult {
+export interface HttpForwardResult {
     status_code: number,
     status_text: string,
     headers: {[key: string]: string},

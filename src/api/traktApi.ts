@@ -1,7 +1,8 @@
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useGlobalConfig } from '../store/db/globalConfig';
 import { useProxyServer } from '../store/db/proxyServer';
-import invokeApi from './invokeApi';
+import invokeApi, { HttpForwardResult } from './invokeApi';
+import { sleep } from '../util/sleep';
 
 const USER_AGENT = 'loemby/' + import.meta.env.VITE_APP_VERSION
 const CLIENT_ID = '05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572'
@@ -141,7 +142,7 @@ async function getUserInfo() {
 /**
  * 开始播放
  */
-async function start(param: any) {
+async function start(param: any): Promise<HttpForwardResult> {
     let access_token = await getCacheAccessToken()
     if (!access_token) {
         return Promise.reject("参数缺失");
@@ -158,15 +159,14 @@ async function start(param: any) {
         },
         body: JSON.stringify(param),
         proxy: await useProxyServer().getTraktProxyUrl()
-    }).then(response => {
+    }).then(async response => {
         if (response.status_code == 401) {
             ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         if (response.status_code == 429) {
-            ElMessage.warning("Trakt Api 请求太多或太快，将在 1 秒钟后重试");
-            setTimeout(() => {
-                return start(param)
-            }, 1000)
+            ElMessage.warning("Trakt 请求太多或太快，开始播放 Api 将在 1 秒钟后重试");
+            await sleep(1000)
+            return start(param)
         }
         return response
     });
@@ -175,7 +175,7 @@ async function start(param: any) {
 /**
  * 停止播放
  */
-async function stop(param: any) {
+async function stop(param: any): Promise<HttpForwardResult> {
     let access_token = await getCacheAccessToken()
     if (!access_token) {
         return Promise.reject("参数缺失");
@@ -192,15 +192,14 @@ async function stop(param: any) {
         },
         body: JSON.stringify(param),
         proxy: await useProxyServer().getTraktProxyUrl()
-    }).then(response => {
+    }).then(async response => {
         if (response.status_code == 401) {
             ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         if (response.status_code == 429) {
-            ElMessage.warning("Trakt Api 请求太多或太快，将在 1 秒钟后重试");
-            setTimeout(() => {
-                return stop(param)
-            }, 1000)
+            ElMessage.warning("Trakt 请求太多或太快，停止播放 Api 将在 1 秒钟后重试");
+            await sleep(1000)
+            return start(param)
         }
         return response
     });
