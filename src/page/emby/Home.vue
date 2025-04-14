@@ -227,7 +227,7 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
     episodesPageSize.value = pageSize
     return embyApi.getContinuePlayList(embyServer.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
@@ -264,7 +264,7 @@ function getFavoriteList(currentPage: number, pageSize: number) {
     favoritePageSize.value = pageSize
     return embyApi.getFavoriteList(embyServer.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<SearchItem> = JSON.parse(response.body);
@@ -281,7 +281,7 @@ function getMediaLibraryList() {
     mediaLibraryLoading.value = true
     return embyApi.getMediaLibraryList(embyServer.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<MediaLibraryItem> = JSON.parse(response.body);
@@ -300,7 +300,7 @@ function getMediaLibraryChildLatest(parentId: string) {
     mediaLibraryChildLoading.value[parentId] = true
     return embyApi.getMediaLibraryChildLatest(embyServer.value, parentId, 16).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: SearchItem[] = JSON.parse(response.body);
@@ -329,7 +329,7 @@ function getMediaLibraryCount() {
     mediaLibraryCountLoading.value = true
     return embyApi.count(embyServer.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: MediaLibraryCount = JSON.parse(response.body);

@@ -185,7 +185,7 @@ function updateCurrentSerie() {
     serieInfoLoading.value = true
     return embyApi.items(embyServer.value, <string>route.params.serieId).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EpisodesItem = JSON.parse(response.body);
@@ -209,7 +209,7 @@ function star() {
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
@@ -233,7 +233,7 @@ function played() {
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
@@ -249,7 +249,7 @@ async function getSeasons() {
     seasonsLoading.value = true
     return embyApi.seasons(embyServer.value, <string>route.params.serieId).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<SeasonsItem> = JSON.parse(response.body);
@@ -271,7 +271,7 @@ async function getEpisodes() {
     episodesLoading.value = true
     return embyApi.episodes(embyServer.value, <string>route.params.serieId, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
@@ -309,7 +309,7 @@ function getDialogEpisodes() {
     dialogEpisodesLoading.value = true
     return embyApi.episodes(embyServer.value, currentSeries.value?.Id!, dialogSeasons.value?.Id!, (dialogEpisodesCurrentPage.value - 1) * dialogEpisodesPageSize.value, dialogEpisodesPageSize.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);

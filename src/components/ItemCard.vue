@@ -110,7 +110,7 @@
                                     <span>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
                                     <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodesItem.Id] }}</el-tag>
                                     <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] }}</el-tag>
-                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] }}</el-tag>
+                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
                                 </span>
                                 <span>
                                     <el-link :underline="false" v-if="episodesItem.UserData" :disabled="starLoading[episodesItem.Id]" @click="star(episodesItem)">
@@ -192,7 +192,7 @@ function star(item: SearchItem | SeasonsItem | EpisodesItem) {
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
@@ -216,7 +216,7 @@ function played(item: SearchItem | SeasonsItem | EpisodesItem) {
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
@@ -255,7 +255,7 @@ async function getSeasons(series: SeriesItem) {
     }
     return embyApi.seasons(embyServer, series.Id).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<SeasonsItem> = JSON.parse(response.body);
@@ -281,7 +281,7 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
     }
     return embyApi.episodes(embyServer, series_id, seasons.Id, (currentPage - 1) * pageSize, pageSize).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);

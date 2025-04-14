@@ -54,7 +54,7 @@ const search = async () => {
     emby_search_result.value = {success: true}
     return embyApi.search(embyServer.value, search_str.value, 0, 30).then(async response => {
         if (response.status_code != 200) {
-            emby_search_result.value = {success: false, message: 'response status' + response.status_code + ' ' + response.status_text}
+            emby_search_result.value = {success: false, message: response.status_code + ' ' + response.status_text}
             return
         }
         let json: EmbyPageList<SearchItem> = JSON.parse(response.body);

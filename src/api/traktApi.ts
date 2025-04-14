@@ -21,7 +21,7 @@ async function saveAccessToken(token_response: TokenResult) {
     await useGlobalConfig().updateGlobalConfig(config);
     getUserInfo().then(response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: {user: {username: string}} = JSON.parse(response.body);
@@ -50,7 +50,7 @@ async function getCacheAccessToken() {
         console.log("trakt token 不足6小时，后台重新获取");
         token({refresh_token: json.refresh_token}).then(response => {
             if (response.status_code != 200) {
-                ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+                ElMessage.error(response.status_code + ' ' + response.status_text)
                 return
             }
             let rejson: TokenResult = JSON.parse(response.body);
@@ -63,7 +63,7 @@ async function getCacheAccessToken() {
         console.log("trakt token 过期，重新获取");
         let response = await token({refresh_token: json.refresh_token})
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let rejson: TokenResult = JSON.parse(response.body);

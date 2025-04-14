@@ -17,7 +17,7 @@
                             <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled ? true : false">
                                 <div style="height: 100%; width: 100%; display: flex; align-items: center;">
                                     <el-icon v-if="embyServer.icon_url" size="24" style="width: 24px; height: 24px;"><img v-lazy="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;"></el-icon>
-                                    <el-icon v-else size="24" style="width: 24px; height: 3624pxpx;"><svg-icon name="emby" /></el-icon>
+                                    <el-icon v-else size="24" style="width: 24px; height: 24px;"><svg-icon name="emby" /></el-icon>
                                     {{ embyServer.server_name }}
                                     <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
                                         {{ keep_alive_days[embyServer.id!] }}
@@ -490,7 +490,7 @@ async function addEmbyServerAddr() {
     }
     embyApi.getServerInfo(currentEmbyServer.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: {ServerName: string, Id: string} = JSON.parse(response.body);
@@ -508,7 +508,7 @@ function getServerInfo(embyServer: EmbyServer) {
     serverInfoLoading.value = true
     embyApi.getServerInfo(embyServer).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: {ServerName: string, Id: string} = JSON.parse(response.body);
@@ -560,7 +560,7 @@ async function login(embyServerConfig: EmbyServer) {
     await updateEmbyServerDb(embyServerConfig);
     return embyApi.authenticateByName(embyServerConfig).then(async response => {
         if (response.status_code != 200) {
-            return Promise.reject('response status' + response.status_code + ' ' + response.status_text)
+            return Promise.reject(response.status_code + ' ' + response.status_text)
         }
         let json: {User: {Id: string}, AccessToken: string} = JSON.parse(response.body);
         embyServerConfig.auth_token = json['AccessToken']
@@ -726,7 +726,7 @@ function embyIconLibraryChange() {
     const lib = embyIconLibrary.value.find(item => item.id === selectedEmbyIconLibrary.value)
     appApi.getEmbyIconLibrary(lib!.url!).then(response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: {name: string, icons:{name: string, url: string}[]} = JSON.parse(response.body);

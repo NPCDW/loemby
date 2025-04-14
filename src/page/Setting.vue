@@ -315,7 +315,7 @@ function checkProxy(id: string) {
     checkProxyLoading.value[id] = true;
     appApi.getProxyLocation(id).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json = JSON.parse(response.body);
@@ -496,7 +496,7 @@ listen<string>('trakt_auth', (event) => {
     traktAuthStatus.value = '授权成功，正在获取授权信息'
     traktApi.token({code: event.payload}).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: {access_token: string, refresh_token: string, expires_in: number, created_at: number} = JSON.parse(response.body);
@@ -509,7 +509,7 @@ listen<string>('trakt_auth', (event) => {
         traktAuthStatus.value = '正在获取用户信息'
         traktApi.getUserInfo().then(response => {
             if (response.status_code != 200) {
-                ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+                ElMessage.error(response.status_code + ' ' + response.status_text)
                 return
             }
             let json: {user: {username: string}} = JSON.parse(response.body);

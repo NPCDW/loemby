@@ -244,7 +244,7 @@ function updateCurrentEpisodes(silent: boolean = false) {
     }
     return embyApi.items(embyServer.value, <string>route.params.episodeId).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EpisodesItem = JSON.parse(response.body);
@@ -267,7 +267,7 @@ async function getCurrentSeries() {
     }
     return embyApi.items(embyServer.value, currentEpisodes.value.SeriesId).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EpisodesItem = JSON.parse(response.body);
@@ -287,7 +287,7 @@ function nextUp(pageNumber: number) {
     nextUpLoading.value = true
     return embyApi.nextUp(embyServer.value, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
@@ -514,7 +514,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
     useDirectLink.value = directLink ? 1 : 0
     return embyApi.playbackInfo(embyServer.value, item_id).then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
@@ -651,7 +651,7 @@ function star() {
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
@@ -675,7 +675,7 @@ function played() {
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
-            ElMessage.error('response status' + response.status_code + ' ' + response.status_text)
+            ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
         let json: UserData = JSON.parse(response.body);
