@@ -52,7 +52,7 @@
                                     {{ label }}
                                 </template>
                                 <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value">
-                                    {{ item.name }} <el-tag disable-transitions>{{ item.size }}</el-tag> <el-tag disable-transitions>{{ item.bitrate }}</el-tag> <el-tag disable-transitions>{{ item.resolution }}</el-tag>
+                                    {{ item.name }} <el-tag disable-transitions>{{ item.size || "0 KB" }}</el-tag> <el-tag disable-transitions>{{ item.bitrate || "0 Kbps" }}</el-tag> <el-tag disable-transitions>{{ item.resolution || "Unknown" }}</el-tag>
                                 </el-option>
                             </el-select>
                         </p>
@@ -565,9 +565,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
                 scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
             }).then(async () => {
                 embyApi.playing(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
-                    ElMessage.success({
-                        message: '开始播放，请稍候'
-                    })
+                    ElMessage.success('开始播放，请稍候')
                     useEmbyServer().updateEmbyServer({id: embyServer.value!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
                         .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer.value!.id!}))
                 })
@@ -608,26 +606,24 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
 function playingStopped(payload: PlaybackProgress) {
     if (embyServer.value.id === payload.server_id && payload.item_id === currentEpisodes.value?.Id) {
         updateCurrentEpisodes(true).then(() => {
-            if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && continuousPlay.value) {
-                ElMessage.success({
-                    message: '播放完成，即将播放下一集'
-                })
+            if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
                 nextUpCurrentPage.value = 1
                 nextUp(1).then(() => {
-                    if (nextUpList.value.length > 0) {
-                        router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
-                            autoplay: 'true',
-                            directLink: useDirectLink.value.toString(),
-                            rememberSelect: rememberSelect.value.toString(),
-                            videoSelect: videoSelect.value,
-                            audioSelect: audioSelect.value,
-                            subtitleSelect: subtitleSelect.value,
-                            versionSelect: versionSelect.value,
-                        }})
-                    } else {
-                        ElMessage.warning({
-                            message: '已经是最后一集了'
-                        })
+                    if (continuousPlay.value) {
+                        if (nextUpList.value.length > 0) {
+                            ElMessage.success('即将播放下一集')
+                            router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
+                                autoplay: continuousPlay.value ? 'true' : 'false',
+                                directLink: useDirectLink.value.toString(),
+                                rememberSelect: rememberSelect.value.toString(),
+                                videoSelect: videoSelect.value,
+                                audioSelect: audioSelect.value,
+                                subtitleSelect: subtitleSelect.value,
+                                versionSelect: versionSelect.value,
+                            }})
+                        } else {
+                            ElMessage.warning('已经是最后一集了')
+                        }
                     }
                 })
             }

@@ -14,16 +14,16 @@
             <span v-else-if="item.Type == 'Episode'" style="display: flex;justify-content: space-between;align-items: center;">
                 <span>{{ (item as EpisodesItem).PremiereDate ? (item as EpisodesItem).PremiereDate.substring(0, 10) : '' }}</span>
                 <span>
-                    <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] }}</el-tag>
-                    <!-- <el-tag disable-transitions>{{ mediaSourceBitrateTag[item.Id] }}</el-tag> -->
+                    <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] || "0 KB" }}</el-tag>
+                    <!-- <el-tag disable-transitions>{{ mediaSourceBitrateTag[item.Id] || "0 Kbps" }}</el-tag> -->
                     <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[item.Id] || 'Unknown' }}</el-tag>
                 </span>
             </span>
             <span v-else-if="item.Type == 'Movie'" style="display: flex;justify-content: space-between;align-items: center;">
                 <span>{{ item.ProductionYear }}</span>
                 <span>
-                    <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] }}</el-tag>
-                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[item.Id] }}</el-tag>
+                    <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] || "0 KB" }}</el-tag>
+                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[item.Id] || "0 Kbps" }}</el-tag>
                     <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[item.Id] || 'Unknown' }}</el-tag>
                 </span>
             </span>
@@ -108,8 +108,8 @@
                             <div style="display: flex;justify-content: space-between;">
                                 <span>
                                     <span>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
-                                    <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodesItem.Id] }}</el-tag>
-                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] }}</el-tag>
+                                    <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodesItem.Id] || "0 KB" }}</el-tag>
+                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
                                     <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
                                 </span>
                                 <span>

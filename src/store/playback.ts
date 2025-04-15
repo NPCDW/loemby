@@ -19,9 +19,7 @@ export const usePlayback = defineStore('playback', () => {
                 }
                 if (event.payload.playback_status === 0) {
                     embyApi.playingStopped(embyServer, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, event.payload.progress).then(() => {
-                        ElMessage.success({
-                            message: '播放结束'
-                        })
+                        ElMessage.success('播放结束')
                         useEventBus().emit('playingStopped', event.payload)
                     })
                     if (event.payload.scrobble_trakt_param) {

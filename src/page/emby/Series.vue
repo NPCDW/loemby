@@ -110,8 +110,8 @@
                     <p><el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</el-link></p>
                     <p>
                         {{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}
-                        <el-tag disable-transitions>{{ mediaSourceSizeTag[episodesItem.Id] }}</el-tag>
-                        <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] }}</el-tag>
+                        <el-tag disable-transitions>{{ mediaSourceSizeTag[episodesItem.Id] || "0 KB" }}</el-tag>
+                        <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
                         <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
                     </p>
                 </div>

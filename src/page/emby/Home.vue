@@ -34,8 +34,8 @@
                             <p><el-progress :percentage="episodesItem.UserData?.Played ? 100 : episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                             <p>
                                 {{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}
-                                <el-tag disable-transitions>{{ mediaSourceSizeTag[episodesItem.Id] }}</el-tag>
-                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] }}</el-tag>
+                                <el-tag disable-transitions>{{ mediaSourceSizeTag[episodesItem.Id] || "0 KB" }}</el-tag>
+                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
                                 <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
                             </p>
                             <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">继续</el-button></p>

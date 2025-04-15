@@ -420,9 +420,7 @@ function editEmbyServer(embyServer: EmbyServer) {
 }
 async function enabledEmbyServer(embyServer: EmbyServer) {
     if (!embyServer.auth_token && embyServer.disabled) {
-        ElMessage.error({
-            message: '请先登录'
-        })
+        ElMessage.error('请先登录')
         return
     }
     embyServer.disabled = 1 - embyServer.disabled!
@@ -632,9 +630,7 @@ function editLine(line: EmbyLine) {
 }
 function delLine(line: EmbyLine) {
     if (line.in_use) {
-        ElMessage.error({
-            message: '不能删除正在使用的服务器线路'
-        })
+        ElMessage.error('不能删除正在使用的服务器线路')
         return
     }
     ElMessageBox.confirm(
