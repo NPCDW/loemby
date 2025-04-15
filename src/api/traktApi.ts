@@ -142,7 +142,7 @@ async function getUserInfo() {
 /**
  * 开始播放
  */
-async function start(param: any): Promise<HttpForwardResult> {
+async function start(param: any, retry: number = 0): Promise<HttpForwardResult> {
     let access_token = await getCacheAccessToken()
     if (!access_token) {
         return Promise.reject("参数缺失");
@@ -164,9 +164,11 @@ async function start(param: any): Promise<HttpForwardResult> {
             ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         if (response.status_code == 429) {
-            ElMessage.warning("Trakt 请求太多或太快，开始播放 Api 将在 1 秒钟后重试");
+            if (retry > 0) {
+                ElMessage.warning("Trakt 请求太多或太快，开始播放 Api 将在 1 秒钟后重试");
+            }
             await sleep(1000)
-            return start(param)
+            return start(param, retry + 1)
         }
         return response
     });
@@ -175,7 +177,7 @@ async function start(param: any): Promise<HttpForwardResult> {
 /**
  * 停止播放
  */
-async function stop(param: any): Promise<HttpForwardResult> {
+async function stop(param: any, retry: number = 0): Promise<HttpForwardResult> {
     let access_token = await getCacheAccessToken()
     if (!access_token) {
         return Promise.reject("参数缺失");
@@ -197,7 +199,9 @@ async function stop(param: any): Promise<HttpForwardResult> {
             ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         if (response.status_code == 429) {
-            ElMessage.warning("Trakt 请求太多或太快，停止播放 Api 将在 1 秒钟后重试");
+            if (retry > 0) {
+                ElMessage.warning("Trakt 请求太多或太快，停止播放 Api 将在 1 秒钟后重试");
+            }
             await sleep(1000)
             return start(param)
         }
