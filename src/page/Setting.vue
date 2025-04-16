@@ -437,7 +437,7 @@ function traktSyncSwitchChange() {
 }
 
 const traktAuthLoading = ref(false)
-const trakt_info = ref<{access_token?: string, refresh_token?: string, expires_in?: number, username?: string}>({});
+const trakt_info = ref<{access_token?: string, refresh_token?: string, expires_in?: number, username?: string, redirect_uri?: string}>({});
 const traktAuthStatus = ref('去授权')
 function getTraktInfo() {
     return useGlobalConfig().getGlobalConfigValue("trakt_info").then(value => {
@@ -494,7 +494,8 @@ function goAuthTrakt() {
 listen<string>('trakt_auth', (event) => {
     console.log(`trakt_auth: code: ${event.payload}`);
     traktAuthStatus.value = '授权成功，正在获取授权信息'
-    traktApi.token({code: event.payload}).then(async response => {
+    const redirect_uri = `http://127.0.0.1:${useRuntimeConfig().runtimeConfig?.axum_port}/trakt_auth`
+    traktApi.token({code: event.payload, redirect_uri}).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
@@ -504,6 +505,7 @@ listen<string>('trakt_auth', (event) => {
             access_token: json.access_token,
             refresh_token: json.refresh_token,
             expires_in: json.expires_in + json.created_at,
+            redirect_uri: redirect_uri,
         };
         await saveTraktInfo()
         traktAuthStatus.value = '正在获取用户信息'

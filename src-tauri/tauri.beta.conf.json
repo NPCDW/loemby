@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "loemby-beta",
-  "version": "0.10.4",
+  "version": "0.10.5",
   "identifier": "com.loemby-beta.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:3420",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
@@ -16,7 +16,7 @@
         "width": 1200,
         "height": 800,
         "backgroundColor": "#121212",
-        "userAgent": "loemby/0.10.4"
+        "userAgent": "loemby/0.10.5"
       }
     ],
     "security": {

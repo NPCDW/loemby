@@ -609,18 +609,18 @@ function playingStopped(payload: PlaybackProgress) {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
                 nextUpCurrentPage.value = 1
                 nextUp(1).then(() => {
+                    router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
+                        autoplay: continuousPlay.value ? 'true' : 'false',
+                        directLink: useDirectLink.value.toString(),
+                        rememberSelect: rememberSelect.value.toString(),
+                        videoSelect: videoSelect.value,
+                        audioSelect: audioSelect.value,
+                        subtitleSelect: subtitleSelect.value,
+                        versionSelect: versionSelect.value,
+                    }})
                     if (continuousPlay.value) {
                         if (nextUpList.value.length > 0) {
                             ElMessage.success('即将播放下一集')
-                            router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
-                                autoplay: continuousPlay.value ? 'true' : 'false',
-                                directLink: useDirectLink.value.toString(),
-                                rememberSelect: rememberSelect.value.toString(),
-                                videoSelect: videoSelect.value,
-                                audioSelect: audioSelect.value,
-                                subtitleSelect: subtitleSelect.value,
-                                versionSelect: versionSelect.value,
-                            }})
                         } else {
                             ElMessage.warning('已经是最后一集了')
                         }
