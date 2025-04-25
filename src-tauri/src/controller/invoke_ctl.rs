@@ -17,6 +17,7 @@ pub async fn get_sys_info() -> Result<String, String> {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlayVideoParam {
     pub mpv_path: String,
+    pub mpv_args: String,
     pub path: String,
     pub proxy: Option<String>,
     pub title: String,

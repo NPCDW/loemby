@@ -50,6 +50,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg(&format!("--title={}", &body.title))
         .arg(&format!("--force-media-title={}", &body.title))
         .arg(&format!("--start=+{}", body.playback_position_ticks / 1000_0000))
+        .arg(&body.mpv_args)
         .arg(&video_path);
 
     for audio in &body.external_audio {

@@ -10,6 +10,9 @@
                     <el-form-item label="MPV路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />
                     </el-form-item>
+                    <el-form-item label="MPV参数">
+                        <el-input v-model="mpv_args" @change="mpvArgsChange" placeholder="示例: --demuxer-max-bytes=512MB --demuxer-max-back-bytes=512MB " />
+                    </el-form-item>
                     <el-form-item label="Trakt （剧集或电影播放完成时可以在网页端看到记录，未播放完成的可以通过接口查询记录）">
                         <div v-if="trakt_info.username">
                             <el-text>{{ trakt_info.username }}</el-text>
@@ -683,10 +686,40 @@ function mpvPathChange() {
     }).catch(e => ElMessage.error('修改MPV路径失败' + e))
 }
 
+const mpv_args = ref<string>('');
+function getMpvArgs() {
+    useGlobalConfig().getGlobalConfigValue("mpv_args").then(value => {
+        mpv_args.value = value ? value : "";
+    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
+}
+function mpvArgsChange() {
+    useGlobalConfig().getGlobalConfig("mpv_args").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = mpv_args.value;
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "mpv_args",
+                config_value: mpv_args.value
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getMpvArgs()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+}
+
 const activePane = ref('Common')
 function handlePaneChange() {
     if (activePane.value == 'Common') {
         getMpvPath()
+        getMpvArgs()
         getTraktInfo()
         getTraktSyncSwitch()
         getTraktProxy()

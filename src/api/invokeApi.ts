@@ -8,6 +8,7 @@ async function getSysInfo(): Promise<string> {
 
 interface PlaybackParam {
     mpv_path: string,
+    mpv_args: string,
     path: string,
     proxy?: string,
     title: string,

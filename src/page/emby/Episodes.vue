@@ -209,6 +209,7 @@ const subtitleSelect = ref(-1)
 const timeLength = ref('')
 const runTimeTicks = ref(0)
 const mpv_path = ref('')
+const mpv_args = ref('')
 
 const continuousPlay = ref(true)
 const rememberSelect = ref(route.query.rememberSelect === 'true' ? true : false)
@@ -235,7 +236,11 @@ watchEffect(async () => {
 
 useGlobalConfig().getGlobalConfigValue("mpv_path").then(value => {
     mpv_path.value = value;
-}).catch(e => ElMessage.error('获取全局播放代理失败' + e))
+}).catch(e => ElMessage.error('获取MPV播放路径失败' + e))
+
+useGlobalConfig().getGlobalConfigValue("mpv_args").then(value => {
+    mpv_args.value = value;
+}).catch(e => ElMessage.error('获取MPV播放参数失败' + e))
 
 const currentEpisodes = ref<EpisodesItem>()
 function updateCurrentEpisodes(silent: boolean = false) {
@@ -547,6 +552,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
             return invokeApi.playback({
                 mpv_path: mpv_path.value,
+                mpv_args: mpv_args.value,
                 path: playUrl,
                 proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),
                 title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.value.server_name,
