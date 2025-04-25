@@ -5,7 +5,7 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 
-use crate::{config::{app_state::AppState, http_pool}, controller::invoke_ctl::PlayVideoParam, service::proxy_svc::AxumAppStateRequest};
+use crate::{config::{app_state::AppState, http_pool}, controller::invoke_ctl::PlayVideoParam, service::proxy_svc::AxumAppStateRequest, util::file_util};
 
 pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = body.mpv_path.clone();
@@ -14,6 +14,16 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         return Err(format!("mpv 路径不存在: {}", mpv_path.to_str().unwrap()));
     }
     let mpv_parent_path = mpv_path.parent().unwrap();
+
+    let portable_config_path = mpv_parent_path.join("portable_config");
+    if !portable_config_path.exists() {
+        let res = file_util::mkdir(&portable_config_path);
+        if res.is_err() {
+            return Err(format!("创建 mpv 配置目录失败"));
+        }
+    }
+    let portable_config_path = portable_config_path.join("loemby.conf");
+    file_util::write_file(&portable_config_path, &body.mpv_args);
 
     let auxm_app_state = state.auxm_app_state.clone();
     let app_state = auxm_app_state.read().await.clone();
@@ -42,6 +52,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let pipe_name = format!("{}-{}-{}", &pipe_name, &body.server_id, &body.media_source_id);
     let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap());
     command.current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
+        .arg(&format!("--include={}", portable_config_path.to_str().unwrap()))
         .arg(&format!("--input-ipc-server={}", pipe_name))
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
@@ -50,7 +61,6 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg(&format!("--title={}", &body.title))
         .arg(&format!("--force-media-title={}", &body.title))
         .arg(&format!("--start=+{}", body.playback_position_ticks / 1000_0000))
-        .arg(&body.mpv_args)
         .arg(&video_path);
 
     for audio in &body.external_audio {

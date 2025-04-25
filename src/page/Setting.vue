@@ -10,8 +10,17 @@
                     <el-form-item label="MPV路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />
                     </el-form-item>
-                    <el-form-item label="MPV参数">
-                        <el-input v-model="mpv_args" @change="mpvArgsChange" placeholder="示例: --demuxer-max-bytes=512MB --demuxer-max-back-bytes=512MB " />
+                    <el-form-item>
+                        <template #label>
+                            <div style="display: flex; align-items: center;">
+                                <span>MPV参数</span>
+                                <el-link target="_blank" href="https://mpv.io/manual/stable/" style="margin-left: 10px;">官方文档</el-link>
+                                <el-link target="_blank" href="https://hooke007.github.io/official_man/mpv.html" style="margin-left: 10px;">中文文档</el-link>
+                            </div>
+                        </template>
+                        <el-input v-model="mpv_args" @change="mpvArgsChange" :rows="4" type="textarea" placeholder="每行一个，示例: 
+demuxer-max-bytes=512MiB
+demuxer-max-back-bytes=512MiB" />
                     </el-form-item>
                     <el-form-item label="Trakt （剧集或电影播放完成时可以在网页端看到记录，未播放完成的可以通过接口查询记录）">
                         <div v-if="trakt_info.username">
