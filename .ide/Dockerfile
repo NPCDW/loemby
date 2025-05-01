@@ -29,7 +29,7 @@ RUN wget https://download.jetbrains.com/rustrover/RustRover-2024.3.5.tar.gz
 RUN tar -zxvf RustRover-2024.3.5.tar.gz -C /ide_cnb
 
 # 安装依赖
-RUN apt-get update && apt-get install -y webkit2gtk-4.1 libwebkit2gtk-4.0-dev build-essential file libxdo-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+RUN apt-get update && apt-get install -y libwebkit2gtk-4.1-dev build-essential file libxdo-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 RUN apt-get update && apt-get install -y curl wget unzip openssh-server git 
 
 ENV LANG C.UTF-8

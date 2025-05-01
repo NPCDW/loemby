@@ -36,5 +36,10 @@
     "resources": {
       "resources/config/*": "resources/config/"
     }
+  },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:loemby.db"]
+    }
   }
 }

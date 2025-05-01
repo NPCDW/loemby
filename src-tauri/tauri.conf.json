@@ -39,6 +39,9 @@
     "createUpdaterArtifacts": true
   },
   "plugins": {
+    "sql": {
+      "preload": ["sqlite:loemby.db"]
+    },
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM2MUNBOEExRTQyMDZGMUMKUldRY2J5RGtvYWdjTm1EdEg0Ym9RNWRKU3laZC80bXpsalNEalV4L0MxVjlTZUtRWmJnWTBOWGcK",
       "endpoints": [

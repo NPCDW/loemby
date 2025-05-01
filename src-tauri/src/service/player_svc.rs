@@ -15,15 +15,15 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     }
     let mpv_parent_path = mpv_path.parent().unwrap();
 
-    let portable_config_path = mpv_parent_path.join("portable_config");
-    if !portable_config_path.exists() {
-        let res = file_util::mkdir(&portable_config_path);
+    let mpv_config_path = app_handle.path().app_config_dir().unwrap().join("mpv_config");
+    if !mpv_config_path.exists() {
+        let res = file_util::mkdir(&mpv_config_path);
         if res.is_err() {
             return Err(format!("创建 mpv 配置目录失败"));
         }
     }
-    let portable_config_path = portable_config_path.join("loemby.conf");
-    file_util::write_file(&portable_config_path, &body.mpv_args);
+    let mpv_config_path = mpv_config_path.join("loemby.conf");
+    file_util::write_file(&mpv_config_path, &body.mpv_args);
 
     let auxm_app_state = state.auxm_app_state.clone();
     let app_state = auxm_app_state.read().await.clone();
@@ -52,7 +52,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let pipe_name = format!("{}-{}-{}", &pipe_name, &body.server_id, &body.media_source_id);
     let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap());
     command.current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
-        .arg(&format!("--include={}", portable_config_path.to_str().unwrap()))
+        .arg(&format!("--include={}", mpv_config_path.to_str().unwrap()))
         .arg(&format!("--input-ipc-server={}", pipe_name))
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
