@@ -25,7 +25,7 @@
                         <h1 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h1>
                         <template v-else>
                             <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
-                            <p>{{ 'S' + currentEpisodes.ParentIndexNumber + 'E' + currentEpisodes.IndexNumber + '. ' + currentEpisodes.Name }}</p>
+                            <p>{{ 'S' + (currentEpisodes.ParentIndexNumber || -1) + 'E' + (currentEpisodes.IndexNumber || -1) + '. ' + currentEpisodes.Name }}</p>
                         </template>
                         <p>
                             <span>外部链接：</span>
@@ -553,7 +553,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
                 }
             }
             let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
-                 : 'S' + currentEpisodes.value?.ParentIndexNumber + 'E' + currentEpisodes.value?.IndexNumber + '. ' + currentEpisodes.value?.Name
+                 : 'S' + (currentEpisodes.value?.ParentIndexNumber || -1) + 'E' + (currentEpisodes.value?.IndexNumber || -1) + '. ' + currentEpisodes.value?.Name
             const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
             return invokeApi.playback({
                 mpv_path: mpv_path.value,
@@ -561,7 +561,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
                 mpv_args: mpv_args.value,
                 path: playUrl,
                 proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),
-                title: episodesName + " | " + currentEpisodes.value?.SeriesName + " | " + embyServer.value.server_name,
+                title: episodesName + " | " + (currentEpisodes.value?.SeriesName || "🎬电影") + " | " + embyServer.value.server_name,
                 user_agent: embyServer.value!.user_agent!,
                 server_id: embyServer.value!.id!,
                 item_id: item_id,
