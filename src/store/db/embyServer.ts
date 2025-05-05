@@ -10,14 +10,6 @@ export const useEmbyServer = defineStore('embyServer', () => {
         return embyServer[0];
     }
 
-    async function getMaxOrderBy() {
-        let embyServer = await useDb().db?.select<{max_order_by: number}[]>('select max(order_by) as max_order_by from emby_server');
-        if (!embyServer || embyServer.length == 0) {
-            return;
-        }
-        return embyServer[0].max_order_by;
-    }
-
     async function listAllEmbyServer() {
         let embyServer = await useDb().db?.select<EmbyServer[]>('select * from emby_server');
         if (!embyServer || embyServer.length == 0) {
@@ -72,12 +64,18 @@ export const useEmbyServer = defineStore('embyServer', () => {
         return res?.rowsAffected;
     }
 
+    async function deferOrder() {
+        let sql = `update emby_server set order_by = order_by + 1`;
+        let res = await useDb().db?.execute(sql);
+        return res?.rowsAffected;
+    }
+
     async function delEmbyServer(id: string) {
         let res = await useDb().db?.execute('delete from emby_server where id = $1', [id]);
         return res?.rowsAffected;
     }
 
-    return { getEmbyServer, delEmbyServer, addEmbyServer, updateEmbyServer, listAllEmbyServer, updateOrder, getMaxOrderBy }
+    return { getEmbyServer, delEmbyServer, addEmbyServer, updateEmbyServer, listAllEmbyServer, updateOrder, deferOrder }
 })
 
 export interface EmbyServer {

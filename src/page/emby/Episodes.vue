@@ -70,7 +70,19 @@
                                 <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select></span>
                         </p>
-                        <div>
+                        <p v-if="currentEpisodes?.SeriesId" style="display: flex; justify-content: center;">
+                            <el-button plain @click="continuousPlay = !continuousPlay">
+                                <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
+                            </el-button>
+                            <el-button v-if="continuousPlay" plain @click="rememberSelect = !rememberSelect">
+                                <span>{{ rememberSelect ? '记住选择' : '自动选择' }}</span>
+                            </el-button>
+                            <el-button v-if="continuousPlay && supportDirectLink" plain @click="useDirectLink = (useDirectLink + 1) % 2">
+                                <span>{{ useDirectLink == 2 ? '直链播放？' : useDirectLink == 1 ? '使用直链' : '不使用直链' }}</span>
+                            </el-button>
+                            <el-button @click="nextUp(1)">接下来</el-button>
+                        </p>
+                        <p style="display: flex; justify-content: center;">
                             <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
                                 <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, false)">
                                     <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
@@ -120,25 +132,13 @@
                                     </el-button>
                                 </template>
                             </template>
-                        </div>
+                        </p>
                     </div>
                 </div>
             </el-skeleton>
-            <h1>接下来</h1>
-            <div v-if="currentEpisodes?.SeriesId" style="margin: 0 0 10px 5px;">
-                <el-button plain @click="continuousPlay = !continuousPlay">
-                    <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
-                </el-button>
-                <el-button v-if="continuousPlay" plain @click="rememberSelect = !rememberSelect">
-                    <span>{{ rememberSelect ? '记住选择' : '自动选择' }}</span>
-                </el-button>
-                <el-button v-if="continuousPlay && supportDirectLink" plain @click="useDirectLink = (useDirectLink + 1) % 2">
-                    <span>{{ useDirectLink == 2 ? '直链播放？' : useDirectLink == 1 ? '使用直链' : '不使用直链' }}</span>
-                </el-button>
-                <el-button @click="nextUp(1)">接下来</el-button>
-            </div>
             <el-skeleton :loading="nextUpLoading" animated v-if="nextUpShow">
                 <template #template>
+                    <h1>接下来</h1>
                     <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                         <el-card style="width: 300px; margin: 5px;" v-for="i in 5" :key="i">
                             <p><el-skeleton-item variant="text" style="width: 90%" /></p>
@@ -209,6 +209,7 @@ const subtitleSelect = ref(-1)
 const timeLength = ref('')
 const runTimeTicks = ref(0)
 const mpv_path = ref('')
+const mpv_startup_dir = ref('')
 const mpv_args = ref('')
 
 const continuousPlay = ref(true)
@@ -236,11 +237,15 @@ watchEffect(async () => {
 
 useGlobalConfig().getGlobalConfigValue("mpv_path").then(value => {
     mpv_path.value = value;
-}).catch(e => ElMessage.error('获取MPV播放路径失败' + e))
+}).catch(e => ElMessage.error('获取MPV路径失败' + e))
+
+useGlobalConfig().getGlobalConfigValue("mpv_startup_dir").then(value => {
+    mpv_startup_dir.value = value;
+}).catch(e => ElMessage.error('获取MPV启动目录失败' + e))
 
 useGlobalConfig().getGlobalConfigValue("mpv_args").then(value => {
     mpv_args.value = value;
-}).catch(e => ElMessage.error('获取MPV播放参数失败' + e))
+}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
 
 const currentEpisodes = ref<EpisodesItem>()
 function updateCurrentEpisodes(silent: boolean = false) {
@@ -552,6 +557,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
             return invokeApi.playback({
                 mpv_path: mpv_path.value,
+                mpv_startup_dir: mpv_startup_dir.value,
                 mpv_args: mpv_args.value,
                 path: playUrl,
                 proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),

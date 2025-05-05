@@ -7,8 +7,11 @@
                         <span style="margin-right: 10px;">当前版本: {{ version }}</span>
                         <el-button type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
                     </el-form-item>
-                    <el-form-item label="MPV路径">
-                        <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe" />
+                    <el-form-item label="MPV文件路径">
+                        <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
+                    </el-form-item>
+                    <el-form-item label="MPV启动目录">
+                        <el-input v-model="mpv_startup_dir" @change="mpvStartupDirChange" placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
                     </el-form-item>
                     <el-form-item>
                         <template #label>
@@ -695,11 +698,40 @@ function mpvPathChange() {
     }).catch(e => ElMessage.error('修改MPV路径失败' + e))
 }
 
+const mpv_startup_dir = ref<string>('');
+function getMpvStartupDir() {
+    useGlobalConfig().getGlobalConfigValue("mpv_startup_dir").then(value => {
+        mpv_startup_dir.value = value ? value : "";
+    }).catch(e => ElMessage.error('获取MPV启动目录失败' + e))
+}
+function mpvStartupDirChange() {
+    useGlobalConfig().getGlobalConfig("mpv_startup_dir").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = mpv_startup_dir.value;
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "mpv_startup_dir",
+                config_value: mpv_startup_dir.value
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getMpvStartupDir()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改MPV启动目录失败' + e))
+}
+
 const mpv_args = ref<string>('');
 function getMpvArgs() {
     useGlobalConfig().getGlobalConfigValue("mpv_args").then(value => {
         mpv_args.value = value ? value : "";
-    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
+    }).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
 }
 function mpvArgsChange() {
     useGlobalConfig().getGlobalConfig("mpv_args").then(config => {
@@ -721,13 +753,14 @@ function mpvArgsChange() {
         }).catch(e => {
             ElMessage.error('修改失败' + e);
         })
-    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+    }).catch(e => ElMessage.error('修改MPV启动参数失败' + e))
 }
 
 const activePane = ref('Common')
 function handlePaneChange() {
     if (activePane.value == 'Common') {
         getMpvPath()
+        getMpvStartupDir()
         getMpvArgs()
         getTraktInfo()
         getTraktSyncSwitch()

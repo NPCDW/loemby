@@ -1,6 +1,6 @@
 <template>
     <div style="display: flex; flex-direction: row;">
-        <el-menu style="height: 100%; width: 200px; min-height: 100vh;" class="el-menu" :collapse="true" :router="true" :default-active="active">
+        <el-menu style="height: 100%; width: 200px; min-height: 100vh; background-color: var(--dark-background-color)" :collapse="false" :router="true" :default-active="active">
             <el-menu-item index="/nav/search">
                 <el-icon><i-ep-Search /></el-icon>聚合搜索
             </el-menu-item>
@@ -391,7 +391,7 @@ function addEmbyServer() {
         const client = "loemby";
         const client_version = import.meta.env.VITE_APP_VERSION;
         const user_agent = client + "/" + client_version;
-        useEmbyServer().getMaxOrderBy().then(max_order_by => {
+        useEmbyServer().deferOrder().then(() => {
             currentEmbyServer.value = {
                 id: generateGuid(),
                 server_name: '未完成',
@@ -402,7 +402,7 @@ function addEmbyServer() {
                 client_version: client_version,
                 device: hostname,
                 device_id: hostname,
-                order_by: max_order_by! + 1,
+                order_by: 1,
                 browse_proxy_id: 'follow',
                 play_proxy_id: 'follow',
             }
@@ -662,6 +662,7 @@ async function saveCurrentEmbyServerAddLine() {
         if (currentEmbyServerAddLine.value.in_use) {
             updateEmbyServerDb({
                 id: currentEmbyServerAddLine.value.emby_server_id,
+                base_url: currentEmbyServerAddLine.value.base_url,
                 browse_proxy_id: currentEmbyServerAddLine.value.browse_proxy_id,
                 play_proxy_id: currentEmbyServerAddLine.value.play_proxy_id
             });
@@ -751,9 +752,4 @@ async function loadImage(icon_url: string) {
 </script>
 
 <style scoped>
-.el-menu {
-    width: 100%;
-    height: 100vh;
-    background-color: var(--dark-background-color);
-}
 </style>

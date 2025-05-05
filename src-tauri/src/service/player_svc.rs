@@ -13,7 +13,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     if !mpv_path.exists() {
         return Err(format!("mpv 路径不存在: {}", mpv_path.to_str().unwrap()));
     }
-    let mpv_parent_path = mpv_path.parent().unwrap();
+    let mpv_startup_dir = body.mpv_startup_dir.clone().unwrap_or(mpv_path.parent().unwrap().as_os_str().to_str().unwrap().to_string());
 
     let mpv_config_path = app_handle.path().app_config_dir().unwrap().join("mpv_config");
     if !mpv_config_path.exists() {
@@ -23,7 +23,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         }
     }
     let mpv_config_path = mpv_config_path.join("loemby.conf");
-    file_util::write_file(&mpv_config_path, &body.mpv_args);
+    file_util::write_file(&mpv_config_path, &body.mpv_args.clone().unwrap_or("".to_string()));
 
     let auxm_app_state = state.auxm_app_state.clone();
     let app_state = auxm_app_state.read().await.clone();
@@ -51,7 +51,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let pipe_name = r"/tmp/mpvsocket";
     let pipe_name = format!("{}-{}-{}", &pipe_name, &body.server_id, &body.media_source_id);
     let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap());
-    command.current_dir(&mpv_parent_path.as_os_str().to_str().unwrap())
+    command.current_dir(&mpv_startup_dir)
         .arg(&format!("--include={}", mpv_config_path.to_str().unwrap()))
         .arg(&format!("--input-ipc-server={}", pipe_name))
         .arg("--terminal=no")  // 不显示控制台输出
