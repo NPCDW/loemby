@@ -13,7 +13,11 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     if !mpv_path.exists() {
         return Err(format!("mpv 路径不存在: {}", mpv_path.to_str().unwrap()));
     }
-    let mpv_startup_dir = body.mpv_startup_dir.clone().unwrap_or(mpv_path.parent().unwrap().as_os_str().to_str().unwrap().to_string());
+    let mpv_startup_dir = if body.mpv_startup_dir.is_none() || body.mpv_startup_dir.as_ref().unwrap().is_empty() {
+        mpv_path.parent().unwrap().as_os_str().to_str().unwrap().to_string()
+    } else {
+        body.mpv_startup_dir.clone().unwrap()
+    };
 
     let mpv_config_path = app_handle.path().app_config_dir().unwrap().join("mpv_config");
     if !mpv_config_path.exists() {
@@ -22,7 +26,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
             return Err(format!("创建 mpv 配置目录失败"));
         }
     }
-    let mpv_config_path = mpv_config_path.join("loemby.conf");
+    let mpv_config_path = mpv_config_path.join("loemby.mpv.conf");
     file_util::write_file(&mpv_config_path, &body.mpv_args.clone().unwrap_or("".to_string()));
 
     let auxm_app_state = state.auxm_app_state.clone();
