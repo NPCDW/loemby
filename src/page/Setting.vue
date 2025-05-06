@@ -21,7 +21,7 @@
                         <el-input v-model="mpv_startup_dir" @change="mpvStartupDirChange" placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
                     </el-form-item>
                     <el-form-item label="MPV缓存（按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小）">
-                        <el-input-number v-model="mpv_cache_seconds" @change="mpvCacheSecondsChange" :min="1" :precision="0" :controls="false">
+                        <el-input-number v-model="mpv_cache_seconds" @change="mpvCacheSecondsChange" :min="0" :precision="0" :controls="false" style="width: 200px;">
                             <template #prefix>
                                 <span>前向缓存</span>
                             </template>
@@ -29,7 +29,7 @@
                                 <span>秒</span>
                             </template>
                         </el-input-number>
-                        <el-input-number v-model="mpv_cache_max_bytes" @change="mpvCacheMaxBytesChange" :min="1" :precision="0" :controls="false">
+                        <el-input-number v-model="mpv_cache_max_bytes" @change="mpvCacheMaxBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
                             <template #prefix>
                                 <span>前向最大缓存</span>
                             </template>
@@ -37,7 +37,7 @@
                                 <span>MiB</span>
                             </template>
                         </el-input-number>
-                        <el-input-number v-model="mpv_cache_back_seconds" @change="mpvCacheBackSecondsChange" :min="1" :precision="0" :controls="false">
+                        <el-input-number v-model="mpv_cache_back_seconds" @change="mpvCacheBackSecondsChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
                             <template #prefix>
                                 <span>后向缓存</span>
                             </template>
@@ -45,7 +45,7 @@
                                 <span>秒</span>
                             </template>
                         </el-input-number>
-                        <el-input-number v-model="mpv_cache_back_max_bytes" @change="mpvCacheBackMaxBytesChange" :min="1" :precision="0" :controls="false">
+                        <el-input-number v-model="mpv_cache_back_max_bytes" @change="mpvCacheBackMaxBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
                             <template #prefix>
                                 <span>后向最大缓存</span>
                             </template>
