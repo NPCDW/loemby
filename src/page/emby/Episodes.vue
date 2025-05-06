@@ -211,6 +211,10 @@ const runTimeTicks = ref(0)
 const mpv_path = ref('')
 const mpv_startup_dir = ref('')
 const mpv_args = ref('')
+const mpv_cache_seconds = ref(0)
+const mpv_cache_max_bytes = ref(0)
+const mpv_cache_back_seconds = ref(0)
+const mpv_cache_back_max_bytes = ref(0)
 
 const continuousPlay = ref(true)
 const rememberSelect = ref(route.query.rememberSelect === 'true' ? true : false)
@@ -245,6 +249,22 @@ useGlobalConfig().getGlobalConfigValue("mpv_startup_dir").then(value => {
 
 useGlobalConfig().getGlobalConfigValue("mpv_args").then(value => {
     mpv_args.value = value;
+}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
+
+useGlobalConfig().getGlobalConfigValue("mpv_cache_seconds").then(value => {
+    mpv_cache_seconds.value = value ? Number(value) : 0;
+}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
+
+useGlobalConfig().getGlobalConfigValue("mpv_cache_max_bytes").then(value => {
+    mpv_cache_max_bytes.value = value ? Number(value) : 0;
+}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
+
+useGlobalConfig().getGlobalConfigValue("mpv_cache_back_seconds").then(value => {
+    mpv_cache_back_seconds.value = value ? Number(value) : 0;
+}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
+
+useGlobalConfig().getGlobalConfigValue("mpv_cache_back_max_bytes").then(value => {
+    mpv_cache_back_max_bytes.value = value ? Number(value) : 0;
 }).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
 
 const currentEpisodes = ref<EpisodesItem>()
@@ -555,10 +575,14 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
                  : 'S' + (currentEpisodes.value?.ParentIndexNumber || -1) + 'E' + (currentEpisodes.value?.IndexNumber || -1) + '. ' + currentEpisodes.value?.Name
             const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
+            const cache_max_bytes = Math.min(Math.round(mpv_cache_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_max_bytes.value * 1024 * 1024)
+            const cache_back_max_bytes = Math.min(Math.round(mpv_cache_back_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_back_max_bytes.value * 1024 * 1024)
             return invokeApi.playback({
                 mpv_path: mpv_path.value,
                 mpv_startup_dir: mpv_startup_dir.value,
                 mpv_args: mpv_args.value,
+                mpv_cache_max_bytes: cache_max_bytes,
+                mpv_cache_back_max_bytes: cache_back_max_bytes,
                 path: playUrl,
                 proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),
                 title: episodesName + " | " + (currentEpisodes.value?.SeriesName || "🎬电影") + " | " + embyServer.value.server_name,

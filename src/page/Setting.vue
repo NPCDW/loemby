@@ -7,11 +7,52 @@
                         <span style="margin-right: 10px;">当前版本: {{ version }}</span>
                         <el-button type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
                     </el-form-item>
+                </el-form>
+            </el-scrollbar>
+        </el-tab-pane>
+        
+        <el-tab-pane label="MPV" name="MPV">
+            <el-scrollbar style="height: calc(100vh - 100px);">
+                <el-form label-position="top">
                     <el-form-item label="MPV文件路径">
                         <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
                     </el-form-item>
                     <el-form-item label="MPV启动目录">
                         <el-input v-model="mpv_startup_dir" @change="mpvStartupDirChange" placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
+                    </el-form-item>
+                    <el-form-item label="MPV缓存（按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小）">
+                        <el-input-number v-model="mpv_cache_seconds" @change="mpvCacheSecondsChange" :min="1" :precision="0" :controls="false">
+                            <template #prefix>
+                                <span>前向缓存</span>
+                            </template>
+                            <template #suffix>
+                                <span>秒</span>
+                            </template>
+                        </el-input-number>
+                        <el-input-number v-model="mpv_cache_max_bytes" @change="mpvCacheMaxBytesChange" :min="1" :precision="0" :controls="false">
+                            <template #prefix>
+                                <span>前向最大缓存</span>
+                            </template>
+                            <template #suffix>
+                                <span>MiB</span>
+                            </template>
+                        </el-input-number>
+                        <el-input-number v-model="mpv_cache_back_seconds" @change="mpvCacheBackSecondsChange" :min="1" :precision="0" :controls="false">
+                            <template #prefix>
+                                <span>后向缓存</span>
+                            </template>
+                            <template #suffix>
+                                <span>秒</span>
+                            </template>
+                        </el-input-number>
+                        <el-input-number v-model="mpv_cache_back_max_bytes" @change="mpvCacheBackMaxBytesChange" :min="1" :precision="0" :controls="false">
+                            <template #prefix>
+                                <span>后向最大缓存</span>
+                            </template>
+                            <template #suffix>
+                                <span>MiB</span>
+                            </template>
+                        </el-input-number>
                     </el-form-item>
                     <el-form-item>
                         <template #label>
@@ -22,9 +63,18 @@
                             </div>
                         </template>
                         <el-input v-model="mpv_args" @change="mpvArgsChange" :rows="4" type="textarea" placeholder="每行一个，示例: 
+ontop=no
 demuxer-max-bytes=512MiB
-demuxer-max-back-bytes=512MiB" />
+demuxer-max-back-bytes=512MiB
+demuxer-readahead-secs=180" />
                     </el-form-item>
+                </el-form>
+            </el-scrollbar>
+        </el-tab-pane>
+        
+        <el-tab-pane label="Trakt" name="Trakt">
+            <el-scrollbar style="height: calc(100vh - 100px);">
+                <el-form label-position="top">
                     <el-form-item label="Trakt （剧集或电影播放完成时可以在网页端看到记录，未播放完成的可以通过接口查询记录）">
                         <div v-if="trakt_info.username">
                             <el-text>{{ trakt_info.username }}</el-text>
@@ -756,12 +806,134 @@ function mpvArgsChange() {
     }).catch(e => ElMessage.error('修改MPV启动参数失败' + e))
 }
 
+const mpv_cache_seconds = ref<number>(0);
+function getMpvCacheSeconds() {
+    useGlobalConfig().getGlobalConfigValue("mpv_cache_seconds").then(value => {
+        mpv_cache_seconds.value = value ? Number(value) : 0;
+    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
+}
+function mpvCacheSecondsChange() {
+    useGlobalConfig().getGlobalConfig("mpv_cache_seconds").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = mpv_cache_seconds.value + '';
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "mpv_cache_seconds",
+                config_value: mpv_cache_seconds.value + ''
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getMpvCacheSeconds()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+}
+
+const mpv_cache_max_bytes = ref<number>(0);
+function getMpvCacheMaxBytes() {
+    useGlobalConfig().getGlobalConfigValue("mpv_cache_max_bytes").then(value => {
+        mpv_cache_max_bytes.value = value ? Number(value) : 0;
+    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
+}
+function mpvCacheMaxBytesChange() {
+    useGlobalConfig().getGlobalConfig("mpv_cache_max_bytes").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = mpv_cache_max_bytes.value + '';
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "mpv_cache_max_bytes",
+                config_value: mpv_cache_max_bytes.value + ''
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getMpvCacheMaxBytes()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+}
+
+const mpv_cache_back_seconds = ref<number>(0);
+function getMpvCacheBackSeconds() {
+    useGlobalConfig().getGlobalConfigValue("mpv_cache_back_seconds").then(value => {
+        mpv_cache_back_seconds.value = value ? Number(value) : 0;
+    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
+}
+function mpvCacheBackSecondsChange() {
+    useGlobalConfig().getGlobalConfig("mpv_cache_back_seconds").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = mpv_cache_back_seconds.value + '';
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "mpv_cache_back_seconds",
+                config_value: mpv_cache_back_seconds.value + ''
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getMpvCacheBackSeconds()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+}
+
+const mpv_cache_back_max_bytes = ref<number>(0);
+function getMpvCacheBackMaxBytes() {
+    useGlobalConfig().getGlobalConfigValue("mpv_cache_back_max_bytes").then(value => {
+        mpv_cache_back_max_bytes.value = value ? Number(value) : 0;
+    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
+}
+function mpvCacheBackMaxBytesChange() {
+    useGlobalConfig().getGlobalConfig("mpv_cache_back_max_bytes").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = mpv_cache_back_max_bytes.value + '';
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "mpv_cache_back_max_bytes",
+                config_value: mpv_cache_back_max_bytes.value + ''
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getMpvCacheBackMaxBytes()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+}
+
 const activePane = ref('Common')
 function handlePaneChange() {
     if (activePane.value == 'Common') {
+    } else if (activePane.value == 'MPV') {
         getMpvPath()
         getMpvStartupDir()
         getMpvArgs()
+        getMpvCacheSeconds()
+        getMpvCacheMaxBytes()
+        getMpvCacheBackSeconds()
+        getMpvCacheBackMaxBytes()
+    } else if (activePane.value == 'Trakt') {
         getTraktInfo()
         getTraktSyncSwitch()
         getTraktProxy()

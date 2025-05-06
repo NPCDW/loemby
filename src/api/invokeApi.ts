@@ -10,6 +10,8 @@ interface PlaybackParam {
     mpv_path: string,
     mpv_startup_dir?: string,
     mpv_args?: string,
+    mpv_cache_max_bytes?: number,
+    mpv_cache_back_max_bytes?: number,
     path: string,
     proxy?: string,
     title: string,
