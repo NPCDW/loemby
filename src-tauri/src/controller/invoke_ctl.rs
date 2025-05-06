@@ -19,6 +19,8 @@ pub struct PlayVideoParam {
     pub mpv_path: String,
     pub mpv_startup_dir: Option<String>,
     pub mpv_args: Option<String>,
+    pub mpv_cache_max_bytes: Option<u32>,
+    pub mpv_cache_back_max_bytes: Option<u32>,
     pub path: String,
     pub proxy: Option<String>,
     pub title: String,
