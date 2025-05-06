@@ -66,11 +66,11 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
         .arg(&format!("--force-media-title={}", &body.title))
         .arg(&format!("--start=+{}", body.playback_position_ticks / 1000_0000))
         .arg(&video_path);
-    
+
     if body.mpv_cache_max_bytes.is_some() && body.mpv_cache_max_bytes.unwrap() > 0 {
         command.arg(&format!("--demuxer-max-bytes={}", body.mpv_cache_max_bytes.unwrap()));
     }
-    if body.mpv_cache_max_bytes.is_some() && body.mpv_cache_max_bytes.unwrap() > 0 {
+    if body.mpv_cache_back_max_bytes.is_some() && body.mpv_cache_back_max_bytes.unwrap() > 0 {
         command.arg(&format!("--demuxer-max-back-bytes={}", body.mpv_cache_back_max_bytes.unwrap()));
     }
 
