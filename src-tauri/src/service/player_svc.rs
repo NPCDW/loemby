@@ -107,7 +107,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     } else if body.vid == 0 {
         command.arg(&format!("--vid=auto"));
     } else {
-        command.arg(&format!("--vid={}", body.aid));
+        command.arg(&format!("--vid={}", body.vid));
     }
     if body.aid == -1 {
         command.arg(&format!("--aid=no"));
