@@ -38,10 +38,10 @@
                                 <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
                                 <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
                             </p>
-                            <p style="display: flex; align-items: center; justify-content: flex-end;">
+                            <p>
                                 <el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">Go</el-button>
                                 <template v-if="deletedContinuePlayList.indexOf(episodesItem.Id) == -1">
-                                    <el-button type="danger" :loading="deleteContinuePlayLoading" @click="deleteContinuePlay(episodesItem.Id, true)"><i-ep-Delete /></el-button></template>
+                                    <el-button plain type="danger" :loading="deleteContinuePlayLoading" @click="deleteContinuePlay(episodesItem.Id, true)"><i-ep-Delete /></el-button></template>
                                 <template v-else>
                                     <el-button type="danger" :loading="deleteContinuePlayLoading" @click="deleteContinuePlay(episodesItem.Id, false)">撤销</el-button>
                                 </template>
@@ -256,9 +256,9 @@ function gotoSeries(seriesId: string) {
     router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
 }
 
-const deleteContinuePlayLoading = ref(false)
+const deleteContinuePlayLoading = ref<{[key: string]: boolean}>({})
 function deleteContinuePlay(episodesId: string, hide: boolean) {
-    deleteContinuePlayLoading.value = true
+    deleteContinuePlayLoading.value[episodesId] = true
     return embyApi.hideFromResume(embyServer.value, episodesId, hide).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
@@ -271,7 +271,7 @@ function deleteContinuePlay(episodesId: string, hide: boolean) {
         }
     }).catch(e => {
         ElMessage.error(e)
-    }).finally(() => deleteContinuePlayLoading.value = false)
+    }).finally(() => deleteContinuePlayLoading.value[episodesId] = false)
 }
 
 const favoriteLoading = ref(false)
