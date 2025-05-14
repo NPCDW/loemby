@@ -501,7 +501,7 @@ async function unplayed(embyServer: EmbyServer, item_id: string) {
  * 隐藏继续观看记录
  * @returns
  */
-async function hideFromResume(embyServer: EmbyServer, item_id: string) {
+async function hideFromResume(embyServer: EmbyServer, item_id: string, hide: boolean) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
         return Promise.reject("参数缺失");
     }
@@ -514,7 +514,7 @@ async function hideFromResume(embyServer: EmbyServer, item_id: string) {
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({
-            "Hide": true,
+            "Hide": hide,
         }),
         proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
     });

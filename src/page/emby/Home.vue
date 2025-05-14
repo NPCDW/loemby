@@ -38,9 +38,13 @@
                                 <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
                                 <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
                             </p>
-                            <p style="display: flex; align-items: center; justify-content: space-between;">
+                            <p style="display: flex; align-items: center; justify-content: flex-end;">
                                 <el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">Go</el-button>
-                                <el-button type="danger" @click="deleteContinuePlay(episodesItem.Id)" :loading="deleteContinuePlayLoading"><i-ep-Delete /></el-button>
+                                <template v-if="deletedContinuePlayList.indexOf(episodesItem.Id) == -1">
+                                    <el-button type="danger" :loading="deleteContinuePlayLoading" @click="deleteContinuePlay(episodesItem.Id, true)"><i-ep-Delete /></el-button></template>
+                                <template v-else>
+                                    <el-button type="danger" :loading="deleteContinuePlayLoading" @click="deleteContinuePlay(episodesItem.Id, false)">撤销</el-button>
+                                </template>
                             </p>
                         </el-card>
                     </div>
@@ -219,6 +223,7 @@ const episodesList = ref<EpisodesItem[]>([])
 const episodesCurrentPage = ref(1)
 const episodesPageSize = ref(12)
 const episodesTotal = ref(0)
+const deletedContinuePlayList = ref<string[]>([])
 const handleContinuePlayPageChange = (val: number) => {
     episodesCurrentPage.value = val
     getContinuePlayList(val, episodesPageSize.value)
@@ -252,14 +257,18 @@ function gotoSeries(seriesId: string) {
 }
 
 const deleteContinuePlayLoading = ref(false)
-function deleteContinuePlay(episodesId: string) {
+function deleteContinuePlay(episodesId: string, hide: boolean) {
     deleteContinuePlayLoading.value = true
-    return embyApi.hideFromResume(embyServer.value, episodesId).then(async response => {
+    return embyApi.hideFromResume(embyServer.value, episodesId, hide).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
-        handlePaneChange()
+        if (hide) {
+            deletedContinuePlayList.value.push(episodesId)
+        } else {
+            deletedContinuePlayList.value.splice(deletedContinuePlayList.value.indexOf(episodesId), 1)
+        }
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => deleteContinuePlayLoading.value = false)
@@ -363,6 +372,7 @@ function handlePaneChange() {
         episodesCurrentPage.value = 1
         episodesPageSize.value = 6
         episodesTotal.value = 0
+        deletedContinuePlayList.value = []
         getContinuePlayList(episodesCurrentPage.value, episodesPageSize.value)
     } else if (activePane.value == 'Favorite') {
         favoriteList.value = []
