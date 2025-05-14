@@ -38,7 +38,10 @@
                                 <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
                                 <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
                             </p>
-                            <p><el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">继续</el-button></p>
+                            <p style="display: flex; align-items: center; justify-content: space-between;">
+                                <el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">Go</el-button>
+                                <el-button type="danger" @click="deleteContinuePlay(episodesItem.Id)" :loading="deleteContinuePlayLoading"><i-ep-Delete /></el-button>
+                            </p>
                         </el-card>
                     </div>
                     <div style="display: flex;justify-content: center;">
@@ -214,7 +217,7 @@ const search = async () => {
 const episodesLoading = ref(false)
 const episodesList = ref<EpisodesItem[]>([])
 const episodesCurrentPage = ref(1)
-const episodesPageSize = ref(6)
+const episodesPageSize = ref(12)
 const episodesTotal = ref(0)
 const handleContinuePlayPageChange = (val: number) => {
     episodesCurrentPage.value = val
@@ -246,6 +249,20 @@ function gotoEpisodes(episodesId: string) {
 }
 function gotoSeries(seriesId: string) {
     router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
+}
+
+const deleteContinuePlayLoading = ref(false)
+function deleteContinuePlay(episodesId: string) {
+    deleteContinuePlayLoading.value = true
+    return embyApi.hideFromResume(embyServer.value, episodesId).then(async response => {
+        if (response.status_code != 200) {
+            ElMessage.error(response.status_code + ' ' + response.status_text)
+            return
+        }
+        handlePaneChange()
+    }).catch(e => {
+        ElMessage.error(e)
+    }).finally(() => deleteContinuePlayLoading.value = false)
 }
 
 const favoriteLoading = ref(false)

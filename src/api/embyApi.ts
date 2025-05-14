@@ -497,10 +497,33 @@ async function unplayed(embyServer: EmbyServer, item_id: string) {
     });
 }
 
+/**
+ * 隐藏继续观看记录
+ * @returns
+ */
+async function hideFromResume(embyServer: EmbyServer, item_id: string) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
+        return Promise.reject("参数缺失");
+    }
+    return invokeApi.httpForward({
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/${item_id}/HideFromResume`,
+        method: 'POST',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'Content-Type': 'application/json',
+            'X-Emby-Token': embyServer.auth_token,
+        },
+        body: JSON.stringify({
+            "Hide": true,
+        }),
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
+    });
+}
+
 export default {
     getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, getContinuePlayList, nextUp,
     getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
-    getImageUrl, count,
+    getImageUrl, count, hideFromResume,
 }
 
 

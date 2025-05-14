@@ -39,11 +39,15 @@
                                 <el-progress :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
                             </span>
                         </div>
-                        <p>
+                        <p style="display: flex;align-items: center;">
                             标签：
                             <span>大小：<el-tag disable-transitions>{{ mediaSourceSizeTag }}</el-tag></span>
                             <span style="margin: 20px;">码率：<el-tag disable-transitions>{{ mediaSourceBitrateTag }}</el-tag></span>
                             <span style="margin: 20px;">分辨率：<el-tag disable-transitions>{{ mediaStreamResolutionTag }}</el-tag></span>
+                            <el-button style="margin: 20px;" plain type="info" :loading="playback_info_loading" @click="getPlaybackInfo(currentEpisodes.Id)" v-if="videoOptions.length <= 1">
+                                <el-icon :size="24" v-if="!playback_info_loading"><i-ep-PriceTag /></el-icon>
+                                <span>获取播放信息</span>
+                            </el-button>
                         </p>
                         <p>
                             版本：
@@ -74,10 +78,10 @@
                             <el-button plain @click="continuousPlay = !continuousPlay">
                                 <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
                             </el-button>
-                            <el-button v-if="continuousPlay" plain @click="rememberSelect = !rememberSelect">
-                                <span>{{ rememberSelect ? '记住选择' : '自动选择' }}</span>
+                            <el-button plain @click="rememberSelect = !rememberSelect">
+                                <span>{{ rememberSelect ? '记住媒体选项' : '自动选择媒体' }}</span>
                             </el-button>
-                            <el-button v-if="continuousPlay && supportDirectLink" plain @click="useDirectLink = (useDirectLink + 1) % 2">
+                            <el-button v-if="supportDirectLink" plain @click="useDirectLink = (useDirectLink + 1) % 2">
                                 <span>{{ useDirectLink == 2 ? '直链播放？' : useDirectLink == 1 ? '使用直链' : '不使用直链' }}</span>
                             </el-button>
                             <el-button @click="nextUp(1)">接下来</el-button>
@@ -534,18 +538,12 @@ function getScrobbleTraktIdsParam(item: EpisodesItem) {
     return ids
 }
 
-// const playingProgressTask = ref<NodeJS.Timeout>()
-function playing(item_id: string, playbackPositionTicks: number, directLink: boolean) {
-    if (!mpv_path) {
-        ElMessage.error('未设置mpv路径')
-        return
-    }
-    play_loading.value = true
-    useDirectLink.value = directLink ? 1 : 0
+const playback_info_loading = ref(false)
+function getPlaybackInfo(item_id: string) {
     return embyApi.playbackInfo(embyServer.value, item_id).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
+            return Promise.reject(response)
         }
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
         for (const mediaSource of currentEpisodes.value!.MediaSources!) {
@@ -555,87 +553,99 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
                 break
             }
         }
-        let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
-        if (currentMediaSources) {
-            let playUrl
-            if (directLink && supportDirectLink.value) {
-                playUrl = currentMediaSources.Path
-            } else {
-                playUrl = embyApi.getDirectStreamUrl(embyServer.value, currentMediaSources.DirectStreamUrl!)!
-            }
-            let externalAudio = []
-            let externalSubtitle = []
-            for (let mediaStream of currentMediaSources.MediaStreams) {
-                if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
-                    externalAudio.push(embyApi.getAudioStreamUrl(embyServer.value, currentEpisodes.value!, currentMediaSources, mediaStream)!)
-                } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
-                    externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer.value, currentEpisodes.value!, currentMediaSources, mediaStream)!)
-                }
-            }
-            let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
-                 : 'S' + (currentEpisodes.value?.ParentIndexNumber || -1) + 'E' + (currentEpisodes.value?.IndexNumber || -1) + '. ' + currentEpisodes.value?.Name
-            const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
-            const cache_max_bytes = Math.min(Math.round(mpv_cache_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_max_bytes.value * 1024 * 1024)
-            const cache_back_max_bytes = Math.min(Math.round(mpv_cache_back_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_back_max_bytes.value * 1024 * 1024)
-            return invokeApi.playback({
-                mpv_path: mpv_path.value,
-                mpv_startup_dir: mpv_startup_dir.value,
-                mpv_args: mpv_args.value,
-                mpv_cache_max_bytes: cache_max_bytes,
-                mpv_cache_back_max_bytes: cache_back_max_bytes,
-                path: playUrl,
-                proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),
-                title: episodesName + " | " + (currentEpisodes.value?.SeriesName || "🎬电影") + " | " + embyServer.value.server_name,
-                user_agent: embyServer.value!.user_agent!,
-                server_id: embyServer.value!.id!,
-                item_id: item_id,
-                media_source_id: currentMediaSources.Id,
-                play_session_id: playbackInfo.PlaySessionId,
-                playback_position_ticks: playbackPositionTicks,
-                run_time_ticks: runTimeTicks.value,
-                vid: videoSelect.value,
-                aid: audioSelect.value,
-                sid: subtitleSelect.value,
-                external_audio: externalAudio,
-                external_subtitle: externalSubtitle,
-                scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
-            }).then(async () => {
-                embyApi.playing(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
-                    ElMessage.success('开始播放，请稍候')
-                    useEmbyServer().updateEmbyServer({id: embyServer.value!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
-                        .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer.value!.id!}))
-                })
-                if (scrobbleTraktParam) {
-                    traktApi.start(scrobbleTraktParam).then(response => {
-                        if (response.status_code == 401 || response.status_code == 429) {
-                            return
-                        }
-                        if (response.status_code != 201) {
-                            ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
-                            return
-                        }
-                        const json: {progress: number, movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
-                        let message: VNode[] = []
-                        if (json.movie) {
-                            message = [h('p', null, `${json.movie.title} (${json.movie.year})`)]
-                        } else if (json.episode) {
-                            message = [h('p', null, `${json.show?.title} (${json.show?.year})`), h('p', null, `S${json.episode.season}E${json.episode.number} ${json.episode.title}`)]
-                        }
-                        ElNotification.success({
-                            title: 'Trakt 同步播放',
-                            message: h('div', null, message),
-                            position: 'bottom-right',
-                        })
-                    }).catch(e => ElMessage.error("Trakt 同步失败：" + e))
-                }
-            }).catch(res => {
-                ElMessage.error({
-                    message: res
-                })
-            })
-        }
+        return playbackInfo
     }).catch(e => {
-        ElMessage.error(e)
+        ElMessage.error('获取播放信息失败' + e)
+        return Promise.reject(e)
+    }).finally(() => playback_info_loading.value = false)
+}
+
+// const playingProgressTask = ref<NodeJS.Timeout>()
+function playing(item_id: string, playbackPositionTicks: number, directLink: boolean) {
+    if (!mpv_path) {
+        ElMessage.error('未设置mpv路径')
+        return
+    }
+    play_loading.value = true
+    useDirectLink.value = directLink ? 1 : 0
+    return getPlaybackInfo(item_id).then(async playbackInfo => {
+        let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
+        if (!currentMediaSources) {
+            ElMessage.error('未获取到播放信息')
+            return
+        }
+        let playUrl
+        if (directLink && supportDirectLink.value) {
+            playUrl = currentMediaSources.Path
+        } else {
+            playUrl = embyApi.getDirectStreamUrl(embyServer.value, currentMediaSources.DirectStreamUrl!)!
+        }
+        let externalAudio = []
+        let externalSubtitle = []
+        for (let mediaStream of currentMediaSources.MediaStreams) {
+            if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
+                externalAudio.push(embyApi.getAudioStreamUrl(embyServer.value, currentEpisodes.value!, currentMediaSources, mediaStream)!)
+            } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
+                externalSubtitle.push(embyApi.getSubtitleStreamUrl(embyServer.value, currentEpisodes.value!, currentMediaSources, mediaStream)!)
+            }
+        }
+        let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
+                : 'S' + (currentEpisodes.value?.ParentIndexNumber || -1) + 'E' + (currentEpisodes.value?.IndexNumber || -1) + '. ' + currentEpisodes.value?.Name
+        const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
+        const cache_max_bytes = Math.min(Math.round(mpv_cache_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_max_bytes.value * 1024 * 1024)
+        const cache_back_max_bytes = Math.min(Math.round(mpv_cache_back_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_back_max_bytes.value * 1024 * 1024)
+        return invokeApi.playback({
+            mpv_path: mpv_path.value,
+            mpv_startup_dir: mpv_startup_dir.value,
+            mpv_args: mpv_args.value,
+            mpv_cache_max_bytes: cache_max_bytes,
+            mpv_cache_back_max_bytes: cache_back_max_bytes,
+            path: playUrl,
+            proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),
+            title: episodesName + " | " + (currentEpisodes.value?.SeriesName || "🎬电影") + " | " + embyServer.value.server_name,
+            user_agent: embyServer.value!.user_agent!,
+            server_id: embyServer.value!.id!,
+            item_id: item_id,
+            media_source_id: currentMediaSources.Id,
+            play_session_id: playbackInfo.PlaySessionId,
+            playback_position_ticks: playbackPositionTicks,
+            run_time_ticks: runTimeTicks.value,
+            vid: videoSelect.value,
+            aid: audioSelect.value,
+            sid: subtitleSelect.value,
+            external_audio: externalAudio,
+            external_subtitle: externalSubtitle,
+            scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
+        }).then(async () => {
+            embyApi.playing(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
+                ElMessage.success('开始播放，请稍候')
+                useEmbyServer().updateEmbyServer({id: embyServer.value!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
+                    .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer.value!.id!}))
+            })
+            if (scrobbleTraktParam) {
+                traktApi.start(scrobbleTraktParam).then(response => {
+                    if (response.status_code == 401 || response.status_code == 429) {
+                        return
+                    }
+                    if (response.status_code != 201) {
+                        ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
+                        return
+                    }
+                    const json: {progress: number, movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
+                    let message: VNode[] = []
+                    if (json.movie) {
+                        message = [h('p', null, `${json.movie.title} (${json.movie.year})`)]
+                    } else if (json.episode) {
+                        message = [h('p', null, `${json.show?.title} (${json.show?.year})`), h('p', null, `S${json.episode.season}E${json.episode.number} ${json.episode.title}`)]
+                    }
+                    ElNotification.success({
+                        title: 'Trakt 同步播放',
+                        message: h('div', null, message),
+                        position: 'bottom-right',
+                    })
+                }).catch(e => ElMessage.error("Trakt 同步失败：" + e))
+            }
+        }).catch(res => ElMessage.error(res))
     }).finally(() => play_loading.value = false)
 }
 
