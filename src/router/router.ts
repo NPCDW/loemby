@@ -16,6 +16,9 @@ const routes = [
             {
                 path: 'search',
                 component: Search,
+                meta: {
+                    keepAlive: true,
+                }
             },
             {
                 path: 'setting',
@@ -36,6 +39,9 @@ const routes = [
             {
                 path: 'emby/:embyId/search',
                 component: EmbySearch,
+                meta: {
+                    keepAlive: true,
+                }
             },
         ],
     },

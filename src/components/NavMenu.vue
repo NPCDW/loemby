@@ -84,7 +84,12 @@
             </el-scrollbar>
         </el-menu>
         <el-scrollbar style="flex: auto; height: 100vh; width: calc(100% - 200px);">
-            <router-view></router-view>
+            <router-view v-slot="{ Component }">
+                <keep-alive>
+                    <component :is="Component" :key="$route.path" v-if="$route.meta.keepAlive" />
+                </keep-alive>
+                <component :is="Component" :key="$route.path" v-if="!$route.meta.keepAlive" />
+            </router-view>
         </el-scrollbar>
     </div>
   <el-dialog v-model="dialogAddEmbyServerVisible" title="Emby Server" width="800">
