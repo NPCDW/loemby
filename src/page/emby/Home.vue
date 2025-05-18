@@ -77,7 +77,7 @@
                         </div>
                     </template>
                     <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <ItemCard v-for="favoriteItem in favoriteList" :key="favoriteItem.Id" :item="favoriteItem" :embyServer="embyServer" />
+                        <ItemCard v-for="favoriteItem in favoriteList" :key="favoriteItem.Id" :item="favoriteItem" :embyServer="embyServer" :show-series-name="true" />
                     </div>
                 </el-skeleton>
                 <el-pagination

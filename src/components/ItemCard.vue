@@ -1,5 +1,10 @@
 <template>
     <el-card style="width: 300px; margin: 5px;">
+        <div v-if="showSeriesName">
+            <el-link v-if="item.Type == 'Episode'" :underline="false" @click="gotoSeries((item as EpisodesItem).SeriesId)">
+                <h2>{{ (item as EpisodesItem).SeriesName }}</h2>
+            </el-link>
+        </div>
         <div>
             <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)">{{ item.Name }}</el-link>
             <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)">
@@ -153,7 +158,8 @@ const router = useRouter()
 
 const {item, embyServer} = defineProps<{
   item: SearchItem,
-  embyServer: EmbyServer
+  embyServer: EmbyServer,
+  showSeriesName?: boolean,
 }>()
 
 const mediaSourceSizeTag = ref<{[key: string]: string}>({})
