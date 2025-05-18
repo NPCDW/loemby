@@ -1,20 +1,20 @@
 <template>
     <div style="display: flex; flex-direction: row;">
-        <el-menu style="height: 100%; width: 200px; min-height: 100vh; background-color: var(--dark-background-color)" :collapse="false" :router="true" :default-active="active">
-            <el-menu-item index="/nav/search">
+        <el-menu style="height: 100%; width: 200px; min-height: 100vh; background-color: var(--dark-background-color)" :collapse="false" :default-active="active">
+            <el-menu-item index="/nav/search" @click="jumpRoute('/nav/search')">
                 <el-icon><i-ep-Search /></el-icon>聚合搜索
             </el-menu-item>
-            <el-menu-item index="/nav/setting">
+            <el-menu-item index="/nav/setting" @click="jumpRoute('/nav/setting')">
                 <el-icon><i-ep-Setting /></el-icon>设置
             </el-menu-item>
-            <el-menu-item index="" @click="addEmbyServer()">
+            <el-menu-item index="addEmbyServer" @click="addEmbyServer()">
                 <el-icon><i-ep-Plus /></el-icon>添加服务器
             </el-menu-item>
             <el-scrollbar style="height: calc(100vh - 168px); flex: none;">
                 <Container @drop="onDrop" style="height: 100%; width: 100%;">  
                     <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
                         <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
-                            <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" :disabled="embyServer.disabled ? true : false">
+                            <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" @click="jumpRoute('/nav/emby/' + embyServer.id)" :disabled="embyServer.disabled ? true : false">
                                 <div style="height: 100%; width: 100%; display: flex; align-items: center;">
                                     <el-icon v-if="embyServer.icon_url" size="24" style="width: 24px; height: 24px;"><img v-lazy="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;"></el-icon>
                                     <el-icon v-else size="24" style="width: 24px; height: 24px;"><svg-icon name="emby" /></el-icon>
@@ -26,26 +26,6 @@
                             </el-menu-item>
                             <template #dropdown>
                                 <el-dropdown-menu>
-                                    <el-dropdown-item>
-                                        <el-dropdown placement="right-start" trigger="hover" style="width: 100%; height: 100%;" >
-                                            <span style="width: 100%; height: 100%;">
-                                                <i-ep-Promotion style="position: absolute; left: 10; margin-left: -15px;" />
-                                                <span style="margin-left: 15px;">线路</span>
-                                            </span>
-                                            <template #dropdown>
-                                                <el-dropdown-menu>
-                                                    <el-dropdown-item v-for='line in embyLines[embyServer.id!]' @click="configLineChange(line.id!, embyServer)">
-                                                        <i-ep-Select v-if="line.in_use" style="position: absolute; left: 10;" />
-                                                        <span style="margin-left: 15px;">{{line.name}}</span>
-                                                    </el-dropdown-item>
-                                                    <el-dropdown-item divided @click="configLine(embyServer)">
-                                                        <i-ep-SetUp style="position: absolute; left: 10;" />
-                                                        <span style="margin-left: 15px;">配置</span>
-                                                    </el-dropdown-item>
-                                                </el-dropdown-menu>
-                                            </template>
-                                        </el-dropdown>
-                                    </el-dropdown-item>
                                     <el-dropdown-item @click="editEmbyIcon(embyServer)">
                                         <i-ep-PriceTag style="position: absolute; left: 10;" />
                                         <span style="margin-left: 15px;">修改图标</span>
@@ -83,13 +63,45 @@
                 </Container>
             </el-scrollbar>
         </el-menu>
-        <el-scrollbar style="flex: auto; height: 100vh; width: calc(100% - 200px);">
+        <el-scrollbar style="flex: auto; height: 100vh; width: calc(100% - 200px); position: relative;">
             <router-view v-slot="{ Component }">
                 <keep-alive>
                     <component :is="Component" :key="$route.path" v-if="$route.meta.keepAlive" />
                 </keep-alive>
                 <component :is="Component" :key="$route.path" v-if="!$route.meta.keepAlive" />
             </router-view>
+            <el-popover placement="left-start" trigger="click" :width="400">
+                <template #reference>
+                    <el-button circle v-if="$route.path.startsWith('/nav/emby/')" style="position: absolute; bottom: 20px; right: 20px"><i-ep-Link /></el-button>
+                </template>
+                <el-form label-position="right" label-width="auto" v-if="$route.path.startsWith('/nav/emby/')">
+                    <el-form-item label="服务器">
+                        <el-text>{{ showEmbyServer.server_name }}</el-text>
+                    </el-form-item>
+                    <el-form-item label="线路">
+                        <el-select v-model="showServerLine.id" @change="configLineChange" placement="left-end">
+                            <el-option v-for='line in embyLines[showEmbyServer.id!]' :key="line.id" :label="line.name" :value="line.id"/>
+                            <template #footer>
+                                <el-button size="small" @click="configLine(showEmbyServer)">配置线路</el-button>
+                            </template>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="媒体库浏览代理">
+                        <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="left-end">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" label="跟随全局代理" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="媒体流播放代理">
+                        <el-select v-model="showServerLine.play_proxy_id" @change="proxyChange(showServerLine)" placement="left-end">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" label="跟随全局代理" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                </el-form>
+            </el-popover>
         </el-scrollbar>
     </div>
   <el-dialog v-model="dialogAddEmbyServerVisible" title="Emby Server" width="800">
@@ -202,7 +214,7 @@
     <el-scrollbar style="width: 100%;height: 400px; padding: 20px;">
         <el-button @click="addLine" type="primary">添加</el-button>
         <div style="padding-top: 20px;">
-            <el-radio-group v-model="currentEmbyServerLineId" @change="configLineChange(currentEmbyServerLineId, currentEmbyServer)">
+            <el-radio-group v-model="currentEmbyServerLineId" @change="configLineChange">
                 <el-radio v-for="line in currentEmbyServerLines" :value="line.id" size="large" border style="height: 100%; margin-bottom: 20px;">
                     <div style="padding: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -275,8 +287,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watchEffect } from "vue";
-import { useRoute } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
+import { useRoute, useRouter } from 'vue-router'
 import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox } from "element-plus";
 import { generateGuid } from "../util/uuid_util";
@@ -292,8 +304,9 @@ import { useEventBus } from "../store/eventBus";
 import { EmbyIconLibrary, useEmbyIconLibrary } from "../store/db/embyIconLibrary";
 import appApi from "../api/appApi";
 
-const active = ref("");
+const active = ref("/nav/search");
 const route = useRoute();
+const router = useRouter()
 watchEffect(() => {
     active.value = route.path;
     console.log(active.value)
@@ -592,6 +605,9 @@ async function saveEditEmbyServer() {
     })
     dialogEditEmbyServerVisible.value = false
 }
+async function jumpRoute(route: string) {
+    router.push(route)
+}
 
 async function onDrop({removedIndex, addedIndex}: {removedIndex: number, addedIndex: number}) {
     useEmbyServer().updateOrder(embyServers.value[removedIndex].id!, embyServers.value[removedIndex].order_by!, embyServers.value[addedIndex].order_by!).then(() => {
@@ -677,16 +693,17 @@ async function saveCurrentEmbyServerAddLine() {
         })
     }).catch(e => ElMessage.error("保存失败" + e)).finally(() => dialogAddLineVisible.value = false)
 }
-async function configLineChange(value: string, embyServer: EmbyServer) {
+async function configLineChange(value: string) {
     useEmbyLine().getEmbyLine(value).then(async line => {
         if (!line) {
             ElMessage.error('获取线路失败')
             return
         }
-        useEmbyLine().updateEmbyUsing(embyServer.id!).then(() => {
+        showServerLine.value = line
+        useEmbyLine().updateEmbyUsing(line.emby_server_id!).then(() => {
             updateEmbyLineDb({id: value, in_use: 1}).catch(e => ElMessage.error("切换失败" + e))
             let tmpEmbyServer = {
-                id: embyServer.id!,
+                id: line.emby_server_id,
                 base_url: line.base_url,
                 browse_proxy_id: line.browse_proxy_id,
                 play_proxy_id: line.play_proxy_id,
@@ -698,6 +715,21 @@ async function configLineChange(value: string, embyServer: EmbyServer) {
             }).catch(e => ElMessage.error("切换失败" + e))
         }).catch(e => ElMessage.error("切换失败" + e))
     }).catch(e => ElMessage.error('获取线路失败' + e))
+}
+function proxyChange(line: EmbyLine) {
+    useEmbyLine().updateEmbyLine(line).then(() => {
+        useEventBus().emit('EmbyLineChanged', {})
+        if (line.in_use) {
+            useEmbyServer().updateEmbyServer({
+                id: line.emby_server_id,
+                browse_proxy_id: line.browse_proxy_id,
+                play_proxy_id: line.play_proxy_id
+            }).then(() => {
+                useEventBus().emit('EmbyServerChanged', {event: 'update', id: line.emby_server_id})
+            }).catch(e => ElMessage.error('修改失败' + e));
+        }
+        ElMessage.success('修改成功');
+    }).catch(e => ElMessage.error('修改失败' + e));
 }
 
 const dialogEditEmbyIconVisible = ref(false)
@@ -754,6 +786,21 @@ async function loadImage(icon_url: string) {
     cache_prefix: ['icon'],
   })
 }
+
+const showEmbyServer = ref<EmbyServer>({})
+const showServerLine = ref<EmbyLine>({})
+watch(
+  () => route.path + embyServers.value?.length + Object.keys(embyLines.value).length,
+  () => {
+        if (route.path.startsWith('/nav/emby/') && embyServers.value && embyServers.value.length > 0) {
+            showEmbyServer.value = embyServers.value.filter(emby => emby.id == route.params.embyId)[0]
+            if (embyLines.value && embyLines.value[showEmbyServer.value.id!] && embyLines.value[showEmbyServer.value.id!].length > 0) {
+                console.log(embyLines.value[showEmbyServer.value.id!], showServerLine.value)
+                showServerLine.value = embyLines.value[showEmbyServer.value.id!].filter(line => line.in_use)[0]!
+            }
+        }
+    }
+)
 </script>
 
 <style scoped>

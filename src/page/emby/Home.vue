@@ -41,9 +41,9 @@
                             <p>
                                 <el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">Go</el-button>
                                 <template v-if="deletedContinuePlayList.indexOf(episodesItem.Id) == -1">
-                                    <el-button plain type="danger" :loading="deleteContinuePlayLoading" @click="deleteContinuePlay(episodesItem.Id, true)"><i-ep-Delete /></el-button></template>
+                                    <el-button plain type="danger" :loading="deleteContinuePlayLoading[episodesItem.Id]" @click="deleteContinuePlay(episodesItem.Id, true)"><i-ep-Delete /></el-button></template>
                                 <template v-else>
-                                    <el-button type="danger" :loading="deleteContinuePlayLoading" @click="deleteContinuePlay(episodesItem.Id, false)">撤销</el-button>
+                                    <el-button type="danger" :loading="deleteContinuePlayLoading[episodesItem.Id]" @click="deleteContinuePlay(episodesItem.Id, false)">撤销</el-button>
                                 </template>
                             </p>
                         </el-card>
@@ -187,7 +187,7 @@ async function getEmbyServer(embyId: string) {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 function embyServerChanged(payload?: {event?: string, id?: string}) {
-    if (payload?.id === route.params.id) {
+    if (payload?.id === route.params.embyId) {
         getEmbyServer(payload?.id)
     }
 }
@@ -195,7 +195,7 @@ onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 watchEffect(async () => {
-    await getEmbyServer(<string>route.params.id)
+    await getEmbyServer(<string>route.params.embyId)
     handlePaneChange()
 })
 

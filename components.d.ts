@@ -7,6 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ElAffix: typeof import('element-plus/es')['ElAffix']
     ElBadge: typeof import('element-plus/es')['ElBadge']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']
@@ -29,7 +30,7 @@ declare module 'vue' {
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElPagination: typeof import('element-plus/es')['ElPagination']
-    ElPopconfirm: typeof import('element-plus/es')['ElPopconfirm']
+    ElPopover: typeof import('element-plus/es')['ElPopover']
     ElProgress: typeof import('element-plus/es')['ElProgress']
     ElRadio: typeof import('element-plus/es')['ElRadio']
     ElRadioGroup: typeof import('element-plus/es')['ElRadioGroup']
@@ -59,9 +60,7 @@ declare module 'vue' {
     IEpPriceTag: typeof import('~icons/ep/price-tag')['default']
     IEpPromotion: typeof import('~icons/ep/promotion')['default']
     IEpSearch: typeof import('~icons/ep/search')['default']
-    IEpSelect: typeof import('~icons/ep/select')['default']
     IEpSetting: typeof import('~icons/ep/setting')['default']
-    IEpSetUp: typeof import('~icons/ep/set-up')['default']
     IEpStar: typeof import('~icons/ep/star')['default']
     IEpStarFilled: typeof import('~icons/ep/star-filled')['default']
     IEpSuccessFilled: typeof import('~icons/ep/success-filled')['default']

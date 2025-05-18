@@ -25,7 +25,7 @@ const routes = [
                 component: Setting,
             },
             {
-                path: 'emby/:id',
+                path: 'emby/:embyId',
                 component: EmbyHome,
             },
             {
