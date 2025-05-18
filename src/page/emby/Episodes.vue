@@ -358,7 +358,11 @@ function handleMediaSources(mediaSources: MediaSource[]) {
             maxMediaSource = mediaSource
         }
     }
-    playbackVersionChange(maxMediaSource.Id)
+    if (rememberSelect.value) {
+        playbackVersionChange(versionOptions.value[Number(<string>route.query.versionSelect)].value)
+    } else {
+        playbackVersionChange(maxMediaSource.Id)
+    }
 }
 
 function playbackVersionChange(mediaSourceId: string) {
