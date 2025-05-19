@@ -544,6 +544,7 @@ function getScrobbleTraktIdsParam(item: EpisodesItem) {
 
 const playback_info_loading = ref(false)
 function getPlaybackInfo(item_id: string) {
+    playback_info_loading.value = true
     return embyApi.playbackInfo(embyServer.value, item_id).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
