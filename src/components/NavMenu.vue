@@ -26,9 +26,13 @@
                             </el-menu-item>
                             <template #dropdown>
                                 <el-dropdown-menu>
+                                    <el-dropdown-item @click="configLine(embyServer)">
+                                        <i-ep-Link style="position: absolute; left: 10;" />
+                                        <span style="margin-left: 15px;">线路</span>
+                                    </el-dropdown-item>
                                     <el-dropdown-item @click="editEmbyIcon(embyServer)">
                                         <i-ep-PriceTag style="position: absolute; left: 10;" />
-                                        <span style="margin-left: 15px;">修改图标</span>
+                                        <span style="margin-left: 15px;">图标</span>
                                     </el-dropdown-item>
                                     <el-dropdown-item @click="editEmbyServer(embyServer)">
                                         <i-ep-Edit style="position: absolute; left: 10;" />
@@ -70,11 +74,11 @@
                 </keep-alive>
                 <component :is="Component" :key="$route.path" v-if="!$route.meta.keepAlive" />
             </router-view>
-            <el-popover placement="left-start" trigger="click" :width="400">
+            <el-popover placement="left-start" trigger="click" :width="400" v-if="$route.path.startsWith('/nav/emby/')">
                 <template #reference>
-                    <el-button circle v-if="$route.path.startsWith('/nav/emby/')" style="position: absolute; bottom: 20px; right: 20px"><i-ep-Link /></el-button>
+                    <el-button circle style="position: absolute; bottom: 20px; right: 20px"><i-ep-Link /></el-button>
                 </template>
-                <el-form label-position="right" label-width="auto" v-if="$route.path.startsWith('/nav/emby/')">
+                <el-form label-position="right" label-width="auto">
                     <el-form-item label="服务器">
                         <el-text>{{ showEmbyServer.server_name }}</el-text>
                     </el-form-item>

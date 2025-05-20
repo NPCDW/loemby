@@ -49,6 +49,7 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElText: typeof import('element-plus/es')['ElText']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    IEpArrowUpBold: typeof import('~icons/ep/arrow-up-bold')['default']
     IEpCircleCheck: typeof import('~icons/ep/circle-check')['default']
     IEpCircleCheckFilled: typeof import('~icons/ep/circle-check-filled')['default']
     IEpCircleCloseFilled: typeof import('~icons/ep/circle-close-filled')['default']

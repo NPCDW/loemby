@@ -6,7 +6,7 @@
             </template>
         </el-input>
         
-        <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
+        <el-scrollbar ref="scrollbarRef" style="height: calc(100vh - 52px); padding: 0 20px;">
             <el-collapse v-model="embyServerKeys">
                 <el-collapse-item :title="embySearchItem.embyServer.server_name" :name="embySearchItem.embyServer.id" :disabled="embySearchItem.result?.Items.length == 0" v-for="embySearchItem in emby_search_result_list">
                     <template #icon>
@@ -27,6 +27,7 @@
                 </el-collapse-item>
             </el-collapse>
         </el-scrollbar>
+        <el-button circle style="position: absolute; bottom: 20px; right: 20px" @click="scrollbarRef!.setScrollTop(0)"><i-ep-ArrowUpBold /></el-button>
     </div>
 </template>
 
@@ -35,7 +36,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import embyApi, { EmbyPageList, SearchItem } from '../api/embyApi'
 import ItemCard from '../components/ItemCard.vue';
 import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ScrollbarInstance } from 'element-plus';
 import { useEventBus } from '../store/eventBus';
 
 const embyServers = ref<EmbyServer[]>([])
@@ -53,6 +54,7 @@ listAllEmbyServer()
 onMounted(() => useEventBus().on('EmbyServerChanged', listAllEmbyServer))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
 
+const scrollbarRef = ref<ScrollbarInstance>()
 const search_loading = ref(false)
 const search_str = ref('')
 const embyServerKeys = ref<string[]>([])
