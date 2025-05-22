@@ -64,14 +64,15 @@ async function logout(embyServer: EmbyServer) {
 
 /**
  * 搜索，该处问题：当搜索电影时，如果传入了搜索关键字和限制条数，搜索结果的总数会返回0（搜索返回的结果正常），不传这两个值又没办法分页
+ * types: Movie,Series,Episode
  * @returns EmbyPageList<SearchItems>
  */
-async function search(embyServer: EmbyServer, search_str: string, startIndex: number, limit: number) {
+async function search(embyServer: EmbyServer, search_str: string, item_types: string[], startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !search_str || startIndex < 0 || !limit) {
         return Promise.reject("参数缺失");
     }
     return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?SearchTerm=${encodeURIComponent(search_str.trim())}&IncludeItemTypes=Movie,Series&Recursive=true&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex=${startIndex}&Limit=${limit}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?SearchTerm=${encodeURIComponent(search_str.trim())}&IncludeItemTypes=${item_types.join(',')}&Recursive=true&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex=${startIndex}&Limit=${limit}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,

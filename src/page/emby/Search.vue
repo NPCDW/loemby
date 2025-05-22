@@ -1,6 +1,13 @@
 <template>
     <div>
         <el-input v-model="search_str" autofocus @keyup.enter="search" :disabled="search_loading" style="padding: 10px;">
+            <template #prepend>
+                <el-checkbox-group v-model="item_types">
+                    <el-checkbox-button key="Movie" value="Movie">电影</el-checkbox-button>
+                    <el-checkbox-button key="Series" value="Series">剧</el-checkbox-button>
+                    <el-checkbox-button key="Episode" value="Episode">集</el-checkbox-button>
+                </el-checkbox-group>
+            </template>
             <template #append>
                 <el-button type="primary" @click="search" :loading="search_loading"><el-icon><i-ep-Search /></el-icon></el-button>
             </template>
@@ -47,12 +54,14 @@ onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 const search_str = ref(<string>route.query.search)
+// const search_type = ref<string>('keyword')
 const search_loading = ref(false)
+const item_types = ref<string[]>(['Movie', 'Series'])
 const emby_search_result = ref<{success: boolean, message?: string, result?: EmbyPageList<SearchItem>}>({success: true})
 const search = async () => {
     search_loading.value = true
     emby_search_result.value = {success: true}
-    return embyApi.search(embyServer.value, search_str.value, 0, 30).then(async response => {
+    return embyApi.search(embyServer.value, search_str.value, item_types.value, 0, 30).then(async response => {
         if (response.status_code != 200) {
             emby_search_result.value = {success: false, message: response.status_code + ' ' + response.status_text}
             return
