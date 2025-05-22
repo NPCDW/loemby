@@ -1,17 +1,17 @@
 <template>
     <div>
-        <el-input v-model="search_str" autofocus @keyup.enter="search" :disabled="search_loading" style="padding: 10px;">
-            <template #prepend>
-                <el-checkbox-group v-model="item_types">
-                    <el-checkbox-button key="Movie" value="Movie">电影</el-checkbox-button>
-                    <el-checkbox-button key="Series" value="Series">剧</el-checkbox-button>
-                    <el-checkbox-button key="Episode" value="Episode">集</el-checkbox-button>
-                </el-checkbox-group>
-            </template>
-            <template #append>
-                <el-button type="primary" @click="search" :loading="search_loading"><el-icon><i-ep-Search /></el-icon></el-button>
-            </template>
-        </el-input>
+        <div style="display: flex; padding: 10px;">
+            <el-checkbox-group v-model="item_types" style="flex: none; margin-right: 5px;">
+                <el-checkbox-button key="Movie" value="Movie">电影</el-checkbox-button>
+                <el-checkbox-button key="Series" value="Series">剧</el-checkbox-button>
+                <el-checkbox-button key="Episode" value="Episode">集</el-checkbox-button>
+            </el-checkbox-group>
+            <el-input v-model="search_str" autofocus @keyup.enter="search" :disabled="search_loading" style="flex: auto;">
+                <template #append>
+                    <el-button type="primary" @click="search" :loading="search_loading"><el-icon><i-ep-Search /></el-icon></el-button>
+                </template>
+            </el-input>
+        </div>
         
         <el-scrollbar ref="scrollbarRef" style="height: calc(100vh - 52px); padding: 0 20px;">
             <el-collapse v-model="embyServerKeys">
