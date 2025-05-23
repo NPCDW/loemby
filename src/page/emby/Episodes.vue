@@ -390,6 +390,7 @@ function playbackVersionChange(mediaSourceId: string) {
     let videoIndex = 0
     let audioIndex = 0
     let subtitleIndex = 0
+    let subtitleScore = 0
     for (let mediaStream of currentMediaSources.MediaStreams) {
         if (mediaStream.Type == 'Video') {
             videoIndex++
@@ -412,12 +413,18 @@ function playbackVersionChange(mediaSourceId: string) {
         } else if (mediaStream.Type == 'Subtitle') {
             subtitleIndex++
             subtitleOptions.value.push({
-                label: mediaStream.DisplayTitle,
+                label: mediaStream.DisplayTitle + " / " + mediaStream.Title + " / " + mediaStream.DisplayLanguage + " / " + mediaStream.Language + " / " + mediaStream.IsDefault,
                 value: subtitleIndex
             })
+            let score = 0;
+            if (mediaStream.IsDefault) {
+                score += 1
+            }
             if (mediaStream.DisplayLanguage && mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1) {
-                subtitleSelect.value = subtitleIndex
-            } else if (mediaStream.IsDefault && subtitleSelect.value === -1) {
+                score += 2
+            }
+            if (score > subtitleScore) {
+                subtitleScore = score
                 subtitleSelect.value = subtitleIndex
             }
         }

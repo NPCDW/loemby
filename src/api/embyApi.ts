@@ -585,8 +585,11 @@ export interface MediaSource {
 export interface MediaStream {
     // 视频、音频、字幕编码
     Codec: string,
+    // 主标题
     DisplayTitle: string,
     DisplayLanguage: string,
+    // 副标题
+    Title: string,
     // 码率
     BitRate: number,
     Height: number,
