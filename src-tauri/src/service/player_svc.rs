@@ -187,7 +187,11 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
     let mut recver = BufReader::new(recver);
 
     let send_task = tokio_root::spawn(async move {
-        let command = r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n";
+        let command = if body.run_time_ticks == 0 {
+            r#"{ "command": ["get_property", "percent-pos"], "request_id": 10022 }"#.to_string() + "\n"
+        } else {
+            r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n"
+        };
         loop {
             let write = sender.write_all(command.as_bytes()).await;
             if write.is_err() {
@@ -222,6 +226,17 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
             let _ = player.kill().await;
             save_playback_progress(&body, &app_handle, last_record_position, 0);
             break;
+        }
+        if let Some(10022) = json.request_id {
+            let progress_percent = json.data;
+            if let Some(progress_percent) = progress_percent {
+                tracing::debug!("MPV IPC 播放进度百分比 {}", progress_percent);
+                last_record_position = Decimal::from_f64(progress_percent).unwrap().round();
+                if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
+                    last_save_time = chrono::Local::now();
+                    save_playback_progress(&body, &app_handle, last_record_position, 1);
+                }
+            }
         }
         if let Some(10023) = json.request_id {
             let progress = json.data;

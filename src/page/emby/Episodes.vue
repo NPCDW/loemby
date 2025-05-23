@@ -34,7 +34,7 @@
                             </el-tooltip>
                         </p>
                         <div style="display: flex;align-items: center;">
-                            <span>总时长: {{ timeLength }}</span>
+                            <span>总时长: {{ displayTimeLength }}</span>
                             <span style="flex: auto; margin-left: 20px;">
                                 <el-progress :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
                             </span>
@@ -179,7 +179,6 @@ import { ElMessage, ElNotification } from 'element-plus';
 import { PlaybackProgress } from '../../store/playback';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
-import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import { useGlobalConfig } from '../../store/db/globalConfig';
 import { useEventBus } from '../../store/eventBus';
@@ -210,7 +209,7 @@ const versionSelect = ref('')
 const videoSelect = ref(-1)
 const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
-const timeLength = ref('')
+const displayTimeLength = ref('')
 const runTimeTicks = ref(0)
 const mpv_path = ref('')
 const mpv_startup_dir = ref('')
@@ -374,6 +373,8 @@ function playbackVersionChange(mediaSourceId: string) {
     mediaSourceBitrateTag.value = formatMbps(currentMediaSources.Bitrate)
     if (currentMediaSources.MediaStreams && currentMediaSources.MediaStreams.length > 0) {
         mediaStreamResolutionTag.value = getResolutionFromMediaSources(currentMediaSources)
+    } else {
+        mediaStreamResolutionTag.value = 'Unknown'
     }
     if (currentMediaSources.IsRemote && currentMediaSources.Path && currentMediaSources.Path.indexOf('://') !== -1) {
         supportDirectLink.value = true
@@ -386,7 +387,7 @@ function playbackVersionChange(mediaSourceId: string) {
     audioOptions.value = []
     subtitleOptions.value = []
     runTimeTicks.value = currentMediaSources.RunTimeTicks
-    timeLength.value = secondsToHMS(currentMediaSources.RunTimeTicks / 1000_0000)
+    displayTimeLength.value = secondsToHMS(currentMediaSources.RunTimeTicks / 1000_0000)
     let videoIndex = 0
     let audioIndex = 0
     let subtitleIndex = 0
@@ -558,9 +559,9 @@ function getPlaybackInfo(item_id: string) {
             return Promise.reject(response)
         }
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
+        currentEpisodes.value!.MediaSources = playbackInfo.MediaSources;
         for (const mediaSource of currentEpisodes.value!.MediaSources!) {
             if (!mediaSource.MediaStreams || mediaSource.MediaStreams.length == 0 || !mediaSource.MediaStreams.find(mediaStream => mediaStream.Type == 'Video')) {
-                currentEpisodes.value!.MediaSources = playbackInfo.MediaSources;
                 handleMediaSources(playbackInfo.MediaSources)
                 break
             }
@@ -621,7 +622,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             media_source_id: currentMediaSources.Id,
             play_session_id: playbackInfo.PlaySessionId,
             playback_position_ticks: playbackPositionTicks,
-            run_time_ticks: runTimeTicks.value,
+            run_time_ticks: runTimeTicks.value ? runTimeTicks.value : 0,
             vid: videoSelect.value,
             aid: audioSelect.value,
             sid: subtitleSelect.value,
@@ -631,8 +632,6 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
         }).then(async () => {
             embyApi.playing(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
                 ElMessage.success('开始播放，请稍候')
-                useEmbyServer().updateEmbyServer({id: embyServer.value!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
-                    .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer.value!.id!}))
             })
             if (scrobbleTraktParam) {
                 traktApi.start(scrobbleTraktParam).then(response => {

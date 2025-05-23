@@ -70,9 +70,9 @@
         <el-scrollbar style="flex: auto; height: 100vh; width: calc(100% - 200px); position: relative;">
             <router-view v-slot="{ Component }">
                 <keep-alive>
-                    <component :is="Component" :key="$route.path" v-if="$route.meta.keepAlive" />
+                    <component :is="Component" :key="$route.path + $route.query" v-if="$route.meta.keepAlive" />
                 </keep-alive>
-                <component :is="Component" :key="$route.path" v-if="!$route.meta.keepAlive" />
+                <component :is="Component" :key="$route.path + $route.query" v-if="!$route.meta.keepAlive" />
             </router-view>
             <el-popover placement="left-start" trigger="click" :width="400" v-if="$route.path.startsWith('/nav/emby/')">
                 <template #reference>
