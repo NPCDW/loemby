@@ -70,9 +70,9 @@
         <el-scrollbar style="flex: auto; height: 100vh; width: calc(100% - 200px); position: relative;">
             <router-view v-slot="{ Component }">
                 <keep-alive>
-                    <component :is="Component" :key="$route.path + $route.query" v-if="$route.meta.keepAlive" />
+                    <component :is="Component" :key="$route.fullPath" v-if="$route.meta.keepAlive" />
                 </keep-alive>
-                <component :is="Component" :key="$route.path + $route.query" v-if="!$route.meta.keepAlive" />
+                <component :is="Component" :key="$route.fullPath" v-if="!$route.meta.keepAlive" />
             </router-view>
             <el-popover placement="left-start" trigger="click" :width="400" v-if="$route.path.startsWith('/nav/emby/')">
                 <template #reference>
@@ -799,7 +799,6 @@ watch(
         if (route.path.startsWith('/nav/emby/') && embyServers.value && embyServers.value.length > 0) {
             showEmbyServer.value = embyServers.value.filter(emby => emby.id == route.params.embyId)[0]
             if (embyLines.value && embyLines.value[showEmbyServer.value.id!] && embyLines.value[showEmbyServer.value.id!].length > 0) {
-                console.log(embyLines.value[showEmbyServer.value.id!], showServerLine.value)
                 showServerLine.value = embyLines.value[showEmbyServer.value.id!].filter(line => line.in_use)[0]!
             }
         }

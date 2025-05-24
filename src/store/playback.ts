@@ -21,7 +21,7 @@ export const usePlayback = defineStore('playback', () => {
                 if (event.payload.playback_status === 0) {
                     const progress = (() => {
                         if (event.payload.run_time_ticks === 0) {
-                            return event.payload.progress > 80 ? 100 : 0
+                            return event.payload.progress > 80 ? 100_0000_0000 : 0
                         } else {
                             return event.payload.progress
                         }
