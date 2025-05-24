@@ -359,6 +359,8 @@ function handleMediaSources(mediaSources: MediaSource[]) {
     }
     if (rememberSelect.value) {
         playbackVersionChange(versionOptions.value[Number(<string>route.query.versionSelect)].value)
+    } else if (versionSelect.value) {
+        playbackVersionChange(versionSelect.value)
     } else {
         playbackVersionChange(maxMediaSource.Id)
     }
@@ -559,12 +561,9 @@ function getPlaybackInfo(item_id: string) {
             return Promise.reject(response)
         }
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
-        currentEpisodes.value!.MediaSources = playbackInfo.MediaSources;
-        for (const mediaSource of currentEpisodes.value!.MediaSources!) {
-            if (!mediaSource.MediaStreams || mediaSource.MediaStreams.length == 0 || !mediaSource.MediaStreams.find(mediaStream => mediaStream.Type == 'Video')) {
-                handleMediaSources(playbackInfo.MediaSources)
-                break
-            }
+        if (videoSelect.value === 0) {
+            currentEpisodes.value!.MediaSources = playbackInfo.MediaSources;
+            handleMediaSources(playbackInfo.MediaSources)
         }
         return playbackInfo
     }).catch(e => {
