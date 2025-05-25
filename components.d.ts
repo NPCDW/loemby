@@ -56,6 +56,7 @@ declare module 'vue' {
     IEpCircleCloseFilled: typeof import('~icons/ep/circle-close-filled')['default']
     IEpDelete: typeof import('~icons/ep/delete')['default']
     IEpEdit: typeof import('~icons/ep/edit')['default']
+    IEpFilm: typeof import('~icons/ep/film')['default']
     IEpLink: typeof import('~icons/ep/link')['default']
     IEpLoading: typeof import('~icons/ep/loading')['default']
     IEpPlus: typeof import('~icons/ep/plus')['default']

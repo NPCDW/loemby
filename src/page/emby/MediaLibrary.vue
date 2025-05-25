@@ -91,6 +91,7 @@ onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 watchEffect(async () => {
     await getEmbyServer(<string>route.params.embyId)
+    getMediaLibraryList()
 })
 
 const search_str = ref('')
@@ -142,7 +143,6 @@ function getMediaLibraryChildLatest(parentId: string) {
         ElMessage.error(e)
     }).finally(() => mediaLibraryChildLoading.value[parentId] = false)
 }
-getMediaLibraryList()
 
 const images = ref<{[key: string]: string}>({})
 async function loadImage(itemId: string) {
