@@ -420,9 +420,13 @@ function checkUpdate() {
 }
 
 const embyServers = ref<EmbyServer[]>([])
+const embyServerMap = ref<{[key: string]: EmbyServer}>({})
 function listAllEmbyServer() {
     useEmbyServer().listAllEmbyServer().then(list => {
         embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
+        list.forEach(item => {
+            embyServerMap.value[item.id!] = item
+        })
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
@@ -706,7 +710,7 @@ function globalPlayProxyChange() {
 function proxyChange(line: EmbyLine) {
     useEmbyLine().updateEmbyLine(line).then(() => {
         useEventBus().emit('EmbyLineChanged', {})
-        if (line.in_use) {
+        if (line.id === embyServerMap.value[line.emby_server_id!].line_id) {
             useEmbyServer().updateEmbyServer({
                 id: line.emby_server_id,
                 browse_proxy_id: line.browse_proxy_id,

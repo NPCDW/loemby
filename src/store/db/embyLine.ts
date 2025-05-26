@@ -10,14 +10,6 @@ export const useEmbyLine = defineStore('embyLine', () => {
         return embyLine[0];
     }
 
-    async function getUsingEmbyLine(emby_server_id: string) {
-        let embyLine = await useDb().db?.select<EmbyLine[]>('select * from emby_line where emby_server_id = $1 and in_use = 1', [emby_server_id]);
-        if (!embyLine || embyLine.length == 0) {
-            return;
-        }
-        return embyLine[0];
-    }
-
     async function listEmbyLine(emby_server_id: string) {
         let embyLine = await useDb().db?.select<EmbyLine[]>('select * from emby_line where emby_server_id = $1', [emby_server_id]);
         if (!embyLine || embyLine.length == 0) {
@@ -70,14 +62,6 @@ export const useEmbyLine = defineStore('embyLine', () => {
         return res?.rowsAffected;
     }
 
-    async function updateEmbyUsing(emby_server_id: string) {
-        let values: string[] = [];
-        values.push(emby_server_id);
-        let sql = `update emby_line set in_use = 0 where emby_server_id = $1`;
-        let res = await useDb().db?.execute(sql, values);
-        return res?.rowsAffected;
-    }
-
     async function delEmbyServer(emby_server_id: string) {
         let res = await useDb().db?.execute('delete from emby_line where emby_server_id = $1', [emby_server_id]);
         return res?.rowsAffected;
@@ -88,7 +72,7 @@ export const useEmbyLine = defineStore('embyLine', () => {
         return res?.rowsAffected;
     }
 
-    return { getEmbyLine, delEmbyLine, addEmbyLine, updateEmbyLine, listAllEmbyLine, getUsingEmbyLine, listEmbyLine, updateEmbyServerName, delEmbyServer, updateEmbyUsing }
+    return { getEmbyLine, delEmbyLine, addEmbyLine, updateEmbyLine, listAllEmbyLine, listEmbyLine, updateEmbyServerName, delEmbyServer }
 })
 
 export interface EmbyLine {
@@ -99,7 +83,6 @@ export interface EmbyLine {
     emby_server_id?: string,
     emby_server_name?: string,
     base_url?: string,
-    in_use?: number,
     browse_proxy_id?: string,
     play_proxy_id?: string,
 }

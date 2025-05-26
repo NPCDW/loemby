@@ -74,6 +74,14 @@ CREATE TABLE "emby_icon_library" (
 ALTER TABLE emby_server ADD COLUMN icon_url VARCHAR(255);
 			"#,
 			kind: MigrationKind::Up,
+		},
+        Migration {
+            version: 3,
+            description: "emby_line_id",
+            sql: r#"
+ALTER TABLE emby_server ADD COLUMN line_id CHAR(36);
+			"#,
+			kind: MigrationKind::Up,
 		}
     ]
 }

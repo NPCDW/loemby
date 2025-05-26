@@ -102,6 +102,7 @@ export interface EmbyServer {
 
     browse_proxy_id?: string,
     play_proxy_id?: string,
+    line_id?: string,
 
     last_playback_time?: string,
     keep_alive_days?: number,
