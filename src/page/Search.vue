@@ -76,6 +76,9 @@ const emby_search_result_list = computed(() => {
 })
 
 async function search() {
+    if (search_str.value == '') {
+        return
+    }
     embyServerKeys.value = []
     emby_search_result.value = {}
     let promises = []

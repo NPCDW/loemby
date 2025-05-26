@@ -59,6 +59,9 @@ const search_loading = ref(false)
 const item_types = ref<string[]>(['Movie', 'Series'])
 const emby_search_result = ref<{success: boolean, message?: string, result?: EmbyPageList<SearchItem>}>({success: true})
 const search = async () => {
+    if (search_str.value == '') {
+        return
+    }
     search_loading.value = true
     emby_search_result.value = {success: true}
     return embyApi.search(embyServer.value, search_str.value, item_types.value, 0, 30).then(async response => {

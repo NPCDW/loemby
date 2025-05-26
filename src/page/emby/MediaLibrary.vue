@@ -63,7 +63,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, SearchItem, MediaLibraryItem } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
@@ -88,11 +88,6 @@ function embyServerChanged(payload?: {event?: string, id?: string}) {
 }
 onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
-
-watchEffect(async () => {
-    await getEmbyServer(<string>route.params.embyId)
-    getMediaLibraryList()
-})
 
 const search_str = ref('')
 const search = async () => {
@@ -153,6 +148,10 @@ async function loadImage(itemId: string) {
     cache_prefix: ['image', embyServer.value.id!],
   })
 }
+
+getEmbyServer(<string>route.params.embyId).then(() => {
+    getMediaLibraryList()
+})
 </script>
 
 <style scoped>
