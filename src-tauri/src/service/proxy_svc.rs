@@ -87,8 +87,8 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     let client = request.client.clone();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
-    // req_headers.remove(axum::http::header::USER_AGENT);
-    // req_headers.insert(axum::http::header::USER_AGENT, request.user_agent.clone().parse().unwrap());
+    req_headers.remove(axum::http::header::USER_AGENT);
+    req_headers.insert(axum::http::header::USER_AGENT, request.user_agent.clone().parse().unwrap());
     let res = client
         .get(request.stream_url.clone())
         .headers(req_headers.clone())
