@@ -75,8 +75,8 @@
                             </el-select></span>
                         </p>
                         <p v-if="currentEpisodes?.SeriesId" style="display: flex; justify-content: center;">
-                            <el-button plain @click="continuousPlay = !continuousPlay">
-                                <span>{{ continuousPlay ? '连续播放' : '单集播放' }}</span>
+                            <el-button plain @click="autoplay = !autoplay">
+                                <span>{{ autoplay ? '连续播放' : '单集播放' }}</span>
                             </el-button>
                             <el-button plain @click="rememberSelect = !rememberSelect">
                                 <span>{{ rememberSelect ? '记住媒体选项' : '自动选择媒体' }}</span>
@@ -201,11 +201,11 @@ function embyServerChanged(payload?: {event?: string, id?: string}) {
 onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
 onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
-const versionOptions = ref<{label: string, value: string, name: string, size: string, bitrate: string, resolution: string}[]>([])
+const versionOptions = ref<{label: string, value: number, mediaSourceId: string, name: string, size: string, bitrate: string, resolution: string}[]>([])
 const videoOptions = ref<{label: string, value: number}[]>([])
 const audioOptions = ref<{label: string, value: number}[]>([])
 const subtitleOptions = ref<{label: string, value: number}[]>([])
-const versionSelect = ref('')
+const versionSelect = ref(-1)
 const videoSelect = ref(-1)
 const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
@@ -219,7 +219,7 @@ const mpv_cache_max_bytes = ref(0)
 const mpv_cache_back_seconds = ref(0)
 const mpv_cache_back_max_bytes = ref(0)
 
-const continuousPlay = ref(true)
+const autoplay = ref(true)
 const rememberSelect = ref(route.query.rememberSelect === 'true' ? true : false)
 const playbackInfoLoading = ref(false)
 const play_loading = ref(false)
@@ -282,11 +282,11 @@ function updateCurrentEpisodes(silent: boolean = false) {
         }
         let json: EpisodesItem = JSON.parse(response.body);
         currentEpisodes.value = json
-        if (json.SeriesId && !currentSeries.value) {
-            getCurrentSeries()
-        }
         if (!silent && json.MediaSources) {
             handleMediaSources(json.MediaSources)
+        }
+        if (json.SeriesId && !currentSeries.value) {
+            await getCurrentSeries()
         }
     }).catch(e => {
         ElMessage.error(e)
@@ -341,33 +341,35 @@ function handleMediaSources(mediaSources: MediaSource[]) {
         return
     }
     versionOptions.value = []
-    let max = 0;
-    let maxMediaSource = mediaSources[0]
-    for (let mediaSource of mediaSources) {
+    let maxMediaSourceSize = 0;
+    let maxVersionId = 1
+    for (let i = 0; i < mediaSources.length; i++) {
+        let mediaSource = mediaSources[i]
         versionOptions.value.push({
             label: mediaSource.Name,
-            value: mediaSource.Id,
+            value: i + 1,
+            mediaSourceId: mediaSource.Id,
             name: mediaSource.Name,
             size: formatBytes(mediaSource.Size),
             bitrate: formatMbps(mediaSource.Bitrate),
             resolution: getResolutionFromMediaSources(mediaSource),
         })
-        if (max < mediaSource.Size) {
-            max = mediaSource.Size
-            maxMediaSource = mediaSource
+        if (maxMediaSourceSize < mediaSource.Size) {
+            maxMediaSourceSize = mediaSource.Size
+            maxVersionId = i + 1
         }
     }
     if (rememberSelect.value) {
-        playbackVersionChange(versionOptions.value[Number(<string>route.query.versionSelect)].value)
-    } else if (versionSelect.value) {
+        playbackVersionChange(Number(<string>route.query.versionSelect))
+    } else if (versionSelect.value > 0) {
         playbackVersionChange(versionSelect.value)
     } else {
-        playbackVersionChange(maxMediaSource.Id)
+        playbackVersionChange(maxVersionId)
     }
 }
 
-function playbackVersionChange(mediaSourceId: string) {
-    let currentMediaSources = currentEpisodes.value!.MediaSources!.find(mediaSource => mediaSource.Id == mediaSourceId)
+function playbackVersionChange(versionId: number) {
+    let currentMediaSources = currentEpisodes.value!.MediaSources!.find(mediaSource => mediaSource.Id == versionOptions.value[versionId - 1].mediaSourceId)
     if (!currentMediaSources) {
         return
     }
@@ -381,7 +383,7 @@ function playbackVersionChange(mediaSourceId: string) {
     if (currentMediaSources.IsRemote && currentMediaSources.Path && currentMediaSources.Path.indexOf('://') !== -1) {
         supportDirectLink.value = true
     }
-    versionSelect.value = mediaSourceId
+    versionSelect.value = versionId
     videoSelect.value = -1
     audioSelect.value = -1
     subtitleSelect.value = -1
@@ -410,7 +412,7 @@ function playbackVersionChange(mediaSourceId: string) {
                 label: mediaStream.DisplayTitle,
                 value: audioIndex
             })
-            if (mediaStream.IsDefault) {
+            if (mediaStream.IsDefault && audioSelect.value === -1) {
                 audioSelect.value = audioIndex
             }
         } else if (mediaStream.Type == 'Subtitle') {
@@ -423,8 +425,11 @@ function playbackVersionChange(mediaSourceId: string) {
             if (mediaStream.IsDefault) {
                 score += 1
             }
-            if (mediaStream.DisplayLanguage && mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1) {
+            if (mediaStream.IsExternal) {
                 score += 2
+            }
+            if (mediaStream.DisplayLanguage && mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1) {
+                score += 3
             }
             if (score > subtitleScore) {
                 subtitleScore = score
@@ -581,7 +586,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
     play_loading.value = true
     useDirectLink.value = directLink ? 1 : 0
     return getPlaybackInfo(item_id).then(async playbackInfo => {
-        let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionSelect.value)
+        let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionOptions.value[versionSelect.value - 1].mediaSourceId)
         if (!currentMediaSources) {
             ElMessage.error('未获取到播放信息')
             return
@@ -665,16 +670,18 @@ function playingStopped(payload: PlaybackProgress) {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
                 nextUpCurrentPage.value = 1
                 nextUp(1).then(() => {
-                    router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
-                        autoplay: continuousPlay.value ? 'true' : 'false',
-                        directLink: useDirectLink.value.toString(),
-                        rememberSelect: rememberSelect.value.toString(),
-                        videoSelect: videoSelect.value,
-                        audioSelect: audioSelect.value,
-                        subtitleSelect: subtitleSelect.value,
-                        versionSelect: versionSelect.value,
-                    }})
-                    if (continuousPlay.value) {
+                    if (nextUpList.value.length > 0) {
+                        router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
+                            autoplay: autoplay.value ? 'true' : 'false',
+                            directLink: useDirectLink.value.toString(),
+                            rememberSelect: rememberSelect.value.toString(),
+                            videoSelect: videoSelect.value,
+                            audioSelect: audioSelect.value,
+                            subtitleSelect: subtitleSelect.value,
+                            versionSelect: versionSelect.value,
+                        }})
+                    }
+                    if (autoplay.value) {
                         if (nextUpList.value.length > 0) {
                             ElMessage.success('即将播放下一集')
                         } else {
