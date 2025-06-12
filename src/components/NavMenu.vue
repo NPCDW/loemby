@@ -695,6 +695,7 @@ async function configLineChange(value: string) {
             ElMessage.error('获取线路失败')
             return
         }
+        showEmbyServer.value.line_id = line.id
         showServerLine.value = line
         let tmpEmbyServer = {
             id: line.emby_server_id,
