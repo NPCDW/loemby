@@ -1,7 +1,7 @@
 <template>
     <el-card style="width: 300px; margin: 5px;">
         <div v-if="showSeriesName">
-            <el-link v-if="item.Type == 'Episode'" :underline="false" @click="gotoSeries((item as EpisodesItem).SeriesId)">
+            <el-link v-if="item.Type == 'Episode' || item.Type == 'Season'" :underline="false" @click="gotoSeries((item as EpisodesItem).SeriesId)">
                 <h2>{{ (item as EpisodesItem).SeriesName }}</h2>
             </el-link>
         </div>
@@ -9,6 +9,9 @@
             <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)">{{ item.Name }}</el-link>
             <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)">
                 {{ 'S' + ((item as EpisodesItem).ParentIndexNumber || -1) + 'E' + ((item as EpisodesItem).IndexNumber || -1) + '. ' + item.Name }}
+            </el-link>
+            <el-link v-else-if="item.Type == 'Season'" :underline="false" @click="showSeason(item as SeasonsItem)">
+                {{ 'S' + (item as SeasonsItem).IndexNumber || -1) + '. ' + item.Name }}
             </el-link>
             <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)">{{ item.Name }}</el-link>
         </div>
@@ -46,7 +49,7 @@
             </span>
             <span v-if="item.Type == 'Series'">
                 <el-badge :value="item.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
-                    <el-button @click="getSeasons(item as SeriesItem)" type="primary" plain>剧集</el-button>
+                    <el-button @click="showSeries(item as SeriesItem)" type="primary" plain>剧集</el-button>
                 </el-badge>
             </span>
         </div>
@@ -143,6 +146,74 @@
             </div>
         </div>
     </el-dialog>
+    <el-dialog
+        v-model="dialogSeasonsVisible"
+        :title="dialogSeasons?.Name"
+        width="800"
+    >
+        <el-scrollbar style="padding: 0 20px;">
+            <p>简介：{{ dialogSeasons?.Overview }}</p>
+            <p>
+                <el-button plain :disabled="playedLoading" @click="played(dialogSeasons!)">
+                    <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="dialogSeasons?.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
+                    <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                    <span>已播放</span>
+                </el-button>
+                <el-button plain :disabled="starLoading" @click="star(dialogSeasons!)">
+                    <template v-if="dialogSeasons?.UserData?.IsFavorite">
+                        <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
+                        <span>取消收藏</span>
+                    </template>
+                    <template v-else>
+                        <el-icon :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
+                        <span>收藏</span>
+                    </template>
+                </el-button>
+            </p>
+            <el-skeleton :loading="dialogEpisodesLoading" animated>
+                <template #template>
+                    <div class="box-item" v-for="i in 5" :key="i">
+                        <p><el-skeleton-item variant="text" style="width: 50%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                    </div>
+                </template>
+                <div v-for="episodesItem in dialogEpisodesList" class="box-item">
+                    <p>
+                        <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">
+                            {{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}
+                        </el-link>
+                    </p>
+                    <div style="display: flex;justify-content: space-between;">
+                        <span>
+                            <span>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
+                            <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodesItem.Id] || "0 KB" }}</el-tag>
+                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
+                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
+                        </span>
+                        <span>
+                            <el-link :underline="false" v-if="episodesItem.UserData" :disabled="starLoading[episodesItem.Id]" @click="star(episodesItem)">
+                                <el-icon color="#E6A23C" :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
+                                <el-icon :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
+                            </el-link>
+                            <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodesItem.Id]" v-if="episodesItem.UserData" @click="played(episodesItem)">
+                                <el-icon color="#67C23A" :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                <el-icon :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                            </el-link>
+                        </span>
+                    </div>
+                </div>
+            </el-skeleton>
+            <el-pagination
+                v-if="episodes_result[dialogSeasons!.SeriesId + '|' + dialogSeasons?.Id]"
+                v-model:current-page="dialogEpisodesCurrentPage"
+                v-model:page-size="dialogEpisodesPageSize"
+                layout="total, prev, pager, next, jumper"
+                :total="episodes_result[dialogSeasons!.SeriesId + '|' + dialogSeasons!.Id].total"
+                @current-change="handleEpisodesPageChange(dialogEpisodesCurrentPage, dialogEmbyServer!, dialogSeasons!.SeriesId, dialogSeasons!)"
+                hide-on-single-page
+            />
+        </el-scrollbar>
+    </el-dialog>
 </template>
 
 <script lang="ts" setup>
@@ -236,6 +307,7 @@ const seasons_result = ref<{[key: string]: EmbyPageList<SeasonsItem>}>({})
 const episodes_result = ref<{[key: string]: {total: number, [key: number]: EpisodesItem[]}}>({})
 
 const dialogSeriesVisible = ref(false)
+const dialogSeasonsVisible = ref(false)
 const dialogEmbyServer = ref<EmbyServer>()
 const dialogSeries = ref<SearchItem>()
 const dialogSeasons = ref<SeasonsItem>()
@@ -246,7 +318,7 @@ const dialogEpisodesPageSize = ref(10)
 const dialogSeasonsLoading = ref(false)
 const dialogEpisodesLoading = ref(false)
 
-async function getSeasons(series: SeriesItem) {
+async function showSeries(series: SeriesItem) {
     dialogSeasons.value = undefined
     dialogSeasonsLoading.value = true
     dialogSeasonsList.value = []
@@ -303,6 +375,13 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
 }
 async function handleEpisodesPageChange(val: number, embyServer: EmbyServer, series_id: string, seasons: SeasonsItem) {
     await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
+}
+async function showSeason(season: SeasonsItem) {
+    dialogSeasons.value = season
+    dialogEpisodesList.value = []
+    dialogEmbyServer.value = embyServer
+    dialogSeasonsVisible.value = true
+    getEpisodes(embyServer, season.SeriesId, season, 1, 10)
 }
 
 </script>

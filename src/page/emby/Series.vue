@@ -34,12 +34,12 @@
                             <el-button round @click="invokeApi.open_url(externalUrl.Url)"><i-ep-Link /> {{ externalUrl.Name }}</el-button>
                         </el-tooltip>
                     </p>
-                    <el-button plain :disabled="playedLoading" @click="played()">
+                    <el-button plain :disabled="playedLoading" @click="played(currentSeries)">
                         <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentSeries.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
                         <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                         <span>已播放</span>
                     </el-button>
-                    <el-button plain :disabled="starLoading" @click="star()">
+                    <el-button plain :disabled="starLoading" @click="star(currentSeries)">
                         <template v-if="currentSeries.UserData?.IsFavorite">
                             <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
                             <span>取消收藏</span>
@@ -87,7 +87,7 @@
                     <div style="min-height: 160px; min-width: 115px;">
                         <img v-lazy="images[season.Id]" style="max-height: 160px; max-width: 115px;" />
                     </div>
-                    <span>{{ season.Name }}</span>
+                    <el-text truncated style="max-width: 115px;">{{ season.Name }}</el-text>
                 </div>
             </div>
         </el-skeleton>
@@ -99,6 +99,24 @@
         width="800"
     >
         <el-scrollbar style="padding: 0 20px;">
+            <p>简介：{{ dialogSeasons?.Overview }}</p>
+            <p>
+                <el-button plain :disabled="playedLoading" @click="played(dialogSeasons!)">
+                    <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="dialogSeasons?.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
+                    <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                    <span>已播放</span>
+                </el-button>
+                <el-button plain :disabled="starLoading" @click="star(dialogSeasons!)">
+                    <template v-if="dialogSeasons?.UserData?.IsFavorite">
+                        <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
+                        <span>取消收藏</span>
+                    </template>
+                    <template v-else>
+                        <el-icon :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
+                        <span>收藏</span>
+                    </template>
+                </el-button>
+            </p>
             <el-skeleton :loading="dialogEpisodesLoading" animated>
                 <template #template>
                     <div class="box-item" v-for="i in 5" :key="i">
@@ -107,13 +125,29 @@
                     </div>
                 </template>
                 <div v-for="episodesItem in dialogEpisodesList" class="box-item">
-                    <p><el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">{{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}</el-link></p>
                     <p>
-                        {{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}
-                        <el-tag disable-transitions>{{ mediaSourceSizeTag[episodesItem.Id] || "0 KB" }}</el-tag>
-                        <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
-                        <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
+                        <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">
+                            {{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}
+                        </el-link>
                     </p>
+                    <div style="display: flex;justify-content: space-between;">
+                        <span>
+                            <span>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
+                            <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodesItem.Id] || "0 KB" }}</el-tag>
+                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
+                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
+                        </span>
+                        <span>
+                            <el-link :underline="false" v-if="episodesItem.UserData" :disabled="starLoading[episodesItem.Id]" @click="star(episodesItem)">
+                                <el-icon color="#E6A23C" :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
+                                <el-icon :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
+                            </el-link>
+                            <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodesItem.Id]" v-if="episodesItem.UserData" @click="played(episodesItem)">
+                                <el-icon color="#67C23A" :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                <el-icon :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                            </el-link>
+                        </span>
+                    </div>
                 </div>
             </el-skeleton>
             <el-pagination
@@ -131,7 +165,7 @@
 <script lang="ts" setup>
 import { useRoute, useRouter } from 'vue-router';
 import { onMounted, onUnmounted, ref } from 'vue';
-import embyApi, { EmbyPageList, EpisodesItem, MediaSource, SeasonsItem, UserData } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodesItem, MediaSource, SeasonsItem, SeriesItem, UserData } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
 import { ElMessage } from 'element-plus';
 import { formatBytes, formatMbps } from '../../util/str_util'
@@ -180,7 +214,7 @@ function getTag(itemId: string, mediaSources?: MediaSource[]) {
 }
 
 const serieInfoLoading = ref(false)
-const currentSeries = ref<EpisodesItem>()
+const currentSeries = ref<SeriesItem>()
 function updateCurrentSerie() {
     serieInfoLoading.value = true
     return embyApi.items(embyServer.value, <string>route.params.serieId).then(async response => {
@@ -188,19 +222,19 @@ function updateCurrentSerie() {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EpisodesItem = JSON.parse(response.body);
+        let json: SeriesItem = JSON.parse(response.body);
         currentSeries.value = json
     }).catch(e => {
         ElMessage.error('更新当前剧集信息失败' + e)
     }).finally(() => serieInfoLoading.value = false)
 }
 
-const starLoading = ref<boolean>(false)
-function star() {
+const starLoading = ref<{[key: string]: boolean}>({})
+function star(item: SeriesItem | SeasonsItem | EpisodesItem) {
     if (!currentSeries.value?.UserData) {
         return
     }
-    starLoading.value = true
+    starLoading.value[item.Id] = true
     let fun;
     if (currentSeries.value?.UserData.IsFavorite) {
         fun = embyApi.unstar(embyServer.value, currentSeries.value?.Id)
@@ -216,15 +250,15 @@ function star() {
         currentSeries.value!.UserData!.IsFavorite = json.IsFavorite
     }).catch(e => {
         ElMessage.error('标记收藏信息失败' + e)
-    }).finally(() => starLoading.value = false)
+    }).finally(() => starLoading.value[item.Id] = false)
 }
 
-const playedLoading = ref<boolean>(false)
-function played() {
+const playedLoading = ref<{[key: string]: boolean}>({})
+function played(item: SeriesItem | SeasonsItem | EpisodesItem) {
     if (!currentSeries.value?.UserData) {
         return
     }
-    playedLoading.value = true
+    playedLoading.value[item.Id] = true
     let fun;
     if (currentSeries.value?.UserData.Played) {
         fun = embyApi.unplayed(embyServer.value, currentSeries.value?.Id)
@@ -240,7 +274,7 @@ function played() {
         currentSeries.value!.UserData!.Played = json.Played
     }).catch(e => {
         ElMessage.error('标记播放信息失败' + e)
-    }).finally(() => playedLoading.value = false)
+    }).finally(() => playedLoading.value[item.Id] = false)
 }
 
 const seasonsLoading = ref<boolean>(false)

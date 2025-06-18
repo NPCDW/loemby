@@ -110,7 +110,7 @@ async function getFavoriteList(embyServer: EmbyServer, startIndex: number, limit
         return Promise.reject("参数缺失");
     }
     return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex=${startIndex}&Limit=${limit}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie,Season&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex=${startIndex}&Limit=${limit}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -539,6 +539,9 @@ export interface BaseItem {
     Type: string,
     ProductionYear: number,
     UserData?: UserData,
+    Overview: string,
+    ProviderIds: {[key: string]: string},
+    ExternalUrls: ExternalUrl[],
 }
 
 export interface SeriesItem extends BaseItem {
@@ -546,6 +549,8 @@ export interface SeriesItem extends BaseItem {
 }
 
 export interface SeasonsItem extends BaseItem {
+    SeriesId: string,
+    SeriesName: string,
     Overview: string,
     IndexNumber: number,
 }
@@ -557,9 +562,6 @@ export interface EpisodesItem extends BaseItem {
     IndexNumber: number,
     MediaSources?: MediaSource[],    // 搜索时，zdz无媒体源字段
     SeriesId: string,
-    Overview: string,
-    ProviderIds: {[key: string]: string}
-    ExternalUrls: ExternalUrl[]
 }
 
 export type SearchItem = SeriesItem | SeasonsItem | EpisodesItem
