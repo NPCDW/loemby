@@ -11,7 +11,7 @@
                 {{ 'S' + ((item as EpisodesItem).ParentIndexNumber || -1) + 'E' + ((item as EpisodesItem).IndexNumber || -1) + '. ' + item.Name }}
             </el-link>
             <el-link v-else-if="item.Type == 'Season'" :underline="false" @click="showSeason(item as SeasonsItem)">
-                {{ 'S' + (item as SeasonsItem).IndexNumber || -1) + '. ' + item.Name }}
+                {{ 'S' + ((item as SeasonsItem).IndexNumber || -1) + '. ' + item.Name }}
             </el-link>
             <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)">{{ item.Name }}</el-link>
         </div>
@@ -50,6 +50,11 @@
             <span v-if="item.Type == 'Series'">
                 <el-badge :value="item.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
                     <el-button @click="showSeries(item as SeriesItem)" type="primary" plain>剧集</el-button>
+                </el-badge>
+            </span>
+            <span v-if="item.Type == 'Season'">
+                <el-badge :value="item.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
+                    <el-button @click="showSeason(item as SeasonsItem)" type="primary" plain>剧集</el-button>
                 </el-badge>
             </span>
         </div>
@@ -154,18 +159,18 @@
         <el-scrollbar style="padding: 0 20px;">
             <p>简介：{{ dialogSeasons?.Overview }}</p>
             <p>
-                <el-button plain :disabled="playedLoading" @click="played(dialogSeasons!)">
-                    <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="dialogSeasons?.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
-                    <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                <el-button plain :disabled="playedLoading[dialogSeasons!.Id]" @click="played(dialogSeasons!)">
+                    <el-icon color="#67C23A" :size="24" :class="playedLoading[dialogSeasons!.Id] ? 'is-loading' : ''" v-if="dialogSeasons?.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
+                    <el-icon :size="24" :class="playedLoading[dialogSeasons!.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                     <span>已播放</span>
                 </el-button>
-                <el-button plain :disabled="starLoading" @click="star(dialogSeasons!)">
+                <el-button plain :disabled="starLoading[dialogSeasons!.Id]" @click="star(dialogSeasons!)">
                     <template v-if="dialogSeasons?.UserData?.IsFavorite">
-                        <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
+                        <el-icon color="#E6A23C" :size="24" :class="starLoading[dialogSeasons!.Id] ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
                         <span>取消收藏</span>
                     </template>
                     <template v-else>
-                        <el-icon :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
+                        <el-icon :size="24" :class="starLoading[dialogSeasons!.Id] ? 'is-loading' : ''"><i-ep-Star /></el-icon>
                         <span>收藏</span>
                     </template>
                 </el-button>

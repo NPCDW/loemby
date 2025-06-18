@@ -34,18 +34,18 @@
                             <el-button round @click="invokeApi.open_url(externalUrl.Url)"><i-ep-Link /> {{ externalUrl.Name }}</el-button>
                         </el-tooltip>
                     </p>
-                    <el-button plain :disabled="playedLoading" @click="played(currentSeries)">
-                        <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="currentSeries.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
-                        <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                    <el-button plain :disabled="playedLoading[currentSeries.Id]" @click="played(currentSeries)">
+                        <el-icon color="#67C23A" :size="24" :class="playedLoading[currentSeries.Id] ? 'is-loading' : ''" v-if="currentSeries.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
+                        <el-icon :size="24" :class="playedLoading[currentSeries.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                         <span>已播放</span>
                     </el-button>
-                    <el-button plain :disabled="starLoading" @click="star(currentSeries)">
+                    <el-button plain :disabled="starLoading[currentSeries.Id]" @click="star(currentSeries)">
                         <template v-if="currentSeries.UserData?.IsFavorite">
-                            <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
+                            <el-icon color="#E6A23C" :size="24" :class="starLoading[currentSeries.Id] ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
                             <span>取消收藏</span>
                         </template>
                         <template v-else>
-                            <el-icon :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
+                            <el-icon :size="24" :class="starLoading[currentSeries.Id] ? 'is-loading' : ''"><i-ep-Star /></el-icon>
                             <span>收藏</span>
                         </template>
                     </el-button>
@@ -101,18 +101,18 @@
         <el-scrollbar style="padding: 0 20px;">
             <p>简介：{{ dialogSeasons?.Overview }}</p>
             <p>
-                <el-button plain :disabled="playedLoading" @click="played(dialogSeasons!)">
-                    <el-icon color="#67C23A" :size="24" :class="playedLoading ? 'is-loading' : ''" v-if="dialogSeasons?.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
-                    <el-icon :size="24" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                <el-button plain :disabled="playedLoading[dialogSeasons!.Id]" @click="played(dialogSeasons!)">
+                    <el-icon color="#67C23A" :size="24" :class="playedLoading[dialogSeasons!.Id] ? 'is-loading' : ''" v-if="dialogSeasons?.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
+                    <el-icon :size="24" :class="playedLoading[dialogSeasons!.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                     <span>已播放</span>
                 </el-button>
-                <el-button plain :disabled="starLoading" @click="star(dialogSeasons!)">
+                <el-button plain :disabled="starLoading[dialogSeasons!.Id]" @click="star(dialogSeasons!)">
                     <template v-if="dialogSeasons?.UserData?.IsFavorite">
-                        <el-icon color="#E6A23C" :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
+                        <el-icon color="#E6A23C" :size="24" :class="starLoading[dialogSeasons!.Id] ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
                         <span>取消收藏</span>
                     </template>
                     <template v-else>
-                        <el-icon :size="24" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
+                        <el-icon :size="24" :class="starLoading[dialogSeasons!.Id] ? 'is-loading' : ''"><i-ep-Star /></el-icon>
                         <span>收藏</span>
                     </template>
                 </el-button>
@@ -231,15 +231,15 @@ function updateCurrentSerie() {
 
 const starLoading = ref<{[key: string]: boolean}>({})
 function star(item: SeriesItem | SeasonsItem | EpisodesItem) {
-    if (!currentSeries.value?.UserData) {
+    if (!item.UserData) {
         return
     }
     starLoading.value[item.Id] = true
     let fun;
-    if (currentSeries.value?.UserData.IsFavorite) {
-        fun = embyApi.unstar(embyServer.value, currentSeries.value?.Id)
+    if (item.UserData!.IsFavorite) {
+        fun = embyApi.unstar(embyServer.value, item.Id)
     } else {
-        fun = embyApi.star(embyServer.value, currentSeries.value?.Id)
+        fun = embyApi.star(embyServer.value, item.Id)
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
@@ -247,7 +247,7 @@ function star(item: SeriesItem | SeasonsItem | EpisodesItem) {
             return
         }
         let json: UserData = JSON.parse(response.body);
-        currentSeries.value!.UserData!.IsFavorite = json.IsFavorite
+        item.UserData!.IsFavorite = json.IsFavorite
     }).catch(e => {
         ElMessage.error('标记收藏信息失败' + e)
     }).finally(() => starLoading.value[item.Id] = false)
@@ -260,10 +260,10 @@ function played(item: SeriesItem | SeasonsItem | EpisodesItem) {
     }
     playedLoading.value[item.Id] = true
     let fun;
-    if (currentSeries.value?.UserData.Played) {
-        fun = embyApi.unplayed(embyServer.value, currentSeries.value?.Id)
+    if (item.UserData!.Played) {
+        fun = embyApi.unplayed(embyServer.value, item.Id)
     } else {
-        fun = embyApi.played(embyServer.value, currentSeries.value?.Id)
+        fun = embyApi.played(embyServer.value, item.Id)
     }
     return fun.then(async response => {
         if (response.status_code != 200) {
@@ -271,7 +271,7 @@ function played(item: SeriesItem | SeasonsItem | EpisodesItem) {
             return
         }
         let json: UserData = JSON.parse(response.body);
-        currentSeries.value!.UserData!.Played = json.Played
+        item.UserData!.Played = json.Played
     }).catch(e => {
         ElMessage.error('标记播放信息失败' + e)
     }).finally(() => playedLoading.value[item.Id] = false)

@@ -110,7 +110,7 @@ async function getFavoriteList(embyServer: EmbyServer, startIndex: number, limit
         return Promise.reject("参数缺失");
     }
     return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie,Season&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex=${startIndex}&Limit=${limit}`,
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie,Season&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate,Overview&StartIndex=${startIndex}&Limit=${limit}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -224,7 +224,7 @@ async function seasons(embyServer: EmbyServer, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Shows/${item_id}/Seasons?Fields=ProductionYear&UserId=${embyServer.user_id}`,
+        url: embyServer.base_url + `/emby/Shows/${item_id}/Seasons?Fields=ProductionYear,Overview&UserId=${embyServer.user_id}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
