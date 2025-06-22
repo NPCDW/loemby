@@ -20,39 +20,59 @@
                     <el-form-item label="MPV启动目录">
                         <el-input v-model="mpv_startup_dir" @change="mpvStartupDirChange" placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
                     </el-form-item>
-                    <el-form-item label="MPV缓存（按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小）">
-                        <el-input-number v-model="mpv_cache_seconds" @change="mpvCacheSecondsChange" :min="0" :precision="0" :controls="false" style="width: 200px;">
-                            <template #prefix>
-                                <span>前向缓存</span>
-                            </template>
-                            <template #suffix>
-                                <span>秒</span>
-                            </template>
-                        </el-input-number>
-                        <el-input-number v-model="mpv_cache_max_bytes" @change="mpvCacheMaxBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
-                            <template #prefix>
-                                <span>前向最大缓存</span>
-                            </template>
-                            <template #suffix>
-                                <span>MiB</span>
-                            </template>
-                        </el-input-number>
-                        <el-input-number v-model="mpv_cache_back_seconds" @change="mpvCacheBackSecondsChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
-                            <template #prefix>
-                                <span>后向缓存</span>
-                            </template>
-                            <template #suffix>
-                                <span>秒</span>
-                            </template>
-                        </el-input-number>
-                        <el-input-number v-model="mpv_cache_back_max_bytes" @change="mpvCacheBackMaxBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
-                            <template #prefix>
-                                <span>后向最大缓存</span>
-                            </template>
-                            <template #suffix>
-                                <span>MiB</span>
-                            </template>
-                        </el-input-number>
+                    <el-form-item label="MPV缓存（按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小）" style="display: flex; flex-direction: column;">
+                        <div style="flex: auto;">
+                            <el-input-number v-model="mpv_cache_seconds" @change="mpvCacheSecondsChange" :min="0" :precision="0" :controls="false" style="width: 200px;">
+                                <template #prefix>
+                                    <span>前向缓存</span>
+                                </template>
+                                <template #suffix>
+                                    <span>秒</span>
+                                </template>
+                            </el-input-number>
+                            <el-input-number v-model="mpv_cache_min_bytes" @change="mpvCacheMinBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
+                                <template #prefix>
+                                    <span>前向最小缓存</span>
+                                </template>
+                                <template #suffix>
+                                    <span>MiB</span>
+                                </template>
+                            </el-input-number>
+                            <el-input-number v-model="mpv_cache_max_bytes" @change="mpvCacheMaxBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
+                                <template #prefix>
+                                    <span>前向最大缓存</span>
+                                </template>
+                                <template #suffix>
+                                    <span>MiB</span>
+                                </template>
+                            </el-input-number>
+                        </div>
+                        <div style="flex: auto;">
+                            <el-input-number v-model="mpv_cache_back_seconds" @change="mpvCacheBackSecondsChange" :min="0" :precision="0" :controls="false" style="width: 200px;">
+                                <template #prefix>
+                                    <span>后向缓存</span>
+                                </template>
+                                <template #suffix>
+                                    <span>秒</span>
+                                </template>
+                            </el-input-number>
+                            <el-input-number v-model="mpv_cache_back_min_bytes" @change="mpvCacheBackMinBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
+                                <template #prefix>
+                                    <span>后向最小缓存</span>
+                                </template>
+                                <template #suffix>
+                                    <span>MiB</span>
+                                </template>
+                            </el-input-number>
+                            <el-input-number v-model="mpv_cache_back_max_bytes" @change="mpvCacheBackMaxBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
+                                <template #prefix>
+                                    <span>后向最大缓存</span>
+                                </template>
+                                <template #suffix>
+                                    <span>MiB</span>
+                                </template>
+                            </el-input-number>
+                        </div>
                     </el-form-item>
                     <el-form-item>
                         <template #label>
@@ -839,6 +859,35 @@ function mpvCacheSecondsChange() {
     }).catch(e => ElMessage.error('修改MPV路径失败' + e))
 }
 
+const mpv_cache_min_bytes = ref<number>(0);
+function getMpvCacheMinBytes() {
+    useGlobalConfig().getGlobalConfigValue("mpv_cache_min_bytes").then(value => {
+        mpv_cache_min_bytes.value = value ? Number(value) : 0;
+    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
+}
+function mpvCacheMinBytesChange() {
+    useGlobalConfig().getGlobalConfig("mpv_cache_min_bytes").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = mpv_cache_min_bytes.value + '';
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "mpv_cache_min_bytes",
+                config_value: mpv_cache_min_bytes.value + ''
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getMpvCacheMinBytes()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+}
+
 const mpv_cache_max_bytes = ref<number>(0);
 function getMpvCacheMaxBytes() {
     useGlobalConfig().getGlobalConfigValue("mpv_cache_max_bytes").then(value => {
@@ -897,6 +946,35 @@ function mpvCacheBackSecondsChange() {
     }).catch(e => ElMessage.error('修改MPV路径失败' + e))
 }
 
+const mpv_cache_back_min_bytes = ref<number>(0);
+function getMpvCacheBackMinBytes() {
+    useGlobalConfig().getGlobalConfigValue("mpv_cache_back_min_bytes").then(value => {
+        mpv_cache_back_min_bytes.value = value ? Number(value) : 0;
+    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
+}
+function mpvCacheBackMinBytesChange() {
+    useGlobalConfig().getGlobalConfig("mpv_cache_back_min_bytes").then(config => {
+        let savePromise;
+        if (config) {
+            config.config_value = mpv_cache_back_min_bytes.value + '';
+            savePromise = useGlobalConfig().updateGlobalConfig(config);
+        } else {
+            config = {
+                id: generateGuid(),
+                config_key: "mpv_cache_back_min_bytes",
+                config_value: mpv_cache_back_min_bytes.value + ''
+            }
+            savePromise = useGlobalConfig().addGlobalConfig(config);
+        }
+        savePromise.then(() => {
+            getMpvCacheBackMinBytes()
+            ElMessage.success('修改成功');
+        }).catch(e => {
+            ElMessage.error('修改失败' + e);
+        })
+    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+}
+
 const mpv_cache_back_max_bytes = ref<number>(0);
 function getMpvCacheBackMaxBytes() {
     useGlobalConfig().getGlobalConfigValue("mpv_cache_back_max_bytes").then(value => {
@@ -934,8 +1012,10 @@ function handlePaneChange() {
         getMpvStartupDir()
         getMpvArgs()
         getMpvCacheSeconds()
+        getMpvCacheMinBytes()
         getMpvCacheMaxBytes()
         getMpvCacheBackSeconds()
+        getMpvCacheBackMinBytes()
         getMpvCacheBackMaxBytes()
     } else if (activePane.value == 'Trakt') {
         getTraktInfo()
