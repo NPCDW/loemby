@@ -5,7 +5,7 @@ import invokeApi, { HttpForwardResult } from './invokeApi';
 import { sleep } from '../util/sleep';
 
 const USER_AGENT = 'loemby/' + import.meta.env.VITE_APP_VERSION
-const CLIENT_ID = '05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572'
+const CLIENT_ID = import.meta.env.VITE_TRAKT_CLIENT_ID
 
 async function saveAccessToken(token_response: TokenResult, redirect_uri: string) {
     let trakt_info = {
@@ -47,11 +47,11 @@ async function getCacheAccessToken() {
         return json.access_token;
     }
     // 如果离过期时间大于1分钟小于6小时，后台刷新token，并立即返回旧token
-    else if (currentTime < json.expires_in - 60 && currentTime > json.expires_in - 6 * 60 * 60) {
+    else if (currentTime < json.expires_in - 60) {
         console.log("trakt token 不足6小时，后台重新获取");
         token({redirect_uri: json.redirect_uri, refresh_token: json.refresh_token}).then(response => {
             if (response.status_code != 200) {
-                ElMessage.error(response.status_code + ' ' + response.status_text)
+                ElMessage.error("trakt token 获取失败: " + response.status_code + ' ' + response.status_text)
                 return
             }
             let rejson: TokenResult = JSON.parse(response.body);
@@ -64,7 +64,7 @@ async function getCacheAccessToken() {
         console.log("trakt token 过期，重新获取");
         let response = await token({redirect_uri: json.redirect_uri, refresh_token: json.refresh_token})
         if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
+            ElMessage.error("trakt token 获取失败: " + response.status_code + ' ' + response.status_text)
             return
         }
         let rejson: TokenResult = JSON.parse(response.body);
@@ -94,7 +94,7 @@ async function token({redirect_uri, code, refresh_token}: TokenParam) {
         return Promise.reject("参数缺失");
     }
     return invokeApi.httpForward({
-        url: 'https://token-exchange.003021.xyz/trakt',
+        url: import.meta.env.VITE_TRAKT_TOKEN_EXCHANGE_URL,
         method: 'POST',
         headers: {
             'User-Agent': USER_AGENT,
@@ -108,7 +108,7 @@ async function token({redirect_uri, code, refresh_token}: TokenParam) {
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
+            ElMessageBox.alert("获取 token: 您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         return response
     });
@@ -135,7 +135,7 @@ async function getUserInfo() {
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
+            ElMessageBox.alert("获取用户信息: 您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         return response
     });
@@ -163,7 +163,7 @@ async function start(param: any, retry: number = 0): Promise<HttpForwardResult> 
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(async response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
+            ElMessageBox.alert("开始播放: 您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         if (response.status_code == 429) {
             if (retry > 0) {
@@ -198,7 +198,7 @@ async function stop(param: any, retry: number = 0): Promise<HttpForwardResult> {
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(async response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
+            ElMessageBox.alert("停止播放: 您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         if (response.status_code == 429) {
             if (retry > 0) {
