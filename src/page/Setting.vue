@@ -503,7 +503,7 @@ function getTraktSyncSwitch() {
     }).catch(e => ElMessage.error('获取Trakt同步开关失败' + e))
 }
 function traktSyncSwitchChange() {
-    useGlobalConfig().getGlobalConfigValue("trakt_sync_switch").then(config => {
+    useGlobalConfig().getGlobalConfigItem("trakt_sync_switch").then(config => {
         let savePromise;
         if (config) {
             config.config_value = trakt_sync_switch.value;
@@ -537,7 +537,7 @@ function getTraktInfo() {
     }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
 }
 async function saveTraktInfo() {
-    return useGlobalConfig().getGlobalConfigValue("trakt_info").then(config => {
+    return useGlobalConfig().getGlobalConfigItem("trakt_info").then(config => {
         let savePromise;
         if (config) {
             config.config_value = JSON.stringify(trakt_info.value);
@@ -622,7 +622,7 @@ function getTraktProxy() {
     }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
 }
 function traktProxyChange() {
-    useGlobalConfig().getGlobalConfigValue("trakt_proxy_id").then(config => {
+    useGlobalConfig().getGlobalConfigItem("trakt_proxy_id").then(config => {
         let savePromise;
         if (config) {
             config.config_value = trakt_proxy_id.value;
@@ -650,7 +650,7 @@ function getAppProxy() {
     }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
 }
 function appProxyChange() {
-    useGlobalConfig().getGlobalConfigValue("app_proxy_id").then(config => {
+    useGlobalConfig().getGlobalConfigItem("app_proxy_id").then(config => {
         let savePromise;
         if (config) {
             config.config_value = app_proxy_id.value;
@@ -678,7 +678,7 @@ function getGlobalBrowseProxy() {
     }).catch(e => ElMessage.error('获取全局浏览代理失败' + e))
 }
 function globalBrowseProxyChange() {
-    useGlobalConfig().getGlobalConfigValue("global_browse_proxy_id").then(config => {
+    useGlobalConfig().getGlobalConfigItem("global_browse_proxy_id").then(config => {
         let savePromise;
         if (config) {
             config.config_value = global_browse_proxy_id.value;
@@ -706,7 +706,7 @@ function getGlobalPlayProxy() {
     }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 }
 function globalPlayProxyChange() {
-    useGlobalConfig().getGlobalConfigValue("global_play_proxy_id").then(config => {
+    useGlobalConfig().getGlobalConfigItem("global_play_proxy_id").then(config => {
         let savePromise;
         if (config) {
             config.config_value = global_play_proxy_id.value;
@@ -750,7 +750,7 @@ function getMpvPath() {
     }).catch(e => ElMessage.error('获取MPV路径失败' + e))
 }
 function mpvPathChange() {
-    useGlobalConfig().getGlobalConfigValue("mpv_path").then(config => {
+    useGlobalConfig().getGlobalConfigItem("mpv_path").then(config => {
         let savePromise;
         if (config) {
             config.config_value = mpv_path.value;
@@ -779,7 +779,7 @@ function getMpvStartupDir() {
     }).catch(e => ElMessage.error('获取MPV启动目录失败' + e))
 }
 function mpvStartupDirChange() {
-    useGlobalConfig().getGlobalConfigValue("mpv_startup_dir").then(config => {
+    useGlobalConfig().getGlobalConfigItem("mpv_startup_dir").then(config => {
         let savePromise;
         if (config) {
             config.config_value = mpv_startup_dir.value;
@@ -808,7 +808,7 @@ function getMpvArgs() {
     }).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
 }
 function mpvArgsChange() {
-    useGlobalConfig().getGlobalConfigValue("mpv_args").then(config => {
+    useGlobalConfig().getGlobalConfigItem("mpv_args").then(config => {
         let savePromise;
         if (config) {
             config.config_value = mpv_args.value;
@@ -837,7 +837,7 @@ function getMpvCacheSeconds() {
     }).catch(e => ElMessage.error('获取MPV路径失败' + e))
 }
 function mpvCacheSecondsChange() {
-    useGlobalConfig().getGlobalConfigValue("mpv_cache_seconds").then(config => {
+    useGlobalConfig().getGlobalConfigItem("mpv_cache_seconds").then(config => {
         let savePromise;
         if (config) {
             config.config_value = mpv_cache_seconds.value + '';
@@ -866,7 +866,7 @@ function getMpvCacheMinBytes() {
     }).catch(e => ElMessage.error('获取MPV路径失败' + e))
 }
 function mpvCacheMinBytesChange() {
-    useGlobalConfig().getGlobalConfigValue("mpv_cache_min_bytes").then(config => {
+    useGlobalConfig().getGlobalConfigItem("mpv_cache_min_bytes").then(config => {
         let savePromise;
         if (config) {
             config.config_value = mpv_cache_min_bytes.value + '';
@@ -895,7 +895,7 @@ function getMpvCacheMaxBytes() {
     }).catch(e => ElMessage.error('获取MPV路径失败' + e))
 }
 function mpvCacheMaxBytesChange() {
-    useGlobalConfig().getGlobalConfigValue("mpv_cache_max_bytes").then(config => {
+    useGlobalConfig().getGlobalConfigItem("mpv_cache_max_bytes").then(config => {
         let savePromise;
         if (config) {
             config.config_value = mpv_cache_max_bytes.value + '';
@@ -924,7 +924,7 @@ function getMpvCacheBackSeconds() {
     }).catch(e => ElMessage.error('获取MPV路径失败' + e))
 }
 function mpvCacheBackSecondsChange() {
-    useGlobalConfig().getGlobalConfigValue("mpv_cache_back_seconds").then(config => {
+    useGlobalConfig().getGlobalConfigItem("mpv_cache_back_seconds").then(config => {
         let savePromise;
         if (config) {
             config.config_value = mpv_cache_back_seconds.value + '';
@@ -953,7 +953,7 @@ function getMpvCacheBackMinBytes() {
     }).catch(e => ElMessage.error('获取MPV路径失败' + e))
 }
 function mpvCacheBackMinBytesChange() {
-    useGlobalConfig().getGlobalConfigValue("mpv_cache_back_min_bytes").then(config => {
+    useGlobalConfig().getGlobalConfigItem("mpv_cache_back_min_bytes").then(config => {
         let savePromise;
         if (config) {
             config.config_value = mpv_cache_back_min_bytes.value + '';
@@ -982,7 +982,7 @@ function getMpvCacheBackMaxBytes() {
     }).catch(e => ElMessage.error('获取MPV路径失败' + e))
 }
 function mpvCacheBackMaxBytesChange() {
-    useGlobalConfig().getGlobalConfigValue("mpv_cache_back_max_bytes").then(config => {
+    useGlobalConfig().getGlobalConfigItem("mpv_cache_back_max_bytes").then(config => {
         let savePromise;
         if (config) {
             config.config_value = mpv_cache_back_max_bytes.value + '';

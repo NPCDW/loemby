@@ -3,15 +3,15 @@ import { useDb } from '../db';
 import { ref } from 'vue';
 
 export const useGlobalConfig = defineStore('globalConfig', () => {
-    const cacheGlobalConfig = ref<{[key: string]: string}>({});
+    const cacheGlobalConfig = ref<{[key: string]: GlobalConfig}>({});
 
     async function refreshCache(key: string) {
         let config = await getGlobalConfig(key)
         if (!config) {
-            cacheGlobalConfig.value[key] = '';
+            cacheGlobalConfig.value[key] = {};
             return;
         }
-        cacheGlobalConfig.value[key] = config.config_value!;
+        cacheGlobalConfig.value[key] = config;
     }
 
     async function initCache() {
@@ -19,16 +19,23 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
         if (!globalConfigList || globalConfigList.length == 0) {
             return;
         }
-        for (const globalConfig of globalConfigList) {
-            cacheGlobalConfig.value[globalConfig.config_key!] = globalConfig.config_value!;
+        for (const item of globalConfigList) {
+            cacheGlobalConfig.value[item.config_key!] = item;
         }
+    }
+
+    async function getGlobalConfigItem(config_key: string) {
+        if (!cacheGlobalConfig.value[config_key]) {
+            await refreshCache(config_key);
+        }
+        return cacheGlobalConfig.value[config_key];
     }
 
     async function getGlobalConfigValue(config_key: string) {
         if (!cacheGlobalConfig.value[config_key]) {
             await refreshCache(config_key);
         }
-        return cacheGlobalConfig.value[config_key];
+        return cacheGlobalConfig.value[config_key].config_value!;
     }
 
     // 这个方法不要加缓存
@@ -70,7 +77,7 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
         return res?.rowsAffected;
     }
 
-    return { getGlobalConfigValue, delGlobalConfig, addGlobalConfig, updateGlobalConfig, initCache }
+    return { getGlobalConfigValue, getGlobalConfigItem, delGlobalConfig, addGlobalConfig, updateGlobalConfig, initCache }
 })
 
 export interface GlobalConfig {
