@@ -24,27 +24,27 @@
                         </div>
                     </template>
                     <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <el-card style="width: 300px; margin: 5px;" v-for="episodesItem in episodesList" :key="episodesItem.Id">
-                            <template v-if="episodesItem.Type == 'Episode'">
-                                <el-link :underline="false" @click="gotoSeries(episodesItem.SeriesId)"><h2>{{ episodesItem.SeriesName }}</h2></el-link>
-                                <p><el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">{{ 'S' + (episodesItem.ParentIndexNumber || -1) + 'E' + (episodesItem.IndexNumber || -1) + '. ' + episodesItem.Name }}</el-link></p>
+                        <el-card style="width: 300px; margin: 5px;" v-for="episodeItem in episodesList" :key="episodeItem.Id">
+                            <template v-if="episodeItem.Type == 'Episode'">
+                                <el-link :underline="false" @click="gotoSeries(episodeItem.SeriesId)"><h2>{{ episodeItem.SeriesName }}</h2></el-link>
+                                <p><el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)">{{ 'S' + (episodeItem.ParentIndexNumber || -1) + 'E' + (episodeItem.IndexNumber || -1) + '. ' + episodeItem.Name }}</el-link></p>
                             </template>
                             <template v-else>
-                                <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)"><h2>{{ episodesItem.Name }}</h2></el-link>
+                                <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)"><h2>{{ episodeItem.Name }}</h2></el-link>
                             </template>
-                            <p><el-progress :percentage="episodesItem.UserData?.Played ? 100 : episodesItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
+                            <p><el-progress :percentage="episodeItem.UserData?.Played ? 100 : episodeItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                             <p>
-                                {{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}
-                                <el-tag disable-transitions>{{ mediaSourceSizeTag[episodesItem.Id] || "0 KB" }}</el-tag>
-                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
-                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
+                                {{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}
+                                <el-tag disable-transitions>{{ mediaSourceSizeTag[episodeItem.Id] || "0 KB" }}</el-tag>
+                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodeItem.Id] || "0 Kbps" }}</el-tag>
+                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodeItem.Id] || 'Unknown' }}</el-tag>
                             </p>
                             <p>
-                                <el-button type="primary" @click="gotoEpisodes(episodesItem.Id)">Go</el-button>
-                                <template v-if="deletedContinuePlayList.indexOf(episodesItem.Id) == -1">
-                                    <el-button plain type="danger" :loading="deleteContinuePlayLoading[episodesItem.Id]" @click="deleteContinuePlay(episodesItem.Id, true)"><i-ep-Delete /></el-button></template>
+                                <el-button type="primary" @click="gotoEpisodes(episodeItem.Id)">Go</el-button>
+                                <template v-if="deletedContinuePlayList.indexOf(episodeItem.Id) == -1">
+                                    <el-button plain type="danger" :loading="deleteContinuePlayLoading[episodeItem.Id]" @click="deleteContinuePlay(episodeItem.Id, true)"><i-ep-Delete /></el-button></template>
                                 <template v-else>
-                                    <el-button type="danger" :loading="deleteContinuePlayLoading[episodesItem.Id]" @click="deleteContinuePlay(episodesItem.Id, false)">撤销</el-button>
+                                    <el-button type="danger" :loading="deleteContinuePlayLoading[episodeItem.Id]" @click="deleteContinuePlay(episodeItem.Id, false)">撤销</el-button>
                                 </template>
                             </p>
                         </el-card>
@@ -113,7 +113,7 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
-import embyApi, { EmbyPageList, EpisodesItem, SearchItem, MediaLibraryCount, MediaSource } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodeItem, SearchItem, MediaLibraryCount, MediaSource } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
 import { formatBytes, formatMbps } from '../../util/str_util'
 import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
@@ -163,7 +163,7 @@ const search = async () => {
 }
 
 const episodesLoading = ref(false)
-const episodesList = ref<EpisodesItem[]>([])
+const episodesList = ref<EpisodeItem[]>([])
 const episodesCurrentPage = ref(1)
 const episodesPageSize = ref(12)
 const episodesTotal = ref(0)
@@ -182,7 +182,7 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
+        let json: EmbyPageList<EpisodeItem> = JSON.parse(response.body);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
         for (const item of json.Items) {

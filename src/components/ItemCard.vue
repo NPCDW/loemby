@@ -1,17 +1,17 @@
 <template>
     <el-card style="width: 300px; margin: 5px;">
         <div v-if="showSeriesName">
-            <el-link v-if="item.Type == 'Episode' || item.Type == 'Season'" :underline="false" @click="gotoSeries((item as EpisodesItem).SeriesId)">
-                <h2>{{ (item as EpisodesItem).SeriesName }}</h2>
+            <el-link v-if="item.Type == 'Episode' || item.Type == 'Season'" :underline="false" @click="gotoSeries((item as EpisodeItem).SeriesId)">
+                <h2>{{ (item as EpisodeItem).SeriesName }}</h2>
             </el-link>
         </div>
         <div>
             <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)">{{ item.Name }}</el-link>
             <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)">
-                {{ 'S' + ((item as EpisodesItem).ParentIndexNumber || -1) + 'E' + ((item as EpisodesItem).IndexNumber || -1) + '. ' + item.Name }}
+                {{ 'S' + ((item as EpisodeItem).ParentIndexNumber || -1) + 'E' + ((item as EpisodeItem).IndexNumber || -1) + '. ' + item.Name }}
             </el-link>
-            <el-link v-else-if="item.Type == 'Season'" :underline="false" @click="showSeason(item as SeasonsItem)">
-                {{ 'S' + ((item as SeasonsItem).IndexNumber || -1) + '. ' + item.Name }}
+            <el-link v-else-if="item.Type == 'Season'" :underline="false" @click="showSeason(item as SeasonItem)">
+                {{ 'S' + ((item as SeasonItem).IndexNumber || -1) + '. ' + item.Name }}
             </el-link>
             <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)">{{ item.Name }}</el-link>
         </div>
@@ -20,7 +20,7 @@
                 {{ item.ProductionYear + ((item as SeriesItem).EndDate && (item as SeriesItem).EndDate.substring(0, 4) != item.ProductionYear + '' ? '-' + (item as SeriesItem).EndDate.substring(0, 4) : '') }}
             </span>
             <span v-else-if="item.Type == 'Episode'" style="display: flex;justify-content: space-between;align-items: center;">
-                <span>{{ (item as EpisodesItem).PremiereDate ? (item as EpisodesItem).PremiereDate.substring(0, 10) : '' }}</span>
+                <span>{{ (item as EpisodeItem).PremiereDate ? (item as EpisodeItem).PremiereDate.substring(0, 10) : '' }}</span>
                 <span>
                     <el-tag disable-transitions>{{ mediaSourceSizeTag[item.Id] || "0 KB" }}</el-tag>
                     <!-- <el-tag disable-transitions>{{ mediaSourceBitrateTag[item.Id] || "0 Kbps" }}</el-tag> -->
@@ -54,7 +54,7 @@
             </span>
             <span v-if="item.Type == 'Season'">
                 <el-badge :value="item.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
-                    <el-button @click="showSeason(item as SeasonsItem)" type="primary" plain>剧集</el-button>
+                    <el-button @click="showSeason(item as SeasonItem)" type="primary" plain>剧集</el-button>
                 </el-badge>
             </span>
         </div>
@@ -76,26 +76,26 @@
                             </div>
                         </template>
                         <div
-                            v-for="seasonsItem in dialogSeasonsList"
-                            :key="seasonsItem.Id"
+                            v-for="seasonItem in dialogSeasonsList"
+                            :key="seasonItem.Id"
                             class="box-item"
-                            :class="{ active: dialogSeasons?.Id === seasonsItem.Id }"
-                            @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonsItem, 1, 10)"
+                            :class="{ active: dialogSeasons?.Id === seasonItem.Id }"
+                            @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonItem, 1, 10)"
                         >
-                            <h3>{{ 'S' + seasonsItem.IndexNumber + '. ' + seasonsItem.Name }}</h3>
+                            <h3>{{ 'S' + seasonItem.IndexNumber + '. ' + seasonItem.Name }}</h3>
                             <div style="display: flex;justify-content: space-between;">
                                 <span>
-                                    <span style="margin-right: 10px;">{{ seasonsItem.ProductionYear }}</span>
-                                    <el-tag type="primary" effect="dark" round disable-transitions>{{ seasonsItem.UserData?.UnplayedItemCount }}</el-tag>
+                                    <span style="margin-right: 10px;">{{ seasonItem.ProductionYear }}</span>
+                                    <el-tag type="primary" effect="dark" round disable-transitions>{{ seasonItem.UserData?.UnplayedItemCount }}</el-tag>
                                 </span>
                                 <span>
-                                    <el-link :underline="false" v-if="seasonsItem.UserData" :disabled="starLoading[seasonsItem.Id]" @click="star(seasonsItem)">
-                                        <el-icon color="#E6A23C" :size="24" :class="starLoading[seasonsItem.Id] ? 'is-loading' : ''" v-if="seasonsItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
-                                        <el-icon :size="24" :class="starLoading[seasonsItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
+                                    <el-link :underline="false" v-if="seasonItem.UserData" :disabled="starLoading[seasonItem.Id]" @click="star(seasonItem)">
+                                        <el-icon color="#E6A23C" :size="24" :class="starLoading[seasonItem.Id] ? 'is-loading' : ''" v-if="seasonItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
+                                        <el-icon :size="24" :class="starLoading[seasonItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
                                     </el-link>
-                                    <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[seasonsItem.Id]" v-if="seasonsItem.UserData" @click="played(seasonsItem)">
-                                        <el-icon color="#67C23A" :size="24" :class="playedLoading[seasonsItem.Id] ? 'is-loading' : ''" v-if="seasonsItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                        <el-icon :size="24" :class="playedLoading[seasonsItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                                    <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[seasonItem.Id]" v-if="seasonItem.UserData" @click="played(seasonItem)">
+                                        <el-icon color="#67C23A" :size="24" :class="playedLoading[seasonItem.Id] ? 'is-loading' : ''" v-if="seasonItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                        <el-icon :size="24" :class="playedLoading[seasonItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                                     </el-link>
                                 </span>
                             </div>
@@ -112,27 +112,27 @@
                                 <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                             </div>
                         </template>
-                        <div v-for="episodesItem in dialogEpisodesList" class="box-item">
+                        <div v-for="episodeItem in dialogEpisodesList" class="box-item">
                             <p>
-                                <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">
-                                    {{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}
+                                <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)">
+                                    {{ episodeItem.IndexNumber + '. ' + episodeItem.Name }}
                                 </el-link>
                             </p>
                             <div style="display: flex;justify-content: space-between;">
                                 <span>
-                                    <span>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
-                                    <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodesItem.Id] || "0 KB" }}</el-tag>
-                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
-                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
+                                    <span>{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>
+                                    <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodeItem.Id] || "0 KB" }}</el-tag>
+                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodeItem.Id] || "0 Kbps" }}</el-tag>
+                                    <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodeItem.Id] || 'Unknown' }}</el-tag>
                                 </span>
                                 <span>
-                                    <el-link :underline="false" v-if="episodesItem.UserData" :disabled="starLoading[episodesItem.Id]" @click="star(episodesItem)">
-                                        <el-icon color="#E6A23C" :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
-                                        <el-icon :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
+                                    <el-link :underline="false" v-if="episodeItem.UserData" :disabled="starLoading[episodeItem.Id]" @click="star(episodeItem)">
+                                        <el-icon color="#E6A23C" :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-if="episodeItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
+                                        <el-icon :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
                                     </el-link>
-                                    <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodesItem.Id]" v-if="episodesItem.UserData" @click="played(episodesItem)">
-                                        <el-icon color="#67C23A" :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                        <el-icon :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                                    <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodeItem.Id]" v-if="episodeItem.UserData" @click="played(episodeItem)">
+                                        <el-icon color="#67C23A" :size="24" :class="playedLoading[episodeItem.Id] ? 'is-loading' : ''" v-if="episodeItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                        <el-icon :size="24" :class="playedLoading[episodeItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                                     </el-link>
                                 </span>
                             </div>
@@ -182,27 +182,27 @@
                         <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                     </div>
                 </template>
-                <div v-for="episodesItem in dialogEpisodesList" class="box-item">
+                <div v-for="episodeItem in dialogEpisodesList" class="box-item">
                     <p>
-                        <el-link :underline="false" @click="gotoEpisodes(episodesItem.Id)">
-                            {{ episodesItem.IndexNumber + '. ' + episodesItem.Name }}
+                        <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)">
+                            {{ episodeItem.IndexNumber + '. ' + episodeItem.Name }}
                         </el-link>
                     </p>
                     <div style="display: flex;justify-content: space-between;">
                         <span>
-                            <span>{{ episodesItem.PremiereDate ? episodesItem.PremiereDate.substring(0, 10) : '' }}</span>
-                            <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodesItem.Id] || "0 KB" }}</el-tag>
-                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodesItem.Id] || "0 Kbps" }}</el-tag>
-                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodesItem.Id] || 'Unknown' }}</el-tag>
+                            <span>{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>
+                            <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodeItem.Id] || "0 KB" }}</el-tag>
+                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodeItem.Id] || "0 Kbps" }}</el-tag>
+                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodeItem.Id] || 'Unknown' }}</el-tag>
                         </span>
                         <span>
-                            <el-link :underline="false" v-if="episodesItem.UserData" :disabled="starLoading[episodesItem.Id]" @click="star(episodesItem)">
-                                <el-icon color="#E6A23C" :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
-                                <el-icon :size="24" :class="starLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
+                            <el-link :underline="false" v-if="episodeItem.UserData" :disabled="starLoading[episodeItem.Id]" @click="star(episodeItem)">
+                                <el-icon color="#E6A23C" :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-if="episodeItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
+                                <el-icon :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
                             </el-link>
-                            <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodesItem.Id]" v-if="episodesItem.UserData" @click="played(episodesItem)">
-                                <el-icon color="#67C23A" :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-if="episodesItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                <el-icon :size="24" :class="playedLoading[episodesItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                            <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodeItem.Id]" v-if="episodeItem.UserData" @click="played(episodeItem)">
+                                <el-icon color="#67C23A" :size="24" :class="playedLoading[episodeItem.Id] ? 'is-loading' : ''" v-if="episodeItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                <el-icon :size="24" :class="playedLoading[episodeItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                             </el-link>
                         </span>
                     </div>
@@ -223,7 +223,7 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import embyApi, { EmbyPageList, EpisodesItem, MediaSource, SearchItem, SeasonsItem, SeriesItem, UserData } from '../api/embyApi';
+import embyApi, { EmbyPageList, EpisodeItem, MediaSource, SearchItem, SeasonItem, SeriesItem, UserData } from '../api/embyApi';
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus';
 import { formatBytes, formatMbps } from '../util/str_util'
@@ -251,7 +251,7 @@ function getTag(itemId: string, mediaSources?: MediaSource[]) {
         }
     }
 }
-getTag(item.Id, (item as EpisodesItem).MediaSources)
+getTag(item.Id, (item as EpisodeItem).MediaSources)
 
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
@@ -261,7 +261,7 @@ function gotoSeries(seriesId: string) {
 }
 
 const starLoading = ref<{[key: string]: boolean}>({})
-function star(item: SearchItem | SeasonsItem | EpisodesItem) {
+function star(item: SearchItem | SeasonItem | EpisodeItem) {
     if (!item.UserData) {
         return
     }
@@ -285,7 +285,7 @@ function star(item: SearchItem | SeasonsItem | EpisodesItem) {
 }
 
 const playedLoading = ref<{[key: string]: boolean}>({})
-function played(item: SearchItem | SeasonsItem | EpisodesItem) {
+function played(item: SearchItem | SeasonItem | EpisodeItem) {
     if (!item.UserData) {
         return
     }
@@ -308,16 +308,16 @@ function played(item: SearchItem | SeasonsItem | EpisodesItem) {
     }).finally(() => playedLoading.value[item.Id] = false)
 }
 
-const seasons_result = ref<{[key: string]: EmbyPageList<SeasonsItem>}>({})
-const episodes_result = ref<{[key: string]: {total: number, [key: number]: EpisodesItem[]}}>({})
+const seasons_result = ref<{[key: string]: EmbyPageList<SeasonItem>}>({})
+const episodes_result = ref<{[key: string]: {total: number, [key: number]: EpisodeItem[]}}>({})
 
 const dialogSeriesVisible = ref(false)
 const dialogSeasonsVisible = ref(false)
 const dialogEmbyServer = ref<EmbyServer>()
 const dialogSeries = ref<SearchItem>()
-const dialogSeasons = ref<SeasonsItem>()
-const dialogSeasonsList = ref<SeasonsItem[]>([])
-const dialogEpisodesList = ref<EpisodesItem[]>([])
+const dialogSeasons = ref<SeasonItem>()
+const dialogSeasonsList = ref<SeasonItem[]>([])
+const dialogEpisodesList = ref<EpisodeItem[]>([])
 const dialogEpisodesCurrentPage = ref(1)
 const dialogEpisodesPageSize = ref(10)
 const dialogSeasonsLoading = ref(false)
@@ -341,14 +341,14 @@ async function showSeries(series: SeriesItem) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<SeasonsItem> = JSON.parse(response.body);
+        let json: EmbyPageList<SeasonItem> = JSON.parse(response.body);
         seasons_result.value[series.Id] = json
         dialogSeasonsList.value = json.Items
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => dialogSeasonsLoading.value = false)
 }
-async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: SeasonsItem, currentPage: number, pageSize: number) {
+async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: SeasonItem, currentPage: number, pageSize: number) {
     dialogEpisodesLoading.value = true
     dialogEpisodesList.value = []
     dialogEpisodesCurrentPage.value = currentPage
@@ -367,7 +367,7 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
+        let json: EmbyPageList<EpisodeItem> = JSON.parse(response.body);
         episodes_result.value[series_id + '|' + seasons.Id].total = json.TotalRecordCount
         episodes_result.value[series_id + '|' + seasons.Id][currentPage]= json.Items
         dialogEpisodesList.value = json.Items
@@ -378,10 +378,10 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
         ElMessage.error(e)
     }).finally(() => dialogEpisodesLoading.value = false)
 }
-async function handleEpisodesPageChange(val: number, embyServer: EmbyServer, series_id: string, seasons: SeasonsItem) {
+async function handleEpisodesPageChange(val: number, embyServer: EmbyServer, series_id: string, seasons: SeasonItem) {
     await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
 }
-async function showSeason(season: SeasonsItem) {
+async function showSeason(season: SeasonItem) {
     dialogSeasons.value = season
     dialogEpisodesList.value = []
     dialogEmbyServer.value = embyServer

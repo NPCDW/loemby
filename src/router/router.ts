@@ -6,6 +6,7 @@ import EmbyHome from '../page/emby/Home.vue'
 import EmbyEpisodes from '../page/emby/Episodes.vue'
 import EmbySeries from '../page/emby/Series.vue'
 import EmbyMediaLibrary from '../page/emby/MediaLibrary.vue'
+import EmbyMediaLibraryItems from '../page/emby/MediaLibraryItems.vue'
 import EmbySearch from '../page/emby/Search.vue'
 
 const routes = [
@@ -43,6 +44,13 @@ const routes = [
             {
                 path: 'emby/:embyId/mediaLibrary',
                 component: EmbyMediaLibrary,
+                meta: {
+                    keepAlive: true,
+                }
+            },
+            {
+                path: 'emby/:embyId/mediaLibrary/items/:parentId',
+                component: EmbyMediaLibraryItems,
                 meta: {
                     keepAlive: true,
                 }

@@ -169,7 +169,7 @@
 
 <script lang="ts" setup>
 import { h, nextTick, onMounted, onUnmounted, ref, VNode, watchEffect } from 'vue';
-import embyApi, { EmbyPageList, EpisodesItem, MediaSource, PlaybackInfo, UserData } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
 import { getResolutionFromMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
@@ -228,7 +228,7 @@ const play_loading = ref(false)
 
 const nextUpShow = ref(false)
 const nextUpLoading = ref(false)
-const nextUpList = ref<EpisodesItem[]>([])
+const nextUpList = ref<EpisodeItem[]>([])
 const nextUpCurrentPage = ref(1)
 const nextUpPageSize = ref(6)
 const nextUpTotal = ref(0)
@@ -280,7 +280,7 @@ useGlobalConfig().getGlobalConfigValue("mpv_cache_back_max_bytes").then(value =>
     mpv_cache_back_max_bytes.value = value ? Number(value) : 0;
 }).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
 
-const currentEpisodes = ref<EpisodesItem>()
+const currentEpisodes = ref<EpisodeItem>()
 function updateCurrentEpisodes(silent: boolean = false) {
     if (!silent) {
         playbackInfoLoading.value = true
@@ -290,7 +290,7 @@ function updateCurrentEpisodes(silent: boolean = false) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EpisodesItem = JSON.parse(response.body);
+        let json: EpisodeItem = JSON.parse(response.body);
         currentEpisodes.value = json
         if (!silent && json.MediaSources) {
             handleMediaSources(json.MediaSources)
@@ -303,7 +303,7 @@ function updateCurrentEpisodes(silent: boolean = false) {
     }).finally(() => playbackInfoLoading.value = false)
 }
 
-const currentSeries = ref<EpisodesItem>()
+const currentSeries = ref<EpisodeItem>()
 async function getCurrentSeries() {
     if (!currentEpisodes.value || !currentEpisodes.value.SeriesId) {
         return
@@ -313,7 +313,7 @@ async function getCurrentSeries() {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EpisodesItem = JSON.parse(response.body);
+        let json: EpisodeItem = JSON.parse(response.body);
         currentSeries.value = json
     }).catch(e => {
         ElMessage.error(e)
@@ -333,7 +333,7 @@ function nextUp(pageNumber: number) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EmbyPageList<EpisodesItem> = JSON.parse(response.body);
+        let json: EmbyPageList<EpisodeItem> = JSON.parse(response.body);
         nextUpList.value = json.Items
         nextUpTotal.value = json.TotalRecordCount
     }).catch(e => {
@@ -529,7 +529,7 @@ function getScrobbleTraktParam(playbackPositionTicks: number) {
         }
     }
 }
-function getScrobbleTraktIdsParam(item: EpisodesItem) {
+function getScrobbleTraktIdsParam(item: EpisodeItem) {
     let ids: {[key in 'imdb' | 'tmdb' | 'tvdb' | 'trakt']?: string} = {}
     for (const [key, value] of Object.entries(item.ProviderIds)) {
         let provider = key.toLowerCase()

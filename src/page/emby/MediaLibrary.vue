@@ -20,7 +20,7 @@
                         </div>
                     </template>
                     <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
-                        <div v-for="item in mediaLibraryList" :key="item.Id" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
+                        <div v-for="item in mediaLibraryList" :key="item.Id" @click="gotoMediaLibraryItems(item.Id)" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
                             <div style="min-width: 267px; min-height: 150px;">
                                 <img v-lazy="images[item.Id]" style="max-width: 267px; max-height: 150px;" />
                             </div>
@@ -32,7 +32,7 @@
         </div>
         <div v-for="mediaLibrary in mediaLibraryList">
             <template v-if="mediaLibraryChildList[mediaLibrary.Id] && mediaLibraryChildList[mediaLibrary.Id].length > 0">
-                <h1>{{ mediaLibrary.Name }}</h1>
+                <h1 @click="gotoMediaLibraryItems(mediaLibrary.Id)">{{ mediaLibrary.Name }}</h1>
                 <el-scrollbar>
                     <div style="display: flex;">
                         <el-skeleton :loading="mediaLibraryChildLoading[mediaLibrary.Id]" animated>
@@ -99,6 +99,9 @@ function gotoEpisodes(episodesId: string) {
 }
 function gotoSeries(seriesId: string) {
     router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
+}
+function gotoMediaLibraryItems(parentId: string) {
+    router.push('/nav/emby/' + embyServer.value.id + '/mediaLibrary/items/' + parentId)
 }
 
 const mediaLibraryLoading = ref(false)

@@ -84,7 +84,7 @@ async function search(embyServer: EmbyServer, search_str: string, item_types: st
 
 /**
  * 首页继续播放列表
- * @returns EmbyPageList<EpisodesItems>
+ * @returns EmbyPageList<EpisodeItems>
  */
 async function getContinuePlayList(embyServer: EmbyServer, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
@@ -103,7 +103,7 @@ async function getContinuePlayList(embyServer: EmbyServer, startIndex: number, l
 
 /**
  * 收藏列表
- * @returns EmbyPageList<EpisodesItems>
+ * @returns EmbyPageList<EpisodeItems>
  */
 async function getFavoriteList(embyServer: EmbyServer, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
@@ -122,7 +122,7 @@ async function getFavoriteList(embyServer: EmbyServer, startIndex: number, limit
 
 /**
  * 系列剧集 接下来 应该播放的剧集
- * @returns EmbyPageList<EpisodesItems>
+ * @returns EmbyPageList<EpisodeItems>
  */
 async function nextUp(embyServer: EmbyServer, seriesId: string, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
@@ -159,8 +159,8 @@ async function getMediaLibraryList(embyServer: EmbyServer) {
 }
 
 /**
- * 首页媒体库子项目
- * @returns SearchItems[]
+ * 首页媒体库子项目最新几条
+ * @returns SearchItem[]
  */
 async function getMediaLibraryChildLatest(embyServer: EmbyServer, parentId: string, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !parentId || !limit) {
@@ -168,6 +168,25 @@ async function getMediaLibraryChildLatest(embyServer: EmbyServer, parentId: stri
     }
     return invokeApi.httpForward({
         url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/Latest?Limit=${limit}&ParentId=${parentId}`,
+        method: 'GET',
+        headers: {
+            'User-Agent': embyServer.user_agent!,
+            'X-Emby-Token': embyServer.auth_token,
+        },
+        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
+    });
+}
+
+/**
+ * 首页媒体库子项目
+ * @returns EmbyPageList<SearchItem>
+ */
+async function getMediaLibraryChild(embyServer: EmbyServer, parentId: string, startIndex: number, limit: number) {
+    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
+        return Promise.reject("参数缺失");
+    }
+    return invokeApi.httpForward({
+        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Recursive=true&IncludeItemTypes=Series,Movie&ParentId=${parentId}&StartIndex=${startIndex}&Limit=${limit}`,
         method: 'GET',
         headers: {
             'User-Agent': embyServer.user_agent!,
@@ -198,7 +217,7 @@ async function count(embyServer: EmbyServer) {
 
 /**
  * 电影详情、剧集详情、季详情、系列详情、合集详情
- * @returns EpisodesItems
+ * @returns EpisodeItems
  */
 async function items(embyServer: EmbyServer, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
@@ -217,7 +236,7 @@ async function items(embyServer: EmbyServer, item_id: string) {
 
 /**
  * 系列 下的 季列表
- * @returns EmbyPageList<SeasonsItems>
+ * @returns EmbyPageList<SeasonItem>
  */
 async function seasons(embyServer: EmbyServer, item_id: string) {
     if (!embyServer.base_url || !embyServer.auth_token || !item_id || !embyServer.user_id) {
@@ -236,7 +255,7 @@ async function seasons(embyServer: EmbyServer, item_id: string) {
 
 /**
  * 季 下的 剧集列表
- * @returns EmbyPageList<EpisodesItems>
+ * @returns EmbyPageList<EpisodeItems>
  */
 async function episodes(embyServer: EmbyServer, item_id: string, seasonId: string, startIndex: number, limit: number) {
     if (!embyServer.base_url || !embyServer.auth_token || !item_id || startIndex < 0 || !limit) {
@@ -389,7 +408,7 @@ function getDirectStreamUrl(embyServer: EmbyServer, directStreamUrl: string) {
  * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
  * @returns
  */
-function getAudioStreamUrl(embyServer: EmbyServer, item: EpisodesItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
+function getAudioStreamUrl(embyServer: EmbyServer, item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
@@ -400,7 +419,7 @@ function getAudioStreamUrl(embyServer: EmbyServer, item: EpisodesItem, mediaSour
  * 组装字幕流地址，请确保字幕流支持外部流
  * @returns
  */
-function getSubtitleStreamUrl(embyServer: EmbyServer, item: EpisodesItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
+function getSubtitleStreamUrl(embyServer: EmbyServer, item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
@@ -524,7 +543,7 @@ async function hideFromResume(embyServer: EmbyServer, item_id: string, hide: boo
 export default {
     getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, getContinuePlayList, nextUp,
     getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
-    getImageUrl, count, hideFromResume,
+    getImageUrl, count, hideFromResume, getMediaLibraryChild, 
 }
 
 
@@ -548,14 +567,14 @@ export interface SeriesItem extends BaseItem {
     EndDate: string,
 }
 
-export interface SeasonsItem extends BaseItem {
+export interface SeasonItem extends BaseItem {
     SeriesId: string,
     SeriesName: string,
     Overview: string,
     IndexNumber: number,
 }
 
-export interface EpisodesItem extends BaseItem {
+export interface EpisodeItem extends BaseItem {
     SeriesName: string,
     PremiereDate: string,
     ParentIndexNumber: number,
@@ -564,7 +583,7 @@ export interface EpisodesItem extends BaseItem {
     SeriesId: string,
 }
 
-export type SearchItem = SeriesItem | SeasonsItem | EpisodesItem
+export type SearchItem = SeriesItem | SeasonItem | EpisodeItem
 
 export interface PlaybackInfo {
     PlaySessionId: string,
