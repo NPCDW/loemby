@@ -8,36 +8,35 @@
     </div>
 
     <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
-        <div style="display: flex;">
-            <el-skeleton :loading="mediaLibraryChildLoading" animated>
-                <template #template>
-                    <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
-                        <div v-for="i in 8" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                            <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
-                            <p><el-skeleton-item variant="text" style="width: 60px" /></p>
-                        </div>
-                    </div>
-                </template>
-                <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
-                    <div v-for="item in mediaLibraryChildList" :key="item.Id"
-                        @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
-                        style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                        <div style="min-width: 115px; min-height: 160px;">
-                            <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
-                        </div>
-                        <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
+        <el-skeleton :loading="mediaLibraryChildLoading" animated>
+            <template #template>
+                <div style="padding: 20px; display: flex; flex-wrap: wrap;">
+                    <div v-for="i in 18" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 18px;">
+                        <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
+                        <div><el-skeleton-item variant="text" style="width: 60px" /></div>
                     </div>
                 </div>
-            </el-skeleton>
-            <el-pagination
-                v-model:current-page="mediaLibraryChildCurrentPage"
-                v-model:page-size="mediaLibraryChildPageSize"
-                layout="total, prev, pager, next, jumper"
-                :total="mediaLibraryChildTotal"
-                @current-change="handleMediaLibraryChildPageChange"
-                hide-on-single-page
-            />
-        </div>
+            </template>
+            <div style="padding: 20px; display: flex; flex-wrap: wrap;">
+                <div v-for="item in mediaLibraryChildList" :key="item.Id"
+                    @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
+                    style="display: flex; flex-direction: column; align-items: center; padding: 18px;">
+                    <div style="min-width: 115px; min-height: 160px;">
+                        <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
+                    </div>
+                    <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
+                </div>
+            </div>
+        </el-skeleton>
+        <el-pagination
+            style="display: flex; justify-content: center;"
+            v-model:current-page="mediaLibraryChildCurrentPage"
+            v-model:page-size="mediaLibraryChildPageSize"
+            layout="total, prev, pager, next, jumper"
+            :total="mediaLibraryChildTotal"
+            @current-change="handleMediaLibraryChildPageChange"
+            hide-on-single-page
+        />
     </el-scrollbar>
 </template>
 
@@ -84,7 +83,7 @@ function gotoSeries(seriesId: string) {
 const mediaLibraryChildLoading = ref<boolean>(false)
 const mediaLibraryChildList = ref<SearchItem[]>([])
 const mediaLibraryChildCurrentPage = ref(1)
-const mediaLibraryChildPageSize = ref(6)
+const mediaLibraryChildPageSize = ref(18)
 const mediaLibraryChildTotal = ref(0)
 const handleMediaLibraryChildPageChange = (val: number) => {
     mediaLibraryChildCurrentPage.value = val
@@ -92,7 +91,7 @@ const handleMediaLibraryChildPageChange = (val: number) => {
 }
 function getMediaLibraryChild(currentPage: number, pageSize: number) {
     mediaLibraryChildLoading.value = true
-    return embyApi.getMediaLibraryChild(embyServer.value, parentId.value, currentPage, pageSize).then(async response => {
+    return embyApi.getMediaLibraryChild(embyServer.value, parentId.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
