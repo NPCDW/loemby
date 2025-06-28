@@ -428,7 +428,7 @@ function playbackVersionChange(versionId: number) {
         } else if (mediaStream.Type == 'Subtitle') {
             subtitleIndex++
             subtitleOptions.value.push({
-                label: mediaStream.DisplayTitle + " / " + mediaStream.Title + " / " + mediaStream.DisplayLanguage + " / " + mediaStream.Language + " / " + mediaStream.IsDefault,
+                label: mediaStream.DisplayTitle + (mediaStream.DisplayLanguage ? (" / " + mediaStream.DisplayLanguage) : ""),
                 value: subtitleIndex
             })
             let score = 0;
