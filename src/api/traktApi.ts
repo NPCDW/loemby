@@ -108,7 +108,7 @@ async function token({redirect_uri, code, refresh_token}: TokenParam) {
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("获取 token: 您的 Trakt 授权好像失效了，或许应该重新授权");
+            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
         }
         return response
     });
@@ -135,7 +135,7 @@ async function getUserInfo() {
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("获取用户信息: 您的 Trakt 授权好像失效了，或许应该重新授权");
+            ElMessageBox.alert("获取 Trakt 用户信息: Trakt access token 失效");
         }
         return response
     });
@@ -163,7 +163,7 @@ async function start(param: any, retry: number = 0): Promise<HttpForwardResult> 
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(async response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("开始播放: 您的 Trakt 授权好像失效了，或许应该重新授权");
+            ElMessageBox.alert("开始播放: Trakt access token 失效");
         }
         if (response.status_code == 429) {
             if (retry > 0) {
@@ -198,7 +198,7 @@ async function stop(param: any, retry: number = 0): Promise<HttpForwardResult> {
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(async response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("停止播放: 您的 Trakt 授权好像失效了，或许应该重新授权");
+            ElMessageBox.alert("停止播放: Trakt access token 失效");
         }
         if (response.status_code == 429) {
             if (retry > 0) {
