@@ -643,6 +643,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             external_audio: externalAudio,
             external_subtitle: externalSubtitle,
             scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
+            start_time: new Date().getTime(),
         }).then(async () => {
             embyApi.playing(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
                 ElMessage.success('开始播放，请稍候')

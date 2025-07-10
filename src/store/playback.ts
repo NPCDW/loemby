@@ -34,8 +34,12 @@ export const usePlayback = defineStore('playback', () => {
                         }
                         useEventBus().emit('playingStopped', event.payload)
                     })
-                    useEmbyServer().updateEmbyServer({id: embyServer!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
-                        .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer!.id!}))
+                    if (new Date().getTime() - event.payload.start_time > 5 * 60 * 1000) {
+                        useEmbyServer().updateEmbyServer({id: embyServer!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
+                            .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer!.id!}))
+                    } else {
+                        ElMessage.warning('播放时间不足 5 分钟，不更新最后播放时间')
+                    }
                     if (event.payload.scrobble_trakt_param) {
                         const progress = (() => {
                             if (event.payload.run_time_ticks === 0) {
@@ -87,4 +91,5 @@ export type PlaybackProgress = {
     run_time_ticks: number;
     scrobble_trakt_param?: string;
     playback_status: number;
+    start_time: number;
 };

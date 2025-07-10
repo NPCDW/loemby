@@ -271,6 +271,7 @@ fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHandle, 
         run_time_ticks: body.run_time_ticks,
         scrobble_trakt_param: body.scrobble_trakt_param.clone(),
         playback_status: playback_status,
+        start_time: body.start_time,
     }).unwrap();
 }
 
@@ -295,4 +296,5 @@ struct PlaybackProgress<'a> {
     pub scrobble_trakt_param: Option<String>,
     // 0 停止  1 播放中
     playback_status: u32,
+    start_time: u64,
 }

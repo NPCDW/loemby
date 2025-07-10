@@ -28,6 +28,7 @@ interface PlaybackParam {
     external_audio: string[],
     external_subtitle: string[],
     scrobble_trakt_param?: string,
+    start_time: number,
 }
 
 async function playback(param: PlaybackParam): Promise<string> {

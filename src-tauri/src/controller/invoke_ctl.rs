@@ -37,6 +37,7 @@ pub struct PlayVideoParam {
     pub external_audio: Vec<String>,
     pub external_subtitle: Vec<String>,
     pub scrobble_trakt_param: Option<String>,
+    pub start_time: u64,
 }
 
 #[tauri::command]
