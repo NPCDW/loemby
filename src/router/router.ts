@@ -2,6 +2,7 @@ import * as VueRouter from 'vue-router'
 import NavMenu from '../components/NavMenu.vue'
 import Search from '../page/Search.vue'
 import Setting from '../page/Setting.vue'
+import History from '../page/History.vue'
 import EmbyHome from '../page/emby/Home.vue'
 import EmbyEpisodes from '../page/emby/Episodes.vue'
 import EmbySeries from '../page/emby/Series.vue'
@@ -10,11 +11,15 @@ import EmbyMediaLibraryItems from '../page/emby/MediaLibraryItems.vue'
 import EmbySearch from '../page/emby/Search.vue'
 
 const routes = [
-    { path: '/', redirect: '/nav/search' },
+    { path: '/', redirect: '/nav/history' },
     {
         path: '/nav',
         component: NavMenu,
         children: [
+            {
+                path: 'history',
+                component: History,
+            },
             {
                 path: 'search',
                 component: Search,

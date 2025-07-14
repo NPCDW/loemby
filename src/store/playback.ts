@@ -8,6 +8,8 @@ import { useEventBus } from './eventBus';
 import traktApi from '../api/traktApi';
 import { h, VNode } from 'vue';
 import dayjs from 'dayjs'
+import { usePlayHistory } from './db/playHistory';
+import { generateGuid } from '../util/uuid_util';
 
 export const usePlayback = defineStore('playback', () => {
     async function listen_playback_progress() {
@@ -34,12 +36,36 @@ export const usePlayback = defineStore('playback', () => {
                         }
                         useEventBus().emit('playingStopped', event.payload)
                     })
-                    if (new Date().getTime() - event.payload.start_time > 5 * 60 * 1000) {
+                    const played_duration = (new Date().getTime() - event.payload.start_time) / 1000
+                    if (played_duration > 5 * 60) {
                         useEmbyServer().updateEmbyServer({id: embyServer!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
                             .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer!.id!}))
                     } else {
                         ElMessage.warning('播放时间不足 5 分钟，不更新最后播放时间')
                     }
+                    usePlayHistory().getPlayHistory(embyServer!.id!, event.payload.item_id).then(response => {
+                        if (response) {
+                            usePlayHistory().updatePlayHistory({
+                                id: response.id!,
+                                update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
+                                emby_server_name: embyServer!.server_name!,
+                                item_name: event.payload.item_name,
+                                series_name: event.payload.series_name,
+                                played_duration})
+                        } else {
+                            usePlayHistory().addPlayHistory({
+                                id: generateGuid(),
+                                create_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
+                                update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
+                                emby_server_id: embyServer!.id!,
+                                emby_server_name: embyServer!.server_name!,
+                                item_id: event.payload.item_id,
+                                item_name: event.payload.item_name,
+                                series_id: event.payload.series_id,
+                                series_name: event.payload.series_name,
+                                played_duration})
+                        }
+                    })
                     if (event.payload.scrobble_trakt_param) {
                         const progress = (() => {
                             if (event.payload.run_time_ticks === 0) {
@@ -85,6 +111,9 @@ export const usePlayback = defineStore('playback', () => {
 export type PlaybackProgress = {
     server_id: string;
     item_id: string;
+    item_name: string;
+    series_id?: string;
+    series_name?: string;
     media_source_id: string;
     play_session_id: string;
     progress: number;

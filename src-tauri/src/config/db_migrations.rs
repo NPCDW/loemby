@@ -82,6 +82,27 @@ ALTER TABLE emby_server ADD COLUMN icon_url VARCHAR(255);
 ALTER TABLE emby_server ADD COLUMN line_id CHAR(36);
 			"#,
 			kind: MigrationKind::Up,
-		}
+		},
+        Migration {
+            version: 4,
+            description: "play_history",
+            sql: r#"
+CREATE TABLE "play_history" (
+  "id" CHAR(36) NOT NULL PRIMARY KEY,
+  "create_time" TIMESTAMP NOT NULL DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),
+	"update_time" TIMESTAMP DEFAULT (datetime(CURRENT_TIMESTAMP, 'localtime')),
+    "emby_server_id" CHAR(36) NOT NULL,
+	"emby_server_name" VARCHAR(255) NOT NULL,
+	"item_type" VARCHAR(255) NOT NULL,
+	"item_id" VARCHAR(255) NOT NULL,
+	"item_name" VARCHAR(255) NOT NULL,
+	"series_id" VARCHAR(255),
+	"series_name" VARCHAR(255),
+  "played_duration" INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX play_history_key on play_history (emby_server_id, item_id);
+			"#,
+			kind: MigrationKind::Up,
+		},
     ]
 }

@@ -1,6 +1,9 @@
 <template>
     <div style="display: flex; flex-direction: row;">
         <el-menu style="height: 100%; width: 200px; min-height: 100vh; background-color: var(--dark-background-color)" :collapse="false" :default-active="active">
+            <el-menu-item index="/nav/search" @click="jumpRoute('/nav/history')">
+                <el-icon><i-ep-Clock /></el-icon>播放历史
+            </el-menu-item>
             <el-menu-item index="/nav/search" @click="jumpRoute('/nav/search')">
                 <el-icon><i-ep-Search /></el-icon>聚合搜索
             </el-menu-item>
