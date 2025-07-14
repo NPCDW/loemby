@@ -265,6 +265,7 @@ fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHandle, 
     app_handle.emit("playback_progress", PlaybackProgress {
         server_id: &body.server_id,
         item_id: &body.item_id,
+        item_type: &body.item_type,
         item_name: &body.item_name,
         series_id: body.series_id.clone(),
         series_name: body.series_name.clone(),
@@ -292,6 +293,7 @@ struct MpvIpcResponse<'a> {
 struct PlaybackProgress<'a> {
     server_id: &'a str,
     item_id: &'a str,
+    item_type: &'a str,
     item_name: &'a str,
     series_id: Option<String>,
     series_name: Option<String>,

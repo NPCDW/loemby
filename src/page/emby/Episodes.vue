@@ -633,6 +633,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             user_agent: embyServer.value!.user_agent!,
             server_id: embyServer.value!.id!,
             item_id: item_id,
+            item_type: currentEpisodes.value!.Type || 'Movie',
             item_name: currentEpisodes.value!.Name!,
             series_id: currentEpisodes.value!.SeriesId,
             series_name: currentEpisodes.value!.SeriesName,

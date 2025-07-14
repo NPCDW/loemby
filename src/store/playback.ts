@@ -50,6 +50,8 @@ export const usePlayback = defineStore('playback', () => {
                                 update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
                                 emby_server_name: embyServer!.server_name!,
                                 item_name: event.payload.item_name,
+                                item_type: event.payload.item_type,
+                                series_id: event.payload.series_id,
                                 series_name: event.payload.series_name,
                                 played_duration})
                         } else {
@@ -60,6 +62,7 @@ export const usePlayback = defineStore('playback', () => {
                                 emby_server_id: embyServer!.id!,
                                 emby_server_name: embyServer!.server_name!,
                                 item_id: event.payload.item_id,
+                                item_type: event.payload.item_type,
                                 item_name: event.payload.item_name,
                                 series_id: event.payload.series_id,
                                 series_name: event.payload.series_name,
@@ -111,6 +114,7 @@ export const usePlayback = defineStore('playback', () => {
 export type PlaybackProgress = {
     server_id: string;
     item_id: string;
+    item_type: string;
     item_name: string;
     series_id?: string;
     series_name?: string;

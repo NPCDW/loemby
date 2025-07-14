@@ -18,6 +18,7 @@ interface PlaybackParam {
     user_agent: string,
     server_id: string,
     item_id: string,
+    item_type: string,
     item_name: string,
     series_id?: string,
     series_name?: string,

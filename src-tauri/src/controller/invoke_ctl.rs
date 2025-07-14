@@ -27,6 +27,7 @@ pub struct PlayVideoParam {
     pub user_agent: String,
     pub server_id: String,
     pub item_id: String,
+    pub item_type: String,
     pub item_name: String,
     pub series_id: Option<String>,
     pub series_name: Option<String>,
