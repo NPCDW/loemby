@@ -13,7 +13,7 @@
             <el-menu-item index="addEmbyServer" @click="addEmbyServer()">
                 <el-icon><i-ep-Plus /></el-icon>添加服务器
             </el-menu-item>
-            <el-scrollbar style="height: calc(100vh - 168px); flex: none;">
+            <el-scrollbar style="height: calc(100vh - 224px); flex: none;">
                 <Container @drop="onDrop" style="height: 100%; width: 100%;">  
                     <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
                         <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">

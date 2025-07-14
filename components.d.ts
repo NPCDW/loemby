@@ -54,6 +54,7 @@ declare module 'vue' {
     IEpCircleCheck: typeof import('~icons/ep/circle-check')['default']
     IEpCircleCheckFilled: typeof import('~icons/ep/circle-check-filled')['default']
     IEpCircleCloseFilled: typeof import('~icons/ep/circle-close-filled')['default']
+    IEpClock: typeof import('~icons/ep/clock')['default']
     IEpDelete: typeof import('~icons/ep/delete')['default']
     IEpEdit: typeof import('~icons/ep/edit')['default']
     IEpFilm: typeof import('~icons/ep/film')['default']

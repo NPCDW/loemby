@@ -1,23 +1,25 @@
 <template>
-    <el-table :data="list" style="width: 100%">
-        <el-table-column prop="name" label="服务器" show-overflow-tooltip />
-        <el-table-column prop="proxy_type" label="剧" />
-        <el-table-column prop="addr" label="集、电影" show-overflow-tooltip />
-        <el-table-column prop="username" label="播放时长" />
-        <el-table-column fixed="right" label="Go">
-            <template #default="scope">
-                <el-button plain type="success" size="small" @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)">Go</el-button>
-            </template>
-        </el-table-column>
-    </el-table>
-    <el-pagination
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        layout="total, prev, pager, next, jumper"
-        :total="total"
-        @current-change="handlePageChange"
-        hide-on-single-page
-    />
+    <el-scrollbar style="padding: 10px;">
+        <el-table :data="list">
+            <el-table-column prop="emby_server_name" label="服务器" show-overflow-tooltip />
+            <el-table-column prop="series_name" label="剧" show-overflow-tooltip />
+            <el-table-column prop="item_name" label="集、电影" show-overflow-tooltip />
+            <el-table-column prop="played_duration" label="播放时长" :formatter="played_duration_formatter" width="100px" />
+            <el-table-column fixed="right" label="Go" width="100px">
+                <template #default="scope">
+                    <el-button plain type="success" size="small" @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)">Go</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            layout="total, prev, pager, next, jumper"
+            :total="total"
+            @current-change="handlePageChange"
+            hide-on-single-page
+        />
+    </el-scrollbar>
 </template>
 
 <script lang="ts" setup>
@@ -25,6 +27,7 @@ import { useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
 import { ElButton, ElMessage } from 'element-plus';
 import { PlayHistory, usePlayHistory } from '../store/db/playHistory';
+import { secondsToHMS } from '../util/str_util'
 
 const router = useRouter()
 function gotoEpisodes(embyServerId: string, episodesId: string) {
@@ -47,6 +50,10 @@ function handlePageChange(pageNumber: number) {
     getEpisodes(pageNumber)
 }
 onMounted(() => getEpisodes())
+
+function played_duration_formatter(row: PlayHistory) {
+    return secondsToHMS(row.played_duration!)
+}
 </script>
 
 <style scoped>
