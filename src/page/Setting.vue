@@ -106,8 +106,8 @@ demuxer-readahead-secs=180" />
                     <el-form-item label="Trakt代理">
                         <el-select v-model="trakt_proxy_id" @change="traktProxyChange" style="width: 220px;">
                             <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option key="followBrowse" label="跟随全局媒体库浏览代理" value="followBrowse"/>
-                            <el-option key="followPlay" label="跟随全局媒体流播放代理" value="followPlay"/>
+                            <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
+                            <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
                             <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
@@ -168,7 +168,7 @@ demuxer-readahead-secs=180" />
                         <template #default="scope">
                             <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)">
                                 <el-option key="no" label="不使用代理" value="no"/>
-                                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                                <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
                                 <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                             </el-select>
                         </template>
@@ -177,7 +177,7 @@ demuxer-readahead-secs=180" />
                         <template #default="scope">
                             <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)">
                                 <el-option key="no" label="不使用代理" value="no"/>
-                                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                                <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
                                 <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                             </el-select>
                         </template>
@@ -192,8 +192,8 @@ demuxer-readahead-secs=180" />
                     <el-form-item label="应用数据代理（图标、自动更新等）">
                         <el-select v-model="app_proxy_id" @change="appProxyChange" style="width: 220px;">
                             <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option key="followBrowse" label="跟随全局媒体库浏览代理" value="followBrowse"/>
-                            <el-option key="followPlay" label="跟随全局媒体流播放代理" value="followPlay"/>
+                            <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
+                            <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
                             <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
@@ -672,9 +672,11 @@ function appProxyChange() {
     }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
 }
 const global_browse_proxy_id = ref<string>('no');
+const global_browse_proxy_name = ref<string>('不使用代理');
 function getGlobalBrowseProxy() {
-    useGlobalConfig().getGlobalConfigValue("global_browse_proxy_id").then(value => {
+    useGlobalConfig().getGlobalConfigValue("global_browse_proxy_id").then(async value => {
         global_browse_proxy_id.value = value ? value : "no";
+        global_browse_proxy_name.value = await useProxyServer().getProxyServerName(value);
     }).catch(e => ElMessage.error('获取全局浏览代理失败' + e))
 }
 function globalBrowseProxyChange() {
@@ -700,9 +702,11 @@ function globalBrowseProxyChange() {
     }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
 }
 const global_play_proxy_id = ref<string>('no');
+const global_play_proxy_name = ref<string>('不使用代理');
 function getGlobalPlayProxy() {
-    useGlobalConfig().getGlobalConfigValue("global_play_proxy_id").then(value => {
+    useGlobalConfig().getGlobalConfigValue("global_play_proxy_id").then(async value => {
         global_play_proxy_id.value = value ? value : "no";
+        global_play_proxy_name.value = await useProxyServer().getProxyServerName(value);
     }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 }
 function globalPlayProxyChange() {

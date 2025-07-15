@@ -96,14 +96,14 @@
                     <el-form-item label="媒体库浏览代理">
                         <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="left-end">
                             <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option key="follow" label="跟随全局代理" value="follow"/>
+                            <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
                             <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
                     <el-form-item label="媒体流播放代理">
                         <el-select v-model="showServerLine.play_proxy_id" @change="proxyChange(showServerLine)" placement="left-end">
                             <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option key="follow" label="跟随全局代理" value="follow"/>
+                            <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
                             <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
@@ -127,14 +127,14 @@
             <el-form-item label="媒体库浏览代理">
                 <el-select v-model="dialogEmbyServer.browse_proxy_id">
                     <el-option key="no" label="不使用代理" value="no"/>
-                    <el-option key="follow" label="跟随全局代理" value="follow"/>
+                    <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
                     <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                 </el-select>
             </el-form-item>
             <el-form-item label="媒体流播放代理">
                 <el-select v-model="dialogEmbyServer.play_proxy_id">
                     <el-option key="no" label="不使用代理" value="no"/>
-                    <el-option key="follow" label="跟随全局代理" value="follow"/>
+                    <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
                     <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                 </el-select>
             </el-form-item>
@@ -195,14 +195,14 @@
         <el-form-item label="媒体库代理">
             <el-select v-model="dialogEmbyServer.browse_proxy_id">
                 <el-option key="no" label="不使用代理" value="no"/>
-                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
                 <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
             </el-select>
         </el-form-item>
         <el-form-item label="媒体流代理">
             <el-select v-model="dialogEmbyServer.play_proxy_id">
                 <el-option key="no" label="不使用代理" value="no"/>
-                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
                 <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
             </el-select>
         </el-form-item>
@@ -249,14 +249,14 @@
         <el-form-item label="媒体库代理">
             <el-select v-model="dialogEmbyServerAddLine.browse_proxy_id">
                 <el-option key="no" label="不使用代理" value="no"/>
-                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
                 <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
             </el-select>
         </el-form-item>
         <el-form-item label="媒体流代理">
             <el-select v-model="dialogEmbyServerAddLine.play_proxy_id">
                 <el-option key="no" label="不使用代理" value="no"/>
-                <el-option key="follow" label="跟随全局代理" value="follow"/>
+                <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
                 <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
             </el-select>
         </el-form-item>
@@ -310,6 +310,7 @@ import 'dayjs/locale/zh-cn'
 import { useEventBus } from "../store/eventBus";
 import { EmbyIconLibrary, useEmbyIconLibrary } from "../store/db/embyIconLibrary";
 import appApi from "../api/appApi";
+import { useGlobalConfig } from "../store/db/globalConfig";
 
 const active = ref("/nav/search");
 const route = useRoute();
@@ -798,6 +799,21 @@ watch(
         }
     }
 )
+
+const global_browse_proxy_name = ref<string>('不使用代理');
+function getGlobalBrowseProxy() {
+    useGlobalConfig().getGlobalConfigValue("global_browse_proxy_id").then(async value => {
+        global_browse_proxy_name.value = await useProxyServer().getProxyServerName(value);
+    }).catch(e => ElMessage.error('获取全局浏览代理失败' + e))
+}
+getGlobalBrowseProxy();
+const global_play_proxy_name = ref<string>('不使用代理');
+function getGlobalPlayProxy() {
+    useGlobalConfig().getGlobalConfigValue("global_play_proxy_id").then(async value => {
+        global_play_proxy_name.value = await useProxyServer().getProxyServerName(value);
+    }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
+}
+getGlobalPlayProxy();
 </script>
 
 <style scoped>

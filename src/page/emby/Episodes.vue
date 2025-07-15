@@ -85,6 +85,7 @@
                                 <span>{{ useDirectLink == 2 ? '直链播放？' : useDirectLink == 1 ? '使用直链' : '不使用直链' }}</span>
                             </el-button>
                             <el-button @click="nextUp(1)">接下来</el-button>
+                            <el-button @click="nextEpisode()">下一个</el-button>
                         </p>
                         <p style="display: flex; justify-content: center;">
                             <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
@@ -325,10 +326,10 @@ const handleNextUpPageChange = (val: number) => {
     nextUp(val)
 }
 
-function nextUp(pageNumber: number) {
+function nextUp(pageNumber: number, pageSize: number = nextUpPageSize.value) {
     nextUpShow.value = true
     nextUpLoading.value = true
-    return embyApi.nextUp(embyServer.value, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
+    return embyApi.nextUp(embyServer.value, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, pageSize).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
@@ -339,6 +340,22 @@ function nextUp(pageNumber: number) {
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => nextUpLoading.value = false)
+}
+function nextEpisode() {
+    nextUpCurrentPage.value = 1
+    nextUp(1, 1).then(() => {
+        if (nextUpList.value.length > 0) {
+            router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
+                autoplay: autoplay.value ? 'true' : 'false',
+                directLink: useDirectLink.value.toString(),
+                rememberSelect: rememberSelect.value.toString(),
+                videoSelect: videoSelect.value,
+                audioSelect: audioSelect.value,
+                subtitleSelect: subtitleSelect.value,
+                versionSelect: versionSelect.value,
+            }})
+        }
+    })
 }
 
 const mediaSourceSizeTag = ref('')
@@ -681,29 +698,17 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
 
 function playingStopped(payload: PlaybackProgress) {
     if (embyServer.value.id === payload.server_id && payload.item_id === currentEpisodes.value?.Id) {
-        updateCurrentEpisodes(true).then(() => {
+        updateCurrentEpisodes(true).then(async () => {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
                 nextUpCurrentPage.value = 1
-                nextUp(1).then(() => {
+                if (autoplay.value) {
                     if (nextUpList.value.length > 0) {
-                        router.replace({path: '/nav/emby/' + embyServer.value.id + '/episodes/' + nextUpList.value[0].Id, query: {
-                            autoplay: autoplay.value ? 'true' : 'false',
-                            directLink: useDirectLink.value.toString(),
-                            rememberSelect: rememberSelect.value.toString(),
-                            videoSelect: videoSelect.value,
-                            audioSelect: audioSelect.value,
-                            subtitleSelect: subtitleSelect.value,
-                            versionSelect: versionSelect.value,
-                        }})
+                        ElMessage.success('即将播放下一集')
+                    } else {
+                        ElMessage.warning('已经是最后一集了')
                     }
-                    if (autoplay.value) {
-                        if (nextUpList.value.length > 0) {
-                            ElMessage.success('即将播放下一集')
-                        } else {
-                            ElMessage.warning('已经是最后一集了')
-                        }
-                    }
-                })
+                }
+                nextEpisode()
             }
         })
     }

@@ -25,7 +25,7 @@ app.use(VueLazyLoad, {})
 
 await useDb().init()
 useGlobalConfig().initCache()
-useProxyServer().refreshCache()
+useProxyServer().initCache()
 await useRuntimeConfig().getRuntimeConfig()
 
 app.mount('#app')
