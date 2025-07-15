@@ -679,6 +679,7 @@ function getGlobalBrowseProxy() {
         global_browse_proxy_name.value = await useProxyServer().getProxyServerName(value);
     }).catch(e => ElMessage.error('获取全局浏览代理失败' + e))
 }
+getGlobalBrowseProxy()
 function globalBrowseProxyChange() {
     useGlobalConfig().getGlobalConfigItem("global_browse_proxy_id").then(config => {
         let savePromise;
@@ -709,6 +710,7 @@ function getGlobalPlayProxy() {
         global_play_proxy_name.value = await useProxyServer().getProxyServerName(value);
     }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 }
+getGlobalPlayProxy()
 function globalPlayProxyChange() {
     useGlobalConfig().getGlobalConfigItem("global_play_proxy_id").then(config => {
         let savePromise;
@@ -1028,8 +1030,6 @@ function handlePaneChange() {
     } else if (activePane.value == 'ProxyServer') {
     } else if (activePane.value == 'EmbyLineProxy') {
         listAllEmbyLine()
-        getGlobalBrowseProxy()
-        getGlobalPlayProxy()
     } else if (activePane.value == 'EmbyIconLibrary') {
         getAppProxy()
         listAllEmbyIconLibrary()
