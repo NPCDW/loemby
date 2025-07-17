@@ -163,7 +163,7 @@ async function start(param: any, retry: number = 0): Promise<HttpForwardResult> 
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(async response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("开始播放: Trakt access token 失效");
+            ElMessageBox.alert("开始播放: Trakt access token 失效，" + access_token);
         }
         if (response.status_code == 429) {
             if (retry > 0) {

@@ -354,6 +354,8 @@ function nextEpisode() {
                 subtitleSelect: subtitleSelect.value,
                 versionSelect: versionSelect.value,
             }})
+        } else {
+            ElMessage.warning('已经是最后一集了')
         }
     })
 }
@@ -702,11 +704,7 @@ function playingStopped(payload: PlaybackProgress) {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
                 nextUpCurrentPage.value = 1
                 if (autoplay.value) {
-                    if (nextUpList.value.length > 0) {
-                        ElMessage.success('即将播放下一集')
-                    } else {
-                        ElMessage.warning('已经是最后一集了')
-                    }
+                    ElMessage.success('即将播放下一集')
                 }
                 nextEpisode()
             }
