@@ -8,9 +8,9 @@
             <el-table-column fixed="right" label="操作" width="100px">
                 <template #default="scope">
                     <el-button plain type="success" size="small" @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)">Go</el-button>
-                    <el-link :underline="false" @click="pin(scope.row)">
-                        <el-icon color="#E6A23C" :size="24" v-if=" scope.row.pinned"><svg-icon name="pin" color="#E6A23C" /></el-icon>
-                        <el-icon :size="24" v-else><svg-icon name="pin" /></el-icon>
+                    <el-link :underline="false" @click="pin(scope.row)" style="margin-left: 5px;">
+                        <el-icon color="#E6A23C" :size="16" v-if=" scope.row.pinned"><svg-icon name="pin" color="#E6A23C" /></el-icon>
+                        <el-icon :size="16" v-else><svg-icon name="unpin" /></el-icon>
                     </el-link>
                 </template>
             </el-table-column>
