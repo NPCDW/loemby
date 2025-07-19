@@ -47,18 +47,18 @@ async function getCacheAccessToken() {
         return json.access_token;
     }
     // 如果离过期时间大于1分钟小于6小时，后台刷新token，并立即返回旧token
-    else if (currentTime < json.expires_in - 60) {
-        console.log("trakt token 不足6小时，后台重新获取");
-        token({redirect_uri: json.redirect_uri, refresh_token: json.refresh_token}).then(response => {
-            if (response.status_code != 200) {
-                ElMessage.error("trakt token 获取失败: " + response.status_code + ' ' + response.status_text)
-                return
-            }
-            let rejson: TokenResult = JSON.parse(response.body);
-            saveAccessToken(rejson, json.redirect_uri);
-        })
-        return json.access_token;
-    }
+    // else if (currentTime < json.expires_in - 60) {
+    //     console.log("trakt token 不足6小时，后台重新获取");
+    //     token({redirect_uri: json.redirect_uri, refresh_token: json.refresh_token}).then(response => {
+    //         if (response.status_code != 200) {
+    //             ElMessage.error("trakt token 获取失败: " + response.status_code + ' ' + response.status_text)
+    //             return
+    //         }
+    //         let rejson: TokenResult = JSON.parse(response.body);
+    //         saveAccessToken(rejson, json.redirect_uri);
+    //     })
+    //     return json.access_token;
+    // }
     // 如果离过期时间不足1分钟，立即刷新token，并返回新token
     else {
         console.log("trakt token 过期，重新获取");
@@ -163,7 +163,7 @@ async function start(param: any, retry: number = 0): Promise<HttpForwardResult> 
         proxy: await useProxyServer().getTraktProxyUrl()
     }).then(async response => {
         if (response.status_code == 401) {
-            ElMessageBox.alert("开始播放: Trakt access token 失效，" + access_token);
+            ElMessageBox.alert("开始播放: Trakt access token 失效");
         }
         if (response.status_code == 429) {
             if (retry > 0) {

@@ -7,7 +7,7 @@ export const usePlayHistory = defineStore('playHistory', () => {
         if (count == null || count == undefined || count == 0) {
             return {count: 0, list: []};
         }
-        let playHistory = await useDb().db?.select<PlayHistory[]>('select * from play_history order by update_time desc limit $1 offset $2', [pageSize, (pageNumber - 1) * pageSize]);
+        let playHistory = await useDb().db?.select<PlayHistory[]>('select * from play_history order by pinned desc, update_time desc limit $1 offset $2', [pageSize, (pageNumber - 1) * pageSize]);
         return {count, list: playHistory || []};
     }
 
@@ -62,4 +62,5 @@ export interface PlayHistory {
     series_id?: string,
     series_name?: string,
     played_duration?: number,
+    pinned?: number,
 }

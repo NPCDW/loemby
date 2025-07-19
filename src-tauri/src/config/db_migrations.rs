@@ -104,5 +104,14 @@ CREATE UNIQUE INDEX play_history_key on play_history (emby_server_id, item_id);
 			"#,
 			kind: MigrationKind::Up,
 		},
+        Migration {
+            version: 5,
+            description: "play_history",
+            sql: r#"
+ALTER TABLE play_history ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX play_history_pinned_update_time ON play_history (pinned, update_time);
+			"#,
+			kind: MigrationKind::Up,
+		},
     ]
 }
