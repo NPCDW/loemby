@@ -717,8 +717,17 @@ function playingStopped(payload: PlaybackProgress) {
 onMounted(() => useEventBus().on('playingStopped', playingStopped))
 onUnmounted(() => useEventBus().remove('playingStopped', playingStopped))
 
+/**
+ * 添加播放记录，
+ * 如果当前记录为剧集，检查所有播放剧集是否有pinned，如果有，取消pinned，并设置此记录为pinned，如果没有，不设置pinned
+ * 如果当前记录为电影，检查是否有播放记录为pinned，保持pinned，如果没有，不设置pinned
+ */
 async function addPlayHistory(episodesName: string) {
-    let pinnedUpdate = await usePlayHistory().cancelPinned(embyServer.value!.id!, currentEpisodes.value!.SeriesId)
+    let pinned = 0
+    if (currentEpisodes.value!.SeriesId) {
+        let pinnedUpdate = await usePlayHistory().cancelPinned(embyServer.value!.id!, currentEpisodes.value!.SeriesId)
+        pinned = pinnedUpdate ? 1 : 0
+    }
     usePlayHistory().getPlayHistory(embyServer.value!.id!, currentEpisodes.value!.Id).then(response => {
         if (response) {
             usePlayHistory().updatePlayHistory({
@@ -729,7 +738,7 @@ async function addPlayHistory(episodesName: string) {
                 item_type: currentEpisodes.value!.Type || 'Movie',
                 series_id: currentEpisodes.value!.SeriesId,
                 series_name: currentEpisodes.value!.SeriesName,
-                pinned: pinnedUpdate ? 1 : 0})
+                pinned: pinned || response.pinned ? 1 : 0})
         } else {
             usePlayHistory().addPlayHistory({
                 id: generateGuid(),
@@ -743,7 +752,7 @@ async function addPlayHistory(episodesName: string) {
                 series_id: currentEpisodes.value!.SeriesId,
                 series_name: currentEpisodes.value!.SeriesName,
                 played_duration: 0,
-                pinned: pinnedUpdate ? 1 : 0})
+                pinned})
         }
     })
 }
