@@ -806,14 +806,18 @@ function getGlobalBrowseProxy() {
         global_browse_proxy_name.value = await useProxyServer().getProxyServerName(value);
     }).catch(e => ElMessage.error('获取全局浏览代理失败' + e))
 }
-getGlobalBrowseProxy();
 const global_play_proxy_name = ref<string>('不使用代理');
 function getGlobalPlayProxy() {
     useGlobalConfig().getGlobalConfigValue("global_play_proxy_id").then(async value => {
         global_play_proxy_name.value = await useProxyServer().getProxyServerName(value);
     }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 }
-getGlobalPlayProxy();
+function getGlobalProxy() {
+    getGlobalBrowseProxy();
+    getGlobalPlayProxy();
+}
+onMounted(() => useEventBus().on('GlobalProxyChanged', getGlobalProxy))
+onUnmounted(() => useEventBus().remove('GlobalProxyChanged', getGlobalProxy))
 </script>
 
 <style scoped>

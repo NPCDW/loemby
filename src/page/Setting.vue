@@ -696,6 +696,7 @@ function globalBrowseProxyChange() {
         }
         savePromise.then(() => {
             getGlobalBrowseProxy()
+            useEventBus().emit('GlobalProxyChanged', {})
             ElMessage.success('修改成功');
         }).catch(e => {
             ElMessage.error('修改失败' + e);
@@ -727,6 +728,7 @@ function globalPlayProxyChange() {
         }
         savePromise.then(() => {
             getGlobalPlayProxy()
+            useEventBus().emit('GlobalProxyChanged', {})
             ElMessage.success('修改成功');
         }).catch(e => {
             ElMessage.error('修改失败' + e);
