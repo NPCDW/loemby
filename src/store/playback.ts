@@ -9,7 +9,6 @@ import traktApi from '../api/traktApi';
 import { h, VNode } from 'vue';
 import dayjs from 'dayjs'
 import { usePlayHistory } from './db/playHistory';
-import { generateGuid } from '../util/uuid_util';
 
 export const usePlayback = defineStore('playback', () => {
     async function listen_playback_progress() {
@@ -53,20 +52,9 @@ export const usePlayback = defineStore('playback', () => {
                                 item_type: event.payload.item_type,
                                 series_id: event.payload.series_id,
                                 series_name: event.payload.series_name,
-                                played_duration})
+                                played_duration: response.played_duration! + played_duration})
                         } else {
-                            usePlayHistory().addPlayHistory({
-                                id: generateGuid(),
-                                create_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
-                                update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
-                                emby_server_id: embyServer!.id!,
-                                emby_server_name: embyServer!.server_name!,
-                                item_id: event.payload.item_id,
-                                item_type: event.payload.item_type,
-                                item_name: event.payload.item_name,
-                                series_id: event.payload.series_id,
-                                series_name: event.payload.series_name,
-                                played_duration})
+                            ElMessage.warning('播放记录不存在，无法更新播放记录')
                         }
                     })
                     if (event.payload.scrobble_trakt_param) {

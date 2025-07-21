@@ -113,5 +113,13 @@ CREATE INDEX play_history_pinned_update_time ON play_history (pinned, update_tim
 			"#,
 			kind: MigrationKind::Up,
 		},
+        Migration {
+            version: 6,
+            description: "play_history",
+            sql: r#"
+CREATE INDEX play_history_series_id ON play_history (emby_server_id, series_id);
+			"#,
+			kind: MigrationKind::Up,
+		},
     ]
 }

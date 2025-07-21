@@ -46,7 +46,16 @@ export const usePlayHistory = defineStore('playHistory', () => {
         return res?.rowsAffected;
     }
 
-    return { getPlayHistory, addPlayHistory, updatePlayHistory, pagePlayHistory }
+    async function cancelPinned(emby_server_id: string, series_id: string) {
+        let values: string[] = [];
+        values.push(emby_server_id);
+        values.push(series_id);
+        let sql = `update play_history set pinned = 0 where emby_server_id = $1 and series_id = $2 and pinned = 1`;
+        let res = await useDb().db?.execute(sql, values);
+        return res?.rowsAffected;
+    }
+
+    return { getPlayHistory, addPlayHistory, updatePlayHistory, pagePlayHistory, cancelPinned }
 })
 
 export interface PlayHistory {

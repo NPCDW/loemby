@@ -816,6 +816,7 @@ function getGlobalProxy() {
     getGlobalBrowseProxy();
     getGlobalPlayProxy();
 }
+getGlobalProxy()
 onMounted(() => useEventBus().on('GlobalProxyChanged', getGlobalProxy))
 onUnmounted(() => useEventBus().remove('GlobalProxyChanged', getGlobalProxy))
 </script>

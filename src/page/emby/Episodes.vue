@@ -180,10 +180,12 @@ import { ElMessage, ElNotification } from 'element-plus';
 import { PlaybackProgress } from '../../store/playback';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
-import 'dayjs/locale/zh-cn'
+import dayjs from 'dayjs'
 import { useGlobalConfig } from '../../store/db/globalConfig';
 import { useEventBus } from '../../store/eventBus';
 import traktApi from '../../api/traktApi';
+import { usePlayHistory } from '../../store/db/playHistory';
+import { generateGuid } from '../../util/uuid_util';
 
 const router = useRouter()
 const route = useRoute()
@@ -640,6 +642,20 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
         const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
         const cache_max_bytes = Math.max(Math.min(Math.round(mpv_cache_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_max_bytes.value * 1024 * 1024), mpv_cache_min_bytes.value * 1024 * 1024)
         const cache_back_max_bytes = Math.max(Math.min(Math.round(mpv_cache_back_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_back_max_bytes.value * 1024 * 1024), mpv_cache_back_min_bytes.value * 1024 * 1024)
+        let pinnedUpdate = await usePlayHistory().cancelPinned(embyServer.value!.id!, currentEpisodes.value!.SeriesId)
+        usePlayHistory().addPlayHistory({
+            id: generateGuid(),
+            create_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
+            update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
+            emby_server_id: embyServer.value!.id!,
+            emby_server_name: embyServer.value!.server_name!,
+            item_id,
+            item_type: currentEpisodes.value!.Type || 'Movie',
+            item_name: episodesName,
+            series_id: currentEpisodes.value!.SeriesId,
+            series_name: currentEpisodes.value!.SeriesName,
+            played_duration: 0,
+            pinned: pinnedUpdate ? 1 : 0})
         return invokeApi.playback({
             mpv_path: mpv_path.value,
             mpv_startup_dir: mpv_startup_dir.value,
