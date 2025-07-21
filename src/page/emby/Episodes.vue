@@ -642,20 +642,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
         const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
         const cache_max_bytes = Math.max(Math.min(Math.round(mpv_cache_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_max_bytes.value * 1024 * 1024), mpv_cache_min_bytes.value * 1024 * 1024)
         const cache_back_max_bytes = Math.max(Math.min(Math.round(mpv_cache_back_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_back_max_bytes.value * 1024 * 1024), mpv_cache_back_min_bytes.value * 1024 * 1024)
-        let pinnedUpdate = await usePlayHistory().cancelPinned(embyServer.value!.id!, currentEpisodes.value!.SeriesId)
-        usePlayHistory().addPlayHistory({
-            id: generateGuid(),
-            create_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
-            update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
-            emby_server_id: embyServer.value!.id!,
-            emby_server_name: embyServer.value!.server_name!,
-            item_id,
-            item_type: currentEpisodes.value!.Type || 'Movie',
-            item_name: episodesName,
-            series_id: currentEpisodes.value!.SeriesId,
-            series_name: currentEpisodes.value!.SeriesName,
-            played_duration: 0,
-            pinned: pinnedUpdate ? 1 : 0})
+        addPlayHistory(episodesName)
         return invokeApi.playback({
             mpv_path: mpv_path.value,
             mpv_startup_dir: mpv_startup_dir.value,
@@ -729,6 +716,37 @@ function playingStopped(payload: PlaybackProgress) {
 }
 onMounted(() => useEventBus().on('playingStopped', playingStopped))
 onUnmounted(() => useEventBus().remove('playingStopped', playingStopped))
+
+async function addPlayHistory(episodesName: string) {
+    let pinnedUpdate = await usePlayHistory().cancelPinned(embyServer.value!.id!, currentEpisodes.value!.SeriesId)
+    usePlayHistory().getPlayHistory(embyServer.value!.id!, currentEpisodes.value!.Id).then(response => {
+        if (response) {
+            usePlayHistory().updatePlayHistory({
+                id: response.id!,
+                update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
+                emby_server_name: embyServer.value!.server_name!,
+                item_name: episodesName,
+                item_type: currentEpisodes.value!.Type || 'Movie',
+                series_id: currentEpisodes.value!.SeriesId,
+                series_name: currentEpisodes.value!.SeriesName,
+                pinned: pinnedUpdate ? 1 : 0})
+        } else {
+            usePlayHistory().addPlayHistory({
+                id: generateGuid(),
+                create_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
+                update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
+                emby_server_id: embyServer.value!.id!,
+                emby_server_name: embyServer.value!.server_name!,
+                item_id: currentEpisodes.value!.Id,
+                item_type: currentEpisodes.value!.Type || 'Movie',
+                item_name: episodesName,
+                series_id: currentEpisodes.value!.SeriesId,
+                series_name: currentEpisodes.value!.SeriesName,
+                played_duration: 0,
+                pinned: pinnedUpdate ? 1 : 0})
+        }
+    })
+}
 
 const starLoading = ref<boolean>(false)
 function star() {
