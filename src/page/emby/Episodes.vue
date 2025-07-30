@@ -171,7 +171,7 @@
 <script lang="ts" setup>
 import { h, nextTick, onMounted, onUnmounted, ref, VNode, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, UserData } from '../../api/embyApi';
-import { formatBytes, formatMbps, secondsToHMS } from '../../util/str_util'
+import { formatBytes, formatMbps, secondsToHMS, isInternalUrl } from '../../util/str_util'
 import { getResolutionFromMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
 import invokeApi from '../../api/invokeApi';
@@ -411,7 +411,7 @@ function playbackVersionChange(versionId: number) {
     } else {
         mediaStreamResolutionTag.value = 'Unknown'
     }
-    if (currentMediaSources.IsRemote && currentMediaSources.Path && currentMediaSources.Path.indexOf('://') !== -1) {
+    if (currentMediaSources.IsRemote && currentMediaSources.Path && currentMediaSources.Path.indexOf('://') !== -1 && !isInternalUrl(currentMediaSources.Path)) {
         supportDirectLink.value = true
     }
     versionSelect.value = versionId
