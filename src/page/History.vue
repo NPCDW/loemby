@@ -16,6 +16,7 @@
             </el-table-column>
         </el-table>
         <el-pagination
+            style="margin: 10px 0 0 0;"
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
             layout="total, prev, pager, next, jumper"
@@ -45,7 +46,7 @@ const total = ref<number>(0)
 async function getEpisodes(pageNumber: number = 1, pageSize: number = 30) {
     return usePlayHistory().pagePlayHistory(pageNumber, pageSize).then(async response => {
         list.value = response.list
-        total.value = response.count
+        total.value = response.total
     }).catch(e => {
         ElMessage.error('获取播放历史失败' + e)
     })

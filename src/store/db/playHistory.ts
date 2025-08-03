@@ -2,13 +2,13 @@ import { defineStore } from 'pinia';
 import { useDb } from '../db';
 
 export const usePlayHistory = defineStore('playHistory', () => {
-    async function pagePlayHistory(pageNumber: number, pageSize: number): Promise<{count: number, list: PlayHistory[]}> {
-        let count = await useDb().db?.select<number>('select count(*) from play_history');
-        if (count == null || count == undefined || count == 0) {
-            return {count: 0, list: []};
+    async function pagePlayHistory(pageNumber: number, pageSize: number): Promise<{total: number, list: PlayHistory[]}> {
+        let total = await useDb().db?.select<{total: number}[]>('select count(*) as total from play_history');
+        if (total == null || total == undefined || total.length == 0 || total[0].total == 0) {
+            return {total: 0, list: []};
         }
         let playHistory = await useDb().db?.select<PlayHistory[]>('select * from play_history order by pinned desc, update_time desc limit $1 offset $2', [pageSize, (pageNumber - 1) * pageSize]);
-        return {count, list: playHistory || []};
+        return {total: total[0].total, list: playHistory || []};
     }
 
     async function getPlayHistory(emby_server_id: string, item_id: string) {
