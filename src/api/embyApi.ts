@@ -588,6 +588,7 @@ export type SearchItem = SeriesItem | SeasonItem | EpisodeItem
 export interface PlaybackInfo {
     PlaySessionId: string,
     MediaSources: MediaSource[],
+    ErrorCode?: string,
 }
 
 export interface MediaSource {
