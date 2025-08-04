@@ -10,7 +10,7 @@ pub async fn forward(param: HttpForwardParam, state: tauri::State<'_, AppState>)
         headers.insert(HeaderName::from_str(key).unwrap(), HeaderValue::from_str(value).unwrap());
     }
 
-    let client = http_pool::get_http_client(param.proxy, state).await?;
+    let client = http_pool::get_api_http_client(param.proxy, state).await?;
     let mut builder = client
         .request(Method::from_str(&param.method)?, param.url)
         .headers(headers);

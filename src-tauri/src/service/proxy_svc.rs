@@ -141,7 +141,7 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
     }
 
     let app_state = axum_app_state.app.state::<AppState>().clone();
-    let client = match http_pool::get_http_client(param.proxy_url.clone(), app_state).await {
+    let client = match http_pool::get_image_http_client(param.proxy_url.clone(), app_state).await {
         Ok(client) => client,
         Err(err) => return (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,

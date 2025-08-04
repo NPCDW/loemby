@@ -33,7 +33,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let app_state = auxm_app_state.read().await.clone();
     let app_state = app_state.as_ref().unwrap();
 
-    let client = match http_pool::get_http_client(body.proxy.clone(), state).await {
+    let client = match http_pool::get_stream_http_client(body.proxy.clone(), state).await {
         Ok(client) => client,
         Err(err) => return Err(err.to_string())
     };
