@@ -11,9 +11,9 @@ pub async fn get_api_http_client(proxy_url: Option<String>, state: tauri::State<
         let mut client = reqwest::Client::builder()
             .danger_accept_invalid_certs(config.danger_accept_invalid_certs)
             .pool_max_idle_per_host(3)
-            .pool_idle_timeout(std::time::Duration::from_secs(90))
-            .read_timeout(std::time::Duration::from_secs(30))
-            .connect_timeout(std::time::Duration::from_secs(30));
+            .pool_idle_timeout(tokio::time::Duration::from_secs(90))
+            .read_timeout(tokio::time::Duration::from_secs(30))
+            .connect_timeout(tokio::time::Duration::from_secs(30));
         if let Some(proxy_url) = proxy_url {
             let proxy = reqwest::Proxy::all(&proxy_url);
             if proxy.is_err() {
@@ -39,9 +39,9 @@ pub async fn get_image_http_client(proxy_url: Option<String>, state: tauri::Stat
         let mut client = reqwest::Client::builder()
             .danger_accept_invalid_certs(config.danger_accept_invalid_certs)
             .pool_max_idle_per_host(6)
-            .pool_idle_timeout(std::time::Duration::from_secs(90))
-            .read_timeout(std::time::Duration::from_secs(30))
-            .connect_timeout(std::time::Duration::from_secs(30));
+            .pool_idle_timeout(tokio::time::Duration::from_secs(90))
+            .read_timeout(tokio::time::Duration::from_secs(30))
+            .connect_timeout(tokio::time::Duration::from_secs(30));
         if let Some(proxy_url) = proxy_url {
             let proxy = reqwest::Proxy::all(&proxy_url);
             if proxy.is_err() {
@@ -65,15 +65,7 @@ pub async fn get_stream_http_client(proxy_url: Option<String>, state: tauri::Sta
         client.unwrap().to_owned()
     } else {
         let mut client = reqwest::Client::builder()
-            .danger_accept_invalid_certs(config.danger_accept_invalid_certs)
-            .pool_max_idle_per_host(3)
-            .pool_idle_timeout(std::time::Duration::from_secs(90))
-            // 该超时时间为从请求开始到响应结束总耗时，如果超过了总耗时，不管是否正在传输数据，都会结束链接，与其他语言库的逻辑不同，其他语言是如果链接有数据传输，有keep-alive就不会超时，
-            // 设置该选项会导致访问流媒体时链接频繁被超时释放，又频繁建立链接，会增加服务器压力，实际上mpv播放时，从头到尾只建立一个链接，由mpv控制缓存速度保持连接分片返回流
-            // .timeout(std::time::Duration::from_secs(30))
-            // 设置该选项会在播放暂停一段时间时释放链接，如果频繁暂停，会出现上述情况
-            // .read_timeout(std::time::Duration::from_secs(30))
-            .connect_timeout(std::time::Duration::from_secs(30));
+            .danger_accept_invalid_certs(config.danger_accept_invalid_certs);
         if let Some(proxy_url) = proxy_url {
             let proxy = reqwest::Proxy::all(&proxy_url);
             if proxy.is_err() {

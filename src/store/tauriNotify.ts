@@ -6,7 +6,7 @@ import { ElMessage, ElNotification } from 'element-plus';
 export const useTauriNotify = defineStore('tauriNotify', () => {
     async function listen_tauri_notify() {
         listen<TauriNotify>('tauri_notify', (event) => {
-            console.log(`store tauri_notify: ${event.payload}`);
+            console.log(`store tauri_notify: ${JSON.stringify(event.payload)}`);
             if (event.payload.alert_type === 'ElMessage') {
                 ElMessage({
                     type: event.payload.message_type,

@@ -5,7 +5,7 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 
-use crate::{config::{app_state::AppState, http_pool}, controller::invoke_ctl::PlayVideoParam, service::proxy_svc::AxumAppStateRequest, util::file_util};
+use crate::{config::app_state::AppState, controller::invoke_ctl::PlayVideoParam, service::proxy_svc::AxumAppStateRequest, util::file_util};
 
 pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = body.mpv_path.clone();
@@ -33,15 +33,11 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     let app_state = auxm_app_state.read().await.clone();
     let app_state = app_state.as_ref().unwrap();
 
-    let client = match http_pool::get_stream_http_client(body.proxy.clone(), state).await {
-        Ok(client) => client,
-        Err(err) => return Err(err.to_string())
-    };
     let video_path = if body.proxy.is_some() {
         let uuid = uuid::Uuid::new_v4().to_string();
         app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
             stream_url: body.path.clone(),
-            client: client.clone(),
+            proxy_url: body.proxy.clone(),
             user_agent: body.user_agent.clone(),
         });
         format!("http://127.0.0.1:{}/stream/video/{}", &app_state.port, &uuid)
@@ -79,7 +75,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
             let uuid = uuid::Uuid::new_v4().to_string();
             app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
                 stream_url: audio.clone(),
-                client: client.clone(),
+                proxy_url: body.proxy.clone(),
                 user_agent: body.user_agent.clone(),
             });
             format!("http://127.0.0.1:{}/stream/audio/{}", &app_state.port, &uuid)
@@ -93,7 +89,7 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
             let uuid = uuid::Uuid::new_v4().to_string();
             app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
                 stream_url: subtitle.clone(),
-                client: client.clone(),
+                proxy_url: body.proxy.clone(),
                 user_agent: body.user_agent.clone(),
             });
             format!("http://127.0.0.1:{}/stream/subtitle/{}", &app_state.port, &uuid)

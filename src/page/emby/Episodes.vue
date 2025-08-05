@@ -598,8 +598,7 @@ function getPlaybackInfo(item_id: string) {
         }
         let playbackInfo: PlaybackInfo = JSON.parse(response.body);
         if (playbackInfo.ErrorCode) {
-            ElMessage.error('获取播放信息失败 ' + playbackInfo.ErrorCode)
-            return Promise.reject('获取播放信息失败 ' + playbackInfo.ErrorCode)
+            return Promise.reject(playbackInfo.ErrorCode)
         }
         if (videoSelect.value === 0) {
             currentEpisodes.value!.MediaSources = playbackInfo.MediaSources;

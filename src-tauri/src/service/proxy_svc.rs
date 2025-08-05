@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
-use tokio_stream::{Stream, StreamExt};
+use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
 use crate::config::{app_state::{AppState, TauriNotify}, http_pool};
 
@@ -84,20 +84,28 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         }
     };
 
-    let client = request.client.clone();
+    let app_state2 = app_state.app.state::<AppState>().clone();
+    let client = http_pool::get_stream_http_client(request.proxy_url.clone(), app_state2).await.unwrap();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, request.user_agent.clone().parse().unwrap());
+    req_headers.insert(axum::http::header::CACHE_CONTROL, "no-cache".parse().unwrap());
     let res = client
         .get(request.stream_url.clone())
         .headers(req_headers.clone())
         .send()
         .await;
-    tracing::debug!("stream: {} {} {} 媒体流响应 {:?}", types, &id, request.user_agent, res);
+    tracing::debug!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, req_headers, res);
     match res {
         Err(err) => {
-            tracing::error!("stream: {} {} {} 媒体流响应 {:?}", types, &id, request.user_agent, err);
+            tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, request.user_agent, err);
+            app_state.app.emit("tauri_notify", TauriNotify {
+                alert_type: "ElMessage".to_string(),
+                message_type: "error".to_string(),
+                title: None,
+                message: format!("媒体流响应错误: {}", err),
+            }).unwrap();
             (
                 axum::http::StatusCode::SERVICE_UNAVAILABLE,
                 axum::http::HeaderMap::new(),
@@ -106,34 +114,22 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         },
         Ok(response) => {
             if !response.status().is_success() {
-                tracing::error!("stream: {} {} {} 媒体流响应 {:?}", types, &id, request.user_agent, response);
+                tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, req_headers, response);
                 let status = response.status();
                 let headers = response.headers().clone();
                 let mut stream = response.bytes_stream();
-                // 如果确定小于1000字节，完整读取并转为文本
-                if let (_lower, Some(upper)) = stream.size_hint() {
-                    if upper < 1000 {
-                        let mut bytes = Vec::with_capacity(upper as usize);
-                        while let Some(Ok(chunk)) = stream.next().await {
-                            bytes.extend_from_slice(&chunk);
-                        }
-                        let text = String::from_utf8_lossy(&bytes);
-                        tracing::error!("stream: {} {} {} 错误响应内容: {}", types, &id, request.user_agent, text);
-                        app_state.app.emit("tauri_notify", TauriNotify {
-                            alert_type: "ElMessage".to_string(),
-                            message_type: "error".to_string(),
-                            title: None,
-                            message: format!("媒体流响应错误: {} {} {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown"), text),
-                        }).unwrap();
-                    } else {
-                        app_state.app.emit("tauri_notify", TauriNotify {
-                            alert_type: "ElMessage".to_string(),
-                            message_type: "error".to_string(),
-                            title: None,
-                            message: format!("媒体流响应错误: {} {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown")),
-                        }).unwrap();
-                    }
+                let mut bytes = Vec::new();
+                while let Some(Ok(chunk)) = stream.next().await {
+                    bytes.extend_from_slice(&chunk);
                 }
+                let text = String::from_utf8_lossy(&bytes);
+                tracing::error!("stream: {} {} {:?} 错误响应内容: {}", types, &id, req_headers, text);
+                app_state.app.emit("tauri_notify", TauriNotify {
+                    alert_type: "ElMessage".to_string(),
+                    message_type: "error".to_string(),
+                    title: None,
+                    message: format!("媒体流响应错误: {} {} {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown"), text),
+                }).unwrap();
                 return (
                     status,
                     headers,
@@ -234,7 +230,7 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
 #[derive(Clone)]
 pub struct AxumAppStateRequest {
     pub stream_url: String,
-    pub client: reqwest::Client,
+    pub proxy_url: Option<String>,
     pub user_agent: String,
 }
 

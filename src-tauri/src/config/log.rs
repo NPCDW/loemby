@@ -20,12 +20,23 @@ pub fn init(local_data_dir: &PathBuf, log_level: &str) {
                 .with_writer(std::io::stdout)
                 .with_writer(std::io::stderr)
                 .with_timer(local_time.clone())
+                .with_line_number(true)
+                .with_target(true)
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .log_internal_errors(true)
                 .with_filter(level),
         )
         .with(
             tracing_subscriber::fmt::layer()
+                .with_ansi(false)
                 .with_writer(file_appender)
                 .with_timer(local_time.clone())
+                .with_line_number(true)
+                .with_target(true)
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .log_internal_errors(true)
                 .with_filter(level),
         )
         .init();
