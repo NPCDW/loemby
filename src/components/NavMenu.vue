@@ -283,7 +283,7 @@
             <template v-for="embyIcon in embyIconList">
                 <div style="display: flex; flex-direction: column; align-items: center; margin: 5px; width: 75px;" v-if="embyIcon.name.toLowerCase().includes(searchEmbyIconName.toLowerCase())">
                         <el-icon :size="48" @click="updateEmbyIcon(embyIcon.url)" style="max-height: 48px; max-width: 48px;">
-                            <img v-lazy="embyIcon.local_url" style="max-height: 48px; max-width: 48px;" />
+                            <img v-lazy="embyIcon.local_url" style="max-height: 48px; max-width: 48px; cursor: pointer;" />
                         </el-icon>
                         <span style="word-break: break-all; font-size: small; max-width: 60px; text-align: center;">{{ embyIcon.name }}</span>
                 </div>
@@ -607,6 +607,9 @@ async function saveEditEmbyServer() {
         if (line.emby_server_name != dialogEmbyServer.value!.server_name) {
             await updateEmbyLineServerName(dialogEmbyServer.value!.id!, dialogEmbyServer.value!.server_name!);
         }
+        if (line.id === showServerLine.value.id) {
+            showServerLine.value = line
+        }
     }).catch(e => ElMessage.error('获取正在使用的线路失败' + e))
     await updateEmbyServerDb(dialogEmbyServer.value!);
     ElMessage.success({
@@ -688,6 +691,9 @@ async function savedialogEmbyServerAddLine() {
                 play_proxy_id: dialogEmbyServerAddLine.value.play_proxy_id
             });
         }
+        if (dialogEmbyServerAddLine.value.id === showServerLine.value.id) {
+            showServerLine.value = dialogEmbyServerAddLine.value
+        }
         ElMessage.success({
             message: "保存成功"
         })
@@ -699,8 +705,10 @@ async function configLineChange(value: string) {
             ElMessage.error('获取线路失败')
             return
         }
-        showEmbyServer.value.line_id = line.id
-        showServerLine.value = line
+        if (line.emby_server_id === showEmbyServer.value.id) {
+            showEmbyServer.value.line_id = line.id
+            showServerLine.value = line
+        }
         let tmpEmbyServer = {
             id: line.emby_server_id,
             base_url: line.base_url,
@@ -708,11 +716,7 @@ async function configLineChange(value: string) {
             play_proxy_id: line.play_proxy_id,
             line_id: line.id,
         }
-        updateEmbyServerDb(tmpEmbyServer).then(() => {
-            ElMessage.success({
-                message: "线路切换成功"
-            })
-        }).catch(e => ElMessage.error("切换失败" + e))
+        updateEmbyServerDb(tmpEmbyServer)
     }).catch(e => ElMessage.error('获取线路失败' + e))
 }
 function proxyChange(line: EmbyLine) {

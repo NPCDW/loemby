@@ -22,7 +22,7 @@
                     @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
                     style="display: flex; flex-direction: column; align-items: center; padding: 18px;">
                     <div style="min-width: 115px; min-height: 160px;">
-                        <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px;" />
+                        <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px; cursor: pointer;" />
                     </div>
                     <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
                 </div>

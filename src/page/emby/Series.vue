@@ -85,7 +85,7 @@
             <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
                 <div v-for="season in seasonsList" @click="showSeasons(season)" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
                     <div style="min-height: 160px; min-width: 115px;">
-                        <img v-lazy="images[season.Id]" style="max-height: 160px; max-width: 115px;" />
+                        <img v-lazy="images[season.Id]" style="max-height: 160px; max-width: 115px; cursor: pointer;" />
                     </div>
                     <el-text truncated style="max-width: 115px;">{{ season.Name }}</el-text>
                 </div>
