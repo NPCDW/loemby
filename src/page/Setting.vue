@@ -272,7 +272,7 @@ demuxer-readahead-secs=180" />
                         <el-switch 
                             v-model="disabledCache"
                             @change="configValueChange('disabledCache', disabledCache + '', getDisabledCache, '禁用缓存')"
-                            active-value="on" inactive-value="off"
+                            active-value="off" inactive-value="on"
                             style="margin-left: 10px;"
                             active-text="使用缓存" inactive-text="禁用缓存" />
                     </el-form-item>
@@ -280,7 +280,7 @@ demuxer-readahead-secs=180" />
                         <el-switch 
                             v-model="disabledImage"
                             @change="configValueChange('disabledImage', disabledImage + '', getDisabledImage, '禁用图片加载')"
-                            active-value="on" inactive-value="off"
+                            active-value="off" inactive-value="on"
                             style="margin-left: 10px;"
                             active-text="正常显示图片" inactive-text="不请求任何图片" />
                     </el-form-item>
@@ -621,7 +621,7 @@ function getTraktInfo() {
     }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
 }
 async function saveTraktInfo() {
-    return useGlobalConfig().getGlobalConfigItem("trakt_info").then(config => {
+    return useGlobalConfig().getGlobalConfig("trakt_info").then(config => {
         let savePromise;
         if (config) {
             config.config_value = JSON.stringify(trakt_info.value);
@@ -844,7 +844,8 @@ function getIconStoredDays() {
 }
 
 function configValueChange(key: string, value: string, callback: () => void, keyName: string = key) {
-    useGlobalConfig().getGlobalConfigItem(key).then(config => {
+    useGlobalConfig().getGlobalConfig(key).then(config => {
+    console.log(config)
         let savePromise;
         if (config) {
             config.config_value = value;

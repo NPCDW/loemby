@@ -782,11 +782,13 @@ function updateEmbyIcon(url: string) {
 }
 
 async function loadImage(icon_url: string) {
+    const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
   return invokeApi.loadImage({
     image_url: icon_url,
     proxy_url: await useProxyServer().getAppProxyUrl(),
     user_agent: 'loemby/' + import.meta.env.VITE_APP_VERSION,
     cache_prefix: ['icon'],
+    disabled_cache: disabledCache == 'on',
   })
 }
 

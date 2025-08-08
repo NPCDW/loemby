@@ -9,7 +9,7 @@ export const useCache = defineStore('cache', () => {
         console.log('60秒后开始清理日志文件');
         await sleep(60_000)
         const logsDirExists = await fs.exists('logs', { baseDir: fs.BaseDirectory.AppLocalData });
-        if (logsDirExists) {
+        if (!logsDirExists) {
             ElMessage.warning('日志目录不存在，清理失败')
             return
         }
@@ -28,10 +28,10 @@ export const useCache = defineStore('cache', () => {
                 continue
             }
     
-            if (file.name.indexOf('.log') === -1) {
-                console.log(file.name + '文件不包含.log');
-                continue
-            };
+            // if (file.name.indexOf('.log') === -1) {
+            //     console.log(file.name + '文件不包含.log');
+            //     continue
+            // };
     
             // 获取文件元数据
             const metadata = await fs.stat('logs/' + file.name, { baseDir: fs.BaseDirectory.AppLocalData });
@@ -59,7 +59,7 @@ export const useCache = defineStore('cache', () => {
 
     async function cleanIcons(cleanAll: boolean = false) {
         const iconDirExists = await fs.exists('cache/icon', { baseDir: fs.BaseDirectory.AppLocalData });
-        if (iconDirExists) {
+        if (!iconDirExists) {
             return
         }
         const iconStoredDays = await useGlobalConfig().getGlobalConfigValue("iconStoredDays")
@@ -77,10 +77,10 @@ export const useCache = defineStore('cache', () => {
                 continue
             }
     
-            if (file.name.indexOf('.png') === -1) {
-                console.log(file.name + '文件不包含.png');
-                continue
-            };
+            // if (file.name.indexOf('.png') === -1) {
+            //     console.log(file.name + '文件不包含.png');
+            //     continue
+            // };
 
             if (cleanAll) {
                 await fs.remove('cache/icon/' + file.name, { baseDir: fs.BaseDirectory.AppLocalData });
@@ -118,7 +118,7 @@ export const useCache = defineStore('cache', () => {
             cleanDir = 'cache/image/' + embyId
         }
         const iconDirExists = await fs.exists(cleanDir, { baseDir: fs.BaseDirectory.AppLocalData });
-        if (iconDirExists) {
+        if (!iconDirExists) {
             return
         }
         const coverImageStoredDays = await useGlobalConfig().getGlobalConfigValue("coverImageStoredDays")
@@ -137,17 +137,21 @@ export const useCache = defineStore('cache', () => {
             };
             if (file.isDirectory) {
                 cleanEmbyCacheR(dir + '/' + file.name, cutoffTime)
+                if ((await fs.readDir(dir + '/' + file.name, { baseDir: fs.BaseDirectory.AppLocalData })).length === 0) {
+                    await fs.remove(dir + '/' + file.name, { baseDir: fs.BaseDirectory.AppLocalData });
+                    console.log(`Deleted empty directory: ${file.name}`);
+                }
                 continue
             }
     
-            if (file.name.indexOf('.png') === -1) {
-                console.log(file.name + '文件不包含.png');
-                continue
-            };
+            // if (file.name.indexOf('.png') === -1) {
+            //     console.log(file.name + '文件不包含.png');
+            //     continue
+            // };
     
             if (cleanAll) {
                 await fs.remove('cache/icon/' + file.name, { baseDir: fs.BaseDirectory.AppLocalData });
-                console.log(`Deleted icon file: ${file.name}`);
+                console.log(`Deleted emby cache file: ${file.name}`);
                 continue
             }
     

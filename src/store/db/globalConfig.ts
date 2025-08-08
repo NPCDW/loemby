@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia';
 import { useDb } from '../db';
 import { ref } from 'vue';
+import { waitUntilTrue } from '../../util/sleep';
 
 export const useGlobalConfig = defineStore('globalConfig', () => {
     const cacheGlobalConfig = ref<{[key: string]: GlobalConfig}>({});
+    const initCacheFinish = ref(false)
 
     async function refreshCache(key: string) {
         let config = await getGlobalConfig(key)
@@ -22,20 +24,18 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
         for (const item of globalConfigList) {
             cacheGlobalConfig.value[item.config_key!] = item;
         }
-    }
-
-    async function getGlobalConfigItem(config_key: string) {
-        if (!cacheGlobalConfig.value[config_key]) {
-            await refreshCache(config_key);
-        }
-        return cacheGlobalConfig.value[config_key];
+        initCacheFinish.value = true
     }
 
     async function getGlobalConfigValue(config_key: string) {
-        if (!cacheGlobalConfig.value[config_key]) {
-            await refreshCache(config_key);
+        if (!initCacheFinish.value) {
+            await waitUntilTrue(() => initCacheFinish.value, 100)
         }
-        return cacheGlobalConfig.value[config_key].config_value!;
+        if (!cacheGlobalConfig.value[config_key]) {
+            cacheGlobalConfig.value[config_key] = {};
+            return '';
+        }
+        return cacheGlobalConfig.value[config_key].config_value || '';
     }
 
     // 这个方法不要加缓存
@@ -77,7 +77,7 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
         return res?.rowsAffected;
     }
 
-    return { getGlobalConfigValue, getGlobalConfigItem, delGlobalConfig, addGlobalConfig, updateGlobalConfig, initCache }
+    return { getGlobalConfigValue, getGlobalConfig, delGlobalConfig, addGlobalConfig, updateGlobalConfig, initCache }
 })
 
 export interface GlobalConfig {

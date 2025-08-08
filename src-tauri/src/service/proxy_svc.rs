@@ -150,6 +150,7 @@ pub struct ImageParam {
     pub proxy_url: Option<String>,
     pub user_agent: String,
     pub cache_prefix: String,
+    pub disabled_cache: bool,
 }
 
 async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<ImageParam>) -> axum::response::Response {
@@ -158,7 +159,7 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
 
     let cache_digest = sha256::digest(&param.image_url);
     let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.png", param.cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
-    if cache_file_path.exists() {
+    if cache_file_path.exists() && !param.disabled_cache {
         tracing::debug!("image: {:?} 从缓存读取", param);
         let file = match tokio::fs::File::open(cache_file_path).await {
             Ok(file) => file,
@@ -202,13 +203,20 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
         ).into_response()
     }
     let response = res.unwrap();
+    let status = response.status();
+    let header = response.headers().clone();
+    let mut stream = response.bytes_stream();
+    if param.disabled_cache {
+        return (
+            status,
+            header,
+            axum::body::Body::from_stream(stream)
+        ).into_response();
+    }
     if !cache_file_path.parent().unwrap().exists() {
         std::fs::create_dir_all(cache_file_path.parent().unwrap()).unwrap();
     }
     let mut file = File::create(cache_file_path).await.unwrap();
-    let status = response.status();
-    let header = response.headers().clone();
-    let mut stream = response.bytes_stream();
 
     let (sender, receiver) = tokio::sync::mpsc::channel(32);
     tokio::spawn(async move {

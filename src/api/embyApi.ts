@@ -1,4 +1,5 @@
 import { EmbyServer } from '../store/db/embyServer';
+import { useGlobalConfig } from '../store/db/globalConfig';
 import { useProxyServer } from '../store/db/proxyServer';
 import invokeApi from './invokeApi';
 
@@ -430,8 +431,9 @@ function getSubtitleStreamUrl(embyServer: EmbyServer, item: EpisodeItem, mediaSo
  * 组装图片地址
  * @returns
  */
-function getImageUrl(embyServer: EmbyServer, item_id: string, imageType: string = 'Primary') {
-    if (!item_id) {
+async function getImageUrl(embyServer: EmbyServer, item_id: string, imageType: string = 'Primary') {
+    const disabledImage = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
+    if (!item_id || disabledImage == 'on') {
         return null;
     }
     return embyServer.base_url + `/emby/Items/${item_id}/Images/${imageType}`;

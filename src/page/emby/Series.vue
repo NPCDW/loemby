@@ -174,6 +174,7 @@ import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
 import { useEventBus } from '../../store/eventBus';
+import { useGlobalConfig } from '../../store/db/globalConfig';
 
 const router = useRouter()
 const route = useRoute()
@@ -361,12 +362,17 @@ function handleDialogEpisodesPageChange(page: number) {
 
 const images = ref<{[key: string]: string}>({})
 async function loadImage(itemId: string) {
-  images.value[itemId] = invokeApi.loadImage({
-    image_url: embyApi.getImageUrl(embyServer.value, itemId)!,
-    proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
-    user_agent: embyServer.value.user_agent!,
-    cache_prefix: ['image', embyServer.value.id!],
-  })
+    const image_url = await embyApi.getImageUrl(embyServer.value, itemId);
+    if (image_url) {
+        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
+        images.value[itemId] = invokeApi.loadImage({
+            image_url,
+            proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
+            user_agent: embyServer.value.user_agent!,
+            cache_prefix: ['image', embyServer.value.id!],
+            disabled_cache: disabledCache == 'on',
+        })
+    }
 }
 </script>
 

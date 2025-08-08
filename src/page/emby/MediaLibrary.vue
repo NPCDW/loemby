@@ -32,9 +32,9 @@
         </div>
         <div v-for="mediaLibrary in mediaLibraryList">
             <template v-if="mediaLibraryChildList[mediaLibrary.Id] && mediaLibraryChildList[mediaLibrary.Id].length > 0">
-                <div style="display: flex; align-items: center;">
+                <div style="display: flex; align-items: baseline;">
                     <h1>{{ mediaLibrary.Name }}</h1>
-                    <el-link type="primary" @click="gotoMediaLibraryItems(mediaLibrary.Id)">more</el-link>
+                    <el-link type="primary" @click="gotoMediaLibraryItems(mediaLibrary.Id)" style="margin-left: 10px;">more+</el-link>
                 </div>
                 <el-scrollbar>
                     <div style="display: flex;">
@@ -74,6 +74,7 @@ import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useProxyServer } from '../../store/db/proxyServer';
 import { useEventBus } from '../../store/eventBus';
+import { useGlobalConfig } from '../../store/db/globalConfig';
 
 const router = useRouter()
 const route = useRoute()
@@ -147,12 +148,17 @@ function getMediaLibraryChildLatest(parentId: string) {
 
 const images = ref<{[key: string]: string}>({})
 async function loadImage(itemId: string) {
-  images.value[itemId] = invokeApi.loadImage({
-    image_url: embyApi.getImageUrl(embyServer.value, itemId)!,
-    proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
-    user_agent: embyServer.value.user_agent!,
-    cache_prefix: ['image', embyServer.value.id!],
-  })
+    const image_url = await embyApi.getImageUrl(embyServer.value, itemId);
+    if (image_url) {
+        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
+        images.value[itemId] = invokeApi.loadImage({
+            image_url,
+            proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
+            user_agent: embyServer.value.user_agent!,
+            cache_prefix: ['image', embyServer.value.id!],
+            disabled_cache: disabledCache == 'on',
+        })
+    }
 }
 
 getEmbyServer(<string>route.params.embyId).then(() => {
