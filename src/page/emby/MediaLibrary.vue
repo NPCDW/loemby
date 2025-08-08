@@ -21,7 +21,7 @@
                     </template>
                     <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
                         <div v-for="item in mediaLibraryList" :key="item.Id" @click="gotoMediaLibraryItems(item.Id)" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                            <div style="min-width: 267px; min-height: 150px;">
+                            <div style="min-width: 267px; min-height: 150px;" class="loe-cover-img">
                                 <img v-lazy="images[item.Id]" style="max-width: 267px; max-height: 150px; cursor: pointer;" />
                             </div>
                             <span>{{ item.Name }}</span>
@@ -51,7 +51,7 @@
                                 <div v-for="item in mediaLibraryChildList[mediaLibrary.Id]" :key="item.Id"
                                     @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
                                     style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                                    <div style="min-width: 115px; min-height: 160px;">
+                                    <div style="min-width: 115px; min-height: 160px;" class="loe-cover-img">
                                         <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px; cursor: pointer;" />
                                     </div>
                                     <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
