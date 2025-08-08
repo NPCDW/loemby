@@ -15,14 +15,23 @@
             <el-scrollbar style="height: calc(100vh - 100px);">
                 <el-form label-position="top">
                     <el-form-item label="MPV文件路径">
-                        <el-input v-model="mpv_path" @change="mpvPathChange" placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
+                        <el-input
+                            v-model="mpv_path"
+                            @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径')"
+                            placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
                     </el-form-item>
                     <el-form-item label="MPV启动目录">
-                        <el-input v-model="mpv_startup_dir" @change="mpvStartupDirChange" placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
+                        <el-input
+                            v-model="mpv_startup_dir"
+                            @change="configValueChange('mpv_startup_dir', mpv_startup_dir, getMpvStartupDir, 'MPV启动目录')"
+                            placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
                     </el-form-item>
                     <el-form-item label="MPV缓存（按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小）" style="display: flex; flex-direction: column;">
                         <div style="flex: auto;">
-                            <el-input-number v-model="mpv_cache_seconds" @change="mpvCacheSecondsChange" :min="0" :precision="0" :controls="false" style="width: 200px;">
+                            <el-input-number
+                                v-model="mpv_cache_seconds"
+                                @change="configValueChange('mpv_cache_seconds', mpv_cache_seconds + '', getMpvCacheSeconds, '前向缓存')"
+                                :min="0" :precision="0" :controls="false" style="width: 200px;">
                                 <template #prefix>
                                     <span>前向缓存</span>
                                 </template>
@@ -30,7 +39,10 @@
                                     <span>秒</span>
                                 </template>
                             </el-input-number>
-                            <el-input-number v-model="mpv_cache_min_bytes" @change="mpvCacheMinBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
+                            <el-input-number
+                                v-model="mpv_cache_min_bytes"
+                                @change="configValueChange('mpv_cache_min_bytes', mpv_cache_min_bytes + '', getMpvCacheMinBytes, '前向最小缓存')"
+                                :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
                                 <template #prefix>
                                     <span>前向最小缓存</span>
                                 </template>
@@ -38,7 +50,10 @@
                                     <span>MiB</span>
                                 </template>
                             </el-input-number>
-                            <el-input-number v-model="mpv_cache_max_bytes" @change="mpvCacheMaxBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
+                            <el-input-number
+                                v-model="mpv_cache_max_bytes"
+                                @change="configValueChange('mpv_cache_max_bytes', mpv_cache_max_bytes + '', getMpvCacheMaxBytes, '前向最大缓存')"
+                                :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
                                 <template #prefix>
                                     <span>前向最大缓存</span>
                                 </template>
@@ -48,7 +63,10 @@
                             </el-input-number>
                         </div>
                         <div style="flex: auto;">
-                            <el-input-number v-model="mpv_cache_back_seconds" @change="mpvCacheBackSecondsChange" :min="0" :precision="0" :controls="false" style="width: 200px;">
+                            <el-input-number
+                                v-model="mpv_cache_back_seconds"
+                                @change="configValueChange('mpv_cache_back_seconds', mpv_cache_back_seconds + '', getMpvCacheBackSeconds, '后向缓存')"
+                                :min="0" :precision="0" :controls="false" style="width: 200px;">
                                 <template #prefix>
                                     <span>后向缓存</span>
                                 </template>
@@ -56,7 +74,10 @@
                                     <span>秒</span>
                                 </template>
                             </el-input-number>
-                            <el-input-number v-model="mpv_cache_back_min_bytes" @change="mpvCacheBackMinBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
+                            <el-input-number
+                                v-model="mpv_cache_back_min_bytes"
+                                @change="configValueChange('mpv_cache_back_min_bytes', mpv_cache_back_min_bytes + '', getMpvCacheBackMinBytes, '后向最小缓存')"
+                                :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
                                 <template #prefix>
                                     <span>后向最小缓存</span>
                                 </template>
@@ -64,7 +85,10 @@
                                     <span>MiB</span>
                                 </template>
                             </el-input-number>
-                            <el-input-number v-model="mpv_cache_back_max_bytes" @change="mpvCacheBackMaxBytesChange" :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
+                            <el-input-number
+                                v-model="mpv_cache_back_max_bytes"
+                                @change="configValueChange('mpv_cache_back_max_bytes', mpv_cache_back_max_bytes + '', getMpvCacheBackMaxBytes, '后向最大缓存')"
+                                :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
                                 <template #prefix>
                                     <span>后向最大缓存</span>
                                 </template>
@@ -82,7 +106,10 @@
                                 <el-link target="_blank" href="https://hooke007.github.io/official_man/mpv.html" style="margin-left: 10px;">中文文档</el-link>
                             </div>
                         </template>
-                        <el-input v-model="mpv_args" @change="mpvArgsChange" :rows="4" type="textarea" placeholder="每行一个，示例: 
+                        <el-input
+                            v-model="mpv_args"
+                            @change="configValueChange('mpv_args', mpv_args, getMpvArgs, 'MPV参数')"
+                            :rows="4" type="textarea" placeholder="每行一个，示例: 
 ontop=no
 demuxer-max-bytes=512MiB
 demuxer-max-back-bytes=512MiB
@@ -98,13 +125,19 @@ demuxer-readahead-secs=180" />
                     <el-form-item label="Trakt （剧集或电影播放完成时可以在网页端看到记录，未播放完成的可以通过接口查询记录）">
                         <div v-if="trakt_info.username">
                             <el-text>{{ trakt_info.username }}</el-text>
-                            <el-switch v-model="trakt_sync_switch" @change="traktSyncSwitchChange" active-value="on" inactive-value="off" inline-prompt style="margin-left: 10px; --el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
+                            <el-switch
+                                v-model="trakt_sync_switch"
+                                @change="configValueChange('trakt_sync_switch', trakt_sync_switch + '', getTraktSyncSwitch, 'Trakt同步开关')"
+                                active-value="on" inactive-value="off" inline-prompt style="margin-left: 10px; --el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
                             <el-button type="danger" @click="delAuthTrakt()" size="small" style="margin: 0 10px;">删除授权</el-button>
                         </div>
                         <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
                     </el-form-item>
                     <el-form-item label="Trakt代理">
-                        <el-select v-model="trakt_proxy_id" @change="traktProxyChange" style="width: 220px;">
+                        <el-select
+                            v-model="trakt_proxy_id"
+                            @change="configValueChange('trakt_proxy_id', trakt_proxy_id + '', getTraktProxy, 'Trakt代理')"
+                            style="width: 220px;">
                             <el-option key="no" label="不使用代理" value="no"/>
                             <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
                             <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
@@ -141,7 +174,10 @@ demuxer-readahead-secs=180" />
                 <h1>Emby线路代理配置</h1>
                 <el-form :inline="true">
                     <el-form-item label="全局媒体库浏览">
-                        <el-select v-model="global_browse_proxy_id" @change="globalBrowseProxyChange" style="width: 220px;">
+                        <el-select
+                            v-model="global_browse_proxy_id"
+                            @change="configValueChange('global_browse_proxy_id', global_browse_proxy_id + '', () => {getGlobalBrowseProxy(); useEventBus().emit('GlobalProxyChanged', {})}, '全局媒体库浏览代理')"
+                            style="width: 220px;">
                             <template #label="{ label }">
                                 <span>全局配置: </span>
                                 <span style="font-weight: bold">{{ label }}</span>
@@ -151,7 +187,10 @@ demuxer-readahead-secs=180" />
                         </el-select>
                     </el-form-item>
                     <el-form-item label="全局媒体流播放">
-                        <el-select v-model="global_play_proxy_id" @change="globalPlayProxyChange" style="width: 220px;">
+                        <el-select
+                            v-model="global_play_proxy_id"
+                            @change="configValueChange('global_play_proxy_id', global_play_proxy_id + '', () => {getGlobalPlayProxy(); useEventBus().emit('GlobalProxyChanged', {})}, '全局媒体流播放代理')"
+                            style="width: 220px;">
                             <template #label="{ label }">
                                 <span>全局配置: </span>
                                 <span style="font-weight: bold">{{ label }}</span>
@@ -190,7 +229,10 @@ demuxer-readahead-secs=180" />
                 <h1>Emby图标库</h1>
                 <el-form :inline="true">
                     <el-form-item label="应用数据代理（图标、自动更新等）">
-                        <el-select v-model="app_proxy_id" @change="appProxyChange" style="width: 220px;">
+                        <el-select
+                            v-model="app_proxy_id"
+                            @change="configValueChange('app_proxy_id', app_proxy_id + '', getAppProxy, '应用数据代理')"
+                            style="width: 220px;">
                             <el-option key="no" label="不使用代理" value="no"/>
                             <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
                             <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
@@ -208,6 +250,69 @@ demuxer-readahead-secs=180" />
                         <template #default="scope">
                             <el-button plain type="primary" size="small" @click.prevent="editEmbyIconLibrary(scope.$index)">编辑</el-button>
                             <el-button plain type="danger" size="small" @click.prevent="delEmbyIconLibrary(scope.$index)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-scrollbar>
+        </el-tab-pane>
+        <el-tab-pane label="缓存与日志" name="CacheAndLog">
+            <el-scrollbar style="height: calc(100vh - 100px);">
+                <el-form label-position="top">
+                    <el-form-item label="日志保存天数">
+                        <el-input-number
+                            v-model="logStoredDays"
+                            @change="configValueChange('logStoredDays', logStoredDays + '', getLogStoredDays, '日志保存天数')"
+                            :min="1" :precision="0">
+                            <template #suffix>
+                                <span>天</span>
+                            </template>
+                        </el-input-number>
+                    </el-form-item>
+                    <el-form-item label="禁用缓存">
+                        <el-switch 
+                            v-model="disabledCache"
+                            @change="configValueChange('disabledCache', disabledCache + '', getDisabledCache, '禁用缓存')"
+                            active-value="on" inactive-value="off"
+                            style="margin-left: 10px;"
+                            active-text="使用缓存" inactive-text="禁用缓存" />
+                    </el-form-item>
+                    <el-form-item label="禁用图片加载">
+                        <el-switch 
+                            v-model="disabledImage"
+                            @change="configValueChange('disabledImage', disabledImage + '', getDisabledImage, '禁用图片加载')"
+                            active-value="on" inactive-value="off"
+                            style="margin-left: 10px;"
+                            active-text="正常显示图片" inactive-text="不请求任何图片" />
+                    </el-form-item>
+                    <el-form-item label="封面图保存天数">
+                        <el-input-number v-model="coverImageStoredDays"
+                            @change="configValueChange('coverImageStoredDays', coverImageStoredDays + '', getCoverImageStoredDays, '封面图保存天数')"
+                            :min="1" :precision="0">
+                            <template #suffix>
+                                <span>天</span>
+                            </template>
+                        </el-input-number>
+                    </el-form-item>
+                    <el-form-item label="图标保存天数">
+                        <el-input-number v-model="iconStoredDays"
+                            @change="configValueChange('iconStoredDays', iconStoredDays + '', getIconStoredDays, '图标保存天数')"
+                            :min="1" :precision="0">
+                            <template #suffix>
+                                <span>天</span>
+                            </template>
+                        </el-input-number>
+                        <el-button type="primary" :loading="cleanIconCacheLoading" @click="cleanIconCache()" style="margin: 0 10px;">🆑清除所有图标缓存</el-button>
+                    </el-form-item>
+                </el-form>
+                <el-table :data="embyServers" style="width: 100%">
+                    <el-table-column prop="server_name" label="服务名" />
+                    <el-table-column prop="username" label="用户名" />
+                    <el-table-column fixed="right" label="Operations" width="180">
+                        <template #header>
+                            <el-button type="primary" :loading="cleanAllEmbyCacheLoading" size="small" @click.prevent="cleanAllEmbyCache()">清除所有缓存</el-button>
+                        </template>
+                        <template #default="scope">
+                            <el-button plain type="primary" :loading="cleanEmbyCacheLoading" size="small" @click.prevent="cleanEmbyCache(scope.row)">清除缓存</el-button>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -291,6 +396,7 @@ import { listen } from '@tauri-apps/api/event';
 import traktApi from '../api/traktApi';
 import {useRuntimeConfig} from "../store/runtimeConfig.ts";
 import { EmbyIconLibrary, useEmbyIconLibrary } from '../store/db/embyIconLibrary.ts';
+import { useCache } from '../store/cache.ts';
 
 const version = useRuntimeConfig().runtimeConfig?.version
 
@@ -502,28 +608,6 @@ function getTraktSyncSwitch() {
         trakt_sync_switch.value = value ? value : "on";
     }).catch(e => ElMessage.error('获取Trakt同步开关失败' + e))
 }
-function traktSyncSwitchChange() {
-    useGlobalConfig().getGlobalConfigItem("trakt_sync_switch").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = trakt_sync_switch.value;
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "trakt_sync_switch",
-                config_value: trakt_sync_switch.value
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getTraktSyncSwitch()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改Trakt同步开关失败' + e))
-}
 
 const traktAuthLoading = ref(false)
 const trakt_info = ref<{access_token?: string, refresh_token?: string, expires_in?: number, username?: string, redirect_uri?: string}>({});
@@ -621,55 +705,11 @@ function getTraktProxy() {
         trakt_proxy_id.value = value ? value : "no";
     }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
 }
-function traktProxyChange() {
-    useGlobalConfig().getGlobalConfigItem("trakt_proxy_id").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = trakt_proxy_id.value;
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "trakt_proxy_id",
-                config_value: trakt_proxy_id.value
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getTraktProxy()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
-}
 const app_proxy_id = ref<string>('followBrowse');
 function getAppProxy() {
     useGlobalConfig().getGlobalConfigValue("app_proxy_id").then(value => {
         app_proxy_id.value = value ? value : "no";
     }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
-}
-function appProxyChange() {
-    useGlobalConfig().getGlobalConfigItem("app_proxy_id").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = app_proxy_id.value;
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "app_proxy_id",
-                config_value: app_proxy_id.value
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getAppProxy()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
 }
 const global_browse_proxy_id = ref<string>('no');
 const global_browse_proxy_name = ref<string>('不使用代理');
@@ -680,29 +720,6 @@ function getGlobalBrowseProxy() {
     }).catch(e => ElMessage.error('获取全局浏览代理失败' + e))
 }
 getGlobalBrowseProxy()
-function globalBrowseProxyChange() {
-    useGlobalConfig().getGlobalConfigItem("global_browse_proxy_id").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = global_browse_proxy_id.value;
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "global_browse_proxy_id",
-                config_value: global_browse_proxy_id.value
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getGlobalBrowseProxy()
-            useEventBus().emit('GlobalProxyChanged', {})
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
-}
 const global_play_proxy_id = ref<string>('no');
 const global_play_proxy_name = ref<string>('不使用代理');
 function getGlobalPlayProxy() {
@@ -712,29 +729,6 @@ function getGlobalPlayProxy() {
     }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 }
 getGlobalPlayProxy()
-function globalPlayProxyChange() {
-    useGlobalConfig().getGlobalConfigItem("global_play_proxy_id").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = global_play_proxy_id.value;
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "global_play_proxy_id",
-                config_value: global_play_proxy_id.value
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getGlobalPlayProxy()
-            useEventBus().emit('GlobalProxyChanged', {})
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改全局浏览代理失败' + e))
-}
 function proxyChange(line: EmbyLine) {
     useEmbyLine().updateEmbyLine(line).then(() => {
         useEventBus().emit('EmbyLineChanged', {})
@@ -755,29 +749,7 @@ const mpv_path = ref<string>('');
 function getMpvPath() {
     useGlobalConfig().getGlobalConfigValue("mpv_path").then(value => {
         mpv_path.value = value ? value : "";
-    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
-}
-function mpvPathChange() {
-    useGlobalConfig().getGlobalConfigItem("mpv_path").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = mpv_path.value;
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "mpv_path",
-                config_value: mpv_path.value
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getMpvPath()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+    }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
 const mpv_startup_dir = ref<string>('');
@@ -786,28 +758,6 @@ function getMpvStartupDir() {
         mpv_startup_dir.value = value ? value : "";
     }).catch(e => ElMessage.error('获取MPV启动目录失败' + e))
 }
-function mpvStartupDirChange() {
-    useGlobalConfig().getGlobalConfigItem("mpv_startup_dir").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = mpv_startup_dir.value;
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "mpv_startup_dir",
-                config_value: mpv_startup_dir.value
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getMpvStartupDir()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改MPV启动目录失败' + e))
-}
 
 const mpv_args = ref<string>('');
 function getMpvArgs() {
@@ -815,201 +765,127 @@ function getMpvArgs() {
         mpv_args.value = value ? value : "";
     }).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
 }
-function mpvArgsChange() {
-    useGlobalConfig().getGlobalConfigItem("mpv_args").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = mpv_args.value;
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "mpv_args",
-                config_value: mpv_args.value
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getMpvArgs()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改MPV启动参数失败' + e))
-}
 
 const mpv_cache_seconds = ref<number>(0);
 function getMpvCacheSeconds() {
     useGlobalConfig().getGlobalConfigValue("mpv_cache_seconds").then(value => {
         mpv_cache_seconds.value = value ? Number(value) : 0;
-    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
-}
-function mpvCacheSecondsChange() {
-    useGlobalConfig().getGlobalConfigItem("mpv_cache_seconds").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = mpv_cache_seconds.value + '';
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "mpv_cache_seconds",
-                config_value: mpv_cache_seconds.value + ''
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getMpvCacheSeconds()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+    }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
 const mpv_cache_min_bytes = ref<number>(0);
 function getMpvCacheMinBytes() {
     useGlobalConfig().getGlobalConfigValue("mpv_cache_min_bytes").then(value => {
         mpv_cache_min_bytes.value = value ? Number(value) : 0;
-    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
-}
-function mpvCacheMinBytesChange() {
-    useGlobalConfig().getGlobalConfigItem("mpv_cache_min_bytes").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = mpv_cache_min_bytes.value + '';
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "mpv_cache_min_bytes",
-                config_value: mpv_cache_min_bytes.value + ''
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getMpvCacheMinBytes()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+    }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
 const mpv_cache_max_bytes = ref<number>(0);
 function getMpvCacheMaxBytes() {
     useGlobalConfig().getGlobalConfigValue("mpv_cache_max_bytes").then(value => {
         mpv_cache_max_bytes.value = value ? Number(value) : 0;
-    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
-}
-function mpvCacheMaxBytesChange() {
-    useGlobalConfig().getGlobalConfigItem("mpv_cache_max_bytes").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = mpv_cache_max_bytes.value + '';
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "mpv_cache_max_bytes",
-                config_value: mpv_cache_max_bytes.value + ''
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getMpvCacheMaxBytes()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+    }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
 const mpv_cache_back_seconds = ref<number>(0);
 function getMpvCacheBackSeconds() {
     useGlobalConfig().getGlobalConfigValue("mpv_cache_back_seconds").then(value => {
         mpv_cache_back_seconds.value = value ? Number(value) : 0;
-    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
-}
-function mpvCacheBackSecondsChange() {
-    useGlobalConfig().getGlobalConfigItem("mpv_cache_back_seconds").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = mpv_cache_back_seconds.value + '';
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "mpv_cache_back_seconds",
-                config_value: mpv_cache_back_seconds.value + ''
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getMpvCacheBackSeconds()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+    }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
 const mpv_cache_back_min_bytes = ref<number>(0);
 function getMpvCacheBackMinBytes() {
     useGlobalConfig().getGlobalConfigValue("mpv_cache_back_min_bytes").then(value => {
         mpv_cache_back_min_bytes.value = value ? Number(value) : 0;
-    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
-}
-function mpvCacheBackMinBytesChange() {
-    useGlobalConfig().getGlobalConfigItem("mpv_cache_back_min_bytes").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = mpv_cache_back_min_bytes.value + '';
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "mpv_cache_back_min_bytes",
-                config_value: mpv_cache_back_min_bytes.value + ''
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        savePromise.then(() => {
-            getMpvCacheBackMinBytes()
-            ElMessage.success('修改成功');
-        }).catch(e => {
-            ElMessage.error('修改失败' + e);
-        })
-    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+    }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
 const mpv_cache_back_max_bytes = ref<number>(0);
 function getMpvCacheBackMaxBytes() {
     useGlobalConfig().getGlobalConfigValue("mpv_cache_back_max_bytes").then(value => {
         mpv_cache_back_max_bytes.value = value ? Number(value) : 0;
-    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
+    }).catch(e => ElMessage.error('获取配置失败' + e))
 }
-function mpvCacheBackMaxBytesChange() {
-    useGlobalConfig().getGlobalConfigItem("mpv_cache_back_max_bytes").then(config => {
+
+const logStoredDays = ref<number>(0);
+function getLogStoredDays() {
+    useGlobalConfig().getGlobalConfigValue("logStoredDays").then(value => {
+        logStoredDays.value = value ? Number(value) : 30;
+    }).catch(e => ElMessage.error('获取配置失败' + e))
+}
+
+const disabledCache = ref<string>('off');
+function getDisabledCache() {
+    useGlobalConfig().getGlobalConfigValue("disabledCache").then(value => {
+        disabledCache.value = value ? value : 'off';
+    }).catch(e => ElMessage.error('获取配置失败' + e))
+}
+
+const disabledImage = ref<string>('off');
+function getDisabledImage() {
+    useGlobalConfig().getGlobalConfigValue("disabledImage").then(value => {
+        disabledImage.value = value ? value : 'off';
+    }).catch(e => ElMessage.error('获取配置失败' + e))
+}
+
+const coverImageStoredDays = ref<number>(0);
+function getCoverImageStoredDays() {
+    useGlobalConfig().getGlobalConfigValue("coverImageStoredDays").then(value => {
+        coverImageStoredDays.value = value ? Number(value) : 30;
+    }).catch(e => ElMessage.error('获取配置失败' + e))
+}
+
+const iconStoredDays = ref<number>(0);
+function getIconStoredDays() {
+    useGlobalConfig().getGlobalConfigValue("iconStoredDays").then(value => {
+        iconStoredDays.value = value ? Number(value) : 365;
+    }).catch(e => ElMessage.error('获取配置失败' + e))
+}
+
+function configValueChange(key: string, value: string, callback: () => void, keyName: string = key) {
+    useGlobalConfig().getGlobalConfigItem(key).then(config => {
         let savePromise;
         if (config) {
-            config.config_value = mpv_cache_back_max_bytes.value + '';
+            config.config_value = value;
             savePromise = useGlobalConfig().updateGlobalConfig(config);
         } else {
             config = {
                 id: generateGuid(),
-                config_key: "mpv_cache_back_max_bytes",
-                config_value: mpv_cache_back_max_bytes.value + ''
+                config_key: key,
+                config_value: value
             }
             savePromise = useGlobalConfig().addGlobalConfig(config);
         }
         savePromise.then(() => {
-            getMpvCacheBackMaxBytes()
-            ElMessage.success('修改成功');
+            callback()
+            ElMessage.success('修改' + keyName + '成功');
         }).catch(e => {
-            ElMessage.error('修改失败' + e);
+            ElMessage.error('修改' + keyName + '失败' + e);
         })
     }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+}
+
+const cleanIconCacheLoading = ref(false)
+function cleanIconCache() {
+    cleanIconCacheLoading.value = true
+    useCache().cleanIcons(true).finally(() => {
+        cleanIconCacheLoading.value = false
+    })
+}
+const cleanEmbyCacheLoading = ref(false)
+function cleanEmbyCache(server: EmbyServer) {
+    cleanEmbyCacheLoading.value = true
+    useCache().cleanEmbyCache(true, server.id).finally(() => {
+        cleanEmbyCacheLoading.value = false
+    })
+}
+const cleanAllEmbyCacheLoading = ref(false)
+function cleanAllEmbyCache() {
+    cleanAllEmbyCacheLoading.value = true
+    useCache().cleanEmbyCache(true).finally(() => {
+        cleanAllEmbyCacheLoading.value = false
+    })
 }
 
 const activePane = ref('Common')
@@ -1035,6 +911,12 @@ function handlePaneChange() {
     } else if (activePane.value == 'EmbyIconLibrary') {
         getAppProxy()
         listAllEmbyIconLibrary()
+    } else if (activePane.value == 'CacheAndLog') {
+        getLogStoredDays()
+        getDisabledCache()
+        getDisabledImage()
+        getCoverImageStoredDays()
+        getIconStoredDays()
     }
 }
 handlePaneChange()

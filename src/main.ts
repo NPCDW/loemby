@@ -15,6 +15,7 @@ import {useRuntimeConfig} from "./store/runtimeConfig.ts";
 import { useGlobalConfig } from './store/db/globalConfig.ts'
 import { useProxyServer } from './store/db/proxyServer.ts'
 import { useTauriNotify } from './store/tauriNotify.ts'
+import { useCache } from './store/cache.ts'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -34,3 +35,7 @@ app.mount('#app')
 usePlayback().listen_playback_progress()
 useTauriNotify().listen_tauri_notify()
 updaer_util.getUpdate()
+
+useCache().cleanLogs()
+useCache().cleanIconsTime()
+useCache().cleanEmbyCacheTime()
