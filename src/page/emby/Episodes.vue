@@ -22,11 +22,16 @@
                 </template>
                 <div v-if="currentEpisodes">
                     <div style="width: 100%;">
-                        <h1 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h1>
-                        <template v-else>
-                            <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
-                            <p>{{ 'S' + (currentEpisodes.ParentIndexNumber || -1) + 'E' + (currentEpisodes.IndexNumber || -1) + '. ' + currentEpisodes.Name }}</p>
-                        </template>
+                        <div style="display: flex; justify-content: space-between;">
+                            <div>
+                                <h1 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h1>
+                                <template v-else>
+                                    <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
+                                    <p>{{ 'S' + (currentEpisodes.ParentIndexNumber || -1) + 'E' + (currentEpisodes.IndexNumber || -1) + '. ' + currentEpisodes.Name }}</p>
+                                </template>
+                            </div>
+                            <img v-lazy="images[currentEpisodes.SeriesId || currentEpisodes.Id]" style="max-height: 115px; max-width: 515px;" />
+                        </div>
                         <p>
                             <span>外部链接：</span>
                             <el-tooltip v-for="externalUrl in currentEpisodes.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
@@ -297,6 +302,7 @@ function updateCurrentEpisodes(silent: boolean = false) {
         currentEpisodes.value = json
         if (!silent && json.MediaSources) {
             handleMediaSources(json.MediaSources)
+            loadImage(json.SeriesId || json.Id)
         }
         if (json.SeriesId && !currentSeries.value) {
             await getCurrentSeries()
@@ -810,6 +816,21 @@ function played() {
 
 function gotoSeries(seriesId: string) {
     router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
+}
+
+const images = ref<{[key: string]: string}>({})
+async function loadImage(itemId: string) {
+    const image_url = await embyApi.getImageUrl(embyServer.value, itemId, 'Logo');
+    if (image_url) {
+        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
+        images.value[itemId] = invokeApi.loadImage({
+            image_url,
+            proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
+            user_agent: embyServer.value.user_agent!,
+            cache_prefix: ['image', embyServer.value.id!, 'Logo'],
+            disabled_cache: disabledCache == 'on',
+        })
+    }
 }
 </script>
 
