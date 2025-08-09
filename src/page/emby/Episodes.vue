@@ -30,7 +30,9 @@
                                     <p>{{ 'S' + (currentEpisodes.ParentIndexNumber || -1) + 'E' + (currentEpisodes.IndexNumber || -1) + '. ' + currentEpisodes.Name }}</p>
                                 </template>
                             </div>
-                            <img v-lazy="images[currentEpisodes.SeriesId || currentEpisodes.Id]" style="max-height: 115px; max-width: 515px;" />
+                            <div class="loe-logo-img">
+                                <img v-lazy="useImage().images[embyServer.id + ':logo:' + currentEpisodes.Id]" style="max-height: 115px; max-width: 515px;" />
+                            </div>
                         </div>
                         <p>
                             <span>外部链接：</span>
@@ -175,7 +177,7 @@
 
 <script lang="ts" setup>
 import { h, nextTick, onMounted, onUnmounted, ref, VNode, watchEffect } from 'vue';
-import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, UserData } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS, isInternalUrl } from '../../util/str_util'
 import { getResolutionFromMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
@@ -191,6 +193,7 @@ import { useEventBus } from '../../store/eventBus';
 import traktApi from '../../api/traktApi';
 import { usePlayHistory } from '../../store/db/playHistory';
 import { generateGuid } from '../../util/uuid_util';
+import { useImage } from '../../store/image';
 
 const router = useRouter()
 const route = useRoute()
@@ -300,30 +303,39 @@ function updateCurrentEpisodes(silent: boolean = false) {
         }
         let json: EpisodeItem = JSON.parse(response.body);
         currentEpisodes.value = json
-        if (!silent && json.MediaSources) {
-            handleMediaSources(json.MediaSources)
-            loadImage(json.SeriesId || json.Id)
-        }
-        if (json.SeriesId && !currentSeries.value) {
-            await getCurrentSeries()
+        if (!silent) {
+            if (json.MediaSources) {
+                handleMediaSources(json.MediaSources)
+            }
+            useImage().loadLogo(embyServer.value, json)
+            if (json.SeriesId && !currentSeries.value) {
+                await getCurrentSeries()
+            }
         }
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => playbackInfoLoading.value = false)
 }
 
-const currentSeries = ref<EpisodeItem>()
+const currentSeries = ref<SeriesItem>()
 async function getCurrentSeries() {
     if (!currentEpisodes.value || !currentEpisodes.value.SeriesId) {
         return
+    }
+    const storage = await sessionStorage.getItem(embyServer.value.id + ':emby:' + currentEpisodes.value.SeriesId)
+    if (storage) {
+        currentSeries.value = JSON.parse(storage)
+        return Promise.resolve()
     }
     return embyApi.items(embyServer.value, currentEpisodes.value.SeriesId).then(async response => {
         if (response.status_code != 200) {
             ElMessage.error(response.status_code + ' ' + response.status_text)
             return
         }
-        let json: EpisodeItem = JSON.parse(response.body);
+        let json: SeriesItem = JSON.parse(response.body);
         currentSeries.value = json
+        sessionStorage.setItem(embyServer.value.id + ':emby:' + currentEpisodes.value!.SeriesId, JSON.stringify(json))
+        return Promise.resolve()
     }).catch(e => {
         ElMessage.error(e)
     })
@@ -556,7 +568,7 @@ function getScrobbleTraktParam(playbackPositionTicks: number) {
         }
     }
 }
-function getScrobbleTraktIdsParam(item: EpisodeItem) {
+function getScrobbleTraktIdsParam(item: EpisodeItem | SeriesItem) {
     let ids: {[key in 'imdb' | 'tmdb' | 'tvdb' | 'trakt']?: string} = {}
     for (const [key, value] of Object.entries(item.ProviderIds)) {
         let provider = key.toLowerCase()
@@ -816,21 +828,6 @@ function played() {
 
 function gotoSeries(seriesId: string) {
     router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
-}
-
-const images = ref<{[key: string]: string}>({})
-async function loadImage(itemId: string) {
-    const image_url = await embyApi.getImageUrl(embyServer.value, itemId, 'Logo');
-    if (image_url) {
-        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
-        images.value[itemId] = invokeApi.loadImage({
-            image_url,
-            proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
-            user_agent: embyServer.value.user_agent!,
-            cache_prefix: ['image', embyServer.value.id!, 'Logo'],
-            disabled_cache: disabledCache == 'on',
-        })
-    }
 }
 </script>
 

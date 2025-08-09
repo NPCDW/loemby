@@ -22,7 +22,7 @@
                     @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
                     style="display: flex; flex-direction: column; align-items: center; padding: 18px;">
                     <div style="min-width: 115px; min-height: 160px;" class="loe-cover-img">
-                        <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px; cursor: pointer;" />
+                        <img v-lazy="useImage().images[embyServer.id + ':cover:' + item.Id]" style="max-width: 270px; max-height: 160px; cursor: pointer;" />
                     </div>
                     <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
                 </div>
@@ -45,11 +45,9 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, SearchItem } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
-import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import { useProxyServer } from '../../store/db/proxyServer';
 import { useEventBus } from '../../store/eventBus';
-import { useGlobalConfig } from '../../store/db/globalConfig';
+import { useImage } from '../../store/image';
 
 const router = useRouter()
 const route = useRoute()
@@ -101,26 +99,11 @@ function getMediaLibraryChild(currentPage: number, pageSize: number) {
         mediaLibraryChildList.value = json.Items
         mediaLibraryChildTotal.value = json.TotalRecordCount
         for (let item of mediaLibraryChildList.value) {
-            loadImage(item.Id)
+            useImage().loadCover(embyServer.value, item)
         }
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => mediaLibraryChildLoading.value = false)
-}
-
-const images = ref<{[key: string]: string}>({})
-async function loadImage(itemId: string) {
-    const image_url = await embyApi.getImageUrl(embyServer.value, itemId);
-    if (image_url) {
-        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
-        images.value[itemId] = invokeApi.loadImage({
-            image_url,
-            proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
-            user_agent: embyServer.value.user_agent!,
-            cache_prefix: ['image', embyServer.value.id!],
-            disabled_cache: disabledCache == 'on',
-        })
-    }
 }
 
 getEmbyServer(<string>route.params.embyId).then(() => {

@@ -22,7 +22,7 @@
             </template>
             <div style="display: flex; padding: 20px;" v-if="currentSeries">
                 <div style="min-height: 416px; min-width: 300px;" class="loe-cover-img">
-                    <img v-lazy="images[<string>route.params.serieId]" style="max-height: 416px; max-width: 300px;" />
+                    <img v-lazy="useImage().images[embyServer.id + ':cover:' + currentSeries.Id]" style="max-height: 416px; max-width: 300px;" />
                 </div>
                 <div style="padding: 20px;">
                     <h1>{{ currentSeries.Name }}</h1>
@@ -85,7 +85,7 @@
             <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
                 <div v-for="season in seasonsList" @click="showSeasons(season)" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
                     <div style="min-height: 160px; min-width: 115px;" class="loe-cover-img">
-                        <img v-lazy="images[season.Id]" style="max-height: 160px; max-width: 115px; cursor: pointer;" />
+                        <img v-lazy="useImage().images[embyServer.id + ':cover:' + season.Id]" style="max-height: 160px; max-width: 115px; cursor: pointer;" />
                     </div>
                     <el-text truncated style="max-width: 115px;">{{ season.Name }}</el-text>
                 </div>
@@ -172,9 +172,8 @@ import { formatBytes, formatMbps } from '../../util/str_util'
 import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
 import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import { useProxyServer } from '../../store/db/proxyServer';
 import { useEventBus } from '../../store/eventBus';
-import { useGlobalConfig } from '../../store/db/globalConfig';
+import { useImage } from '../../store/image';
 
 const router = useRouter()
 const route = useRoute()
@@ -197,7 +196,6 @@ getEmbyServer().then(() => {
     updateCurrentSerie()
     getSeasons()
     getEpisodes()
-    loadImage(<string>route.params.serieId)
 })
 
 const mediaSourceSizeTag = ref<{[key: string]: string}>({})
@@ -225,6 +223,7 @@ function updateCurrentSerie() {
         }
         let json: SeriesItem = JSON.parse(response.body);
         currentSeries.value = json
+        useImage().loadCover(embyServer.value, json)
     }).catch(e => {
         ElMessage.error('更新当前剧集信息失败' + e)
     }).finally(() => serieInfoLoading.value = false)
@@ -290,7 +289,7 @@ async function getSeasons() {
         let json: EmbyPageList<SeasonItem> = JSON.parse(response.body);
         seasonsList.value = json.Items
         json.Items.forEach(item => {
-            loadImage(item.Id)
+            useImage().loadCover(embyServer.value, item)
         })
     }).catch(e => {
         ElMessage.error('获取季失败' + e)
@@ -358,21 +357,6 @@ function getDialogEpisodes() {
 function handleDialogEpisodesPageChange(page: number) {
     dialogEpisodesCurrentPage.value = page
     getDialogEpisodes()
-}
-
-const images = ref<{[key: string]: string}>({})
-async function loadImage(itemId: string) {
-    const image_url = await embyApi.getImageUrl(embyServer.value, itemId);
-    if (image_url) {
-        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
-        images.value[itemId] = invokeApi.loadImage({
-            image_url,
-            proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
-            user_agent: embyServer.value.user_agent!,
-            cache_prefix: ['image', embyServer.value.id!],
-            disabled_cache: disabledCache == 'on',
-        })
-    }
 }
 </script>
 

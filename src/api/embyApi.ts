@@ -563,6 +563,15 @@ export interface BaseItem {
     Overview: string,
     ProviderIds: {[key: string]: string},
     ExternalUrls: ExternalUrl[],
+    ImageTags: BaseItemImageTags,
+}
+
+export interface BaseItemImageTags {
+    Primary: string,
+    Art: string,
+    Banner: string,
+    Logo: string,
+    Thumb: string,
 }
 
 export interface SeriesItem extends BaseItem {
@@ -574,6 +583,9 @@ export interface SeasonItem extends BaseItem {
     SeriesName: string,
     Overview: string,
     IndexNumber: number,
+    ParentLogoItemId: string,
+    ParentThumbItemId: string,
+    SeriesPrimaryImageTag: string,
 }
 
 export interface EpisodeItem extends BaseItem {
@@ -583,6 +595,9 @@ export interface EpisodeItem extends BaseItem {
     IndexNumber: number,
     MediaSources?: MediaSource[],    // 搜索时，zdz无媒体源字段
     SeriesId: string,
+    ParentLogoItemId: string,
+    ParentThumbItemId: string,
+    SeriesPrimaryImageTag: string,
 }
 
 export type SearchItem = SeriesItem | SeasonItem | EpisodeItem
@@ -643,6 +658,7 @@ export interface MediaLibraryItem {
     Name: string,
     Id: string,
     Type: string,
+    ImageTags: BaseItemImageTags,
 }
 
 export interface MediaLibraryCount {

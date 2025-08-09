@@ -311,6 +311,7 @@ import { useEventBus } from "../store/eventBus";
 import { EmbyIconLibrary, useEmbyIconLibrary } from "../store/db/embyIconLibrary";
 import appApi from "../api/appApi";
 import { useGlobalConfig } from "../store/db/globalConfig";
+import { useImage } from "../store/image";
 
 const active = ref("/nav/search");
 const route = useRoute();
@@ -345,7 +346,7 @@ const embyIconLocalUrl = ref<{[key: string]: string}>({})
 function getEmbyIconLocalUrl() {
     for (const emby of embyServers.value) {
         if (emby.icon_url) {
-            loadImage(emby.icon_url).then(local_url => embyIconLocalUrl.value[emby.id!] = local_url)
+            useImage().loadIcon(emby.icon_url!).then(local_url => embyIconLocalUrl.value[emby.id!] = local_url)
         }
     }
 }
@@ -769,7 +770,7 @@ function embyIconLibraryChange() {
         let json: {name: string, icons:{name: string, url: string}[]} = JSON.parse(response.body);
         embyIconList.value = json.icons
         for (const icon of embyIconList.value) {
-            loadImage(icon.url!).then(local_url => icon.local_url = local_url)
+            useImage().loadIcon(icon.url!).then(local_url => icon.local_url = local_url)
         }
     }).catch(e => ElMessage.error(e)).finally(() => embyIconListLoading.value = false)
 }
@@ -779,17 +780,6 @@ function updateEmbyIcon(url: string) {
         icon_url: url
     }
     updateEmbyServerDb(tmp)
-}
-
-async function loadImage(icon_url: string) {
-    const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
-  return invokeApi.loadImage({
-    image_url: icon_url,
-    proxy_url: await useProxyServer().getAppProxyUrl(),
-    user_agent: 'loemby/' + import.meta.env.VITE_APP_VERSION,
-    cache_prefix: ['icon'],
-    disabled_cache: disabledCache == 'on',
-  })
 }
 
 const showEmbyServer = ref<EmbyServer>({})

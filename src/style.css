@@ -19,6 +19,7 @@ img[lazy=error] {
     height: 100%;
   transform: scale(1);
   content: '';
+  background: #1D1E1F;
 }
 
 img[lazy=error]::before {
@@ -26,7 +27,25 @@ img[lazy=error]::before {
   position: absolute;
   left: 0; top: 0;
   width: 100%; height: 100%;
+}
+
+img[lazy=loading] {
+    width: 100%;
+    height: 100%;
+  transform: scale(1);
+  content: '';
   background: #1D1E1F;
+}
+
+img[lazy=loading]::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+}
+
+.loe-logo-img img[lazy=error] {
+    display: none;
 }
 
 .loe-cover-img {

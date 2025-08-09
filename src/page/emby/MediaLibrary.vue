@@ -22,7 +22,7 @@
                     <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
                         <div v-for="item in mediaLibraryList" :key="item.Id" @click="gotoMediaLibraryItems(item.Id)" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
                             <div style="min-width: 267px; min-height: 150px;" class="loe-cover-img">
-                                <img v-lazy="images[item.Id]" style="max-width: 267px; max-height: 150px; cursor: pointer;" />
+                                <img v-lazy="useImage().images[embyServer.id + ':cover:' + item.Id]" style="max-width: 267px; max-height: 150px; cursor: pointer;" />
                             </div>
                             <span>{{ item.Name }}</span>
                         </div>
@@ -52,7 +52,7 @@
                                     @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
                                     style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
                                     <div style="min-width: 115px; min-height: 160px;" class="loe-cover-img">
-                                        <img v-lazy="images[item.Id]" style="max-width: 115px; max-height: 160px; cursor: pointer;" />
+                                        <img v-lazy="useImage().images[embyServer.id + ':cover:' + item.Id]" style="max-height: 160px; cursor: pointer;" />
                                     </div>
                                     <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
                                 </div>
@@ -70,11 +70,9 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, SearchItem, MediaLibraryItem } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
-import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import { useProxyServer } from '../../store/db/proxyServer';
 import { useEventBus } from '../../store/eventBus';
-import { useGlobalConfig } from '../../store/db/globalConfig';
+import { useImage } from '../../store/image';
 
 const router = useRouter()
 const route = useRoute()
@@ -120,7 +118,7 @@ function getMediaLibraryList() {
         let json: EmbyPageList<MediaLibraryItem> = JSON.parse(response.body);
         mediaLibraryList.value = json.Items
         for (let item of mediaLibraryList.value) {
-            loadImage(item.Id)
+            useImage().loadCover(embyServer.value, item)
             getMediaLibraryChildLatest(item.Id)
         }
     }).catch(e => {
@@ -139,26 +137,11 @@ function getMediaLibraryChildLatest(parentId: string) {
         let json: SearchItem[] = JSON.parse(response.body);
         mediaLibraryChildList.value[parentId] = json
         for (let item of mediaLibraryChildList.value[parentId]) {
-            loadImage(item.Id)
+            useImage().loadCover(embyServer.value, item)
         }
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => mediaLibraryChildLoading.value[parentId] = false)
-}
-
-const images = ref<{[key: string]: string}>({})
-async function loadImage(itemId: string) {
-    const image_url = await embyApi.getImageUrl(embyServer.value, itemId);
-    if (image_url) {
-        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
-        images.value[itemId] = invokeApi.loadImage({
-            image_url,
-            proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.value.browse_proxy_id),
-            user_agent: embyServer.value.user_agent!,
-            cache_prefix: ['image', embyServer.value.id!],
-            disabled_cache: disabledCache == 'on',
-        })
-    }
 }
 
 getEmbyServer(<string>route.params.embyId).then(() => {
