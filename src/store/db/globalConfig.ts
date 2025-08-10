@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { useDb } from '../db';
 import { ref } from 'vue';
 import { waitUntilTrue } from '../../util/sleep';
+import { generateGuid } from '../../util/uuid_util';
 
 export const useGlobalConfig = defineStore('globalConfig', () => {
     const cacheGlobalConfig = ref<{[key: string]: GlobalConfig}>({});
@@ -48,6 +49,7 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
     }
 
     async function addGlobalConfig(globalConfig: GlobalConfig) {
+        globalConfig.id = generateGuid();
         let fields: string[] = [], values: string[] = [];
         for (const [key, value] of Object.entries(globalConfig)) {
             if (value != null && value != undefined && key != 'create_time') {

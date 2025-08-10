@@ -29,24 +29,24 @@
                                     <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
                                     <p>{{ 'S' + (currentEpisodes.ParentIndexNumber || -1) + 'E' + (currentEpisodes.IndexNumber || -1) + '. ' + currentEpisodes.Name }}</p>
                                 </template>
+                                <p>
+                                    <span>外部链接：</span>
+                                    <el-tooltip v-for="externalUrl in currentEpisodes.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
+                                        <el-button round @click="invokeApi.open_url(externalUrl.Url)"><i-ep-Link /> {{ externalUrl.Name }}</el-button>
+                                    </el-tooltip>
+                                </p>
                             </div>
                             <div class="loe-logo-img">
                                 <img v-lazy="useImage().images[embyServer.id + ':logo:' + currentEpisodes.Id]" style="max-height: 115px; max-width: 515px;" />
                             </div>
                         </div>
-                        <p>
-                            <span>外部链接：</span>
-                            <el-tooltip v-for="externalUrl in currentEpisodes.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
-                                <el-button round @click="invokeApi.open_url(externalUrl.Url)"><i-ep-Link /> {{ externalUrl.Name }}</el-button>
-                            </el-tooltip>
-                        </p>
                         <div style="display: flex;align-items: center;">
                             <span>总时长: {{ displayTimeLength }}</span>
                             <span style="flex: auto; margin-left: 20px;">
-                                <el-progress :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
+                                <el-progress style="width: 300px;" :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
                             </span>
                         </div>
-                        <p style="display: flex;align-items: center;">
+                        <div style="display: flex;align-items: center;">
                             标签：
                             <span>大小：<el-tag disable-transitions>{{ mediaSourceSizeTag }}</el-tag></span>
                             <span style="margin: 20px;">码率：<el-tag disable-transitions>{{ mediaSourceBitrateTag }}</el-tag></span>
@@ -55,8 +55,8 @@
                                 <el-icon :size="24" v-if="!playback_info_loading"><i-ep-PriceTag /></el-icon>
                                 <span>获取播放信息</span>
                             </el-button>
-                        </p>
-                        <p>
+                        </div>
+                        <div>
                             版本：
                             <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 840px" :disabled="versionOptions.length <= 1">
                                 <template #label="{ label }">
@@ -66,8 +66,8 @@
                                     {{ item.name }} <el-tag disable-transitions>{{ item.size || "0 KB" }}</el-tag> <el-tag disable-transitions>{{ item.bitrate || "0 Kbps" }}</el-tag> <el-tag disable-transitions>{{ item.resolution || "Unknown" }}</el-tag>
                                 </el-option>
                             </el-select>
-                        </p>
-                        <p>
+                        </div>
+                        <div style="margin: 15px 0;">
                             <span>视频：
                             <el-select v-model="videoSelect" size="large" style="width: 235px" :disabled="videoOptions.length <= 1">
                                 <el-option v-for="item in videoOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -80,7 +80,7 @@
                             <el-select v-model="subtitleSelect" size="large" style="width: 235px" :disabled="subtitleOptions.length <= 1">
                                 <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select></span>
-                        </p>
+                        </div>
                         <p v-if="currentEpisodes?.SeriesId" style="display: flex; justify-content: center;">
                             <el-button plain @click="autoplay = !autoplay">
                                 <span>{{ autoplay ? '连续播放' : '单集播放' }}</span>

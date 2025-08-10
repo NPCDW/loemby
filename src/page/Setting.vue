@@ -620,27 +620,6 @@ function getTraktInfo() {
         }
     }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
 }
-async function saveTraktInfo() {
-    return useGlobalConfig().getGlobalConfig("trakt_info").then(config => {
-        let savePromise;
-        if (config) {
-            config.config_value = JSON.stringify(trakt_info.value);
-            savePromise = useGlobalConfig().updateGlobalConfig(config);
-        } else {
-            config = {
-                id: generateGuid(),
-                config_key: "trakt_info",
-                config_value: JSON.stringify(trakt_info.value)
-            }
-            savePromise = useGlobalConfig().addGlobalConfig(config);
-        }
-        return savePromise.then(() => {
-            getTraktInfo()
-        }).catch(e => {
-            ElMessage.error('保存失败' + e);
-        }).catch(e => ElMessage.error('保存Trakt信息失败' + e))
-    }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
-}
 function delAuthTrakt() {
   ElMessageBox.confirm(
     `确认删除 Trakt 授权吗？同时建议前往 Trakt 官网吊销应用授权，这将删除该应用获取的所有授权，官网地址: https://trakt.tv/oauth/authorized_applications`,
@@ -680,7 +659,7 @@ listen<string>('trakt_auth', (event) => {
             expires_in: json.expires_in + json.created_at,
             redirect_uri: redirect_uri,
         };
-        await saveTraktInfo()
+        await configValueChange('trakt_info', JSON.stringify(trakt_info.value), getTraktInfo, "Trakt信息")
         traktAuthStatus.value = '正在获取用户信息'
         traktApi.getUserInfo().then(response => {
             if (response.status_code != 200) {
@@ -689,7 +668,7 @@ listen<string>('trakt_auth', (event) => {
             }
             let json: {user: {username: string}} = JSON.parse(response.body);
             trakt_info.value.username = json.user.username;
-            saveTraktInfo()
+            configValueChange('trakt_info', JSON.stringify(trakt_info.value), getTraktInfo, "Trakt信息")
             traktAuthLoading.value = false
             traktAuthStatus.value = '换个账户？授权失效？'
         }).catch(e => {
@@ -844,23 +823,20 @@ function getIconStoredDays() {
 }
 
 function configValueChange(key: string, value: string, callback: () => void, keyName: string = key) {
-    useGlobalConfig().getGlobalConfig(key).then(config => {
-    console.log(config)
+    return useGlobalConfig().getGlobalConfig(key).then(config => {
         let savePromise;
         if (config) {
             config.config_value = value;
             savePromise = useGlobalConfig().updateGlobalConfig(config);
         } else {
             config = {
-                id: generateGuid(),
                 config_key: key,
                 config_value: value
             }
             savePromise = useGlobalConfig().addGlobalConfig(config);
         }
-        savePromise.then(() => {
+        return savePromise.then(() => {
             callback()
-            ElMessage.success('修改' + keyName + '成功');
         }).catch(e => {
             ElMessage.error('修改' + keyName + '失败' + e);
         })
