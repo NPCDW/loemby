@@ -32,7 +32,7 @@ async function authenticateByName(embyServer: EmbyServer) {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=UTF-8',
             'X-Emby-Authorization': `Emby Client="${embyServer.client}", Device="${embyServer.device}", DeviceId="${embyServer.device_id}", Version="${embyServer.client_version}"`,
         },
         body: JSON.stringify({
@@ -55,7 +55,7 @@ async function logout(embyServer: EmbyServer) {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=UTF-8',
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({}),
@@ -282,12 +282,13 @@ async function playbackInfo(embyServer: EmbyServer, item_id: string) {
         return Promise.reject("参数缺失");
     }
     return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Items/${item_id}/PlaybackInfo`,
+        url: embyServer.base_url + `/emby/Items/${item_id}/PlaybackInfo?IsPlayback=false`,
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=UTF-8',
             'X-Emby-Token': embyServer.auth_token,
+            // 'x-emby-authorization': `Emby UserId=${embyServer.user_id},Client=${embyServer.client},Device=${embyServer.device},DeviceId=${embyServer.device_id},Version=${embyServer.client_version}`,
         },
         body: JSON.stringify({
             "UserId": embyServer.user_id,
@@ -325,7 +326,7 @@ async function playing(embyServer: EmbyServer, item_id: string, media_source_id:
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=UTF-8',
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({
@@ -353,7 +354,7 @@ async function playingProgress(embyServer: EmbyServer, item_id: string, media_so
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=UTF-8',
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({
@@ -380,7 +381,7 @@ async function playingStopped(embyServer: EmbyServer, item_id: string, media_sou
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=UTF-8',
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({
@@ -452,7 +453,7 @@ async function star(embyServer: EmbyServer, item_id: string) {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=UTF-8',
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({}),
@@ -492,7 +493,7 @@ async function played(embyServer: EmbyServer, item_id: string) {
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=UTF-8',
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({}),
@@ -532,7 +533,7 @@ async function hideFromResume(embyServer: EmbyServer, item_id: string, hide: boo
         method: 'POST',
         headers: {
             'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json; charset=UTF-8',
             'X-Emby-Token': embyServer.auth_token,
         },
         body: JSON.stringify({
