@@ -1,7 +1,7 @@
 <template>
-    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 10px); padding: 10px 20px 0 20px;">
+    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 40px); padding: 10px 20px 0 20px;">
         <el-tab-pane label="常规" name="Common">
-            <el-scrollbar style="height: calc(100vh - 100px);">
+            <el-scrollbar style="height: calc(100vh - 120px);">
                 <el-form label-position="top">
                     <el-form-item label="应用更新">
                         <span style="margin-right: 10px;">当前版本: {{ version }}</span>
@@ -12,7 +12,7 @@
         </el-tab-pane>
         
         <el-tab-pane label="MPV" name="MPV">
-            <el-scrollbar style="height: calc(100vh - 100px);">
+            <el-scrollbar style="height: calc(100vh - 120px);">
                 <el-form label-position="top">
                     <el-form-item label="MPV文件路径">
                         <el-input
@@ -120,7 +120,7 @@ demuxer-readahead-secs=180" />
         </el-tab-pane>
         
         <el-tab-pane label="Trakt" name="Trakt">
-            <el-scrollbar style="height: calc(100vh - 100px);">
+            <el-scrollbar style="height: calc(100vh - 120px);">
                 <el-form label-position="top">
                     <el-form-item label="Trakt （剧集或电影播放完成时可以在网页端看到记录，未播放完成的可以通过接口查询记录）">
                         <div v-if="trakt_info.username">
@@ -148,7 +148,7 @@ demuxer-readahead-secs=180" />
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="代理服务器" name="ProxyServer">
-            <el-scrollbar style="height: calc(100vh - 100px);">
+            <el-scrollbar style="height: calc(100vh - 120px);">
                 <h1>代理服务器</h1>
                 <el-table :data="proxyServer" style="width: 100%">
                     <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
@@ -170,7 +170,7 @@ demuxer-readahead-secs=180" />
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="Emby线路代理" name="EmbyLineProxy">
-            <el-scrollbar style="height: calc(100vh - 100px);">
+            <el-scrollbar style="height: calc(100vh - 120px);">
                 <h1>Emby线路代理配置</h1>
                 <el-form :inline="true">
                     <el-form-item label="全局媒体库浏览">
@@ -225,7 +225,7 @@ demuxer-readahead-secs=180" />
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="Emby图标库" name="EmbyIconLibrary">
-            <el-scrollbar style="height: calc(100vh - 100px);">
+            <el-scrollbar style="height: calc(100vh - 120px);">
                 <h1>Emby图标库</h1>
                 <el-form :inline="true">
                     <el-form-item label="应用数据代理（图标、自动更新等）">
@@ -256,7 +256,7 @@ demuxer-readahead-secs=180" />
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="缓存与日志" name="CacheAndLog">
-            <el-scrollbar style="height: calc(100vh - 100px);">
+            <el-scrollbar style="height: calc(100vh - 120px);">
                 <el-form label-position="top">
                     <el-form-item label="日志保存天数">
                         <el-input-number

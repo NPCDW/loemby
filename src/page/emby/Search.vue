@@ -13,7 +13,7 @@
             </el-input>
         </div>
     
-        <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
+        <el-scrollbar style="height: calc(100vh - 82px); padding: 0 20px;">
             <div v-if="emby_search_result.success" style="display: flex; flex-wrap: wrap; flex-direction: row;">
                 <ItemCard v-for="rootItem in emby_search_result.result?.Items" :key="rootItem.Id" :item="rootItem" :embyServer="embyServer" />
             </div>

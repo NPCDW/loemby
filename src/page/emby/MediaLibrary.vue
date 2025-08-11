@@ -7,7 +7,7 @@
         </el-input>
     </div>
 
-    <el-scrollbar style="height: calc(100vh - 52px); padding: 0 20px;">
+    <el-scrollbar style="height: calc(100vh - 82px); padding: 0 20px;">
         <div>
             <el-scrollbar>
                 <el-skeleton :loading="mediaLibraryLoading" animated>

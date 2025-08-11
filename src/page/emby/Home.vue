@@ -8,9 +8,9 @@
         </el-input>
     </div>
 
-    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 52px); padding: 0 20px;">
+    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 82px); padding: 0 20px;">
         <el-tab-pane label="继续观看" name="ContinuePlay">
-            <el-scrollbar style="height: calc(100vh - 107px);">
+            <el-scrollbar style="height: calc(100vh - 137px);">
                 <el-skeleton :loading="episodesLoading" animated>
                     <template #template>
                         <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
@@ -64,7 +64,7 @@
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="收藏" name="Favorite">
-            <el-scrollbar style="height: calc(100vh - 107px);">
+            <el-scrollbar style="height: calc(100vh - 137px);">
                 <el-skeleton :loading="favoriteLoading" animated>
                     <template #template>
                         <div style="display: flex; flex-wrap: wrap; flex-direction: row;">

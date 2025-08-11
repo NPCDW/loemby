@@ -1,116 +1,108 @@
 <template>
-    <div style="display: flex; flex-direction: row;">
-        <el-menu style="height: 100%; width: 200px; min-height: 100vh; background-color: var(--dark-background-color)" :collapse="false" :default-active="active">
-            <el-menu-item index="/nav/history" @click="jumpRoute('/nav/history')">
-                <el-icon><i-ep-Clock /></el-icon>播放历史
-            </el-menu-item>
-            <el-menu-item index="/nav/search" @click="jumpRoute('/nav/search')">
-                <el-icon><i-ep-Search /></el-icon>聚合搜索
-            </el-menu-item>
-            <el-menu-item index="/nav/setting" @click="jumpRoute('/nav/setting')">
-                <el-icon><i-ep-Setting /></el-icon>设置
-            </el-menu-item>
-            <el-menu-item index="addEmbyServer" @click="addEmbyServer()">
-                <el-icon><i-ep-Plus /></el-icon>添加服务器
-            </el-menu-item>
-            <el-scrollbar style="height: calc(100vh - 224px); flex: none;">
-                <Container @drop="onDrop" style="height: 100%; width: 100%;">  
-                    <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
-                        <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
-                            <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" @click="jumpRoute('/nav/emby/' + embyServer.id)" :disabled="embyServer.disabled ? true : false">
-                                <div style="height: 100%; width: 100%; display: flex; align-items: center;">
-                                    <el-icon v-if="embyServer.icon_url" size="24" style="width: 24px; height: 24px;"><img v-lazy="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;"></el-icon>
-                                    <el-icon v-else size="24" style="width: 24px; height: 24px;"><svg-icon name="emby" /></el-icon>
-                                    {{ embyServer.server_name }}
-                                    <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
-                                        {{ keep_alive_days[embyServer.id!] }}
-                                    </el-tag>
-                                </div>
-                            </el-menu-item>
-                            <template #dropdown>
-                                <el-dropdown-menu>
-                                    <el-dropdown-item @click="configLine(embyServer)">
-                                        <i-ep-Link style="position: absolute; left: 10;" />
-                                        <span style="margin-left: 15px;">线路</span>
-                                    </el-dropdown-item>
-                                    <el-dropdown-item @click="editEmbyIcon(embyServer)">
-                                        <i-ep-PriceTag style="position: absolute; left: 10;" />
-                                        <span style="margin-left: 15px;">图标</span>
-                                    </el-dropdown-item>
-                                    <el-dropdown-item @click="editEmbyServer(embyServer)">
-                                        <i-ep-Edit style="position: absolute; left: 10;" />
-                                        <span style="margin-left: 15px;">编辑</span>
-                                    </el-dropdown-item>
-                                    <el-dropdown-item @click="enabledEmbyServer(embyServer)">
-                                        <template v-if="embyServer.disabled">
-                                            <i-ep-CircleCheckFilled style="position: absolute; left: 10;" />
-                                            <span style="margin-left: 15px;">启用</span>
-                                        </template>
-                                        <template v-else>
-                                            <i-ep-CircleCloseFilled style="position: absolute; left: 10;" />
-                                            <span style="margin-left: 15px;">禁用</span>
-                                        </template>
-                                    </el-dropdown-item>
-                                    <el-dropdown-item divided @click="reLogin(embyServer)">
-                                        <i-ep-Promotion style="position: absolute; left: 10;" />
-                                        <span style="margin-left: 15px;">重新登录</span>
-                                    </el-dropdown-item>
-                                    <el-dropdown-item style="color: #E6A23C" @click="logoutEmbyServer(embyServer)">
-                                        <i-ep-WarnTriangleFilled style="position: absolute; left: 10;" />
-                                        <span style="margin-left: 15px;">退出登录</span>
-                                    </el-dropdown-item>
-                                    <el-dropdown-item style="color: #F56C6C" @click="delEmbyServer(embyServer)">
-                                        <i-ep-Delete style="position: absolute; left: 10;" />
-                                        <span style="margin-left: 15px;">删除</span>
-                                    </el-dropdown-item>
-                                </el-dropdown-menu>
-                            </template>
-                        </el-dropdown>
-                    </Draggable>
-                </Container>
+    <div>
+        <div style="display: flex; flex-direction: row; height: calc(100vh - 30px);">
+            <el-menu style="height: 100%; width: 200px; min-height: calc(100vh - 30px); background-color: var(--dark-background-color)" :collapse="false" :default-active="active">
+                <el-menu-item index="/nav/history" @click="jumpRoute('/nav/history')">
+                    <el-icon><i-ep-Clock /></el-icon>播放历史
+                </el-menu-item>
+                <el-menu-item index="/nav/search" @click="jumpRoute('/nav/search')">
+                    <el-icon><i-ep-Search /></el-icon>聚合搜索
+                </el-menu-item>
+                <el-menu-item index="/nav/setting" @click="jumpRoute('/nav/setting')">
+                    <el-icon><i-ep-Setting /></el-icon>设置
+                </el-menu-item>
+                <el-menu-item index="addEmbyServer" @click="addEmbyServer()">
+                    <el-icon><i-ep-Plus /></el-icon>添加服务器
+                </el-menu-item>
+                <el-scrollbar style="height: calc(100vh - 254px); flex: none;">
+                    <Container @drop="onDrop" style="height: 100%; width: 100%;">  
+                        <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
+                            <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
+                                <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" @click="jumpRoute('/nav/emby/' + embyServer.id)" :disabled="embyServer.disabled ? true : false">
+                                    <div style="height: 100%; width: 100%; display: flex; align-items: center;">
+                                        <el-icon v-if="embyServer.icon_url" size="24" style="width: 24px; height: 24px;"><img v-lazy="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;"></el-icon>
+                                        <el-icon v-else size="24" style="width: 24px; height: 24px;"><svg-icon name="emby" /></el-icon>
+                                        {{ embyServer.server_name }}
+                                        <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
+                                            {{ keep_alive_days[embyServer.id!] }}
+                                        </el-tag>
+                                    </div>
+                                </el-menu-item>
+                                <template #dropdown>
+                                    <el-dropdown-menu>
+                                        <el-dropdown-item @click="configLine(embyServer)">
+                                            <i-ep-Link style="position: absolute; left: 10;" />
+                                            <span style="margin-left: 15px;">线路</span>
+                                        </el-dropdown-item>
+                                        <el-dropdown-item @click="editEmbyIcon(embyServer)">
+                                            <i-ep-PriceTag style="position: absolute; left: 10;" />
+                                            <span style="margin-left: 15px;">图标</span>
+                                        </el-dropdown-item>
+                                        <el-dropdown-item @click="editEmbyServer(embyServer)">
+                                            <i-ep-Edit style="position: absolute; left: 10;" />
+                                            <span style="margin-left: 15px;">编辑</span>
+                                        </el-dropdown-item>
+                                        <el-dropdown-item @click="enabledEmbyServer(embyServer)">
+                                            <template v-if="embyServer.disabled">
+                                                <i-ep-CircleCheckFilled style="position: absolute; left: 10;" />
+                                                <span style="margin-left: 15px;">启用</span>
+                                            </template>
+                                            <template v-else>
+                                                <i-ep-CircleCloseFilled style="position: absolute; left: 10;" />
+                                                <span style="margin-left: 15px;">禁用</span>
+                                            </template>
+                                        </el-dropdown-item>
+                                        <el-dropdown-item divided @click="reLogin(embyServer)">
+                                            <i-ep-Promotion style="position: absolute; left: 10;" />
+                                            <span style="margin-left: 15px;">重新登录</span>
+                                        </el-dropdown-item>
+                                        <el-dropdown-item style="color: #E6A23C" @click="logoutEmbyServer(embyServer)">
+                                            <i-ep-WarnTriangleFilled style="position: absolute; left: 10;" />
+                                            <span style="margin-left: 15px;">退出登录</span>
+                                        </el-dropdown-item>
+                                        <el-dropdown-item style="color: #F56C6C" @click="delEmbyServer(embyServer)">
+                                            <i-ep-Delete style="position: absolute; left: 10;" />
+                                            <span style="margin-left: 15px;">删除</span>
+                                        </el-dropdown-item>
+                                    </el-dropdown-menu>
+                                </template>
+                            </el-dropdown>
+                        </Draggable>
+                    </Container>
+                </el-scrollbar>
+            </el-menu>
+            <el-scrollbar style="flex: auto; height: calc(100vh - 30px); width: calc(100% - 200px); position: relative;">
+                <router-view v-slot="{ Component }">
+                    <keep-alive>
+                        <component :is="Component" :key="$route.fullPath" v-if="$route.meta.keepAlive" />
+                    </keep-alive>
+                    <component :is="Component" :key="$route.fullPath" v-if="!$route.meta.keepAlive" />
+                </router-view>
             </el-scrollbar>
-        </el-menu>
-        <el-scrollbar style="flex: auto; height: 100vh; width: calc(100% - 200px); position: relative;">
-            <router-view v-slot="{ Component }">
-                <keep-alive>
-                    <component :is="Component" :key="$route.fullPath" v-if="$route.meta.keepAlive" />
-                </keep-alive>
-                <component :is="Component" :key="$route.fullPath" v-if="!$route.meta.keepAlive" />
-            </router-view>
-            <el-popover placement="left-start" trigger="click" :width="400" v-if="$route.path.startsWith('/nav/emby/')">
-                <template #reference>
-                    <el-button circle style="position: absolute; bottom: 20px; right: 20px"><i-ep-Link /></el-button>
-                </template>
-                <el-form label-position="right" label-width="auto">
-                    <el-form-item label="服务器">
-                        <el-text>{{ showEmbyServer.server_name }}</el-text>
-                    </el-form-item>
-                    <el-form-item label="线路">
-                        <el-select v-model="showEmbyServer.line_id" @change="configLineChange" placement="left-end">
-                            <el-option v-for='line in embyLines[showEmbyServer.id!]' :key="line.id" :label="line.name" :value="line.id"/>
-                            <template #footer>
-                                <el-button size="small" @click="configLine(showEmbyServer)">配置线路</el-button>
-                            </template>
-                        </el-select>
-                    </el-form-item>
-                    <el-form-item label="媒体库浏览代理">
-                        <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="left-end">
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
-                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                    <el-form-item label="媒体流播放代理">
-                        <el-select v-model="showServerLine.play_proxy_id" @change="proxyChange(showServerLine)" placement="left-end">
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
-                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                </el-form>
-            </el-popover>
-        </el-scrollbar>
+        </div>
+        <div style="height: 29px; border-top: 1px solid #4c4d4f; display: flex; justify-content: end; align-items: center;">
+            <div v-if="$route.path.startsWith('/nav/emby/')">
+                <el-text>{{ showEmbyServer.server_name }}</el-text>
+                <el-select v-model="showEmbyServer.line_id" @change="configLineChange" placement="top" size="small" style="width: 80px;">
+                    <el-option v-for='line in embyLines[showEmbyServer.id!]' :key="line.id" :label="line.name" :value="line.id"/>
+                    <template #footer>
+                        <el-button size="small" @click="configLine(showEmbyServer)">配置线路</el-button>
+                    </template>
+                </el-select>
+                <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 80px;">
+                    <el-option key="no" label="不使用代理" value="no"/>
+                    <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
+                    <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                </el-select>
+                <el-select v-model="showServerLine.play_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 80px;">
+                    <el-option key="no" label="不使用代理" value="no"/>
+                    <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
+                    <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                </el-select>
+            </div>
+        </div>
     </div>
+
   <el-dialog v-model="dialogAddEmbyServerVisible" title="Emby Server" width="800">
     <el-steps :active="stepActive" align-center>
         <el-step title="服务器地址" />

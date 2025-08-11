@@ -13,7 +13,7 @@
             </el-input>
         </div>
         
-        <el-scrollbar ref="scrollbarRef" style="height: calc(100vh - 52px); padding: 0 20px;">
+        <el-scrollbar ref="scrollbarRef" style="height: calc(100vh - 82px); padding: 0 20px;">
             <el-collapse v-model="embyServerKeys">
                 <el-collapse-item :title="embySearchItem.embyServer.server_name" :name="embySearchItem.embyServer.id" :disabled="embySearchItem.result?.Items.length == 0" v-for="embySearchItem in emby_search_result_list">
                     <template #icon>

@@ -1,5 +1,5 @@
 <template>
-    <el-scrollbar style="height: 100vh;">
+    <el-scrollbar style="height: calc(100vh - 30px);">
         <div style="padding: 20px 32px;">
             <el-skeleton :loading="playbackInfoLoading" animated>
                 <template #template>
