@@ -18,7 +18,7 @@
                         <el-input
                             v-model="mpv_path"
                             @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径')"
-                            placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
+                            :rows="4" type="textarea" placeholder="每行一个，示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
                     </el-form-item>
                     <el-form-item label="MPV启动目录">
                         <el-input
