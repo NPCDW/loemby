@@ -83,18 +83,18 @@
         <div style="height: 29px; border-top: 1px solid #4c4d4f; display: flex; justify-content: end; align-items: center;">
             <div v-if="$route.path.startsWith('/nav/emby/')">
                 <el-text>{{ showEmbyServer.server_name }}</el-text>
-                <el-select v-model="showEmbyServer.line_id" @change="configLineChange" placement="top" size="small" style="width: 80px;">
+                <el-select v-model="showEmbyServer.line_id" @change="configLineChange" placement="top" size="small" style="width: 180px; margin-left: 5px;">
                     <el-option v-for='line in embyLines[showEmbyServer.id!]' :key="line.id" :label="line.name" :value="line.id"/>
                     <template #footer>
                         <el-button size="small" @click="configLine(showEmbyServer)">配置线路</el-button>
                     </template>
                 </el-select>
-                <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 80px;">
+                <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 180px; margin-left: 5px;">
                     <el-option key="no" label="不使用代理" value="no"/>
                     <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
                     <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                 </el-select>
-                <el-select v-model="showServerLine.play_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 80px;">
+                <el-select v-model="showServerLine.play_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 180px; margin-left: 5px;">
                     <el-option key="no" label="不使用代理" value="no"/>
                     <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
                     <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
