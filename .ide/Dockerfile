@@ -24,9 +24,9 @@ RUN code-server --install-extension donjayamanne.githistory
 RUN code-server --install-extension tauri-apps.tauri-vscode
 
 # 安装jetbrains支持 https://docs.cnb.cool/zh/vscode/jetbrains.html
-RUN mkdir -p /ide_cnb
-RUN wget https://download.jetbrains.com/rustrover/RustRover-2024.3.5.tar.gz
-RUN tar -zxvf RustRover-2024.3.5.tar.gz -C /ide_cnb
+# RUN mkdir -p /ide_cnb
+# RUN wget https://download.jetbrains.com/rustrover/RustRover-2024.3.5.tar.gz
+# RUN tar -zxvf RustRover-2024.3.5.tar.gz -C /ide_cnb
 
 # 安装依赖
 RUN apt-get update && apt-get install -y libwebkit2gtk-4.1-dev build-essential file libxdo-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
