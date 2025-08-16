@@ -81,7 +81,7 @@
             </el-scrollbar>
         </div>
         <div style="height: 29px; border-top: 1px solid #4c4d4f; display: flex; justify-content: end; align-items: center;">
-            <div v-if="$route.path.startsWith('/nav/emby/')">
+            <div v-if="$route.path.startsWith('/nav/emby/')" style="display: flex; align-items: center; margin-right: 3px;">
                 <el-text>{{ showEmbyServer.server_name }}</el-text>
                 <el-select v-model="showEmbyServer.line_id" @change="configLineChange" placement="top" size="small" style="width: 180px; margin-left: 5px;">
                     <el-option v-for='line in embyLines[showEmbyServer.id!]' :key="line.id" :label="line.name" :value="line.id"/>
