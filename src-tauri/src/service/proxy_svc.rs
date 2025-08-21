@@ -87,6 +87,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     let client = http_pool::get_stream_http_client(request.proxy_url.clone(), app_state2).await.unwrap();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
+    req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, request.user_agent.clone().parse().unwrap());
     req_headers.insert(axum::http::header::CACHE_CONTROL, "no-cache".parse().unwrap());
@@ -204,8 +205,10 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
     };
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
+    req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, param.user_agent.clone().parse().unwrap());
+    req_headers.insert(axum::http::header::REFERER, param.image_url.clone().parse().unwrap());
     let res = client
         .get(param.image_url.clone())
         .headers(req_headers.clone())
