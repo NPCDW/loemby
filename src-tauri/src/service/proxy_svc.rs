@@ -96,7 +96,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         .headers(req_headers.clone())
         .send()
         .await;
-    tracing::debug!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, req_headers, res);
+    tracing::debug!("stream: {} {} {:?} {:?} 媒体流响应 {:?}", types, &id, request, req_headers, res);
     match res {
         Err(err) => {
             tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, request.user_agent, err);
@@ -114,9 +114,9 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         },
         Ok(response) => {
             if !response.status().is_success() {
-                tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, req_headers, response);
                 let status = response.status();
                 let headers = response.headers().clone();
+                tracing::error!("stream: {} {} {:?} 媒体流响应 {:?} {:?}", types, &id, req_headers, status, headers);
                 let mut stream = response.bytes_stream();
                 let mut bytes = Vec::new();
                 while let Some(Ok(chunk)) = stream.next().await {
@@ -235,7 +235,7 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
     ).into_response()
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AxumAppStateRequest {
     pub stream_url: String,
     pub proxy_url: Option<String>,
