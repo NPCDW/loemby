@@ -6,7 +6,6 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use tokio_stream::wrappers::ReceiverStream;
 use crate::config::{app_state::{AppState, TauriNotify}, http_pool};
 
 pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
@@ -159,9 +158,10 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
 
     let cache_digest = sha256::digest(&param.image_url);
     let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.png", param.cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+    let metadata_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.metadata", param.cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
     if cache_file_path.exists() && !param.disabled_cache {
-        tracing::debug!("image: {:?} 从缓存读取", param);
-        let file = match tokio::fs::File::open(cache_file_path).await {
+        tracing::debug!("image: {:?} {:?} 从缓存读取", cache_file_path, param);
+        let file = match tokio::fs::File::open(&cache_file_path).await {
             Ok(file) => file,
             Err(err) => return (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -169,9 +169,26 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
                 axum::body::Body::new(format!("从缓存读取失败 {}", err))
             ).into_response(),
         };
+
+        // 从 .metadata 文件中读取元数据
+        let mut headers = axum::http::HeaderMap::new();
+        if let Ok(metadata_content) = tokio::fs::read_to_string(&metadata_file_path).await {
+            if let Ok(metadata) = serde_json::from_str::<serde_json::Value>(&metadata_content) {
+                if let Some(content_type) = metadata["content_type"].as_str() {
+                    headers.insert("content-type", content_type.parse().unwrap());
+                }
+                if let Some(content_length) = metadata["content_length"].as_str() {
+                    headers.insert("content-length", content_length.parse().unwrap());
+                }
+                if let Some(content_encoding) = metadata["content_encoding"].as_str() {
+                    headers.insert("content-encoding", content_encoding.parse().unwrap());
+                }
+            }
+        }
+
         return (
             axum::http::StatusCode::OK,
-            axum::http::HeaderMap::new(),
+            headers,
             axum::body::Body::from_stream(FramedRead::new(file, BytesCodec::new()))
         ).into_response();
     }
@@ -216,22 +233,36 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
     if !cache_file_path.parent().unwrap().exists() {
         std::fs::create_dir_all(cache_file_path.parent().unwrap()).unwrap();
     }
-    let mut file = File::create(cache_file_path).await.unwrap();
+    let mut cache_file = File::create(&cache_file_path).await.unwrap();
+    while let Some(Ok(chunk)) = stream.next().await {
+        cache_file.write_all(&chunk).await.unwrap();
+    }
+    cache_file.flush().await.unwrap();
+    drop(cache_file);
 
-    let (sender, receiver) = tokio::sync::mpsc::channel(32);
-    tokio::spawn(async move {
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk.unwrap();
-            file.write_all(&chunk).await.unwrap();
-            sender.send(chunk).await.unwrap();
-        }
+    // 保存元数据到 .metadata 文件
+    let mut metadata_file = File::create(&metadata_file_path).await.unwrap();
+    let metadata = serde_json::json!({
+        "content_type": header.get("content-type").map(|v| v.to_str().unwrap().to_string()),
+        "content_length": header.get("content-length").map(|v| v.to_str().unwrap().to_string()),
+        "content_encoding": header.get("content-encoding").map(|v| v.to_str().unwrap().to_string()),
     });
-    let receiver_stream = ReceiverStream::new(receiver);
-    let mapped_stream = receiver_stream.map(|chunk| Ok::<_, std::io::Error>(chunk));
+    metadata_file.write_all(metadata.to_string().as_bytes()).await.unwrap();
+    metadata_file.flush().await.unwrap();
+    drop(metadata_file);
+
+    let file = match tokio::fs::File::open(&cache_file_path).await {
+        Ok(file) => file,
+        Err(err) => return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("从缓存读取失败 {}", err))
+        ).into_response(),
+    };
     (
         status,
         header,
-        axum::body::Body::from_stream(mapped_stream)
+        axum::body::Body::from_stream(FramedRead::new(file, BytesCodec::new()))
     ).into_response()
 }
 

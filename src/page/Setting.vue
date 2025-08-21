@@ -150,6 +150,7 @@ demuxer-readahead-secs=180" />
         <el-tab-pane label="代理服务器" name="ProxyServer">
             <el-scrollbar style="height: calc(100vh - 120px);">
                 <h1>代理服务器</h1>
+                <p>推荐使用 http 代理，reqwest 库的 socks5 代理在某些服可能有问题</p>
                 <el-table :data="proxyServer" style="width: 100%">
                     <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
                     <el-table-column prop="proxy_type" label="Type" width="80" />
