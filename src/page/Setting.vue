@@ -334,7 +334,6 @@ demuxer-readahead-secs=180" />
                 <el-form-item label="代理类型">
                     <el-select v-model="dialogProxyServer.proxy_type">
                         <el-option key="socks5" label="socks5" value="socks5"/>
-                        <el-option key="socks" label="socks4" value="socks"/>
                         <el-option key="https" label="https" value="https"/>
                         <el-option key="http" label="http" value="http"/>
                     </el-select>
