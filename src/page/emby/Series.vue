@@ -130,15 +130,13 @@
                             {{ episodeItem.IndexNumber + '. ' + episodeItem.Name }}
                         </el-link>
                     </p>
-                    <div style="display: flex;justify-content: space-between;">
-                        <span>
-                            <span>{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>
-                            <el-tag disable-transitions style="margin-left: 10px;">{{ mediaSourceSizeTag[episodeItem.Id] || "0 KB" }}</el-tag>
-                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodeItem.Id] || "0 Kbps" }}</el-tag>
-                            <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodeItem.Id] || 'Unknown' }}</el-tag>
+                    <div style="display: flex;justify-content: space-between;align-items: end;">
+                        <span style="display: flex; flex-direction: column;">
+                            <el-tag disable-transitions style="margin-left: 10px;" v-for="value in mediaSourceTag[episodeItem.Id]">{{ value }}</el-tag>
                         </span>
-                        <span>
-                            <el-link :underline="false" v-if="episodeItem.UserData" :disabled="starLoading[episodeItem.Id]" @click="star(episodeItem)">
+                        <span style="display: flex; justify-content: center; align-items: center;">
+                            <span>{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>
+                            <el-link style="margin-left: 7px;" :underline="false" v-if="episodeItem.UserData" :disabled="starLoading[episodeItem.Id]" @click="star(episodeItem)">
                                 <el-icon color="#E6A23C" :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-if="episodeItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
                                 <el-icon :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
                             </el-link>
@@ -168,8 +166,8 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, SeasonItem, SeriesItem, UserData } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
 import { ElMessage } from 'element-plus';
-import { formatBytes, formatMbps } from '../../util/str_util'
-import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
+import { formatBytes } from '../../util/str_util'
+import { getResolutionFromMediaSources } from '../../util/play_info_util'
 import invokeApi from '../../api/invokeApi';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useEventBus } from '../../store/eventBus';
@@ -198,16 +196,18 @@ getEmbyServer().then(() => {
     getEpisodes()
 })
 
-const mediaSourceSizeTag = ref<{[key: string]: string}>({})
-const mediaSourceBitrateTag = ref<{[key: string]: string}>({})
-const mediaStreamResolutionTag = ref<{[key: string]: string}>({})
+const mediaSourceTag = ref<{[key: string]: string[]}>({})
 function getTag(itemId: string, mediaSources?: MediaSource[]) {
-    let maxMediaSource = maxMediaSources(mediaSources);
-    if (maxMediaSource) {
-        mediaSourceSizeTag.value[itemId] = formatBytes(maxMediaSource.Size)
-        mediaSourceBitrateTag.value[itemId] = formatMbps(maxMediaSource.Bitrate)
-        if (maxMediaSource.MediaStreams && maxMediaSource.MediaStreams.length > 0) {
-            mediaStreamResolutionTag.value[itemId] = getResolutionFromMediaSources(maxMediaSource)
+    mediaSourceTag.value[itemId] = []
+    if (mediaSources) {
+        for (let mediaSource of mediaSources) {
+            const size = formatBytes(mediaSource.Size) || '0 KB'
+            // const bitrate = formatMbps(mediaSource.Bitrate) || '0 Kbps'
+            let resolution = 'Unknown'
+            if (mediaSource.MediaStreams && mediaSource.MediaStreams.length > 0) {
+                resolution = getResolutionFromMediaSources(mediaSource)
+            }
+            mediaSourceTag.value[itemId].push(size + " | " + resolution)
         }
     }
 }

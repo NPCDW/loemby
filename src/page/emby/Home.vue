@@ -35,9 +35,6 @@
                             <p><el-progress :percentage="episodeItem.UserData?.Played ? 100 : episodeItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
                             <p>
                                 {{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}
-                                <el-tag disable-transitions>{{ mediaSourceSizeTag[episodeItem.Id] || "0 KB" }}</el-tag>
-                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaSourceBitrateTag[episodeItem.Id] || "0 Kbps" }}</el-tag>
-                                <el-tag disable-transitions style="margin-left: 5px;">{{ mediaStreamResolutionTag[episodeItem.Id] || 'Unknown' }}</el-tag>
                             </p>
                             <p>
                                 <el-button type="primary" @click="gotoEpisodes(episodeItem.Id)">Go</el-button>
@@ -113,10 +110,8 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
-import embyApi, { EmbyPageList, EpisodeItem, SearchItem, MediaLibraryCount, MediaSource } from '../../api/embyApi';
+import embyApi, { EmbyPageList, EpisodeItem, SearchItem, MediaLibraryCount } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
-import { formatBytes, formatMbps } from '../../util/str_util'
-import { getResolutionFromMediaSources, maxMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
 import { useEventBus } from '../../store/eventBus';
@@ -142,20 +137,6 @@ watchEffect(async () => {
     await getEmbyServer(<string>route.params.embyId)
     handlePaneChange()
 })
-
-const mediaSourceSizeTag = ref<{[key: string]: string}>({})
-const mediaSourceBitrateTag = ref<{[key: string]: string}>({})
-const mediaStreamResolutionTag = ref<{[key: string]: string}>({})
-function getTag(itemId: string, mediaSources?: MediaSource[]) {
-    let maxMediaSource = maxMediaSources(mediaSources);
-    if (maxMediaSource) {
-        mediaSourceSizeTag.value[itemId] = formatBytes(maxMediaSource.Size)
-        mediaSourceBitrateTag.value[itemId] = formatMbps(maxMediaSource.Bitrate)
-        if (maxMediaSource.MediaStreams && maxMediaSource.MediaStreams.length > 0) {
-            mediaStreamResolutionTag.value[itemId] = getResolutionFromMediaSources(maxMediaSource)
-        }
-    }
-}
 
 const search_str = ref('')
 const search = async () => {
@@ -185,9 +166,6 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
         let json: EmbyPageList<EpisodeItem> = JSON.parse(response.body);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
-        for (const item of json.Items) {
-            getTag(item.Id, item.MediaSources)
-        }
     }).catch(e => {
         ElMessage.error(e)
     }).finally(() => episodesLoading.value = false)
