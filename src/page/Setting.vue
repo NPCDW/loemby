@@ -269,13 +269,13 @@ demuxer-readahead-secs=180" />
                             </template>
                         </el-input-number>
                     </el-form-item>
-                    <el-form-item label="禁用缓存">
+                    <el-form-item label="禁用图片缓存">
                         <el-switch 
                             v-model="disabledCache"
-                            @change="configValueChange('disabledCache', disabledCache + '', getDisabledCache, '禁用缓存')"
+                            @change="configValueChange('disabledCache', disabledCache + '', getDisabledCache, '禁用图片缓存')"
                             active-value="off" inactive-value="on"
                             style="margin-left: 10px;"
-                            active-text="使用缓存" inactive-text="禁用缓存" />
+                            active-text="使用图片缓存" inactive-text="禁用图片缓存" />
                     </el-form-item>
                     <el-form-item label="禁用图片加载">
                         <el-switch 

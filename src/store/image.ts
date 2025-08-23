@@ -15,7 +15,7 @@ export const useImage = defineStore('image', () => {
         }
         const image_url = await embyApi.getImageUrl(embyServer, itemId, imageType);
         if (image_url) {
-            const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
+            const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledCache") || 'off'
             images.value[imageKey] = invokeApi.loadImage({
                 image_url,
                 proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id),
@@ -70,7 +70,7 @@ export const useImage = defineStore('image', () => {
     }
 
     async function loadIcon(icon_url: string) {
-        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
+        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledCache") || 'off'
         return invokeApi.loadImage({
             image_url: icon_url,
             proxy_url: await useProxyServer().getAppProxyUrl(),
