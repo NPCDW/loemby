@@ -2,12 +2,19 @@
     <el-scrollbar style="padding: 10px;">
         <el-table :data="list" :row-style="highlightRowFunction">
             <el-table-column prop="emby_server_name" label="服务器" show-overflow-tooltip />
-            <el-table-column prop="series_name" label="剧" show-overflow-tooltip />
-            <el-table-column prop="item_name" label="集、电影" show-overflow-tooltip />
+            <el-table-column prop="series_name" label="剧" show-overflow-tooltip>
+                <template #default="scope">
+                    <el-link @click.prevent="gotoSeries(scope.row.emby_server_id, scope.row.series_id)">{{ scope.row.series_name }}</el-link>
+                </template>
+            </el-table-column>
+            <el-table-column prop="item_name" label="集、电影" show-overflow-tooltip>
+                <template #default="scope">
+                    <el-link @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)">{{ scope.row.item_name }}</el-link>
+                </template>
+            </el-table-column>
             <el-table-column prop="played_duration" label="播放时长" :formatter="played_duration_formatter" width="100px" />
             <el-table-column fixed="right" label="操作" width="100px">
                 <template #default="scope">
-                    <el-button plain type="primary" size="small" @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)">Go</el-button>
                     <el-link :underline="false" @click="pin(scope.row)" style="margin-left: 5px;">
                         <el-icon color="#E6A23C" :size="16" v-if=" scope.row.pinned"><svg-icon name="pin" color="#E6A23C" /></el-icon>
                         <el-icon :size="16" v-else><svg-icon name="unpin" /></el-icon>
@@ -30,13 +37,16 @@
 <script lang="ts" setup>
 import { useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
-import { ElButton, ElMessage } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import { PlayHistory, usePlayHistory } from '../store/db/playHistory';
 import { secondsToHMS } from '../util/str_util'
 
 const router = useRouter()
 function gotoEpisodes(embyServerId: string, episodesId: string) {
     router.push('/nav/emby/' + embyServerId + '/episodes/' + episodesId)
+}
+function gotoSeries(embyServerId: string, seriesId: string) {
+    router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
 }
 
 const list = ref<PlayHistory[]>([])

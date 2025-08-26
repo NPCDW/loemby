@@ -4,6 +4,15 @@ Emby 客户端主要针对目标导向型用户设计，能为目标明确的内
 
 当前仅官方支持 Windows 平台，理论上兼容 Linux 和 macOS，但尚未经过完整测试，不保证稳定性。
 
+# 使用
+前往 [Release](https://github.com/NPCDW/loemby/releases) 下载对应平台的安装包，安装后即可使用。
+
+该软件仅支持浏览搜索等，如果需要观看视频，需要自行下载 mpv 视频播放器，并在设置中进行配置。推荐以下 mpv 播放器以及整合包：
+1. [官方推荐，无任何高级功能](https://mpv.io/installation/)
+2. [MPV_lazy](https://github.com/hooke007/MPV_lazy)
+3. [mpv-config](https://github.com/dyphire/mpv-config)
+4. [mpv.net-DW](https://github.com/diana7127/mpv.net-DW)
+
 ## 开发
 
 安装依赖

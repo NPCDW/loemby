@@ -80,13 +80,16 @@
                 </router-view>
             </el-scrollbar>
         </div>
-        <div style="height: 29px; border-top: 1px solid #4c4d4f; display: flex; justify-content: end; align-items: center;">
+        <div style="height: 29px; border-top: 1px solid #4c4d4f; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; margin-left: 3px;">
+                <el-text>服务器总数：{{ embyServers.length }}</el-text>
+            </div>
             <div v-if="$route.path.startsWith('/nav/emby/')" style="display: flex; align-items: center; margin-right: 3px;">
                 <el-text>{{ showEmbyServer.server_name }}</el-text>
                 <el-select v-model="showEmbyServer.line_id" @change="configLineChange" placement="top" size="small" style="width: 180px; margin-left: 5px;">
                     <template #label="{ label }">
-                        <span>线路: </span>
-                        <span style="font-weight: bold">{{ label }}</span>
+                        <span style="font-weight: bold">线路: </span>
+                        <span>{{ label }}</span>
                     </template>
                     <el-option v-for='line in embyLines[showEmbyServer.id!]' :key="line.id" :label="line.name" :value="line.id"/>
                     <template #footer>
@@ -95,8 +98,8 @@
                 </el-select>
                 <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 180px; margin-left: 5px;">
                     <template #label="{ label }">
-                        <span>浏览: </span>
-                        <span style="font-weight: bold">{{ label }}</span>
+                        <span style="font-weight: bold">浏览: </span>
+                        <span>{{ label }}</span>
                     </template>
                     <el-option key="no" label="不使用代理" value="no"/>
                     <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
@@ -104,8 +107,8 @@
                 </el-select>
                 <el-select v-model="showServerLine.play_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 180px; margin-left: 5px;">
                     <template #label="{ label }">
-                        <span>播放: </span>
-                        <span style="font-weight: bold">{{ label }}</span>
+                        <span style="font-weight: bold">播放: </span>
+                        <span>{{ label }}</span>
                     </template>
                     <el-option key="no" label="不使用代理" value="no"/>
                     <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>

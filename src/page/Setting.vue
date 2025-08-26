@@ -180,8 +180,8 @@ demuxer-readahead-secs=180" />
                             @change="configValueChange('global_browse_proxy_id', global_browse_proxy_id + '', () => {getGlobalBrowseProxy(); useEventBus().emit('GlobalProxyChanged', {})}, '全局媒体库浏览代理')"
                             style="width: 220px;">
                             <template #label="{ label }">
-                                <span>全局配置: </span>
-                                <span style="font-weight: bold">{{ label }}</span>
+                                <span style="font-weight: bold">全局配置: </span>
+                                <span>{{ label }}</span>
                             </template>
                             <el-option key="no" label="不使用代理" value="no"/>
                             <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
@@ -193,8 +193,8 @@ demuxer-readahead-secs=180" />
                             @change="configValueChange('global_play_proxy_id', global_play_proxy_id + '', () => {getGlobalPlayProxy(); useEventBus().emit('GlobalProxyChanged', {})}, '全局媒体流播放代理')"
                             style="width: 220px;">
                             <template #label="{ label }">
-                                <span>全局配置: </span>
-                                <span style="font-weight: bold">{{ label }}</span>
+                                <span style="font-weight: bold">全局配置: </span>
+                                <span>{{ label }}</span>
                             </template>
                             <el-option key="no" label="不使用代理" value="no"/>
                             <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
