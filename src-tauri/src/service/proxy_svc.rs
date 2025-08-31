@@ -90,13 +90,49 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, request.user_agent.clone().parse().unwrap());
-    req_headers.insert(axum::http::header::CACHE_CONTROL, "no-cache".parse().unwrap());
-    let res = client
+    let mut res = client
         .get(request.stream_url.clone())
         .headers(req_headers.clone())
         .send()
         .await;
     tracing::debug!("stream: {} {} {:?} {:?} 媒体流响应 {:?}", types, &id, request, req_headers, res);
+    // 手动重定向，reqwest 默认会自动重定向，但某些情况下会失败，所以这里手动重定向，猜测可能是 https 重定向到 http 会失败
+    for _ in 1..10 {
+        if let Ok(response) = &res {
+            if !response.status().is_redirection() {
+                break;
+            }
+            tracing::debug!("stream: {} {} 手动重定向", types, &id);
+            match response.headers().get(axum::http::header::LOCATION) {
+                None => {
+                    tracing::error!("stream: {} {} {:?} 手动重定向失败，媒体流响应没有 Location 头", types, &id, request);
+                    app_state.app.emit("tauri_notify", TauriNotify {
+                        alert_type: "ElMessage".to_string(),
+                        message_type: "error".to_string(),
+                        title: None,
+                        message: format!("手动重定向失败，媒体流响应没有 Location 头"),
+                    }).unwrap();
+                    return (
+                        axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                        axum::http::HeaderMap::new(),
+                        axum::body::Body::new("手动重定向失败，媒体流响应没有 Location 头".to_string())
+                    ).into_response();
+                },
+                Some(location) => {
+                    tracing::debug!("stream: {} {} {:?} 手动重定向到 {:?}", types, &id, request, location);
+                    // /cdn?path=/mnt/files/nfs-files/resources\xe7\x94\xb5\xe8\xa7\x86\xe5\x89\xa7/\xe6\xac\xa7\xe7\xbe\x8e\xe5\x89\xa7/\xe6\x98\xaf\xef\xbc\x8c\xe9\xa6\x96\xe7\x9b\xb8 (1986)/Season 1/\xe6\x98\xaf\xef\xbc\x8c\xe9\xa6\x96\xe7\x9b\xb8 - S01E04 - \xe7\xac\xac 4 \xe9\x9b\x86.mp4
+                    // 如果使用 location.to_str() 这个方法会报错，所以可能是因为这个原因所以没有自动重定向
+                    let location = String::from_utf8_lossy(location.as_bytes()).to_string();
+                    res = client
+                        .get(location)
+                        .headers(req_headers.clone())
+                        .send()
+                        .await;
+                    tracing::debug!("stream: {} {} {:?} {:?} 手动重定向后媒体流响应 {:?}", types, &id, request, req_headers, res);
+                },
+            }
+        }
+    }
     match res {
         Err(err) => {
             tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, request.user_agent, err);

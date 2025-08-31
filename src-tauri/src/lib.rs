@@ -49,7 +49,8 @@ pub fn run() {
             app.manage(AppState {
                 app_config: config,
                 auxm_app_state: axum_app_state,
-                reqwest_pool: RwLock::new(HashMap::new()),
+                api_reqwest_pool: RwLock::new(HashMap::new()),
+                image_reqwest_pool: RwLock::new(HashMap::new()),
             });
             
             #[cfg(desktop)]

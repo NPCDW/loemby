@@ -9,7 +9,8 @@ use crate::{config, service::proxy_svc::AxumAppState};
 pub struct AppState {
     pub app_config: config::app_config::Config,
     pub auxm_app_state: Arc::<RwLock<Option<AxumAppState>>>,
-    pub reqwest_pool: RwLock<HashMap<String, Client>>,
+    pub api_reqwest_pool: RwLock<HashMap<String, Client>>,
+    pub image_reqwest_pool: RwLock<HashMap<String, Client>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

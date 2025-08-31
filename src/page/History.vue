@@ -4,16 +4,16 @@
             <el-table-column prop="emby_server_name" label="服务器" show-overflow-tooltip />
             <el-table-column prop="series_name" label="剧" show-overflow-tooltip>
                 <template #default="scope">
-                    <el-link @click.prevent="gotoSeries(scope.row.emby_server_id, scope.row.series_id)">{{ scope.row.series_name }}</el-link>
+                    <el-link @click.prevent="gotoSeries(scope.row.emby_server_id, scope.row.series_id)" :type="scope.row.pinned ? 'primary' : 'default'">{{ scope.row.series_name }}</el-link>
                 </template>
             </el-table-column>
             <el-table-column prop="item_name" label="集、电影" show-overflow-tooltip>
                 <template #default="scope">
-                    <el-link @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)">{{ scope.row.item_name }}</el-link>
+                    <el-link @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)" :type="scope.row.pinned ? 'primary' : 'default'">{{ scope.row.item_name }}</el-link>
                 </template>
             </el-table-column>
             <el-table-column prop="played_duration" label="播放时长" :formatter="played_duration_formatter" width="100px" />
-            <el-table-column fixed="right" label="操作" width="100px">
+            <el-table-column fixed="right" label="Pin" width="50px">
                 <template #default="scope">
                     <el-link :underline="false" @click="pin(scope.row)" style="margin-left: 5px;">
                         <el-icon color="#E6A23C" :size="16" v-if=" scope.row.pinned"><svg-icon name="pin" color="#E6A23C" /></el-icon>
