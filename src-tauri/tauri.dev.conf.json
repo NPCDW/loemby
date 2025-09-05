@@ -38,8 +38,5 @@
     }
   },
   "plugins": {
-    "sql": {
-      "preload": ["sqlite:loemby.db"]
-    }
   }
 }

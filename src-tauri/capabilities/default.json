@@ -6,10 +6,6 @@
     "main"
   ],
   "permissions": [
-    "core:default",
-    "sql:default",
-    "sql:allow-execute",
-    "fs:allow-applocaldata-read-recursive",
-    "fs:allow-applocaldata-write-recursive"
+    "core:default"
   ]
 }

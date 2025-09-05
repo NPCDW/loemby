@@ -11,6 +11,7 @@ pub struct AppState {
     pub auxm_app_state: Arc::<RwLock<Option<AxumAppState>>>,
     pub api_reqwest_pool: RwLock<HashMap<String, Client>>,
     pub image_reqwest_pool: RwLock<HashMap<String, Client>>,
+    pub db_pool: sqlx::Pool<sqlx::Sqlite>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

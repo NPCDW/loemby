@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use crate::config::app_state::AppState;
 use crate::config::runtime_config;
-use crate::service::{http_forward_svc, player_svc, updater_svc};
+use crate::service::{cache_svc, http_forward_svc, player_svc, updater_svc};
 
 #[tauri::command]
 pub async fn get_sys_info() -> Result<String, String> {
@@ -140,4 +140,20 @@ pub async fn restart_app(app_handle: tauri::AppHandle) {
 #[tauri::command]
 pub async fn get_runtime_config(state: tauri::State<'_, AppState>) -> Result<runtime_config::RuntimeConfig, ()> {
     runtime_config::get_runtime_config(state).await
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CleanCacheParam {
+    pub dir: String,
+    pub cutoff_day: u32,
+    pub force_clean: bool,
+}
+
+#[tauri::command]
+pub async fn clean_cache(body: CleanCacheParam, app_handle: tauri::AppHandle) -> Result<(), String> {
+    let res = cache_svc::clean(body, app_handle).await;
+    if let Err(err) = res {
+        return Err(format!("清理失败: {} ", err.to_string()));
+    }
+    Ok(())
 }

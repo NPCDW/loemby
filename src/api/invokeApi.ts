@@ -98,6 +98,10 @@ async function get_runtime_config(): Promise<RuntimeConfig> {
     return invoke('get_runtime_config', {});
 }
 
+async function clean_cache(dir: string, cutoff_days: number, force_clean: boolean = false): Promise<void> {
+    return invoke('clean_cache', {body: {dir, cutoff_days, force_clean}});
+}
+
 export default {
-    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url, updater, restartApp, get_runtime_config
+    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url, updater, restartApp, get_runtime_config, clean_cache
 }

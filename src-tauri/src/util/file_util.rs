@@ -14,7 +14,7 @@ pub fn exist<P: AsRef<Path>>(path: P) -> bool {
 }
 
 #[allow(dead_code)]
-pub fn create_file_if_not_exist<P: AsRef<Path>>(path: P) -> io::Result<()> {
+pub fn create_file_if_not_exist<P: AsRef<Path>>(path: &P) -> io::Result<()> {
     let path = path.as_ref();
     let parent = path.parent().unwrap();
     if !parent.exists() {
