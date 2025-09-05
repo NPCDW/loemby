@@ -13,7 +13,7 @@ pub struct ProxyServer {
 }
 
 pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<ProxyServer, sqlx::Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from proxy_server where id = ");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from proxy_server where id = ?");
     query_builder.push_bind(id);
     let query = query_builder.build_query_as::<ProxyServer>();
     let sql = query.sql();
@@ -109,7 +109,7 @@ pub async fn update_by_id(entity: ProxyServer, pool: &Pool<Sqlite>) -> Result<sq
 }
 
 pub async fn delete_by_id(id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
-    let mut query_builder = QueryBuilder::new("delete from proxy_server where id = ");
+    let mut query_builder = QueryBuilder::new("delete from proxy_server where id = ?");
     query_builder.push_bind(id);
     let query = query_builder.build();
     let sql = query.sql();

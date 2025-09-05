@@ -35,7 +35,7 @@ pub struct EmbyServer {
 }
 
 pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<EmbyServer, sqlx::Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_server where id = ");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_server where id = ?");
     query_builder.push_bind(id);
     let query = query_builder.build_query_as::<EmbyServer>();
     let sql = query.sql();
@@ -268,14 +268,12 @@ pub async fn update_by_id(entity: EmbyServer, pool: &Pool<Sqlite>) -> Result<sql
 pub async fn update_order(removed_id: String, removed_index: u32, added_index: u32, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
     let mut query_builder: QueryBuilder<Sqlite>;
     if removed_index > added_index {
-        query_builder = QueryBuilder::new("update emby_server set order_by = order_by + 1 where order_by >= ");
+        query_builder = QueryBuilder::new("update emby_server set order_by = order_by + 1 where order_by >= ? and order_by < ?");
         query_builder.push_bind(added_index);
-        query_builder.push(" and order_by < ");
         query_builder.push_bind(removed_index);
     } else {
-        query_builder = QueryBuilder::new("update emby_server set order_by = order_by - 1 where order_by > ");
+        query_builder = QueryBuilder::new("update emby_server set order_by = order_by - 1 where order_by > ? and order_by <= ?");
         query_builder.push_bind(removed_index);
-        query_builder.push(" and order_by <= ");
         query_builder.push_bind(added_index);
     }
     let query = query_builder.build();
@@ -298,7 +296,7 @@ pub async fn defer_order(pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQuer
 }
 
 pub async fn delete_by_id(id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
-    let mut query_builder = QueryBuilder::new("delete from emby_server where id = ");
+    let mut query_builder = QueryBuilder::new("delete from emby_server where id = ?");
     query_builder.push_bind(id);
     let query = query_builder.build();
     let sql = query.sql();

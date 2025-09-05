@@ -14,7 +14,7 @@ pub struct EmbyLine {
 }
 
 pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<EmbyLine, sqlx::Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_line where id = ");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_line where id = ?");
     query_builder.push_bind(id);
     let query = query_builder.build_query_as::<EmbyLine>();
     let sql = query.sql();
@@ -24,7 +24,7 @@ pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<EmbyLine, sqlx
 }
 
 pub async fn list_emby_server_line(emby_server_id: String, pool: &Pool<Sqlite>) -> Result<Vec<EmbyLine>, sqlx::Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_line where emby_server_id = ");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_line where emby_server_id = ?");
     query_builder.push_bind(emby_server_id);
     let query = query_builder.build_query_as::<EmbyLine>();
     let sql = query.sql();
@@ -128,8 +128,30 @@ pub async fn update_by_id(entity: EmbyLine, pool: &Pool<Sqlite>) -> Result<sqlx:
     res
 }
 
+pub async fn update_line_emby_server_name(emby_server_id: String, emby_server_name: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update emby_line set emby_server_name = ? where emby_server_id = ?");
+    query_builder.push_bind(emby_server_name);
+    query_builder.push_bind(emby_server_id);
+
+    let query = query_builder.build();
+    let sql = query.sql();
+    let res = query.execute(pool).await;
+    tracing::debug!("sqlx: 更新线路emby服务名: {} {:?}", sql, res);
+    res
+}
+
+pub async fn delete_line_by_emby_server(emby_server_id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+    let mut query_builder = QueryBuilder::new("delete from emby_line where emby_server_id = ?");
+    query_builder.push_bind(emby_server_id);
+    let query = query_builder.build();
+    let sql = query.sql();
+    let res = query.execute(pool).await;
+    tracing::debug!("sqlx: 删除线路: {} {:?}", sql, res);
+    res
+}
+
 pub async fn delete_by_id(id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
-    let mut query_builder = QueryBuilder::new("delete from emby_line where id = ");
+    let mut query_builder = QueryBuilder::new("delete from emby_line where id = ?");
     query_builder.push_bind(id);
     let query = query_builder.build();
     let sql = query.sql();

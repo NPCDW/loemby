@@ -18,7 +18,7 @@ pub struct PlayHistory {
     pub pinned: Option<u32>,
 }
 
-pub async fn page(pool: &Pool<Sqlite>) -> anyhow::Result<(u32, Vec<PlayHistory>)> {
+pub async fn page(page_number: u32, page_size: u32, pool: &Pool<Sqlite>) -> anyhow::Result<(u32, Vec<PlayHistory>)> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select count(*) as total from play_history");
     let query = query_builder.build_query_as::<(i64,)>();
     let sql = query.sql();
@@ -29,7 +29,9 @@ pub async fn page(pool: &Pool<Sqlite>) -> anyhow::Result<(u32, Vec<PlayHistory>)
         return anyhow::Ok((0, vec![]));
     }
 
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history order by pinned desc, update_time desc limit ? offset ?");
+    query_builder.push_bind(page_size);
+    query_builder.push_bind((page_number - 1) * page_size);
     let query = query_builder.build_query_as::<PlayHistory>();
     let sql = query.sql();
     let res = query.fetch_all(pool).await;
@@ -38,7 +40,7 @@ pub async fn page(pool: &Pool<Sqlite>) -> anyhow::Result<(u32, Vec<PlayHistory>)
 }
 
 pub async fn get(emby_server_id: String, item_id: String, pool: &Pool<Sqlite>) -> Result<PlayHistory, sqlx::Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history where emby_server_id = ");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history where emby_server_id = ?");
     query_builder.push_bind(emby_server_id);
     query_builder.push(" and item_id = ");
     query_builder.push_bind(item_id);
@@ -164,9 +166,8 @@ pub async fn update_by_id(entity: PlayHistory, pool: &Pool<Sqlite>) -> Result<sq
 }
 
 pub async fn cancel_pinned(emby_server_id: String, series_id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update play_history set pinned = 0 where pinned = 1 and emby_server_id = ");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update play_history set pinned = 0 where pinned = 1 and emby_server_id = ? and series_id = ?");
     query_builder.push_bind(emby_server_id);
-    query_builder.push(" and series_id = ");
     query_builder.push_bind(series_id);
 
     let query = query_builder.build();

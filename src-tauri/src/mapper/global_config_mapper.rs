@@ -9,8 +9,8 @@ pub struct GlobalConfig {
     pub config_value: Option<String>,
 }
 
-pub async fn get_by_id(config_key: String, pool: &Pool<Sqlite>) -> Result<GlobalConfig, sqlx::Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from global_config where config_key = ");
+pub async fn get_by_key(config_key: String, pool: &Pool<Sqlite>) -> Result<GlobalConfig, sqlx::Error> {
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from global_config where config_key = ?");
     query_builder.push_bind(config_key);
     let query = query_builder.build_query_as::<GlobalConfig>();
     let sql = query.sql();
@@ -75,8 +75,8 @@ pub async fn update_by_id(entity: GlobalConfig, pool: &Pool<Sqlite>) -> Result<s
     res
 }
 
-pub async fn delete_by_id(config_key: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
-    let mut query_builder = QueryBuilder::new("delete from global_config where config_key = ");
+pub async fn delete_by_key(config_key: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+    let mut query_builder = QueryBuilder::new("delete from global_config where config_key = ?");
     query_builder.push_bind(config_key);
     let query = query_builder.build();
     let sql = query.sql();

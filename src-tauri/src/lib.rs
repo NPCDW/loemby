@@ -13,7 +13,7 @@ use controller::proxy_server_ctl::{get_proxy_server, list_all_proxy_server, add_
 use controller::play_history_ctl::{get_play_history, page_play_history, add_play_history, update_play_history, cancel_pinned_play_history};
 use controller::global_config_ctl::{get_global_config, list_all_global_config, add_global_config, update_global_config, delete_global_config};
 use controller::emby_server_ctl::{get_emby_server, list_all_emby_server, add_emby_server, update_emby_server, defer_emby_server_order, update_emby_server_order, delete_emby_server};
-use controller::emby_line_ctl::{get_emby_line, list_emby_server_line, list_all_emby_line, add_emby_line, update_emby_line, delete_emby_line};
+use controller::emby_line_ctl::{get_emby_line, list_emby_server_line, list_all_emby_line, add_emby_line, update_emby_line, update_line_emby_server_name, delete_line_by_emby_server_id, delete_emby_line};
 use controller::emby_icon_library_ctl::{get_emby_icon_library, list_all_emby_icon_library, add_emby_icon_library, update_emby_icon_library, delete_emby_icon_library};
 use controller::invoke_ctl::{get_sys_info, play_video, http_forward, go_trakt_auth, open_url, updater, restart_app, get_runtime_config, clean_cache};
 use config::app_state::AppState;
@@ -26,7 +26,7 @@ pub fn run() {
             get_play_history, page_play_history, add_play_history, update_play_history, cancel_pinned_play_history,
             get_global_config, list_all_global_config, add_global_config, update_global_config, delete_global_config,
             get_emby_server, list_all_emby_server, add_emby_server, update_emby_server, defer_emby_server_order, update_emby_server_order, delete_emby_server,
-            get_emby_line, list_emby_server_line, list_all_emby_line, add_emby_line, update_emby_line, delete_emby_line,
+            get_emby_line, list_emby_server_line, list_all_emby_line, add_emby_line, update_emby_line, update_line_emby_server_name, delete_line_by_emby_server_id, delete_emby_line,
             get_emby_icon_library, list_all_emby_icon_library, add_emby_icon_library, update_emby_icon_library, delete_emby_icon_library,
             get_sys_info, play_video, http_forward, go_trakt_auth, open_url, updater, restart_app, get_runtime_config, clean_cache
         ])

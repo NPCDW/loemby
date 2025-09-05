@@ -19,9 +19,15 @@ pub async fn get_play_history(body: GetPlayHistoryParam, state: tauri::State<'_,
     Ok(res.unwrap())
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct PagePlayHistoryParam {
+    pub page_number: u32,
+    pub page_size: u32
+}
+
 #[tauri::command]
-pub async fn page_play_history(state: tauri::State<'_, AppState>) -> Result<(u32, Vec<PlayHistory>), String> {
-    let res = play_history_mapper::page(&state.db_pool).await;
+pub async fn page_play_history(body: PagePlayHistoryParam, state: tauri::State<'_, AppState>) -> Result<(u32, Vec<PlayHistory>), String> {
+    let res = play_history_mapper::page(body.page_number, body.page_size, &state.db_pool).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }

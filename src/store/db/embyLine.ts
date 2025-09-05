@@ -1,75 +1,37 @@
 import { defineStore } from 'pinia';
-import { useDb } from '../db';
+import { invoke } from '@tauri-apps/api/core';
 
 export const useEmbyLine = defineStore('embyLine', () => {
-    async function getEmbyLine(id: string) {
-        let embyLine = await useDb().db?.select<EmbyLine[]>('select * from emby_line where id = $1', [id]);
-        if (!embyLine || embyLine.length == 0) {
-            return;
-        }
-        return embyLine[0];
+    async function getEmbyLine(id: string): Promise<EmbyLine> {
+        return invoke('get_emby_line', {id});
     }
 
-    async function listEmbyLine(emby_server_id: string) {
-        let embyLine = await useDb().db?.select<EmbyLine[]>('select * from emby_line where emby_server_id = $1', [emby_server_id]);
-        if (!embyLine || embyLine.length == 0) {
-            return [];
-        }
-        return embyLine;
+    async function listEmbyLine(emby_server_id: string): Promise<EmbyLine[]> {
+        return invoke('list_emby_server_line', {embyServerId: emby_server_id});
     }
 
-    async function listAllEmbyLine() {
-        let embyLine = await useDb().db?.select<EmbyLine[]>('select * from emby_line');
-        if (!embyLine || embyLine.length == 0) {
-            return [];
-        }
-        return embyLine;
+    async function listAllEmbyLine(): Promise<EmbyLine[]> {
+        return invoke('list_all_emby_line');
     }
 
-    async function addEmbyLine(embyLine: EmbyLine) {
-        let fields: string[] = [], values: string[] = [];
-        for (const [key, value] of Object.entries(embyLine)) {
-            if (value != null && value != undefined && key != 'create_time') {
-                fields.push(key);
-                values.push(value);
-            }
-        }
-        let sql = `insert into emby_line (${fields.join(',')}) values (${fields.map((_item, index) => '$' + (index + 1)).join(',')})`;
-        let res = await useDb().db?.execute(sql, values);
-        return res?.rowsAffected;
+    async function addEmbyLine(embyLine: EmbyLine): Promise<number> {
+        return invoke('add_emby_line', {body: embyLine});
     }
 
-    async function updateEmbyLine(embyLine: EmbyLine) {
-        let fields: string[] = [], values: string[] = [];
-        values.push(embyLine.id!);
-        for (const [key, value] of Object.entries(embyLine)) {
-            if (value != null && value != undefined && key != 'id' && key != 'create_time') {
-                fields.push(key);
-                values.push(value);
-            }
-        }
-        let sql = `update emby_line set ${fields.map((item, index) => item + ' = $' + (index + 2)).join(',')} where id = $1`;
-        let res = await useDb().db?.execute(sql, values);
-        return res?.rowsAffected;
+    async function updateEmbyLine(embyLine: EmbyLine): Promise<number> {
+        return invoke('update_emby_line', {body: embyLine});
     }
 
-    async function updateEmbyServerName(emby_server_id: string, emby_server_name: string) {
-        let values: string[] = [];
-        values.push(emby_server_id);
-        values.push(emby_server_name);
-        let sql = `update emby_line set emby_server_name = $2 where emby_server_id = $1`;
-        let res = await useDb().db?.execute(sql, values);
-        return res?.rowsAffected;
+    async function updateEmbyServerName(emby_server_id: string, emby_server_name: string): Promise<number> {
+        return invoke('update_emby_line', {body: {emby_server_id, emby_server_name}});
     }
 
-    async function delEmbyServer(emby_server_id: string) {
-        let res = await useDb().db?.execute('delete from emby_line where emby_server_id = $1', [emby_server_id]);
-        return res?.rowsAffected;
+    async function delEmbyServer(emby_server_id: string): Promise<number> {
+        return invoke('delete_emby_line', {embyServerId: emby_server_id});
     }
 
-    async function delEmbyLine(id: string) {
-        let res = await useDb().db?.execute('delete from emby_line where id = $1', [id]);
-        return res?.rowsAffected;
+    async function delEmbyLine(id: string): Promise<number> {
+        return invoke('delete_emby_line', {id: id});
     }
 
     return { getEmbyLine, delEmbyLine, addEmbyLine, updateEmbyLine, listAllEmbyLine, listEmbyLine, updateEmbyServerName, delEmbyServer }

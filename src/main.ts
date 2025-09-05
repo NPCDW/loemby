@@ -5,7 +5,6 @@ import './style.css'
 import App from './App.vue'
 import router from './router/router'
 import { createPinia } from 'pinia'
-import { useDb } from './store/db'
 import { usePlayback } from './store/playback'
 import svgIcon from "./components/SvgIcon/index.vue";
 import 'virtual:svg-icons-register'
@@ -25,7 +24,6 @@ app.use(router)
 app.component('svg-icon', svgIcon)
 app.use(VueLazyLoad, {})
 
-await useDb().init()
 useGlobalConfig().initCache()
 useProxyServer().initCache()
 await useRuntimeConfig().getRuntimeConfig()

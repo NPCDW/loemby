@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { useDb } from '../db';
+import { invoke } from '@tauri-apps/api/core';
 import { useGlobalConfig } from './globalConfig';
 import { ref } from 'vue';
 
@@ -23,55 +23,24 @@ export const useProxyServer = defineStore('proxyServer', () => {
         }
     }
 
-    async function getProxyServer(id: string) {
-        let proxyServer = await useDb().db?.select<ProxyServer[]>('select * from proxy_server where id = $1', [id]);
-        if (!proxyServer || proxyServer.length == 0) {
-            return;
-        }
-        return proxyServer[0];
+    async function getProxyServer(id: string): Promise<ProxyServer> {
+        return invoke('get_proxy_server', {id});
     }
 
-    async function listAllProxyServer() {
-        let proxyServer = await useDb().db?.select<ProxyServer[]>('select * from proxy_server');
-        if (!proxyServer || proxyServer.length == 0) {
-            return [];
-        }
-        return proxyServer;
+    async function listAllProxyServer(): Promise<ProxyServer[]> {
+        return invoke('list_all_proxy_server');
     }
 
-    async function addProxyServer(proxyServer: ProxyServer) {
-        let fields: string[] = [], values: string[] = [];
-        for (const [key, value] of Object.entries(proxyServer)) {
-            if (value != null && value != undefined && key != 'create_time') {
-                fields.push(key);
-                values.push(value);
-            }
-        }
-        let sql = `insert into proxy_server (${fields.join(',')}) values (${fields.map((_item, index) => '$' + (index + 1)).join(',')})`;
-        let res = await useDb().db?.execute(sql, values);
-        await refreshCache(proxyServer.id!);
-        return res?.rowsAffected;
+    async function addProxyServer(proxyServer: ProxyServer): Promise<number> {
+        return invoke('add_proxy_server', {body: proxyServer});
     }
 
-    async function updateProxyServer(proxyServer: ProxyServer) {
-        let fields: string[] = [], values: string[] = [];
-        values.push(proxyServer.id!);
-        for (const [key, value] of Object.entries(proxyServer)) {
-            if (value != null && value != undefined && key != 'id' && key != 'create_time') {
-                fields.push(key);
-                values.push(value);
-            }
-        }
-        let sql = `update proxy_server set ${fields.map((item, index) => item + ' = $' + (index + 2)).join(',')} where id = $1`;
-        let res = await useDb().db?.execute(sql, values);
-        await refreshCache(proxyServer.id!);
-        return res?.rowsAffected;
+    async function updateProxyServer(proxyServer: ProxyServer): Promise<number> {
+        return invoke('update_proxy_server', {body: proxyServer});
     }
 
-    async function delProxyServer(id: string) {
-        let res = await useDb().db?.execute('delete from proxy_server where id = $1', [id]);
-        await refreshCache(id);
-        return res?.rowsAffected;
+    async function delProxyServer(id: string): Promise<number> {
+        return invoke('delete_proxy_server', {id: id});
     }
 
     async function getProxyServerName(id: string) {
