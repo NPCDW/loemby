@@ -3,7 +3,7 @@ name = "loemby"
 version = "0.24.1"
 description = "Emby Client"
 authors = ["NPCDW"]
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

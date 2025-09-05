@@ -39,15 +39,20 @@ pub fn run() {
             let config = config.unwrap();
             println!("Read Config: {:?}", &config);
 
-            let db_pool = tauri::async_runtime::block_on(config::db::init(config_dir))?;
-            
             let local_data_dir = app.path().resolve("", tauri::path::BaseDirectory::AppLocalData)?;
             config::log::init(&local_data_dir, &config.log_level);
 
+            let db_pool = tauri::async_runtime::block_on(config::db::init(config_dir))?;
+            
             let axum_app_state = Arc::new(RwLock::new(None));
             let axum_app_state_clone = axum_app_state.clone();
             let app_handle = app.app_handle().clone();
-            tauri::async_runtime::block_on(proxy_svc::init_proxy_svc(axum_app_state_clone, app_handle))?;
+            tauri::async_runtime::spawn(async move {
+                let res = proxy_svc::init_proxy_svc(axum_app_state_clone, app_handle).await;
+                if res.is_err() {
+                    tracing::error!("{:#?}", res);
+                }
+            });
 
             app.manage(AppState {
                 app_config: config,

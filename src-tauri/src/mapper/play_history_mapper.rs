@@ -29,8 +29,9 @@ pub async fn page(page_number: u32, page_size: u32, pool: &Pool<Sqlite>) -> anyh
         return anyhow::Ok((0, vec![]));
     }
 
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history order by pinned desc, update_time desc limit ? offset ?");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history order by pinned desc, update_time desc limit ");
     query_builder.push_bind(page_size);
+    query_builder.push(" offset ");
     query_builder.push_bind((page_number - 1) * page_size);
     let query = query_builder.build_query_as::<PlayHistory>();
     let sql = query.sql();
@@ -40,7 +41,7 @@ pub async fn page(page_number: u32, page_size: u32, pool: &Pool<Sqlite>) -> anyh
 }
 
 pub async fn get(emby_server_id: String, item_id: String, pool: &Pool<Sqlite>) -> Result<PlayHistory, sqlx::Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history where emby_server_id = ?");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history where emby_server_id = ");
     query_builder.push_bind(emby_server_id);
     query_builder.push(" and item_id = ");
     query_builder.push_bind(item_id);
@@ -166,8 +167,9 @@ pub async fn update_by_id(entity: PlayHistory, pool: &Pool<Sqlite>) -> Result<sq
 }
 
 pub async fn cancel_pinned(emby_server_id: String, series_id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update play_history set pinned = 0 where pinned = 1 and emby_server_id = ? and series_id = ?");
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update play_history set pinned = 0 where pinned = 1 and emby_server_id = ");
     query_builder.push_bind(emby_server_id);
+    query_builder.push(" and series_id = ");
     query_builder.push_bind(series_id);
 
     let query = query_builder.build();
