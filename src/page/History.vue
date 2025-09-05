@@ -53,18 +53,18 @@ const list = ref<PlayHistory[]>([])
 const currentPage = ref<number>(1)
 const pageSize = ref<number>(30)
 const total = ref<number>(0)
-async function getEpisodes(pageNumber: number = 1, pageSize: number = 30) {
+async function getPlayHistory(pageNumber: number = 1, pageSize: number = 30) {
     return usePlayHistory().pagePlayHistory(pageNumber, pageSize).then(async response => {
-        list.value = response.list
-        total.value = response.total
+        list.value = response[1]
+        total.value = response[0]
     }).catch(e => {
         ElMessage.error('获取播放历史失败' + e)
     })
 }
 function handlePageChange(pageNumber: number) {
-    getEpisodes(pageNumber)
+    getPlayHistory(pageNumber)
 }
-onMounted(() => getEpisodes())
+onMounted(() => getPlayHistory())
 
 function played_duration_formatter(row: PlayHistory) {
     return secondsToHMS(row.played_duration!)

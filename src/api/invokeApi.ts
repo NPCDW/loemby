@@ -98,8 +98,8 @@ async function get_runtime_config(): Promise<RuntimeConfig> {
     return invoke('get_runtime_config', {});
 }
 
-async function clean_cache(dir: string, cutoff_days: number, force_clean: boolean = false): Promise<void> {
-    return invoke('clean_cache', {body: {dir, cutoff_days, force_clean}});
+async function clean_cache(dir: string, cutoff_day: number, force_clean: boolean = false): Promise<void> {
+    return invoke('clean_cache', {body: {dir, cutoff_day, force_clean}});
 }
 
 export default {

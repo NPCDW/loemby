@@ -60,13 +60,13 @@ pub async fn create(entity: GlobalConfig, pool: &Pool<Sqlite>) -> Result<sqlx::s
     res
 }
 
-pub async fn update_by_id(entity: GlobalConfig, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn update_by_key(entity: GlobalConfig, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update global_config set ");
     let mut separated = query_builder.separated(", ");
     if entity.config_value.is_some() {
         separated.push("config_value = ").push_bind_unseparated(entity.config_value.unwrap());
     }
-    query_builder.push(" where config_key = ").push_bind(entity.id.unwrap());
+    query_builder.push(" where config_key = ").push_bind(entity.config_key.unwrap());
 
     let query = query_builder.build();
     let sql = query.sql();

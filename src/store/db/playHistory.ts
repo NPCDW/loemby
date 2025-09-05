@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
 
 export const usePlayHistory = defineStore('playHistory', () => {
-    async function pagePlayHistory(page_number: number, page_size: number): Promise<{total: number, list: PlayHistory[]}> {
+    async function pagePlayHistory(page_number: number, page_size: number): Promise<[number, PlayHistory[]]> {
         return invoke('page_play_history', {body: {page_number, page_size}});
     }
 

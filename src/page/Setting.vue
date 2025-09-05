@@ -840,7 +840,7 @@ function configValueChange(key: string, value: string, callback: () => void, key
         }).catch(e => {
             ElMessage.error('修改' + keyName + '失败' + e);
         })
-    }).catch(e => ElMessage.error('修改MPV路径失败' + e))
+    }).catch(e => ElMessage.error('修改配置失败' + e))
 }
 
 const cleanIconCacheLoading = ref(false)

@@ -37,7 +37,7 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
 
     // 这个方法不要加缓存
     async function getGlobalConfig(config_key: string): Promise<GlobalConfig> {
-        return invoke('get_emby_icon_library', {configKey: config_key});
+        return invoke('get_global_config', {configKey: config_key});
     }
 
     async function addGlobalConfig(globalConfig: GlobalConfig): Promise<unknown> {

@@ -31,7 +31,7 @@ pub async fn add_global_config(body: GlobalConfig, state: tauri::State<'_, AppSt
 
 #[tauri::command]
 pub async fn update_global_config(body: GlobalConfig, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = global_config_mapper::update_by_id(body, &state.db_pool).await;
+    let res = global_config_mapper::update_by_key(body, &state.db_pool).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
