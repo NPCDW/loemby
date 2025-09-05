@@ -43,8 +43,8 @@ export const useProxyServer = defineStore('proxyServer', () => {
         return invoke('delete_proxy_server', {id: id});
     }
 
-    async function getProxyServerName(id: string) {
-        if (id == 'no') {
+    async function getGlobalProxyServerName(id: string) {
+        if (!id || id == 'no') {
             return '不使用代理'
         }
         if (!cacheProxyServer.value[id]) {
@@ -136,7 +136,7 @@ export const useProxyServer = defineStore('proxyServer', () => {
         return proxyServer.proxy_type + "://" + auth + proxyServer.addr
     }
 
-    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, getBrowseProxyUrl, getPlayProxyUrl, getTraktProxyUrl, getProxyUrl, getAppProxyUrl, initCache, refreshCache, getProxyServerName }
+    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, getBrowseProxyUrl, getPlayProxyUrl, getTraktProxyUrl, getProxyUrl, getAppProxyUrl, initCache, refreshCache, getGlobalProxyServerName }
 })
 
 export interface ProxyServer {
