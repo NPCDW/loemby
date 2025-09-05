@@ -9,12 +9,12 @@ pub struct GlobalConfig {
     pub config_value: Option<String>,
 }
 
-pub async fn get_by_key(config_key: String, pool: &Pool<Sqlite>) -> Result<GlobalConfig, sqlx::Error> {
+pub async fn get_by_key(config_key: String, pool: &Pool<Sqlite>) -> Result<Option<GlobalConfig>, sqlx::Error> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from global_config where config_key = ");
     query_builder.push_bind(config_key);
     let query = query_builder.build_query_as::<GlobalConfig>();
     let sql = query.sql();
-    let res = query.fetch_one(pool).await;
+    let res = query.fetch_optional(pool).await;
     tracing::debug!("sqlx: 查询配置: {} {:?}", sql, res);
     res
 }

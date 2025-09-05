@@ -3,7 +3,7 @@ use crate::mapper::global_config_mapper;
 use crate::mapper::global_config_mapper::GlobalConfig;
 
 #[tauri::command]
-pub async fn get_global_config(config_key: String, state: tauri::State<'_, AppState>) -> Result<GlobalConfig, String> {
+pub async fn get_global_config(config_key: String, state: tauri::State<'_, AppState>) -> Result<Option<GlobalConfig>, String> {
     let res = global_config_mapper::get_by_key(config_key, &state.db_pool).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());

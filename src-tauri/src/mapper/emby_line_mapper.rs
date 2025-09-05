@@ -13,12 +13,12 @@ pub struct EmbyLine {
     pub play_proxy_id: Option<String>,
 }
 
-pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<EmbyLine, sqlx::Error> {
+pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<Option<EmbyLine>, sqlx::Error> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_line where id = ");
     query_builder.push_bind(id);
     let query = query_builder.build_query_as::<EmbyLine>();
     let sql = query.sql();
-    let res = query.fetch_one(pool).await;
+    let res = query.fetch_optional(pool).await;
     tracing::debug!("sqlx: 查询线路: {} {:?}", sql, res);
     res
 }

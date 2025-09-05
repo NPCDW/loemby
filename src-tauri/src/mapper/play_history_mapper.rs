@@ -40,14 +40,14 @@ pub async fn page(page_number: u32, page_size: u32, pool: &Pool<Sqlite>) -> anyh
     anyhow::Ok((count.0 as u32, res?))
 }
 
-pub async fn get(emby_server_id: String, item_id: String, pool: &Pool<Sqlite>) -> Result<PlayHistory, sqlx::Error> {
+pub async fn get(emby_server_id: String, item_id: String, pool: &Pool<Sqlite>) -> Result<Option<PlayHistory>, sqlx::Error> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history where emby_server_id = ");
     query_builder.push_bind(emby_server_id);
     query_builder.push(" and item_id = ");
     query_builder.push_bind(item_id);
     let query = query_builder.build_query_as::<PlayHistory>();
     let sql = query.sql();
-    let res = query.fetch_one(pool).await;
+    let res = query.fetch_optional(pool).await;
     tracing::debug!("sqlx: 查询播放历史: {} {:?}", sql, res);
     res
 }

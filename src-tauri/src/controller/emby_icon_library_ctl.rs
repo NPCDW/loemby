@@ -3,7 +3,7 @@ use crate::mapper::emby_icon_library_mapper;
 use crate::mapper::emby_icon_library_mapper::EmbyIconLibrary;
 
 #[tauri::command]
-pub async fn get_emby_icon_library(id: String, state: tauri::State<'_, AppState>) -> Result<EmbyIconLibrary, String> {
+pub async fn get_emby_icon_library(id: String, state: tauri::State<'_, AppState>) -> Result<Option<EmbyIconLibrary>, String> {
     let res = emby_icon_library_mapper::get_by_id(id, &state.db_pool).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());

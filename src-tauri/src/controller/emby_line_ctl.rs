@@ -5,7 +5,7 @@ use crate::mapper::emby_line_mapper;
 use crate::mapper::emby_line_mapper::EmbyLine;
 
 #[tauri::command]
-pub async fn get_emby_line(id: String, state: tauri::State<'_, AppState>) -> Result<EmbyLine, String> {
+pub async fn get_emby_line(id: String, state: tauri::State<'_, AppState>) -> Result<Option<EmbyLine>, String> {
     let res = emby_line_mapper::get_by_id(id, &state.db_pool).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
