@@ -34,12 +34,12 @@ pub struct EmbyServer {
     pub disabled: Option<u32>,
 }
 
-pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<EmbyServer, sqlx::Error> {
+pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<Option<EmbyServer>, sqlx::Error> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_server where id = ");
     query_builder.push_bind(id);
     let query = query_builder.build_query_as::<EmbyServer>();
     let sql = query.sql();
-    let res = query.fetch_one(pool).await;
+    let res = query.fetch_optional(pool).await;
     tracing::debug!("sqlx: 查询emby服务器: {} {:?}", sql, res);
     res
 }

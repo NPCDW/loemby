@@ -11,7 +11,7 @@ pub struct GetPlayHistoryParam {
 }
 
 #[tauri::command]
-pub async fn get_play_history(body: GetPlayHistoryParam, state: tauri::State<'_, AppState>) -> Result<PlayHistory, String> {
+pub async fn get_play_history(body: GetPlayHistoryParam, state: tauri::State<'_, AppState>) -> Result<Option<PlayHistory>, String> {
     let res = play_history_mapper::get(body.emby_server_id, body.item_id, &state.db_pool).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());

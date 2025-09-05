@@ -5,7 +5,7 @@ use crate::mapper::emby_server_mapper;
 use crate::mapper::emby_server_mapper::EmbyServer;
 
 #[tauri::command]
-pub async fn get_emby_server(id: String, state: tauri::State<'_, AppState>) -> Result<EmbyServer, String> {
+pub async fn get_emby_server(id: String, state: tauri::State<'_, AppState>) -> Result<Option<EmbyServer>, String> {
     let res = emby_server_mapper::get_by_id(id, &state.db_pool).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());

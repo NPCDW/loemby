@@ -12,12 +12,12 @@ pub struct ProxyServer {
     pub password: Option<String>,
 }
 
-pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<ProxyServer, sqlx::Error> {
+pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<Option<ProxyServer>, sqlx::Error> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from proxy_server where id = ");
     query_builder.push_bind(id);
     let query = query_builder.build_query_as::<ProxyServer>();
     let sql = query.sql();
-    let res = query.fetch_one(pool).await;
+    let res = query.fetch_optional(pool).await;
     tracing::debug!("sqlx: 查询代理服务器: {} {:?}", sql, res);
     res
 }
