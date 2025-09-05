@@ -35,7 +35,7 @@ export const usePlayback = defineStore('playback', () => {
                         }
                         useEventBus().emit('playingStopped', event.payload)
                     })
-                    const played_duration = (new Date().getTime() - event.payload.start_time) / 1000
+                    const played_duration = Number(((new Date().getTime() - event.payload.start_time) / 1000).toFixed())
                     if (played_duration > 5 * 60) {
                         useEmbyServer().updateEmbyServer({id: embyServer!.id!, last_playback_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss')})
                             .then(() => useEventBus().emit('EmbyServerChanged', {event: 'update', id: embyServer!.id!}))

@@ -23,11 +23,11 @@ export const useEmbyLine = defineStore('embyLine', () => {
     }
 
     async function updateEmbyServerName(emby_server_id: string, emby_server_name: string): Promise<number> {
-        return invoke('update_emby_line', {body: {emby_server_id, emby_server_name}});
+        return invoke('update_line_emby_server_name', {body: {emby_server_id, emby_server_name}});
     }
 
     async function delEmbyServer(emby_server_id: string): Promise<number> {
-        return invoke('delete_emby_line', {embyServerId: emby_server_id});
+        return invoke('delete_line_by_emby_server_id', {embyServerId: emby_server_id});
     }
 
     async function delEmbyLine(id: string): Promise<number> {

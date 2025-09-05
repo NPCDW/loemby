@@ -14,7 +14,7 @@ pub struct PlayHistory {
     pub item_name: Option<String>,
     pub series_id: Option<String>,
     pub series_name: Option<String>,
-    pub played_duration: Option<u32>,
+    pub played_duration: Option<i64>,
     pub pinned: Option<u32>,
 }
 
