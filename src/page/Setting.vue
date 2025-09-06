@@ -100,10 +100,10 @@
                     </el-form-item>
                     <el-form-item>
                         <template #label>
-                            <div style="display: flex; align-items: center;">
+                            <div style="display: flex; align-items: center;" @click.stop="">
                                 <span>MPV参数</span>
-                                <el-link target="_blank" href="https://mpv.io/manual/stable/" style="margin-left: 10px;">官方文档</el-link>
-                                <el-link target="_blank" href="https://hooke007.github.io/official_man/mpv.html" style="margin-left: 10px;">中文文档</el-link>
+                                <el-link @click.stop.prevent="invokeApi.open_url('https://mpv.io/manual/stable/')" style="margin-left: 10px;">官方文档</el-link>
+                                <el-link @click.stop.prevent="invokeApi.open_url('https://hooke007.github.io/official_man/mpv.html')" style="margin-left: 10px;">中文文档</el-link>
                             </div>
                         </template>
                         <el-input

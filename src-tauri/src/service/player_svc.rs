@@ -8,7 +8,8 @@ use tauri::{Emitter, Manager};
 use crate::{config::app_state::AppState, controller::invoke_ctl::PlayVideoParam, service::proxy_svc::AxumAppStateRequest, util::file_util};
 
 pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
-    let mpv_path_vec = body.mpv_path.split("\n").collect::<Vec<&str>>();
+    let mpv_path = body.mpv_path.trim().replace("\r", "");
+    let mpv_path_vec = mpv_path.split("\n").collect::<Vec<&str>>();
     let mpv_path = mpv_path_vec.iter().find(|&&path| PathBuf::from(path).is_file());
     if mpv_path.is_none() {
         return Err(format!("所有的 mpv 路径都不存在: {}", body.mpv_path));
