@@ -22,7 +22,7 @@ pub async fn list_all_proxy_server(state: tauri::State<'_, AppState>) -> Result<
 
 #[tauri::command]
 pub async fn add_proxy_server(body: ProxyServer, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = proxy_server_mapper::create(body, &state.db_pool).await;
+    let res = proxy_server_mapper::create(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -31,7 +31,7 @@ pub async fn add_proxy_server(body: ProxyServer, state: tauri::State<'_, AppStat
 
 #[tauri::command]
 pub async fn update_proxy_server(body: ProxyServer, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = proxy_server_mapper::update_by_id(body, &state.db_pool).await;
+    let res = proxy_server_mapper::update_by_id(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -40,7 +40,7 @@ pub async fn update_proxy_server(body: ProxyServer, state: tauri::State<'_, AppS
 
 #[tauri::command]
 pub async fn delete_proxy_server(id: String, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = proxy_server_mapper::delete_by_id(id, &state.db_pool).await;
+    let res = proxy_server_mapper::delete_by_id(id, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }

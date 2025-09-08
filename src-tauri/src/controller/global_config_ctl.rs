@@ -22,7 +22,7 @@ pub async fn list_all_global_config(state: tauri::State<'_, AppState>) -> Result
 
 #[tauri::command]
 pub async fn add_global_config(body: GlobalConfig, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = global_config_mapper::create(body, &state.db_pool).await;
+    let res = global_config_mapper::create(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -31,7 +31,7 @@ pub async fn add_global_config(body: GlobalConfig, state: tauri::State<'_, AppSt
 
 #[tauri::command]
 pub async fn update_global_config(body: GlobalConfig, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = global_config_mapper::update_by_key(body, &state.db_pool).await;
+    let res = global_config_mapper::update_by_key(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -40,7 +40,7 @@ pub async fn update_global_config(body: GlobalConfig, state: tauri::State<'_, Ap
 
 #[tauri::command]
 pub async fn delete_global_config(config_key: String, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = global_config_mapper::delete_by_key(config_key, &state.db_pool).await;
+    let res = global_config_mapper::delete_by_key(config_key, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }

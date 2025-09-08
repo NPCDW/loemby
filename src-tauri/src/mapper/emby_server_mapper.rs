@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Execute, Pool, QueryBuilder, Sqlite};
 
+use crate::config::app_state::AppState;
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
 pub struct EmbyServer {
     pub id: Option<String>,
@@ -34,26 +36,42 @@ pub struct EmbyServer {
     pub disabled: Option<u32>,
 }
 
-pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<Option<EmbyServer>, sqlx::Error> {
+pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
+    let list = list_all(&state.db_pool).await?;
+    let mut cache_map_write = state.emby_server_chache.write().await;
+    cache_map_write.clear();
+    for server in list {
+        cache_map_write.insert(server.id.clone().unwrap(), server);
+    }
+    anyhow::Ok(())
+}
+
+pub async fn get_cache(id: String, state: &tauri::State<'_, AppState>) -> Option<EmbyServer> {
+    let cache_map = state.emby_server_chache.read().await;
+    cache_map.get(&id).cloned()
+}
+
+pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> anyhow::Result<Option<EmbyServer>> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_server where id = ");
     query_builder.push_bind(id);
     let query = query_builder.build_query_as::<EmbyServer>();
     let sql = query.sql();
     let res = query.fetch_optional(pool).await;
     tracing::debug!("sqlx: 查询emby服务器: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn list_all(pool: &Pool<Sqlite>) -> Result<Vec<EmbyServer>, sqlx::Error> {
+pub async fn list_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<EmbyServer>> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_server");
     let query = query_builder.build_query_as::<EmbyServer>();
     let sql = query.sql();
     let res = query.fetch_all(pool).await;
     tracing::debug!("sqlx: 查询所有emby服务器: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn create(entity: EmbyServer, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn create(entity: EmbyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
+    let entity_clone = entity.clone();
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into emby_server(");
     let mut separated = query_builder.separated(", ");
     separated.push("id");
@@ -188,12 +206,16 @@ pub async fn create(entity: EmbyServer, pool: &Pool<Sqlite>) -> Result<sqlx::sql
 
     let query = query_builder.build();
     let sql = query.sql();
-    let res = query.execute(pool).await;
+    let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 添加emby服务器: {} {:?}", sql, res);
-    res
+    if res.is_ok() {
+        state.emby_server_chache.write().await.insert(entity_clone.id.clone().unwrap(), entity_clone.clone());
+    }
+    anyhow::Ok(res?)
 }
 
-pub async fn update_by_id(entity: EmbyServer, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn update_by_id(entity: EmbyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
+    let entity_clone = entity.clone();
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update emby_server set ");
     let mut separated = query_builder.separated(", ");
     if entity.base_url.is_some() {
@@ -260,12 +282,15 @@ pub async fn update_by_id(entity: EmbyServer, pool: &Pool<Sqlite>) -> Result<sql
 
     let query = query_builder.build();
     let sql = query.sql();
-    let res = query.execute(pool).await;
+    let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 更新emby服务器: {} {:?}", sql, res);
-    res
+    if res.is_ok() {
+        state.emby_server_chache.write().await.insert(entity_clone.id.clone().unwrap(), entity_clone.clone());
+    }
+    anyhow::Ok(res?)
 }
 
-pub async fn update_order(removed_id: String, removed_index: u32, added_index: u32, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn update_order(removed_id: String, removed_index: u32, added_index: u32, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder: QueryBuilder<Sqlite>;
     if removed_index > added_index {
         query_builder = QueryBuilder::new("update emby_server set order_by = order_by + 1 where order_by >= ");
@@ -280,29 +305,32 @@ pub async fn update_order(removed_id: String, removed_index: u32, added_index: u
     }
     let query = query_builder.build();
     let sql = query.sql();
-    let mut res = query.execute(pool).await;
+    let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 更新emby服务器排序: {} {:?}", sql, res);
     if res.is_ok() {
-        res = super::emby_server_mapper::update_by_id(EmbyServer { id: Some(removed_id), order_by: Some(added_index), ..Default::default() }, pool).await;
+        super::emby_server_mapper::update_by_id(EmbyServer { id: Some(removed_id), order_by: Some(added_index), ..Default::default() }, &state).await?;
     }
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn defer_order(pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn defer_order(state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update emby_server set order_by = order_by + 1");
     let query = query_builder.build();
     let sql = query.sql();
-    let res = query.execute(pool).await;
+    let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 推后emby服务器排序: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn delete_by_id(id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn delete_by_id(id: String, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder = QueryBuilder::new("delete from emby_server where id = ");
-    query_builder.push_bind(id);
+    query_builder.push_bind(&id);
     let query = query_builder.build();
     let sql = query.sql();
-    let res = query.execute(pool).await;
+    let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 删除emby服务器: {} {:?}", sql, res);
-    res
+    if res.is_ok() {
+        state.emby_server_chache.write().await.remove(&id);
+    }
+    anyhow::Ok(res?)
 }

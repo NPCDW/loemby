@@ -521,12 +521,8 @@ async function addEmbyServerAddr() {
         dialogEmbyServer.value.line_id = line.id
         await addEmbyServerDb(dialogEmbyServer.value);
     }
-    embyApi.getServerInfo(dialogEmbyServer.value).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: {ServerName: string, Id: string} = JSON.parse(response.body);
+    embyApi.getServerInfo(dialogEmbyServer.value!.id!).then(async response => {
+        let json: {ServerName: string, Id: string} = JSON.parse(response);
         dialogEmbyServer.value!.server_name = json['ServerName']
         dialogEmbyServer.value!.server_id = json['Id']
         await updateEmbyServerDb(dialogEmbyServer.value);
@@ -539,12 +535,8 @@ async function addEmbyServerAddr() {
 const serverInfoLoading = ref(false)
 function getServerInfo(embyServer: EmbyServer) {
     serverInfoLoading.value = true
-    embyApi.getServerInfo(embyServer).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: {ServerName: string, Id: string} = JSON.parse(response.body);
+    embyApi.getServerInfo(embyServer.id!).then(async response => {
+        let json: {ServerName: string, Id: string} = JSON.parse(response);
         embyServer.server_name = json['ServerName']
         embyServer.server_id = json['Id']
     }).catch(e => {
@@ -591,16 +583,13 @@ async function reLogin(embyServerConfig: EmbyServer) {
 }
 async function login(embyServerConfig: EmbyServer) {
     await updateEmbyServerDb(embyServerConfig);
-    return embyApi.authenticateByName(embyServerConfig).then(async response => {
-        if (response.status_code != 200) {
-            return Promise.reject(response.status_code + ' ' + response.status_text)
-        }
-        let json: {User: {Id: string}, AccessToken: string} = JSON.parse(response.body);
+    return embyApi.authenticateByName(embyServerConfig.id!).then(async response => {
+        let json: {User: {Id: string}, AccessToken: string} = JSON.parse(response);
         embyServerConfig.auth_token = json['AccessToken']
         embyServerConfig.user_id = json["User"]['Id']
         embyServerConfig.disabled = 0
         await updateEmbyServerDb(embyServerConfig);
-    })
+    }).catch(e => ElMessage.error('登录失败 ' + e))
 }
 async function saveEditEmbyServer() {
     await useEmbyLine().getEmbyLine(dialogEmbyServer.value!.line_id!).then(async line => {

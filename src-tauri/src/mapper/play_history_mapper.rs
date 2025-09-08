@@ -40,7 +40,7 @@ pub async fn page(page_number: u32, page_size: u32, pool: &Pool<Sqlite>) -> anyh
     anyhow::Ok((count.0 as u32, res?))
 }
 
-pub async fn get(emby_server_id: String, item_id: String, pool: &Pool<Sqlite>) -> Result<Option<PlayHistory>, sqlx::Error> {
+pub async fn get(emby_server_id: String, item_id: String, pool: &Pool<Sqlite>) -> anyhow::Result<Option<PlayHistory>> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history where emby_server_id = ");
     query_builder.push_bind(emby_server_id);
     query_builder.push(" and item_id = ");
@@ -49,10 +49,10 @@ pub async fn get(emby_server_id: String, item_id: String, pool: &Pool<Sqlite>) -
     let sql = query.sql();
     let res = query.fetch_optional(pool).await;
     tracing::debug!("sqlx: 查询播放历史: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn create(entity: PlayHistory, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn create(entity: PlayHistory, pool: &Pool<Sqlite>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into play_history(");
     let mut separated = query_builder.separated(", ");
     separated.push("id");
@@ -123,10 +123,10 @@ pub async fn create(entity: PlayHistory, pool: &Pool<Sqlite>) -> Result<sqlx::sq
     let sql = query.sql();
     let res = query.execute(pool).await;
     tracing::debug!("sqlx: 添加播放历史: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn update_by_id(entity: PlayHistory, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn update_by_id(entity: PlayHistory, pool: &Pool<Sqlite>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update play_history set ");
     let mut separated = query_builder.separated(", ");
     separated.push("update_time = ").push_bind_unseparated(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
@@ -163,10 +163,10 @@ pub async fn update_by_id(entity: PlayHistory, pool: &Pool<Sqlite>) -> Result<sq
     let sql = query.sql();
     let res = query.execute(pool).await;
     tracing::debug!("sqlx: 更新播放历史: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn cancel_pinned(emby_server_id: String, series_id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn cancel_pinned(emby_server_id: String, series_id: String, pool: &Pool<Sqlite>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update play_history set pinned = 0 where pinned = 1 and emby_server_id = ");
     query_builder.push_bind(emby_server_id);
     query_builder.push(" and series_id = ");
@@ -176,5 +176,5 @@ pub async fn cancel_pinned(emby_server_id: String, series_id: String, pool: &Poo
     let sql = query.sql();
     let res = query.execute(pool).await;
     tracing::debug!("sqlx: 更新播放历史: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Execute, Pool, QueryBuilder, Sqlite};
 
+use crate::{config::app_state::AppState, mapper::global_config_mapper};
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
 pub struct ProxyServer {
     pub id: Option<String>,
@@ -12,26 +14,103 @@ pub struct ProxyServer {
     pub password: Option<String>,
 }
 
-pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<Option<ProxyServer>, sqlx::Error> {
+fn get_proxy_url(proxy: ProxyServer) -> String {
+    let username = proxy.username.unwrap_or("".to_string());
+    let password = proxy.password.unwrap_or("".to_string());
+    let auth = if username == "" && password == "" {
+        "".to_string()
+    } else {
+        format!("{}:{}@", username, password)
+    };
+    format!("{}://{}{}", proxy.proxy_type.unwrap(), auth, proxy.addr.unwrap())
+}
+
+pub async fn get_browse_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
+    if proxy_id.is_none() {
+        return None;
+    }
+    let proxy_id = proxy_id.unwrap();
+    if proxy_id == "no" {
+        return None;
+    }
+    if proxy_id == "follow" {
+        let proxy_id = global_config_mapper::get_cache("global_browse_proxy_id", state).await;
+        return Box::pin(get_browse_proxy_url(proxy_id, state)).await;
+    }
+    return get_cache(proxy_id, state).await;
+}
+
+// pub async fn get_play_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
+//     if proxy_id.is_none() {
+//         return None;
+//     }
+//     let proxy_id = proxy_id.unwrap();
+//     if proxy_id == "no" {
+//         return None;
+//     }
+//     if proxy_id == "follow" {
+//         let proxy_id = global_config_mapper::get_cache("global_play_proxy_id", state).await;
+//         return Box::pin(get_play_proxy_url(proxy_id, state)).await;
+//     }
+//     return get_cache(proxy_id, state).await;
+// }
+
+// pub async fn get_app_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
+//     if proxy_id.is_none() {
+//         return None;
+//     }
+//     let proxy_id = proxy_id.unwrap();
+//     if proxy_id == "no" {
+//         return None;
+//     }
+//     if proxy_id == "followBrowse" {
+//         let proxy_id = global_config_mapper::get_cache("global_browse_proxy_id", state).await;
+//         return Box::pin(get_browse_proxy_url(proxy_id, state)).await;
+//     }
+//     if proxy_id == "followPlay" {
+//         let proxy_id = global_config_mapper::get_cache("global_play_proxy_id", state).await;
+//         return Box::pin(get_play_proxy_url(proxy_id, state)).await;
+//     }
+//     return get_cache(proxy_id, state).await;
+// }
+
+pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
+    let list = list_all(&state.db_pool).await?;
+    let mut cache_map_write = state.proxy_server_chache.write().await;
+    cache_map_write.clear();
+    for proxy in list {
+        let proxy_url = get_proxy_url(proxy.clone());
+        cache_map_write.insert(proxy.id.unwrap(), proxy_url);
+    }
+    anyhow::Ok(())
+}
+
+pub async fn get_cache(id: String, state: &tauri::State<'_, AppState>) -> Option<String> {
+    let cache_map = state.proxy_server_chache.read().await;
+    cache_map.get(&id).cloned()
+}
+
+pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> anyhow::Result<Option<ProxyServer>> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from proxy_server where id = ");
     query_builder.push_bind(id);
     let query = query_builder.build_query_as::<ProxyServer>();
     let sql = query.sql();
     let res = query.fetch_optional(pool).await;
     tracing::debug!("sqlx: 查询代理服务器: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn list_all(pool: &Pool<Sqlite>) -> Result<Vec<ProxyServer>, sqlx::Error> {
+pub async fn list_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<ProxyServer>> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from proxy_server");
     let query = query_builder.build_query_as::<ProxyServer>();
     let sql = query.sql();
     let res = query.fetch_all(pool).await;
     tracing::debug!("sqlx: 查询所有代理服务器: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn create(entity: ProxyServer, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn create(entity: ProxyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
+    let entity_clone = entity.clone();
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into proxy_server(");
     let mut separated = query_builder.separated(", ");
     separated.push("id");
@@ -76,12 +155,17 @@ pub async fn create(entity: ProxyServer, pool: &Pool<Sqlite>) -> Result<sqlx::sq
 
     let query = query_builder.build();
     let sql = query.sql();
-    let res = query.execute(pool).await;
+    let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 添加代理服务器: {} {:?}", sql, res);
-    res
+    if res.is_ok() {
+        let proxy_url = get_proxy_url(entity_clone.clone());
+        state.proxy_server_chache.write().await.insert(entity_clone.id.clone().unwrap(), proxy_url);
+    }
+    anyhow::Ok(res?)
 }
 
-pub async fn update_by_id(entity: ProxyServer, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn update_by_id(entity: ProxyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
+    let entity_clone = entity.clone();
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update proxy_server set ");
     let mut separated = query_builder.separated(", ");
     if entity.name.is_some() {
@@ -103,17 +187,24 @@ pub async fn update_by_id(entity: ProxyServer, pool: &Pool<Sqlite>) -> Result<sq
 
     let query = query_builder.build();
     let sql = query.sql();
-    let res = query.execute(pool).await;
+    let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 更新代理服务器: {} {:?}", sql, res);
-    res
+    if res.is_ok() {
+        let proxy_url = get_proxy_url(entity_clone.clone());
+        state.proxy_server_chache.write().await.insert(entity_clone.id.clone().unwrap(), proxy_url);
+    }
+    anyhow::Ok(res?)
 }
 
-pub async fn delete_by_id(id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn delete_by_id(id: String, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder = QueryBuilder::new("delete from proxy_server where id = ");
-    query_builder.push_bind(id);
+    query_builder.push_bind(&id);
     let query = query_builder.build();
     let sql = query.sql();
-    let res = query.execute(pool).await;
+    let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 删除代理服务器: {} {:?}", sql, res);
-    res
+    if res.is_ok() {
+        state.proxy_server_chache.write().await.remove(&id);
+    }
+    anyhow::Ok(res?)
 }

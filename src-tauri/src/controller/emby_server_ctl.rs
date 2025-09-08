@@ -24,7 +24,7 @@ pub async fn list_all_emby_server(state: tauri::State<'_, AppState>) -> Result<V
 
 #[tauri::command]
 pub async fn add_emby_server(body: EmbyServer, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = emby_server_mapper::create(body, &state.db_pool).await;
+    let res = emby_server_mapper::create(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -33,7 +33,7 @@ pub async fn add_emby_server(body: EmbyServer, state: tauri::State<'_, AppState>
 
 #[tauri::command]
 pub async fn update_emby_server(body: EmbyServer, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = emby_server_mapper::update_by_id(body, &state.db_pool).await;
+    let res = emby_server_mapper::update_by_id(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -49,7 +49,7 @@ pub struct UpdateEmbyServerOrderParam {
 
 #[tauri::command]
 pub async fn update_emby_server_order(body: UpdateEmbyServerOrderParam, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = emby_server_mapper::update_order(body.removed_id, body.removed_index, body.added_index, &state.db_pool).await;
+    let res = emby_server_mapper::update_order(body.removed_id, body.removed_index, body.added_index, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -58,7 +58,7 @@ pub async fn update_emby_server_order(body: UpdateEmbyServerOrderParam, state: t
 
 #[tauri::command]
 pub async fn defer_emby_server_order(state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = emby_server_mapper::defer_order(&state.db_pool).await;
+    let res = emby_server_mapper::defer_order(&state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -67,7 +67,7 @@ pub async fn defer_emby_server_order(state: tauri::State<'_, AppState>) -> Resul
 
 #[tauri::command]
 pub async fn delete_emby_server(id: String, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = emby_server_mapper::delete_by_id(id, &state.db_pool).await;
+    let res = emby_server_mapper::delete_by_id(id, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }

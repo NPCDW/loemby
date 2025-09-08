@@ -2,45 +2,30 @@ import { EmbyServer } from '../store/db/embyServer';
 import { useGlobalConfig } from '../store/db/globalConfig';
 import { useProxyServer } from '../store/db/proxyServer';
 import invokeApi from './invokeApi';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * 获取服务器信息，无需验证
  */
-async function getServerInfo(embyServer: EmbyServer) {
-    if (!embyServer.base_url) {
+async function getServerInfo(emby_server_id: string): Promise<string> {
+    if (!emby_server_id) {
         return Promise.reject("参数缺失");
     }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + '/emby/System/Info/Public',
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+    return invoke('emby_get_server_info', {body: {
+        emby_server_id
+    }});
 }
 
 /**
  * 通过用户名密码授权
  */
-async function authenticateByName(embyServer: EmbyServer) {
-    if (!embyServer.base_url || !embyServer.username) {
+async function authenticateByName(emby_server_id: string): Promise<string> {
+    if (!emby_server_id) {
         return Promise.reject("参数缺失");
     }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + '/emby/Users/AuthenticateByName',
-        method: 'POST',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Emby-Authorization': `Emby Client="${embyServer.client}", Device="${embyServer.device}", DeviceId="${embyServer.device_id}", Version="${embyServer.client_version}"`,
-        },
-        body: JSON.stringify({
-            "Username": embyServer.username,
-            "Pw": !embyServer.password ? null : embyServer.password
-        }),
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+    return invoke('emby_authenticate_by_name', {body: {
+        emby_server_id
+    }});
 }
 
 /**

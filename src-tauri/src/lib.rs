@@ -8,7 +8,9 @@ mod config;
 mod mapper;
 mod service;
 mod util;
+mod http;
 
+use controller::emby_http_ctl::{emby_get_server_info, emby_authenticate_by_name};
 use controller::proxy_server_ctl::{get_proxy_server, list_all_proxy_server, add_proxy_server, update_proxy_server, delete_proxy_server};
 use controller::play_history_ctl::{get_play_history, page_play_history, add_play_history, update_play_history, cancel_pinned_play_history};
 use controller::global_config_ctl::{get_global_config, list_all_global_config, add_global_config, update_global_config, delete_global_config};
@@ -22,6 +24,7 @@ use config::app_state::AppState;
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            emby_get_server_info, emby_authenticate_by_name,
             get_proxy_server, list_all_proxy_server, add_proxy_server, update_proxy_server, delete_proxy_server,
             get_play_history, page_play_history, add_play_history, update_play_history, cancel_pinned_play_history,
             get_global_config, list_all_global_config, add_global_config, update_global_config, delete_global_config,
@@ -57,10 +60,17 @@ pub fn run() {
             app.manage(AppState {
                 app_config: config,
                 auxm_app_state: axum_app_state,
-                api_reqwest_pool: RwLock::new(HashMap::new()),
-                image_reqwest_pool: RwLock::new(HashMap::new()),
+                api_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
+                image_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
+                emby_server_chache: Arc::new(RwLock::new(HashMap::new())),
+                global_config_chache: Arc::new(RwLock::new(HashMap::new())),
+                proxy_server_chache: Arc::new(RwLock::new(HashMap::new())),
                 db_pool,
             });
+
+            tauri::async_runtime::block_on(mapper::emby_server_mapper::load_cache(&app.state()))?;
+            tauri::async_runtime::block_on(mapper::global_config_mapper::load_cache(&app.state()))?;
+            tauri::async_runtime::block_on(mapper::proxy_server_mapper::load_cache(&app.state()))?;
             
             #[cfg(desktop)]
             app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap_or_else(|err| {

@@ -17,8 +17,8 @@ pub async fn forward(param: HttpForwardParam, state: tauri::State<'_, AppState>)
     if let Some(body) = param.body {
         builder = builder.body(body);
     }
-    tracing::debug!("reqwest request {:?}", &builder);
-    let response = builder.send().await?;
-    tracing::debug!("reqwest response {:?}", &response);
-    Ok(response)
+    let builder_print = format!("{:?}", &builder);
+    let response = builder.send().await;
+    tracing::debug!("reqwest response {} {:?}", builder_print, &response);
+    Ok(response?)
 }

@@ -9,26 +9,26 @@ pub struct EmbyIconLibrary {
     pub url: Option<String>,
 }
 
-pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> Result<Option<EmbyIconLibrary>, sqlx::Error> {
+pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> anyhow::Result<Option<EmbyIconLibrary>> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_icon_library where id = ");
     query_builder.push_bind(id);
     let query = query_builder.build_query_as::<EmbyIconLibrary>();
     let sql = query.sql();
     let res = query.fetch_optional(pool).await;
     tracing::debug!("sqlx: 查询图标库: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn list_all(pool: &Pool<Sqlite>) -> Result<Vec<EmbyIconLibrary>, sqlx::Error> {
+pub async fn list_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<EmbyIconLibrary>> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from emby_icon_library");
     let query = query_builder.build_query_as::<EmbyIconLibrary>();
     let sql = query.sql();
     let res = query.fetch_all(pool).await;
     tracing::debug!("sqlx: 查询所有图标库: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn create(entity: EmbyIconLibrary, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn create(entity: EmbyIconLibrary, pool: &Pool<Sqlite>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into emby_icon_library(");
     let mut separated = query_builder.separated(", ");
     separated.push("id");
@@ -57,10 +57,10 @@ pub async fn create(entity: EmbyIconLibrary, pool: &Pool<Sqlite>) -> Result<sqlx
     let sql = query.sql();
     let res = query.execute(pool).await;
     tracing::debug!("sqlx: 添加图标库: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn update_by_id(entity: EmbyIconLibrary, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn update_by_id(entity: EmbyIconLibrary, pool: &Pool<Sqlite>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update emby_icon_library set ");
     let mut separated = query_builder.separated(", ");
     if entity.name.is_some() {
@@ -75,15 +75,15 @@ pub async fn update_by_id(entity: EmbyIconLibrary, pool: &Pool<Sqlite>) -> Resul
     let sql = query.sql();
     let res = query.execute(pool).await;
     tracing::debug!("sqlx: 更新图标库: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
 
-pub async fn delete_by_id(id: String, pool: &Pool<Sqlite>) -> Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error> {
+pub async fn delete_by_id(id: String, pool: &Pool<Sqlite>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let mut query_builder = QueryBuilder::new("delete from emby_icon_library where id = ");
     query_builder.push_bind(id);
     let query = query_builder.build();
     let sql = query.sql();
     let res = query.execute(pool).await;
     tracing::debug!("sqlx: 删除图标库: {} {:?}", sql, res);
-    res
+    anyhow::Ok(res?)
 }
