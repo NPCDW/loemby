@@ -1,7 +1,5 @@
 import { EmbyServer } from '../store/db/embyServer';
 import { useGlobalConfig } from '../store/db/globalConfig';
-import { useProxyServer } from '../store/db/proxyServer';
-import invokeApi from './invokeApi';
 import { invoke } from '@tauri-apps/api/core';
 
 /**
@@ -31,21 +29,10 @@ async function authenticateByName(emby_server_id: string): Promise<string> {
 /**
  * 登出
  */
-async function logout(embyServer: EmbyServer) {
-    if (!embyServer.base_url || !embyServer.auth_token) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + '/emby/Sessions/Logout',
-        method: 'POST',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        body: JSON.stringify({}),
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function logout(emby_server_id: string): Promise<string> {
+    return invoke('emby_logout', {body: {
+        emby_server_id
+    }});
 }
 
 /**
@@ -53,248 +40,143 @@ async function logout(embyServer: EmbyServer) {
  * types: Movie,Series,Episode
  * @returns EmbyPageList<SearchItems>
  */
-async function search(embyServer: EmbyServer, search_str: string, item_types: string[], startIndex: number, limit: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !search_str || startIndex < 0 || !limit) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?SearchTerm=${encodeURIComponent(search_str.trim())}&IncludeItemTypes=${item_types.join(',')}&Recursive=true&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex=${startIndex}&Limit=${limit}`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function search(emby_server_id: string, search_str: string, item_types: string[], start_index: number, limit: number): Promise<string> {
+    return invoke('emby_search', {body: {
+        emby_server_id,
+        search_str,
+        item_types,
+        start_index,
+        limit
+    }});
 }
 
 /**
  * 首页继续播放列表
  * @returns EmbyPageList<EpisodeItems>
  */
-async function getContinuePlayList(embyServer: EmbyServer, startIndex: number, limit: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/Resume?MediaTypes=Video&Recursive=true&Fields=AlternateMediaSources,MediaSources&StartIndex=${startIndex}&Limit=${limit}`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function getContinuePlayList(emby_server_id: string, start_index: number, limit: number): Promise<string> {
+    return invoke('emby_get_continue_play_list', {body: {
+        emby_server_id,
+        start_index,
+        limit
+    }});
 }
 
 /**
  * 收藏列表
  * @returns EmbyPageList<EpisodeItems>
  */
-async function getFavoriteList(embyServer: EmbyServer, startIndex: number, limit: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie,Season&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate,Overview&StartIndex=${startIndex}&Limit=${limit}`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function getFavoriteList(emby_server_id: string, start_index: number, limit: number): Promise<string> {
+    return invoke('emby_get_favorite_list', {body: {
+        emby_server_id,
+        start_index,
+        limit
+    }});
 }
 
 /**
  * 系列剧集 接下来 应该播放的剧集
  * @returns EmbyPageList<EpisodeItems>
  */
-async function nextUp(embyServer: EmbyServer, seriesId: string, startIndex: number, limit: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Shows/NextUp?UserId=${embyServer.user_id}&SeriesId=${seriesId}&StartIndex=${startIndex}&Limit=${limit}&Fields=AlternateMediaSources,MediaSources`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function nextUp(emby_server_id: string, series_id: string, start_index: number, limit: number): Promise<string> {
+    return invoke('emby_next_up', {body: {
+        emby_server_id,
+        series_id,
+        start_index,
+        limit
+    }});
 }
 
 /**
  * 首页媒体库列表
  * @returns EmbyPageList<MediaLibraryItem>
  */
-async function getMediaLibraryList(embyServer: EmbyServer) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Views`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function getMediaLibraryList(emby_server_id: string): Promise<string> {
+    return invoke('emby_get_media_library_list', {body: {
+        emby_server_id,
+    }});
 }
 
 /**
  * 首页媒体库子项目最新几条
  * @returns SearchItem[]
  */
-async function getMediaLibraryChildLatest(embyServer: EmbyServer, parentId: string, limit: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !parentId || !limit) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/Latest?Limit=${limit}&ParentId=${parentId}`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function getMediaLibraryChildLatest(emby_server_id: string, parent_id: string, limit: number): Promise<string> {
+    return invoke('emby_get_media_library_child_latest', {body: {
+        emby_server_id,
+        parent_id,
+        limit
+    }});
 }
 
 /**
  * 首页媒体库子项目
  * @returns EmbyPageList<SearchItem>
  */
-async function getMediaLibraryChild(embyServer: EmbyServer, parentId: string, startIndex: number, limit: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || startIndex < 0 || !limit) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items?Recursive=true&IncludeItemTypes=Series,Movie&ParentId=${parentId}&StartIndex=${startIndex}&Limit=${limit}`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function getMediaLibraryChild(emby_server_id: string, parent_id: string, start_index: number, limit: number): Promise<string> {
+    return invoke('emby_get_media_library_child', {body: {
+        emby_server_id,
+        parent_id,
+        start_index,
+        limit
+    }});
 }
 
 /**
  * 剧集数量统计
  * @returns MediaLibraryCount
  */
-async function count(embyServer: EmbyServer) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Items/Counts?UserId=${embyServer.user_id}`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function count(emby_server_id: string) {
+    return invoke('emby_count', {body: {
+        emby_server_id,
+    }});
 }
 
 /**
  * 电影详情、剧集详情、季详情、系列详情、合集详情
  * @returns EpisodeItems
  */
-async function items(embyServer: EmbyServer, item_id: string) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/${item_id}`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function items(emby_server_id: string, item_id: string) {
+    return invoke('emby_items', {body: {
+        emby_server_id,
+        item_id,
+    }});
 }
 
 /**
  * 系列 下的 季列表
  * @returns EmbyPageList<SeasonItem>
  */
-async function seasons(embyServer: EmbyServer, item_id: string) {
-    if (!embyServer.base_url || !embyServer.auth_token || !item_id || !embyServer.user_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Shows/${item_id}/Seasons?Fields=ProductionYear,Overview&UserId=${embyServer.user_id}`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function seasons(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_seasons', {body: {
+        emby_server_id,
+        item_id,
+    }});
 }
 
 /**
  * 季 下的 剧集列表
  * @returns EmbyPageList<EpisodeItems>
  */
-async function episodes(embyServer: EmbyServer, item_id: string, seasonId: string, startIndex: number, limit: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !item_id || startIndex < 0 || !limit) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Shows/${item_id}/Episodes?StartIndex=${startIndex}&Limit=${limit}&SeasonId=${seasonId}&Fields=AlternateMediaSources,MediaSources&UserId=${embyServer.user_id}`,
-        method: 'GET',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function episodes(emby_server_id: string, item_id: string, season_id: string, start_index: number, limit: number): Promise<string> {
+    return invoke('emby_episodes', {body: {
+        emby_server_id,
+        item_id,
+        season_id,
+        start_index,
+        limit
+    }});
 }
 
 /**
  * 播放流媒体详情
  * @returns PlaybackInfo
  */
-async function playbackInfo(embyServer: EmbyServer, item_id: string) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Items/${item_id}/PlaybackInfo?IsPlayback=false`,
-        method: 'POST',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Emby-Token': embyServer.auth_token,
-            // 'x-emby-authorization': `Emby UserId=${embyServer.user_id},Client=${embyServer.client},Device=${embyServer.device},DeviceId=${embyServer.device_id},Version=${embyServer.client_version}`,
-        },
-        body: JSON.stringify({
-            "UserId": embyServer.user_id,
-            "MaxStreamingBitrate": 1400000000,
-            "MaxStaticBitrate": 1400000000,
-            "MusicStreamingTranscodingBitrate": 1920000,
-            "DeviceProfile": {
-                "DirectPlayProfiles": [
-                    {
-                        "Container": "",
-                        "Type": "Video"
-                    },
-                    {
-                        "Container": "",
-                        "Type": "Audio"
-                    }
-                ]
-            }
-        }),
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function playbackInfo(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_playback_info', {body: {
+        emby_server_id,
+        item_id,
+    }});
 }
 
 /**
@@ -302,27 +184,14 @@ async function playbackInfo(embyServer: EmbyServer, item_id: string) {
  * @param positionTicks 播放位置 / 一千万 换算成秒 
  * @returns 204
  */
-async function playing(embyServer: EmbyServer, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Sessions/Playing?ItemId=${item_id}&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}`,
-        method: 'POST',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        body: JSON.stringify({
-            "ItemId": `${item_id}`,
-            "MediaSourceId": `${media_source_id}`,
-            "PlayMethod": "DirectStream",
-            "PlaySessionId": `${play_session_id}`,
-            "PositionTicks": `${positionTicks}`,
-        }),
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function playing(emby_server_id: string, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number): Promise<string> {
+    return invoke('emby_playing', {body: {
+        emby_server_id,
+        item_id,
+        media_source_id,
+        play_session_id,
+        positionTicks
+    }});
 }
 
 /**
@@ -330,54 +199,28 @@ async function playing(embyServer: EmbyServer, item_id: string, media_source_id:
  * @param positionTicks 播放位置 / 一千万 换算成秒 
  * @returns 204
  */
-async function playingProgress(embyServer: EmbyServer, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Sessions/Playing/Progress?ItemId=${item_id}&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}`,
-        method: 'POST',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        body: JSON.stringify({
-            "ItemId": `${item_id}`,
-            "MediaSourceId": `${media_source_id}`,
-            "PlayMethod": "DirectStream",
-            "PlaySessionId": `${play_session_id}`,
-            "PositionTicks": `${positionTicks}`,
-        }),
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function playingProgress(emby_server_id: string, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number): Promise<string> {
+    return invoke('emby_playing_progress', {body: {
+        emby_server_id,
+        item_id,
+        media_source_id,
+        play_session_id,
+        positionTicks
+    }});
 }
 
 /**
  * 结束播放
  * @returns 204
  */
-async function playingStopped(embyServer: EmbyServer, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id || !media_source_id || !play_session_id || !positionTicks) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Sessions/Playing/Stopped?ItemId=${item_id}&MediaSourceId=${media_source_id}&PlayMethod=DirectStream&PlaySessionId=${play_session_id}&PositionTicks=${positionTicks}`,
-        method: 'POST',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        body: JSON.stringify({
-            "ItemId": `${item_id}`,
-            "MediaSourceId": `${media_source_id}`,
-            "PlayMethod": "DirectStream",
-            "PlaySessionId": `${play_session_id}`,
-            "PositionTicks": `${positionTicks}`,
-        }),
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function playingStopped(emby_server_id: string, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number): Promise<string> {
+    return invoke('emby_playing_stopped', {body: {
+        emby_server_id,
+        item_id,
+        media_source_id,
+        play_session_id,
+        positionTicks
+    }});
 }
 
 /**
@@ -429,103 +272,56 @@ async function getImageUrl(embyServer: EmbyServer, item_id: string, imageType: s
  * 收藏
  * @returns
  */
-async function star(embyServer: EmbyServer, item_id: string) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/FavoriteItems/${item_id}`,
-        method: 'POST',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        body: JSON.stringify({}),
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function star(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_star', {body: {
+        emby_server_id,
+        item_id,
+    }});
 }
 
 /**
  * 取消收藏
  * @returns
  */
-async function unstar(embyServer: EmbyServer, item_id: string) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/FavoriteItems/${item_id}`,
-        method: 'DELETE',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function unstar(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_unstar', {body: {
+        emby_server_id,
+        item_id,
+    }});
 }
 
 /**
  * 标记已播放
  * @returns
  */
-async function played(embyServer: EmbyServer, item_id: string) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/PlayedItems/${item_id}`,
-        method: 'POST',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        body: JSON.stringify({}),
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function played(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_played', {body: {
+        emby_server_id,
+        item_id,
+    }});
 }
 
 /**
  * 取消已播放
  * @returns
  */
-async function unplayed(embyServer: EmbyServer, item_id: string) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/PlayedItems/${item_id}`,
-        method: 'DELETE',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function unplayed(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_unplayed', {body: {
+        emby_server_id,
+        item_id,
+    }});
 }
 
 /**
  * 隐藏继续观看记录
  * @returns
  */
-async function hideFromResume(embyServer: EmbyServer, item_id: string, hide: boolean) {
-    if (!embyServer.base_url || !embyServer.auth_token || !embyServer.user_id || !item_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: embyServer.base_url + `/emby/Users/${embyServer.user_id}/Items/${item_id}/HideFromResume`,
-        method: 'POST',
-        headers: {
-            'User-Agent': embyServer.user_agent!,
-            'Content-Type': 'application/json; charset=UTF-8',
-            'X-Emby-Token': embyServer.auth_token,
-        },
-        body: JSON.stringify({
-            "Hide": hide,
-        }),
-        proxy: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id)
-    });
+async function hideFromResume(emby_server_id: string, item_id: string, hide: boolean): Promise<string> {
+    return invoke('emby_hide_from_resume', {body: {
+        emby_server_id,
+        item_id,
+        hide,
+    }});
 }
 
 export default {

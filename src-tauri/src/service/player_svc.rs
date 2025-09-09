@@ -5,7 +5,7 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 
-use crate::{config::app_state::AppState, controller::invoke_ctl::PlayVideoParam, service::proxy_svc::AxumAppStateRequest, util::file_util};
+use crate::{config::app_state::AppState, controller::invoke_ctl::PlayVideoParam, service::axum_svc::AxumAppStateRequest, util::file_util};
 
 pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let mpv_path = body.mpv_path.trim().replace("\r", "");

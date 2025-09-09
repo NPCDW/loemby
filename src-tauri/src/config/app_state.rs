@@ -4,7 +4,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tauri::async_runtime::RwLock;
 
-use crate::{config, service::proxy_svc::AxumAppState};
+use crate::{config, service::axum_svc::AxumAppState};
 
 pub struct AppState {
     pub app_config: config::app_config::Config,

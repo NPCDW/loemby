@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use service::proxy_svc;
+use service::axum_svc;
 use tauri::{async_runtime::RwLock, Manager};
 
 mod controller;
@@ -8,9 +8,8 @@ mod config;
 mod mapper;
 mod service;
 mod util;
-mod http;
 
-use controller::emby_http_ctl::{emby_get_server_info, emby_authenticate_by_name};
+use controller::emby_http_ctl::{emby_get_server_info, emby_authenticate_by_name, emby_logout, emby_search, emby_get_continue_play_list, emby_get_favorite_list, emby_next_up, emby_get_media_library_list, emby_get_media_library_child_latest, emby_get_media_library_child, emby_count, emby_items, emby_seasons, emby_episodes, emby_playback_info, emby_playing, emby_playing_progress, emby_playing_stopped, emby_get_direct_stream_url, emby_get_audio_stream_url, emby_get_subtitle_stream_url, emby_get_image_url, emby_star, emby_unstar, emby_played, emby_unplayed, emby_hide_from_resume};
 use controller::proxy_server_ctl::{get_proxy_server, list_all_proxy_server, add_proxy_server, update_proxy_server, delete_proxy_server};
 use controller::play_history_ctl::{get_play_history, page_play_history, add_play_history, update_play_history, cancel_pinned_play_history};
 use controller::global_config_ctl::{get_global_config, list_all_global_config, add_global_config, update_global_config, delete_global_config};
@@ -24,7 +23,7 @@ use config::app_state::AppState;
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            emby_get_server_info, emby_authenticate_by_name,
+            emby_get_server_info, emby_authenticate_by_name, emby_logout, emby_search, emby_get_continue_play_list, emby_get_favorite_list, emby_next_up, emby_get_media_library_list, emby_get_media_library_child_latest, emby_get_media_library_child, emby_count, emby_items, emby_seasons, emby_episodes, emby_playback_info, emby_playing, emby_playing_progress, emby_playing_stopped, emby_get_direct_stream_url, emby_get_audio_stream_url, emby_get_subtitle_stream_url, emby_get_image_url, emby_star, emby_unstar, emby_played, emby_unplayed, emby_hide_from_resume,
             get_proxy_server, list_all_proxy_server, add_proxy_server, update_proxy_server, delete_proxy_server,
             get_play_history, page_play_history, add_play_history, update_play_history, cancel_pinned_play_history,
             get_global_config, list_all_global_config, add_global_config, update_global_config, delete_global_config,
@@ -51,7 +50,7 @@ pub fn run() {
             let axum_app_state_clone = axum_app_state.clone();
             let app_handle = app.app_handle().clone();
             tauri::async_runtime::spawn(async move {
-                let res = proxy_svc::init_proxy_svc(axum_app_state_clone, app_handle).await;
+                let res = axum_svc::init_proxy_svc(axum_app_state_clone, app_handle).await;
                 if res.is_err() {
                     tracing::error!("{:#?}", res);
                 }
