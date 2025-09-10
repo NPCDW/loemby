@@ -33,6 +33,14 @@ interface PlaybackParam {
     external_subtitle: string[],
     scrobble_trakt_param?: string,
     start_time: number,
+    playlist: {item_id: string, title: string}[],
+    direct_link: string,
+    remember_select: string,
+    video_select: number,
+    audio_select: number,
+    subtitle_select: number,
+    version_select: number,
+    mpv_ipc?: string,
 }
 
 async function playback(param: PlaybackParam): Promise<string> {

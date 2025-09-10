@@ -6,9 +6,9 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use crate::config::{app_state::{AppState, TauriNotify}, http_pool};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, service::player_svc};
 
-pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
+pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let actual_port = listener.local_addr()?.port();
@@ -25,6 +25,7 @@ pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, a
         .route("/stream/{types}/{id}", get(stream))
         .route("/image", get(image))
         .route("/trakt_auth", get(trakt_auth))
+        .route("/play_media", get(play_media))
         .with_state(axum_app_state);
 
     axum::serve(listener, router).await?;
@@ -33,15 +34,43 @@ pub async fn init_proxy_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, a
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PlayParam {
+    pub mpv_ipc: String,
+    pub emby_server_id: String,
+    pub item_id: String,
+    pub direct_link: String,
+    pub select_policy: String, // 手动，高码率优先，高分辨率优先
+    pub video_select: i32,
+    pub audio_select: i32,
+    pub subtitle_select: i32,
+    pub version_select: i32,
+}
+
+async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(params): Query<PlayParam>) -> axum::response::Response {
+    tracing::debug!("play_media: {:?}", params);
+    let axum_app_state = axum_app_state.read().await.clone().unwrap();
+    let res = player_svc::play_media(&axum_app_state, &params).await;
+    if let Err(err) = res {
+        tracing::error!("play_media: {:?} {:?}", params, err);
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("play_media: {:?} {:?}", params, err))
+        ).into_response();
+    }
+    axum::response::Json(serde_json::json!({"success": true})).into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TraktAuthParam {
     pub code: String,
     pub state: String,
 }
 
-async fn trakt_auth(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(params): Query<TraktAuthParam>) -> axum::response::Response {
+async fn trakt_auth(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(params): Query<TraktAuthParam>) -> axum::response::Response {
     tracing::debug!("trakt_auth: {:?} {:?}", params, headers);
-    let app_state = app_state.read().await.clone().unwrap();
-    if !app_state.trakt_auth_state.read().await.contains(&params.state) {
+    let axum_app_state = axum_app_state.read().await.clone().unwrap();
+    if !axum_app_state.trakt_auth_state.read().await.contains(&params.state) {
         tracing::error!("trakt_auth: {} 无效的 state", &params.state);
         return (
             axum::http::StatusCode::BAD_REQUEST,
@@ -49,7 +78,7 @@ async fn trakt_auth(headers: axum::http::HeaderMap, State(app_state): State<Arc<
             axum::body::Body::new(format!("trakt_auth: {} 无效的 state", &params.state))
         ).into_response();
     }
-    let app_handle = app_state.app;
+    let app_handle = axum_app_state.app;
     let res = app_handle.emit("trakt_auth", params.code);
     if let Err(err) = res {
         tracing::error!("trakt_auth: 向前台发送事件失败 {}", err);
@@ -67,10 +96,10 @@ async fn trakt_auth(headers: axum::http::HeaderMap, State(app_state): State<Arc<
     axum::response::Html("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>授权成功，您可以关闭网页，并返回应用了</body></html>").into_response()
 }
 
-async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((types, id)): Path<(String, String)>) -> axum::response::Response {
+async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((types, id)): Path<(String, String)>) -> axum::response::Response {
     tracing::debug!("stream: {} {} {:?}", types, id, headers);
-    let app_state = app_state.read().await.clone().unwrap();
-    let request = app_state.request.read().await;
+    let axum_app_state = axum_app_state.read().await.clone().unwrap();
+    let request = axum_app_state.request.read().await;
     let request = match request.get(&id).clone() {
         Some(request) => request,
         None => {
@@ -83,8 +112,8 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
         }
     };
 
-    let app_state2 = app_state.app.state::<AppState>().clone();
-    let client = http_pool::get_stream_http_client(request.proxy_url.clone(), &app_state2).await.unwrap();
+    let app_state = axum_app_state.app.state::<AppState>().clone();
+    let client = http_pool::get_stream_http_client(request.proxy_url.clone(), &app_state).await.unwrap();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::REFERER);
@@ -106,7 +135,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
             match response.headers().get(axum::http::header::LOCATION) {
                 None => {
                     tracing::error!("stream: {} {} {:?} 手动重定向失败，媒体流响应没有 Location 头", types, &id, request);
-                    app_state.app.emit("tauri_notify", TauriNotify {
+                    axum_app_state.app.emit("tauri_notify", TauriNotify {
                         alert_type: "ElMessage".to_string(),
                         message_type: "error".to_string(),
                         title: None,
@@ -136,7 +165,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     match res {
         Err(err) => {
             tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, request.user_agent, err);
-            app_state.app.emit("tauri_notify", TauriNotify {
+            axum_app_state.app.emit("tauri_notify", TauriNotify {
                 alert_type: "ElMessage".to_string(),
                 message_type: "error".to_string(),
                 title: None,
@@ -160,7 +189,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
                 }
                 let text = String::from_utf8_lossy(&bytes);
                 tracing::error!("stream: {} {} {:?} 错误响应内容: {}", types, &id, req_headers, text);
-                app_state.app.emit("tauri_notify", TauriNotify {
+                axum_app_state.app.emit("tauri_notify", TauriNotify {
                     alert_type: "ElMessage".to_string(),
                     message_type: "error".to_string(),
                     title: None,
@@ -189,9 +218,9 @@ pub struct ImageParam {
     pub disabled_cache: bool,
 }
 
-async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<ImageParam>) -> axum::response::Response {
+async fn image(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<ImageParam>) -> axum::response::Response {
     tracing::debug!("image: {:?}", param);
-    let axum_app_state = app_state.read().await.clone().unwrap();
+    let axum_app_state = axum_app_state.read().await.clone().unwrap();
 
     let cache_digest = sha256::digest(&param.image_url);
     let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.png", param.cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();

@@ -54,7 +54,7 @@ pub fn run() {
             let axum_app_state_clone = axum_app_state.clone();
             let app_handle = app.app_handle().clone();
             tauri::async_runtime::spawn(async move {
-                let res = axum_svc::init_proxy_svc(axum_app_state_clone, app_handle).await;
+                let res = axum_svc::init_axum_svc(axum_app_state_clone, app_handle).await;
                 if res.is_err() {
                     tracing::error!("{:#?}", res);
                 }

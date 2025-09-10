@@ -15,6 +15,12 @@ pub async fn get_sys_info() -> Result<String, String> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PlayVideoPlaylistParam {
+    pub item_id: String,
+    pub title: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlayVideoParam {
     pub mpv_path: String,
     pub mpv_startup_dir: Option<String>,
@@ -29,6 +35,8 @@ pub struct PlayVideoParam {
     pub item_id: String,
     pub item_type: String,
     pub item_name: String,
+    pub emby_server_id: String,
+    pub emby_server_name: String,
     pub series_id: Option<String>,
     pub series_name: Option<String>,
     pub media_source_id: String,
@@ -42,6 +50,14 @@ pub struct PlayVideoParam {
     pub external_subtitle: Vec<String>,
     pub scrobble_trakt_param: Option<String>,
     pub start_time: u64,
+    pub playlist: Vec<PlayVideoPlaylistParam>,
+    pub direct_link: String,
+    pub select_policy: String,
+    pub video_select: i32,
+    pub audio_select: i32,
+    pub subtitle_select: i32,
+    pub version_select: i32,
+    pub mpv_ipc: Option<String>,
 }
 
 #[tauri::command]
