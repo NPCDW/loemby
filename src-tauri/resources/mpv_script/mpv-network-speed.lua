@@ -9,7 +9,7 @@ function update_speed()
     
     -- 完整的ASS样式定义，添加\pos(x,y)控制位置
     -- 这里保持\an9(右上角对齐)，但用\pos从顶部向下偏移20像素
-    local ass_style = "{\\an9\\fs8\\bord0\\c&409eff&}"
+    local ass_style = "{\\an9\\3c&HA066FD&}"
     
     -- 设置OSD显示
     mp.set_osd_ass(0, 0, ass_style .. speed_text)

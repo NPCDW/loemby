@@ -505,19 +505,13 @@ const checkProxyLoading = ref<{[key: string]: boolean}>({});
 function checkProxy(id: string) {
     checkProxyLoading.value[id] = true;
     appApi.getProxyLocation(id).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json = JSON.parse(response.body);
+        let json = JSON.parse(response);
         for (let index = 0; index < proxyServer.value.length; index++) {
             if (proxyServer.value[index].id === id) {
                 proxyServer.value[index].location = json["ip"] + " " + json["country"]["code"];
             }
         }
-    }).catch(e => {
-        ElMessage.error('检测代理失败，可能是代理配置错误，请检查代理配置' + e)
-    }).finally(() => checkProxyLoading.value[id] = false);
+    }).catch(e => ElMessage.error('检测代理失败，可能是代理配置错误，请检查代理配置' + e)).finally(() => checkProxyLoading.value[id] = false);
 }
 
 const checkUpdateLoading = ref<boolean>(false);
@@ -648,11 +642,7 @@ listen<string>('trakt_auth', (event) => {
     traktAuthStatus.value = '授权成功，正在获取授权信息'
     const redirect_uri = `http://127.0.0.1:${useRuntimeConfig().runtimeConfig?.axum_port}/trakt_auth`
     traktApi.token({code: event.payload, redirect_uri}).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: {access_token: string, refresh_token: string, expires_in: number, created_at: number} = JSON.parse(response.body);
+        let json: {access_token: string, refresh_token: string, expires_in: number, created_at: number} = JSON.parse(response);
         trakt_info.value = {
             access_token: json.access_token,
             refresh_token: json.refresh_token,
@@ -662,11 +652,7 @@ listen<string>('trakt_auth', (event) => {
         await configValueChange('trakt_info', JSON.stringify(trakt_info.value), getTraktInfo, "Trakt信息")
         traktAuthStatus.value = '正在获取用户信息'
         traktApi.getUserInfo().then(response => {
-            if (response.status_code != 200) {
-                ElMessage.error(response.status_code + ' ' + response.status_text)
-                return
-            }
-            let json: {user: {username: string}} = JSON.parse(response.body);
+            let json: {user: {username: string}} = JSON.parse(response);
             trakt_info.value.username = json.user.username;
             configValueChange('trakt_info', JSON.stringify(trakt_info.value), getTraktInfo, "Trakt信息")
             traktAuthLoading.value = false

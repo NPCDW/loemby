@@ -84,7 +84,7 @@ async fn stream(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLo
     };
 
     let app_state2 = app_state.app.state::<AppState>().clone();
-    let client = http_pool::get_stream_http_client(request.proxy_url.clone(), app_state2).await.unwrap();
+    let client = http_pool::get_stream_http_client(request.proxy_url.clone(), &app_state2).await.unwrap();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::REFERER);
@@ -231,7 +231,7 @@ async fn image(headers: axum::http::HeaderMap, State(app_state): State<Arc<RwLoc
     }
 
     let app_state = axum_app_state.app.state::<AppState>().clone();
-    let client = match http_pool::get_image_http_client(param.proxy_url.clone(), app_state).await {
+    let client = match http_pool::get_image_http_client(param.proxy_url.clone(), &app_state).await {
         Ok(client) => client,
         Err(err) => return (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,

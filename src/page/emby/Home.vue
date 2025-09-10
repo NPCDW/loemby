@@ -158,17 +158,11 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
     episodesLoading.value = true
     episodesCurrentPage.value = currentPage
     episodesPageSize.value = pageSize
-    return embyApi.getContinuePlayList(embyServer.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: EmbyPageList<EpisodeItem> = JSON.parse(response.body);
+    return embyApi.getContinuePlayList(embyServer.value.id!, (currentPage - 1) * pageSize, pageSize).then(async response => {
+        let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => episodesLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => episodesLoading.value = false)
 }
 
 function gotoEpisodes(episodesId: string) {
@@ -184,19 +178,13 @@ function gotoMediaLibrary() {
 const deleteContinuePlayLoading = ref<{[key: string]: boolean}>({})
 function deleteContinuePlay(episodesId: string, hide: boolean) {
     deleteContinuePlayLoading.value[episodesId] = true
-    return embyApi.hideFromResume(embyServer.value, episodesId, hide).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
+    return embyApi.hideFromResume(embyServer.value.id!, episodesId, hide).then(async () => {
         if (hide) {
             deletedContinuePlayList.value.push(episodesId)
         } else {
             deletedContinuePlayList.value.splice(deletedContinuePlayList.value.indexOf(episodesId), 1)
         }
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => deleteContinuePlayLoading.value[episodesId] = false)
+    }).catch(e => ElMessage.error(e)).finally(() => deleteContinuePlayLoading.value[episodesId] = false)
 }
 
 const favoriteLoading = ref(false)
@@ -213,33 +201,21 @@ function getFavoriteList(currentPage: number, pageSize: number) {
     favoriteLoading.value = true
     favoriteCurrentPage.value = currentPage
     favoritePageSize.value = pageSize
-    return embyApi.getFavoriteList(embyServer.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: EmbyPageList<SearchItem> = JSON.parse(response.body);
+    return embyApi.getFavoriteList(embyServer.value.id!, (currentPage - 1) * pageSize, pageSize).then(async response => {
+        let json: EmbyPageList<SearchItem> = JSON.parse(response);
         favoriteList.value = json.Items
         favoriteTotal.value = json.TotalRecordCount
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => favoriteLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => favoriteLoading.value = false)
 }
 
 const mediaLibraryCountLoading = ref(false)
 const mediaLibraryCount = ref<MediaLibraryCount>()
 function getMediaLibraryCount() {
     mediaLibraryCountLoading.value = true
-    return embyApi.count(embyServer.value).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: MediaLibraryCount = JSON.parse(response.body);
+    return embyApi.count(embyServer.value.id!).then(async response => {
+        let json: MediaLibraryCount = JSON.parse(response);
         mediaLibraryCount.value = json
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => mediaLibraryCountLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => mediaLibraryCountLoading.value = false)
 }
 
 const activePane = ref('ContinuePlay')

@@ -110,38 +110,26 @@ const mediaLibraryLoading = ref(false)
 const mediaLibraryList = ref<MediaLibraryItem[]>([])
 function getMediaLibraryList() {
     mediaLibraryLoading.value = true
-    return embyApi.getMediaLibraryList(embyServer.value).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: EmbyPageList<MediaLibraryItem> = JSON.parse(response.body);
+    return embyApi.getMediaLibraryList(embyServer.value.id!).then(async response => {
+        let json: EmbyPageList<MediaLibraryItem> = JSON.parse(response);
         mediaLibraryList.value = json.Items
         for (let item of mediaLibraryList.value) {
             useImage().loadCover(embyServer.value, item)
             getMediaLibraryChildLatest(item.Id)
         }
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => mediaLibraryLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => mediaLibraryLoading.value = false)
 }
 const mediaLibraryChildLoading = ref<{[key: string]: boolean}>({})
 const mediaLibraryChildList = ref<{[key: string]: SearchItem[]}>({})
 function getMediaLibraryChildLatest(parentId: string) {
     mediaLibraryChildLoading.value[parentId] = true
-    return embyApi.getMediaLibraryChildLatest(embyServer.value, parentId, 16).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: SearchItem[] = JSON.parse(response.body);
+    return embyApi.getMediaLibraryChildLatest(embyServer.value.id!, parentId, 16).then(async response => {
+        let json: SearchItem[] = JSON.parse(response);
         mediaLibraryChildList.value[parentId] = json
         for (let item of mediaLibraryChildList.value[parentId]) {
             useImage().loadCover(embyServer.value, item)
         }
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => mediaLibraryChildLoading.value[parentId] = false)
+    }).catch(e => ElMessage.error(e)).finally(() => mediaLibraryChildLoading.value[parentId] = false)
 }
 
 getEmbyServer(<string>route.params.embyId).then(() => {

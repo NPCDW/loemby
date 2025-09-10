@@ -90,20 +90,14 @@ const handleMediaLibraryChildPageChange = (val: number) => {
 }
 function getMediaLibraryChild(currentPage: number, pageSize: number) {
     mediaLibraryChildLoading.value = true
-    return embyApi.getMediaLibraryChild(embyServer.value, parentId.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: EmbyPageList<SearchItem> = JSON.parse(response.body);
+    return embyApi.getMediaLibraryChild(embyServer.value.id!, parentId.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
+        let json: EmbyPageList<SearchItem> = JSON.parse(response);
         mediaLibraryChildList.value = json.Items
         mediaLibraryChildTotal.value = json.TotalRecordCount
         for (let item of mediaLibraryChildList.value) {
             useImage().loadCover(embyServer.value, item)
         }
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => mediaLibraryChildLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => mediaLibraryChildLoading.value = false)
 }
 
 getEmbyServer(<string>route.params.embyId).then(() => {

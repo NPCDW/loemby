@@ -1,11 +1,6 @@
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import { useGlobalConfig } from '../store/db/globalConfig';
-import { useProxyServer } from '../store/db/proxyServer';
-import invokeApi, { HttpForwardResult } from './invokeApi';
-import { sleep } from '../util/sleep';
-
-const USER_AGENT = 'loemby/' + import.meta.env.VITE_APP_VERSION
-const CLIENT_ID = import.meta.env.VITE_TRAKT_CLIENT_ID
+import { invoke } from '@tauri-apps/api/core';
 
 async function saveAccessToken(token_response: TokenResult, redirect_uri: string) {
     let trakt_info = {
@@ -21,18 +16,14 @@ async function saveAccessToken(token_response: TokenResult, redirect_uri: string
     }
     await useGlobalConfig().updateGlobalConfig(config);
     getUserInfo().then(response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: {user: {username: string}} = JSON.parse(response.body);
+        let json: {user: {username: string}} = JSON.parse(response);
         trakt_info.username = json.user.username;
         let config = {
             config_key: "trakt_info",
             config_value: JSON.stringify(trakt_info)
         }
         useGlobalConfig().updateGlobalConfig(config);
-    })
+    }).catch(e => ElMessage.error(e))
 }
 
 async function getCacheAccessToken() {
@@ -63,11 +54,7 @@ async function getCacheAccessToken() {
     else {
         console.log("trakt token 过期，重新获取");
         let response = await token({redirect_uri: json.redirect_uri, refresh_token: json.refresh_token})
-        if (response.status_code != 200) {
-            ElMessage.error("trakt token 获取失败: " + response.status_code + ' ' + response.status_text)
-            return
-        }
-        let rejson: TokenResult = JSON.parse(response.body);
+        let rejson: TokenResult = JSON.parse(response);
         saveAccessToken(rejson, json.redirect_uri);
         return rejson.access_token;
     }
@@ -89,126 +76,52 @@ interface TokenResult {
 /**
  * 获取 token
  */
-async function token({redirect_uri, code, refresh_token}: TokenParam) {
+async function token({redirect_uri, code, refresh_token}: TokenParam): Promise<string> {
     if ((!code && !refresh_token)) {
         return Promise.reject("参数缺失");
     }
-    return invokeApi.httpForward({
-        url: import.meta.env.VITE_TRAKT_TOKEN_EXCHANGE_URL,
-        method: 'POST',
-        headers: {
-            'User-Agent': USER_AGENT,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            "code": code,
-            "refresh_token": refresh_token,
-            "redirect_uri": redirect_uri,
-        }),
-        proxy: await useProxyServer().getTraktProxyUrl()
-    }).then(response => {
-        if (response.status_code == 401) {
-            ElMessageBox.alert("您的 Trakt 授权好像失效了，或许应该重新授权");
-        }
-        return response
-    });
+    return invoke('trakt_http_token', {body: {
+        redirect_uri, code, refresh_token
+    }});
 }
 
 /**
  * 获取用户信息
  */
-async function getUserInfo() {
+async function getUserInfo(): Promise<string> {
     let access_token = await getCacheAccessToken()
     if (!access_token) {
         return Promise.reject("参数缺失");
     }
-    return invokeApi.httpForward({
-        url: 'https://api.trakt.tv/users/settings',
-        method: 'GET',
-        headers: {
-            'User-Agent': USER_AGENT,
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${access_token}`,
-            'trakt-api-version': '2',
-            'trakt-api-key': CLIENT_ID
-        },
-        proxy: await useProxyServer().getTraktProxyUrl()
-    }).then(response => {
-        if (response.status_code == 401) {
-            ElMessageBox.alert("获取 Trakt 用户信息: Trakt access token 失效");
-        }
-        return response
-    });
+    return invoke('trakt_http_get_user_info', {body: {
+        access_token
+    }});
 }
 
 /**
  * 开始播放
  */
-async function start(param: any, retry: number = 0): Promise<HttpForwardResult> {
+async function start(param: any): Promise<string> {
     let access_token = await getCacheAccessToken()
     if (!access_token) {
         return Promise.reject("参数缺失");
     }
-    return invokeApi.httpForward({
-        url: 'https://api.trakt.tv/scrobble/start',
-        method: 'POST',
-        headers: {
-            'User-Agent': USER_AGENT,
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${access_token}`,
-            'trakt-api-version': '2',
-            'trakt-api-key': CLIENT_ID
-        },
-        body: JSON.stringify(param),
-        proxy: await useProxyServer().getTraktProxyUrl()
-    }).then(async response => {
-        if (response.status_code == 401) {
-            ElMessageBox.alert("开始播放: Trakt access token 失效");
-        }
-        if (response.status_code == 429) {
-            if (retry > 0) {
-                ElMessage.warning("Trakt 请求太多或太快，开始播放 Api 将在 1 秒钟后重试");
-            }
-            await sleep(1000)
-            return start(param, retry + 1)
-        }
-        return response
-    });
+    return invoke('trakt_http_start', {body: {
+        access_token, body: JSON.stringify(param)
+    }});
 }
 
 /**
  * 停止播放
  */
-async function stop(param: any, retry: number = 0): Promise<HttpForwardResult> {
+async function stop(param: any): Promise<string> {
     let access_token = await getCacheAccessToken()
     if (!access_token) {
         return Promise.reject("参数缺失");
     }
-    return invokeApi.httpForward({
-        url: 'https://api.trakt.tv/scrobble/stop',
-        method: 'POST',
-        headers: {
-            'User-Agent': USER_AGENT,
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${access_token}`,
-            'trakt-api-version': '2',
-            'trakt-api-key': CLIENT_ID
-        },
-        body: JSON.stringify(param),
-        proxy: await useProxyServer().getTraktProxyUrl()
-    }).then(async response => {
-        if (response.status_code == 401) {
-            ElMessageBox.alert("停止播放: Trakt access token 失效");
-        }
-        if (response.status_code == 429) {
-            if (retry > 0) {
-                ElMessage.warning("Trakt 请求太多或太快，停止播放 Api 将在 1 秒钟后重试");
-            }
-            await sleep(1000)
-            return start(param)
-        }
-        return response
-    });
+    return invoke('trakt_http_stop', {body: {
+        access_token, body: JSON.stringify(param)
+    }});
 }
 
 export default {

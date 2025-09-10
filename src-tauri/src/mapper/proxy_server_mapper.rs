@@ -40,39 +40,39 @@ pub async fn get_browse_proxy_url(proxy_id: Option<String>, state: &tauri::State
     return get_cache(proxy_id, state).await;
 }
 
-// pub async fn get_play_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
-//     if proxy_id.is_none() {
-//         return None;
-//     }
-//     let proxy_id = proxy_id.unwrap();
-//     if proxy_id == "no" {
-//         return None;
-//     }
-//     if proxy_id == "follow" {
-//         let proxy_id = global_config_mapper::get_cache("global_play_proxy_id", state).await;
-//         return Box::pin(get_play_proxy_url(proxy_id, state)).await;
-//     }
-//     return get_cache(proxy_id, state).await;
-// }
+pub async fn get_play_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
+    if proxy_id.is_none() {
+        return None;
+    }
+    let proxy_id = proxy_id.unwrap();
+    if proxy_id == "no" {
+        return None;
+    }
+    if proxy_id == "follow" {
+        let proxy_id = global_config_mapper::get_cache("global_play_proxy_id", state).await;
+        return Box::pin(get_play_proxy_url(proxy_id, state)).await;
+    }
+    return get_cache(proxy_id, state).await;
+}
 
-// pub async fn get_app_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
-//     if proxy_id.is_none() {
-//         return None;
-//     }
-//     let proxy_id = proxy_id.unwrap();
-//     if proxy_id == "no" {
-//         return None;
-//     }
-//     if proxy_id == "followBrowse" {
-//         let proxy_id = global_config_mapper::get_cache("global_browse_proxy_id", state).await;
-//         return Box::pin(get_browse_proxy_url(proxy_id, state)).await;
-//     }
-//     if proxy_id == "followPlay" {
-//         let proxy_id = global_config_mapper::get_cache("global_play_proxy_id", state).await;
-//         return Box::pin(get_play_proxy_url(proxy_id, state)).await;
-//     }
-//     return get_cache(proxy_id, state).await;
-// }
+pub async fn get_app_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
+    if proxy_id.is_none() {
+        return None;
+    }
+    let proxy_id = proxy_id.unwrap();
+    if proxy_id == "no" {
+        return None;
+    }
+    if proxy_id == "followBrowse" {
+        let proxy_id = global_config_mapper::get_cache("global_browse_proxy_id", state).await;
+        return Box::pin(get_browse_proxy_url(proxy_id, state)).await;
+    }
+    if proxy_id == "followPlay" {
+        let proxy_id = global_config_mapper::get_cache("global_play_proxy_id", state).await;
+        return Box::pin(get_play_proxy_url(proxy_id, state)).await;
+    }
+    return get_cache(proxy_id, state).await;
+}
 
 pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
     let list = list_all(&state.db_pool).await?;

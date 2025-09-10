@@ -68,7 +68,7 @@ pub struct HttpForwardResult {
 
 #[tauri::command]
 pub async fn http_forward(param: HttpForwardParam, state: tauri::State<'_, AppState>) -> Result<HttpForwardResult, String> {
-    let res = http_forward_svc::forward(param, state).await;
+    let res = http_forward_svc::forward(param, &state).await;
     if res.is_err() {
         return Err(res.unwrap_err().to_string());
     }

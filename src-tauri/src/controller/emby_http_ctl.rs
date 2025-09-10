@@ -10,7 +10,7 @@ pub struct EmbyGetServerInfoParam {
 
 #[tauri::command]
 pub async fn emby_get_server_info(body: EmbyGetServerInfoParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_server_info(body, state).await;
+    let res = emby_http_svc::get_server_info(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -24,7 +24,7 @@ pub struct EmbyAuthenticateByNameParam {
 
 #[tauri::command]
 pub async fn emby_authenticate_by_name(body: EmbyAuthenticateByNameParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::authenticate_by_name(body, state).await;
+    let res = emby_http_svc::authenticate_by_name(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -38,7 +38,7 @@ pub struct EmbyLogoutParam {
 
 #[tauri::command]
 pub async fn emby_logout(body: EmbyLogoutParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::logout(body, state).await;
+    let res = emby_http_svc::logout(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -56,7 +56,7 @@ pub struct EmbySearchParam {
 
 #[tauri::command]
 pub async fn emby_search(body: EmbySearchParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::search(body, state).await;
+    let res = emby_http_svc::search(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -72,7 +72,7 @@ pub struct EmbyGetContinuePlayListParam {
 
 #[tauri::command]
 pub async fn emby_get_continue_play_list(body: EmbyGetContinuePlayListParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_continue_play_list(body, state).await;
+    let res = emby_http_svc::get_continue_play_list(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -88,7 +88,7 @@ pub struct EmbyGetFavoriteListParam {
 
 #[tauri::command]
 pub async fn emby_get_favorite_list(body: EmbyGetFavoriteListParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_favorite_list(body, state).await;
+    let res = emby_http_svc::get_favorite_list(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -105,7 +105,7 @@ pub struct EmbyNextUpParam {
 
 #[tauri::command]
 pub async fn emby_next_up(body: EmbyNextUpParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::next_up(body, state).await;
+    let res = emby_http_svc::next_up(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -119,7 +119,7 @@ pub struct EmbyGetMediaLibraryListParam {
 
 #[tauri::command]
 pub async fn emby_get_media_library_list(body: EmbyGetMediaLibraryListParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_media_library_list(body, state).await;
+    let res = emby_http_svc::get_media_library_list(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -135,7 +135,7 @@ pub struct EmbyGetMediaLibraryChildLatestParam {
 
 #[tauri::command]
 pub async fn emby_get_media_library_child_latest(body: EmbyGetMediaLibraryChildLatestParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_media_library_child_latest(body, state).await;
+    let res = emby_http_svc::get_media_library_child_latest(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -152,7 +152,7 @@ pub struct EmbyGetMediaLibraryChildParam {
 
 #[tauri::command]
 pub async fn emby_get_media_library_child(body: EmbyGetMediaLibraryChildParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_media_library_child(body, state).await;
+    let res = emby_http_svc::get_media_library_child(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -166,7 +166,7 @@ pub struct EmbyCountParam {
 
 #[tauri::command]
 pub async fn emby_count(body: EmbyCountParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::count(body, state).await;
+    let res = emby_http_svc::count(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -181,7 +181,7 @@ pub struct EmbyItemsParam {
 
 #[tauri::command]
 pub async fn emby_items(body: EmbyItemsParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::items(body, state).await;
+    let res = emby_http_svc::items(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -196,7 +196,7 @@ pub struct EmbySeasonsParam {
 
 #[tauri::command]
 pub async fn emby_seasons(body: EmbySeasonsParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::seasons(body, state).await;
+    let res = emby_http_svc::seasons(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -214,7 +214,7 @@ pub struct EmbyEpisodesParam {
 
 #[tauri::command]
 pub async fn emby_episodes(body: EmbyEpisodesParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::episodes(body, state).await;
+    let res = emby_http_svc::episodes(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -229,7 +229,7 @@ pub struct EmbyPlaybackInfoParam {
 
 #[tauri::command]
 pub async fn emby_playback_info(body: EmbyPlaybackInfoParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::playback_info(body, state).await;
+    let res = emby_http_svc::playback_info(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -247,7 +247,7 @@ pub struct EmbyPlayingParam {
 
 #[tauri::command]
 pub async fn emby_playing(body: EmbyPlayingParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::playing(body, state).await;
+    let res = emby_http_svc::playing(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -265,7 +265,7 @@ pub struct EmbyPlayingProgressParam {
 
 #[tauri::command]
 pub async fn emby_playing_progress(body: EmbyPlayingProgressParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::playing_progress(body, state).await;
+    let res = emby_http_svc::playing_progress(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -283,7 +283,7 @@ pub struct EmbyPlayingStoppedParam {
 
 #[tauri::command]
 pub async fn emby_playing_stopped(body: EmbyPlayingStoppedParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::playing_stopped(body, state).await;
+    let res = emby_http_svc::playing_stopped(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -298,7 +298,7 @@ pub struct EmbyGetDirectStreamUrlParam {
 
 #[tauri::command]
 pub async fn emby_get_direct_stream_url(body: EmbyGetDirectStreamUrlParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_direct_stream_url(body, state).await;
+    let res = emby_http_svc::get_direct_stream_url(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -317,7 +317,7 @@ pub struct EmbyGetAudioStreamUrlParam {
 
 #[tauri::command]
 pub async fn emby_get_audio_stream_url(body: EmbyGetAudioStreamUrlParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_audio_stream_url(body, state).await;
+    let res = emby_http_svc::get_audio_stream_url(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -337,7 +337,7 @@ pub struct EmbyGetSubtitleStreamUrlParam {
 
 #[tauri::command]
 pub async fn emby_get_subtitle_stream_url(body: EmbyGetSubtitleStreamUrlParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_subtitle_stream_url(body, state).await;
+    let res = emby_http_svc::get_subtitle_stream_url(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -353,7 +353,7 @@ pub struct EmbyGetImageUrlParam {
 
 #[tauri::command]
 pub async fn emby_get_image_url(body: EmbyGetImageUrlParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_image_url(body, state).await;
+    let res = emby_http_svc::get_image_url(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -368,7 +368,7 @@ pub struct EmbyStarParam {
 
 #[tauri::command]
 pub async fn emby_star(body: EmbyStarParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::star(body, state).await;
+    let res = emby_http_svc::star(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -383,7 +383,7 @@ pub struct EmbyUnstarParam {
 
 #[tauri::command]
 pub async fn emby_unstar(body: EmbyUnstarParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::unstar(body, state).await;
+    let res = emby_http_svc::unstar(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -398,7 +398,7 @@ pub struct EmbyPlayedParam {
 
 #[tauri::command]
 pub async fn emby_played(body: EmbyPlayedParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::played(body, state).await;
+    let res = emby_http_svc::played(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -413,7 +413,7 @@ pub struct EmbyUnplayedParam {
 
 #[tauri::command]
 pub async fn emby_unplayed(body: EmbyUnplayedParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::unplayed(body, state).await;
+    let res = emby_http_svc::unplayed(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -429,7 +429,7 @@ pub struct EmbyHideFromResumeParam {
 
 #[tauri::command]
 pub async fn emby_hide_from_resume(body: EmbyHideFromResumeParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::hide_from_resume(body, state).await;
+    let res = emby_http_svc::hide_from_resume(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }

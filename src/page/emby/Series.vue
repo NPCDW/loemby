@@ -216,17 +216,11 @@ const serieInfoLoading = ref(false)
 const currentSeries = ref<SeriesItem>()
 function updateCurrentSerie() {
     serieInfoLoading.value = true
-    return embyApi.items(embyServer.value, <string>route.params.serieId).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: SeriesItem = JSON.parse(response.body);
+    return embyApi.items(embyServer.value.id!, <string>route.params.serieId).then(async response => {
+        let json: SeriesItem = JSON.parse(response);
         currentSeries.value = json
         useImage().loadCover(embyServer.value, json)
-    }).catch(e => {
-        ElMessage.error('更新当前剧集信息失败' + e)
-    }).finally(() => serieInfoLoading.value = false)
+    }).catch(e => ElMessage.error('更新当前剧集信息失败' + e)).finally(() => serieInfoLoading.value = false)
 }
 
 const starLoading = ref<{[key: string]: boolean}>({})
@@ -237,20 +231,14 @@ function star(item: SeriesItem | SeasonItem | EpisodeItem) {
     starLoading.value[item.Id] = true
     let fun;
     if (item.UserData!.IsFavorite) {
-        fun = embyApi.unstar(embyServer.value, item.Id)
+        fun = embyApi.unstar(embyServer.value.id!, item.Id)
     } else {
-        fun = embyApi.star(embyServer.value, item.Id)
+        fun = embyApi.star(embyServer.value.id!, item.Id)
     }
     return fun.then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: UserData = JSON.parse(response.body);
+        let json: UserData = JSON.parse(response);
         item.UserData!.IsFavorite = json.IsFavorite
-    }).catch(e => {
-        ElMessage.error('标记收藏信息失败' + e)
-    }).finally(() => starLoading.value[item.Id] = false)
+    }).catch(e => ElMessage.error('标记收藏信息失败' + e)).finally(() => starLoading.value[item.Id] = false)
 }
 
 const playedLoading = ref<{[key: string]: boolean}>({})
@@ -261,39 +249,27 @@ function played(item: SeriesItem | SeasonItem | EpisodeItem) {
     playedLoading.value[item.Id] = true
     let fun;
     if (item.UserData!.Played) {
-        fun = embyApi.unplayed(embyServer.value, item.Id)
+        fun = embyApi.unplayed(embyServer.value.id!, item.Id)
     } else {
-        fun = embyApi.played(embyServer.value, item.Id)
+        fun = embyApi.played(embyServer.value.id!, item.Id)
     }
     return fun.then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: UserData = JSON.parse(response.body);
+        let json: UserData = JSON.parse(response);
         item.UserData!.Played = json.Played
-    }).catch(e => {
-        ElMessage.error('标记播放信息失败' + e)
-    }).finally(() => playedLoading.value[item.Id] = false)
+    }).catch(e => ElMessage.error('标记播放信息失败' + e)).finally(() => playedLoading.value[item.Id] = false)
 }
 
 const seasonsLoading = ref<boolean>(false)
 const seasonsList = ref<SeasonItem[]>([])
 async function getSeasons() {
     seasonsLoading.value = true
-    return embyApi.seasons(embyServer.value, <string>route.params.serieId).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: EmbyPageList<SeasonItem> = JSON.parse(response.body);
+    return embyApi.seasons(embyServer.value.id!, <string>route.params.serieId).then(async response => {
+        let json: EmbyPageList<SeasonItem> = JSON.parse(response);
         seasonsList.value = json.Items
         json.Items.forEach(item => {
             useImage().loadCover(embyServer.value, item)
         })
-    }).catch(e => {
-        ElMessage.error('获取季失败' + e)
-    }).finally(() => seasonsLoading.value = false)
+    }).catch(e => ElMessage.error('获取季失败' + e)).finally(() => seasonsLoading.value = false)
 }
 
 const episodesLoading = ref<boolean>(false)
@@ -303,17 +279,11 @@ const episodesPageSize = ref<number>(6)
 const episodesTotal = ref<number>(0)
 async function getEpisodes() {
     episodesLoading.value = true
-    return embyApi.episodes(embyServer.value, <string>route.params.serieId, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: EmbyPageList<EpisodeItem> = JSON.parse(response.body);
+    return embyApi.episodes(embyServer.value.id!, <string>route.params.serieId, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
+        let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
-    }).catch(e => {
-        ElMessage.error('获取剧集失败' + e)
-    }).finally(() => episodesLoading.value = false)
+    }).catch(e => ElMessage.error('获取剧集失败' + e)).finally(() => episodesLoading.value = false)
 }
 function handleEpisodesPageChange(page: number) {
     episodesCurrentPage.value = page
@@ -341,12 +311,8 @@ function showSeasons(season: SeasonItem) {
 }
 function getDialogEpisodes() {
     dialogEpisodesLoading.value = true
-    return embyApi.episodes(embyServer.value, currentSeries.value?.Id!, dialogSeasons.value?.Id!, (dialogEpisodesCurrentPage.value - 1) * dialogEpisodesPageSize.value, dialogEpisodesPageSize.value).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: EmbyPageList<EpisodeItem> = JSON.parse(response.body);
+    return embyApi.episodes(embyServer.value.id!, currentSeries.value?.Id!, dialogSeasons.value?.Id!, (dialogEpisodesCurrentPage.value - 1) * dialogEpisodesPageSize.value, dialogEpisodesPageSize.value).then(async response => {
+        let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         dialogEpisodesList.value = json.Items
         dialogEpisodesTotal.value = json.TotalRecordCount
         for (const item of json.Items) {

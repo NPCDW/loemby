@@ -1,6 +1,6 @@
 use super::app_state::AppState;
 
-pub async fn get_api_http_client(proxy_url: Option<String>, state: tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
+pub async fn get_api_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
     let config = state.app_config.clone();
     let proxy_key = proxy_url.clone().unwrap_or("no".to_string());
     // 必须 clone 否则在 read 未完成时 write 会锁住
@@ -29,7 +29,7 @@ pub async fn get_api_http_client(proxy_url: Option<String>, state: tauri::State<
     anyhow::Ok(client)
 }
 
-pub async fn get_image_http_client(proxy_url: Option<String>, state: tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
+pub async fn get_image_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
     let config = state.app_config.clone();
     let proxy_key = proxy_url.clone().unwrap_or("no".to_string());
     // 必须 clone 否则在 read 未完成时 write 会锁住
@@ -58,7 +58,7 @@ pub async fn get_image_http_client(proxy_url: Option<String>, state: tauri::Stat
     anyhow::Ok(client)
 }
 
-pub async fn get_stream_http_client(proxy_url: Option<String>, state: tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
+pub async fn get_stream_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
     let config = state.app_config.clone();
     let mut client = reqwest::Client::builder()
         .danger_accept_invalid_certs(config.danger_accept_invalid_certs);

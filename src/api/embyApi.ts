@@ -126,7 +126,7 @@ async function getMediaLibraryChild(emby_server_id: string, parent_id: string, s
  * 剧集数量统计
  * @returns MediaLibraryCount
  */
-async function count(emby_server_id: string) {
+async function count(emby_server_id: string): Promise<string> {
     return invoke('emby_count', {body: {
         emby_server_id,
     }});
@@ -136,7 +136,7 @@ async function count(emby_server_id: string) {
  * 电影详情、剧集详情、季详情、系列详情、合集详情
  * @returns EpisodeItems
  */
-async function items(emby_server_id: string, item_id: string) {
+async function items(emby_server_id: string, item_id: string): Promise<string> {
     return invoke('emby_items', {body: {
         emby_server_id,
         item_id,

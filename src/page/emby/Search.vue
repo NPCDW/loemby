@@ -64,12 +64,8 @@ const search = async () => {
     }
     search_loading.value = true
     emby_search_result.value = {success: true}
-    return embyApi.search(embyServer.value, search_str.value, item_types.value, 0, 30).then(async response => {
-        if (response.status_code != 200) {
-            emby_search_result.value = {success: false, message: response.status_code + ' ' + response.status_text}
-            return
-        }
-        let json: EmbyPageList<SearchItem> = JSON.parse(response.body);
+    return embyApi.search(embyServer.value.id!, search_str.value, item_types.value, 0, 30).then(async response => {
+        let json: EmbyPageList<SearchItem> = JSON.parse(response);
         emby_search_result.value = {success: true, result: json}
     }).catch(e => {
         emby_search_result.value = {success: false, message: e}

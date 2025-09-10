@@ -296,12 +296,8 @@ function updateCurrentEpisodes(silent: boolean = false) {
     if (!silent) {
         playbackInfoLoading.value = true
     }
-    return embyApi.items(embyServer.value, <string>route.params.episodeId).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: EpisodeItem = JSON.parse(response.body);
+    return embyApi.items(embyServer.value.id!, <string>route.params.episodeId).then(async response => {
+        let json: EpisodeItem = JSON.parse(response);
         currentEpisodes.value = json
         if (!silent) {
             if (json.MediaSources) {
@@ -312,9 +308,7 @@ function updateCurrentEpisodes(silent: boolean = false) {
                 await getCurrentSeries()
             }
         }
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => playbackInfoLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => playbackInfoLoading.value = false)
 }
 
 const currentSeries = ref<SeriesItem>()
@@ -327,18 +321,12 @@ async function getCurrentSeries() {
         currentSeries.value = JSON.parse(storage)
         return Promise.resolve()
     }
-    return embyApi.items(embyServer.value, currentEpisodes.value.SeriesId).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: SeriesItem = JSON.parse(response.body);
+    return embyApi.items(embyServer.value.id!, currentEpisodes.value.SeriesId).then(async response => {
+        let json: SeriesItem = JSON.parse(response);
         currentSeries.value = json
         sessionStorage.setItem(embyServer.value.id + ':emby:' + currentEpisodes.value!.SeriesId, JSON.stringify(json))
         return Promise.resolve()
-    }).catch(e => {
-        ElMessage.error(e)
-    })
+    }).catch(e => ElMessage.error(e))
 }
 
 const handleNextUpPageChange = (val: number) => {
@@ -349,17 +337,11 @@ const handleNextUpPageChange = (val: number) => {
 function nextUp(pageNumber: number, pageSize: number = nextUpPageSize.value) {
     nextUpShow.value = true
     nextUpLoading.value = true
-    return embyApi.nextUp(embyServer.value, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, pageSize).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: EmbyPageList<EpisodeItem> = JSON.parse(response.body);
+    return embyApi.nextUp(embyServer.value.id!, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, pageSize).then(async response => {
+        let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         nextUpList.value = json.Items
         nextUpTotal.value = json.TotalRecordCount
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => nextUpLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => nextUpLoading.value = false)
 }
 function nextEpisode() {
     nextUpCurrentPage.value = 1
@@ -609,12 +591,8 @@ function getScrobbleTraktIdsParam(item: EpisodeItem | SeriesItem) {
 const playback_info_loading = ref(false)
 function getPlaybackInfo(item_id: string) {
     playback_info_loading.value = true
-    return embyApi.playbackInfo(embyServer.value, item_id).then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return Promise.reject(response)
-        }
-        let playbackInfo: PlaybackInfo = JSON.parse(response.body);
+    return embyApi.playbackInfo(embyServer.value.id!, item_id).then(async response => {
+        let playbackInfo: PlaybackInfo = JSON.parse(response);
         if (playbackInfo.ErrorCode) {
             return Promise.reject(playbackInfo.ErrorCode)
         }
@@ -692,19 +670,12 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
             start_time: new Date().getTime(),
         }).then(async () => {
-            embyApi.playing(embyServer.value!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
+            embyApi.playing(embyServer.value!.id!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
                 ElMessage.success('开始播放，请稍候')
             })
             if (scrobbleTraktParam) {
                 traktApi.start(scrobbleTraktParam).then(response => {
-                    if (response.status_code == 401 || response.status_code == 429) {
-                        return
-                    }
-                    if (response.status_code != 201) {
-                        ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
-                        return
-                    }
-                    const json: {progress: number, movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
+                    const json: {progress: number, movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response);
                     let message: VNode[] = []
                     if (json.movie) {
                         message = [h('p', null, `${json.movie.title} (${json.movie.year})`)]
@@ -786,20 +757,14 @@ function star() {
     starLoading.value = true
     let fun;
     if (currentEpisodes.value?.UserData.IsFavorite) {
-        fun = embyApi.unstar(embyServer.value, currentEpisodes.value?.Id)
+        fun = embyApi.unstar(embyServer.value.id!, currentEpisodes.value?.Id)
     } else {
-        fun = embyApi.star(embyServer.value, currentEpisodes.value?.Id)
+        fun = embyApi.star(embyServer.value.id!, currentEpisodes.value?.Id)
     }
     return fun.then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: UserData = JSON.parse(response.body);
+        let json: UserData = JSON.parse(response);
         currentEpisodes.value!.UserData!.IsFavorite = json.IsFavorite
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => starLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => starLoading.value = false)
 }
 
 const playedLoading = ref<boolean>(false)
@@ -810,20 +775,14 @@ function played() {
     playedLoading.value = true
     let fun;
     if (currentEpisodes.value?.UserData.Played) {
-        fun = embyApi.unplayed(embyServer.value, currentEpisodes.value?.Id)
+        fun = embyApi.unplayed(embyServer.value.id!, currentEpisodes.value?.Id)
     } else {
-        fun = embyApi.played(embyServer.value, currentEpisodes.value?.Id)
+        fun = embyApi.played(embyServer.value.id!, currentEpisodes.value?.Id)
     }
     return fun.then(async response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: UserData = JSON.parse(response.body);
+        let json: UserData = JSON.parse(response);
         currentEpisodes.value!.UserData!.Played = json.Played
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => playedLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => playedLoading.value = false)
 }
 
 function gotoSeries(seriesId: string) {

@@ -57,9 +57,7 @@ async function getPlayHistory(pageNumber: number = 1, pageSize: number = 30) {
     return usePlayHistory().pagePlayHistory(pageNumber, pageSize).then(async response => {
         list.value = response[1]
         total.value = response[0]
-    }).catch(e => {
-        ElMessage.error('获取播放历史失败' + e)
-    })
+    }).catch(e => ElMessage.error('获取播放历史失败' + e))
 }
 function handlePageChange(pageNumber: number) {
     getPlayHistory(pageNumber)
@@ -74,9 +72,7 @@ function pin(row: PlayHistory) {
     let pinned = row.pinned ? 0 : 1
     usePlayHistory().updatePlayHistory({id: row.id, pinned: pinned}).then(() => {
         row.pinned = pinned
-    }).catch(e => {
-        ElMessage.error('更新失败' + e)
-    })
+    }).catch(e => ElMessage.error('更新失败' + e))
 }
 
 function highlightRowFunction({row}: {row: PlayHistory}) {

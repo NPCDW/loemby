@@ -1,40 +1,21 @@
-import { useProxyServer } from '../store/db/proxyServer';
-import invokeApi from './invokeApi';
-
-const USER_AGENT = 'loemby/' + import.meta.env.VITE_APP_VERSION
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * 校验代理服务器
  */
-async function getProxyLocation(proxy_id: string) {
-    if (!proxy_id) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url: 'https://api.my-ip.io/v2/ip.json',
-        method: 'GET',
-        headers: {
-            'User-Agent': USER_AGENT,
-        },
-        proxy: await useProxyServer().getProxyUrl(proxy_id)
-    });
+async function getProxyLocation(proxy_id: string): Promise<string> {
+    return invoke('app_http_get_proxy_location', {body: {
+        proxy_id
+    }});
 }
 
 /**
- * 校验代理服务器
+ * 获取emby图标库
  */
-async function getEmbyIconLibrary(url: string) {
-    if (!url) {
-        return Promise.reject("参数缺失");
-    }
-    return invokeApi.httpForward({
-        url,
-        method: 'GET',
-        headers: {
-            'User-Agent': USER_AGENT,
-        },
-        proxy: await useProxyServer().getAppProxyUrl()
-    });
+async function getEmbyIconLibrary(url: string): Promise<string> {
+    return invoke('app_http_get_emby_icon_library', {body: {
+        url
+    }});
 }
 
 export default {

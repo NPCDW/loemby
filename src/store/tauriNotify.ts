@@ -1,7 +1,7 @@
 import { listen } from '@tauri-apps/api/event';
 import _ from 'lodash';
 import { defineStore } from 'pinia'
-import { ElMessage, ElNotification } from 'element-plus';
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus';
 
 export const useTauriNotify = defineStore('tauriNotify', () => {
     async function listen_tauri_notify() {
@@ -15,6 +15,11 @@ export const useTauriNotify = defineStore('tauriNotify', () => {
             } else if (event.payload.alert_type === 'ElNotification') {
                 ElNotification({
                     type: event.payload.message_type,
+                    title: event.payload.title,
+                    message: event.payload.message
+                });
+            } else if (event.payload.alert_type === 'ElMessageBox') {
+                ElMessageBox({
                     title: event.payload.title,
                     message: event.payload.message
                 });

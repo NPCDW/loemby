@@ -94,12 +94,8 @@ async function search() {
 }
 async function singleEmbySearch(embyServer: EmbyServer) {
     emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: true, success: false}
-    return embyApi.search(embyServer, search_str.value, item_types.value, 0, 30).then(async response => {
-        if (response.status_code != 200) {
-            emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: false, message: response.status_code + ' ' + response.status_text}
-            return
-        }
-        let json: EmbyPageList<SearchItem> = JSON.parse(response.body);
+    return embyApi.search(embyServer.id!, search_str.value, item_types.value, 0, 30).then(async response => {
+        let json: EmbyPageList<SearchItem> = JSON.parse(response);
         emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: true, result: json}
         if (json.Items.length > 0) {
             embyServerKeys.value.push(embyServer.id!)

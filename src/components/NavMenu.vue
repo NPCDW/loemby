@@ -470,7 +470,7 @@ function logoutEmbyServer(embyServer: EmbyServer) {
       type: 'warning',
     }
   ).then(async () => {
-        await embyApi.logout(embyServer)
+        await embyApi.logout(embyServer.id!)
         embyServer.disabled = 1
         embyServer.auth_token = ''
         await updateEmbyServerDb({id: embyServer.id, auth_token: '', disabled: embyServer.disabled})
@@ -528,9 +528,7 @@ async function addEmbyServerAddr() {
         await updateEmbyServerDb(dialogEmbyServer.value);
         updateEmbyLineServerName(dialogEmbyServer.value!.id!, dialogEmbyServer.value!.server_name!);
         stepActive.value = stepActive.value + 1;
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => addEmbyServerAddrLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => addEmbyServerAddrLoading.value = false)
 }
 const serverInfoLoading = ref(false)
 function getServerInfo(embyServer: EmbyServer) {
@@ -539,9 +537,7 @@ function getServerInfo(embyServer: EmbyServer) {
         let json: {ServerName: string, Id: string} = JSON.parse(response);
         embyServer.server_name = json['ServerName']
         embyServer.server_id = json['Id']
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => serverInfoLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => serverInfoLoading.value = false)
 }
 const addEmbyServerAuthLoading = ref(false)
 function addEmbyServerPrevStep() {
@@ -558,9 +554,7 @@ async function addEmbyServerAuth() {
     addEmbyServerAuthLoading.value = true
     login(dialogEmbyServer.value).then(() => {
         stepActive.value = stepActive.value + 1;
-    }).catch(e => {
-        ElMessage.error(e)
-    }).finally(() => addEmbyServerAuthLoading.value = false)
+    }).catch(e => ElMessage.error(e)).finally(() => addEmbyServerAuthLoading.value = false)
 }
 async function reLogin(embyServerConfig: EmbyServer) {
   ElMessageBox.confirm(
@@ -576,9 +570,7 @@ async function reLogin(embyServerConfig: EmbyServer) {
         ElMessage.success({
             message: "登录成功"
         })
-    }).catch(e => {
-        ElMessage.error(e)
-    })
+    }).catch(e => ElMessage.error(e))
     })
 }
 async function login(embyServerConfig: EmbyServer) {
@@ -759,11 +751,7 @@ function embyIconLibraryChange() {
     embyIconList.value = []
     const lib = embyIconLibrary.value.find(item => item.id === selectedEmbyIconLibrary.value)
     appApi.getEmbyIconLibrary(lib!.url!).then(response => {
-        if (response.status_code != 200) {
-            ElMessage.error(response.status_code + ' ' + response.status_text)
-            return
-        }
-        let json: {name: string, icons:{name: string, url: string}[]} = JSON.parse(response.body);
+        let json: {name: string, icons:{name: string, url: string}[]} = JSON.parse(response);
         embyIconList.value = json.icons
         for (const icon of embyIconList.value) {
             useImage().loadIcon(icon.url!).then(local_url => icon.local_url = local_url)

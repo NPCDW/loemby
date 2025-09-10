@@ -4,7 +4,7 @@ use reqwest::{header::{HeaderMap, HeaderName, HeaderValue}, Method, Response};
 
 use crate::{config::{app_state::AppState, http_pool}, controller::invoke_ctl::HttpForwardParam};
 
-pub async fn forward(param: HttpForwardParam, state: tauri::State<'_, AppState>) -> anyhow::Result<Response> {
+pub async fn forward(param: HttpForwardParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<Response> {
     let mut headers = HeaderMap::new();
     for (key, value) in &param.headers {
         headers.insert(HeaderName::from_str(key).unwrap(), HeaderValue::from_str(value).unwrap());
