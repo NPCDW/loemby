@@ -257,7 +257,7 @@ struct PlaybackProgress<'a> {
     start_time: u64,
 }
 
-pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> anyhow::Result<()> {
+pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> anyhow::Result<String> {
     let (recver, mut sender) = get_pipe_rw(&params.mpv_ipc).await?;
 
     let app_state = axum_app_state.app.state::<AppState>().clone();
@@ -277,6 +277,9 @@ pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> an
         return Err(anyhow::anyhow!("Emby Playback Info Error: {}", error_code));
     }
     // todo!("自动或手动选择媒体源");
+    tracing::debug!("Emby Playback Info: {:?}", playback_info);
+    let mut final_video_url = String::new();
+    let mut final_video_title = String::new();
     for media_sources in playback_info.media_sources {
         let mut video_url = format!("{}/emby{}", emby_server.base_url.as_ref().unwrap(), media_sources.direct_stream_url);
         if play_proxy_url.is_some() {
@@ -291,14 +294,18 @@ pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> an
 
         let media_source_item_id = if media_sources.item_id.is_some() {media_sources.item_id.unwrap()} else {params.item_id.clone()};
         for media_stream in media_sources.media_streams {
+            if media_stream.type_ == "Video" {
+                let video_title = format!("{} / {}", media_sources.name, media_stream.display_title);
+                let command = format!(r#"{{ "command": ["video-add", "{}", "auto", "{}"] }}{}"#, video_url, video_title, "\n");
+                sender.write_all(command.as_bytes()).await?;
+                tracing::debug!("MPV IPC Command video-add: {}", command);
+                final_video_url = video_url.clone();
+                final_video_title = video_title.clone();
+            }
             if media_stream.is_external.is_none() || media_stream.is_external == Some(false) {
                 continue;
             }
-            if media_stream.type_ == "Video" {
-                let video_title = format!("{} / {}", media_sources.name, media_stream.display_title);
-                let command = format!(r#"{{ "command": ["video-add", "{}", "auto", "{}"], "request_id": 10023 }}{}"#, video_url, video_title, "\n");
-                sender.write_all(command.as_bytes()).await?;
-            } else if media_stream.type_ == "Audio" {
+            if media_stream.type_ == "Audio" {
                 let mut audio_url = format!("{}/emby/Audio/{}/stream.{}?AudioStreamIndex={}&Static=true", emby_server.base_url.as_ref().unwrap(), media_source_item_id, media_stream.codec, media_stream.index);
                 if play_proxy_url.is_some() {
                     let uuid = uuid::Uuid::new_v4().to_string();
@@ -310,8 +317,9 @@ pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> an
                     audio_url = format!("http://127.0.0.1:{}/stream/audio/{}", &axum_app_state.port, &uuid);
                 }
                 let audio_title = format!("{} / {}", media_stream.display_title, media_stream.display_language.unwrap_or_default());
-                let command = format!(r#"{{ "command": ["audio-add", "{}", "auto", "{}"], "request_id": 10023 }}{}"#, audio_url, audio_title, "\n");
+                let command = format!(r#"{{ "command": ["audio-add", "{}", "auto", "{}"] }}{}"#, audio_url, audio_title, "\n");
                 sender.write_all(command.as_bytes()).await?;
+                tracing::debug!("MPV IPC Command audio-add: {}", command);
             } else if media_stream.type_ == "Subtitle" {
                 let mut subtitle_url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.base_url.as_ref().unwrap(), media_source_item_id, media_sources.id, media_stream.index, media_stream.codec);
                 if play_proxy_url.is_some() {
@@ -324,8 +332,9 @@ pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> an
                     subtitle_url = format!("http://127.0.0.1:{}/stream/subtitle/{}", &axum_app_state.port, &uuid);
                 }
                 let subtitle_title = format!("{} / {}", media_stream.display_title, media_stream.display_language.unwrap_or_default());
-                let command = format!(r#"{{ "command": ["sub-add", "{}", "auto", "{}"], "request_id": 10023 }}{}"#, subtitle_url, subtitle_title, "\n");
+                let command = format!(r#"{{ "command": ["sub-add", "{}", "auto", "{}"] }}{}"#, subtitle_url, subtitle_title, "\n");
                 sender.write_all(command.as_bytes()).await?;
+                tracing::debug!("MPV IPC Command sub-add: {}", command);
             }
         }
     }
@@ -367,13 +376,15 @@ pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> an
     //     }
     // });
 
-    Ok(())
+    let m3u8 = format!(r#"#EXTM3U
+#EXT-X-VERSION:3
+##EXTINF:-1,{}
+{}"#, final_video_title, final_video_url);
+    Ok(m3u8)
 }
 
+#[cfg(not(windows))]
 async fn get_pipe_rw(pipe_name: &str) -> anyhow::Result<(interprocess::local_socket::tokio::RecvHalf, interprocess::local_socket::tokio::SendHalf)> {
-    #[cfg(windows)]
-    use interprocess::os::windows::named_pipe::{pipe_mode, tokio::*};
-    #[cfg(not(windows))]
     use interprocess::local_socket::{tokio::{prelude::*, Stream}, GenericFilePath};
 
     let mut retry_count = 0;
@@ -381,9 +392,6 @@ async fn get_pipe_rw(pipe_name: &str) -> anyhow::Result<(interprocess::local_soc
         if retry_count >= 10 {
             break None;
         }
-        #[cfg(windows)]
-        let conn = DuplexPipeStream::<pipe_mode::Bytes>::connect_by_path(pipe_name).await;
-        #[cfg(not(windows))]
         let conn = {
             let name = pipe_name.to_fs_name::<GenericFilePath>();
             if name.is_err() {
@@ -392,6 +400,33 @@ async fn get_pipe_rw(pipe_name: &str) -> anyhow::Result<(interprocess::local_soc
             let name = name.unwrap();
             Stream::connect(name.clone()).await
         };
+        if conn.is_ok() {
+            tracing::debug!("MPV IPC connected");
+            break Some(conn.unwrap());
+        }
+        tracing::debug!("MPV IPC Failed to connect to mpv IPC, retrying...");
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        retry_count += 1;
+    };
+    let conn = match conn {
+        Some(conn) => conn,
+        None => {
+            return Err(anyhow::anyhow!("MPV IPC Failed to connect to mpv IPC"));
+        }
+    };
+    Ok(conn.split())
+}
+
+#[cfg(windows)]
+async fn get_pipe_rw(pipe_name: &str) -> anyhow::Result<(interprocess::os::windows::named_pipe::tokio::RecvPipeStream<interprocess::os::windows::named_pipe::pipe_mode::Bytes>, interprocess::os::windows::named_pipe::tokio::SendPipeStream<interprocess::os::windows::named_pipe::pipe_mode::Bytes>)> {
+    use interprocess::os::windows::named_pipe::{pipe_mode, tokio::*};
+
+    let mut retry_count = 0;
+    let conn = loop {
+        if retry_count >= 10 {
+            break None;
+        }
+        let conn = DuplexPipeStream::<pipe_mode::Bytes>::connect_by_path(pipe_name).await;
         if conn.is_ok() {
             tracing::debug!("MPV IPC connected");
             break Some(conn.unwrap());
