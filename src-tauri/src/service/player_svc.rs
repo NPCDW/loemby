@@ -96,47 +96,10 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
 }
 
 async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, body: PlayVideoParam, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
-    use tokio as tokio_root;
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    #[cfg(windows)]
-    use interprocess::os::windows::named_pipe::{pipe_mode, tokio::*};
-    #[cfg(not(windows))]
-    use interprocess::local_socket::{tokio::{prelude::*, Stream}, GenericFilePath};
-
-    let mut retry_count = 0;
-    let conn = loop {
-        if retry_count >= 10 {
-            break None;
-        }
-        #[cfg(windows)]
-        let conn = DuplexPipeStream::<pipe_mode::Bytes>::connect_by_path(pipe_name).await;
-        #[cfg(not(windows))]
-        let conn = {
-            let name = pipe_name.to_fs_name::<GenericFilePath>();
-            if name.is_err() {
-                return Err(anyhow::anyhow!("MPV IPC Failed to convert pipe name to fs name"));
-            }
-            let name = name.unwrap();
-            Stream::connect(name.clone()).await
-        };
-        if conn.is_ok() {
-            tracing::debug!("MPV IPC connected");
-            break Some(conn.unwrap());
-        }
-        tracing::debug!("MPV IPC Failed to connect to mpv IPC, retrying...");
-        tokio_root::time::sleep(std::time::Duration::from_millis(500)).await;
-        retry_count += 1;
-    };
-    let conn = match conn {
-        Some(conn) => conn,
-        None => {
-            return Err(anyhow::anyhow!("MPV IPC Failed to connect to mpv IPC"));
-        }
-    };
-    let (recver, mut sender) = conn.split();
+    let (recver, mut sender) = get_pipe_rw(pipe_name).await?;
     let mut recver = BufReader::new(recver);
 
-    let send_task = tokio_root::spawn(async move {
+    let send_task = tokio::spawn(async move {
         let command = if body.run_time_ticks == 0 {
             r#"{ "command": ["get_property", "percent-pos"], "request_id": 10022 }"#.to_string() + "\n"
         } else {
@@ -148,7 +111,7 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
                 tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
                 break;
             }
-            tokio_root::time::sleep(std::time::Duration::from_secs(5)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         }
     });
 
@@ -279,7 +242,6 @@ pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> an
     // todo!("自动或手动选择媒体源");
     tracing::debug!("Emby Playback Info: {:?}", playback_info);
     let mut final_video_url = String::new();
-    let mut final_video_title = String::new();
     for media_sources in playback_info.media_sources {
         let mut video_url = format!("{}/emby{}", emby_server.base_url.as_ref().unwrap(), media_sources.direct_stream_url);
         if play_proxy_url.is_some() {
@@ -300,7 +262,6 @@ pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> an
                 sender.write_all(command.as_bytes()).await?;
                 tracing::debug!("MPV IPC Command video-add: {}", command);
                 final_video_url = video_url.clone();
-                final_video_title = video_title.clone();
             }
             if media_stream.is_external.is_none() || media_stream.is_external == Some(false) {
                 continue;
@@ -375,6 +336,23 @@ pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> an
     //         save_playback_progress(&body, &app_handle, Decimal::from_u64(body.playback_position_ticks).unwrap(), 0);
     //     }
     // });
+
+    tokio::spawn(async move {
+        let mut recver = BufReader::new(recver);
+        loop {
+            let mut buffer = String::new();
+            let read = recver.read_line(&mut buffer).await;
+            if read.is_err() {
+                tracing::error!("MPV IPC Failed to read pipe {:?}", read);
+                continue;
+            }
+            if buffer.contains("end-file") {
+                tracing::debug!("MPV IPC 播放结束 {}", buffer.trim());
+                break;
+            }
+            tracing::debug!("MPV IPC Server answered: {}", buffer.trim());
+        }
+    });
 
     Ok(final_video_url)
 }
