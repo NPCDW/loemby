@@ -1,5 +1,4 @@
 import { EmbyServer } from '../store/db/embyServer';
-import { useGlobalConfig } from '../store/db/globalConfig';
 import { invoke } from '@tauri-apps/api/core';
 
 /**
@@ -257,18 +256,6 @@ function getSubtitleStreamUrl(embyServer: EmbyServer, item: EpisodeItem, mediaSo
 }
 
 /**
- * 组装图片地址
- * @returns
- */
-async function getImageUrl(embyServer: EmbyServer, item_id: string, imageType: string = 'Primary') {
-    const disabledImage = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
-    if (!item_id || disabledImage == 'on') {
-        return null;
-    }
-    return embyServer.base_url + `/emby/Items/${item_id}/Images/${imageType}`;
-}
-
-/**
  * 收藏
  * @returns
  */
@@ -327,7 +314,7 @@ async function hideFromResume(emby_server_id: string, item_id: string, hide: boo
 export default {
     getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, getContinuePlayList, nextUp,
     getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
-    getImageUrl, count, hideFromResume, getMediaLibraryChild, 
+    count, hideFromResume, getMediaLibraryChild, 
 }
 
 

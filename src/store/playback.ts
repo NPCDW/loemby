@@ -13,21 +13,21 @@ import { usePlayHistory } from './db/playHistory';
 export const usePlayback = defineStore('playback', () => {
     async function listen_playback_progress() {
         listen<PlaybackProgress>('playback_progress', (event) => {
-            console.log(`store playback_progress: playback ${event.payload.progress / 1000 / 10000} second from ${event.payload.server_id} ${event.payload.item_id} ${event.payload.media_source_id}`);
-            useEmbyServer().getEmbyServer(event.payload.server_id).then((embyServer) => {
+            console.log(`store playback_progress: playback ${event.payload.progress / 1000 / 10000} second from ${event.payload.emby_server_id} ${event.payload.item_id} ${event.payload.media_source_id}`);
+            useEmbyServer().getEmbyServer(event.payload.emby_server_id).then((embyServer) => {
                 if (!embyServer) {
-                    console.error(`Emby服务器Id: ${event.payload.server_id} 不存在`);
+                    console.error(`Emby服务器Id: ${event.payload.emby_server_id} 不存在`);
                     return
                 }
+                const progress = (() => {
+                    if (event.payload.run_time_ticks === 0) {
+                        return event.payload.progress > 80 ? 100_0000_0000 : 0
+                    } else {
+                        return event.payload.progress
+                    }
+                })()
                 if (event.payload.playback_status === 0) {
-                    const progress = (() => {
-                        if (event.payload.run_time_ticks === 0) {
-                            return event.payload.progress > 80 ? 100_0000_0000 : 0
-                        } else {
-                            return event.payload.progress
-                        }
-                    })()
-                    embyApi.playingStopped(embyServer, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, progress).then(() => {
+                    embyApi.playingStopped(embyServer.id!, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, progress).then(() => {
                         if (event.payload.run_time_ticks === 0) {
                             ElMessage.success('播放结束，时长信息不存在，无法标记确切进度')
                         } else {
@@ -68,14 +68,7 @@ export const usePlayback = defineStore('playback', () => {
                         let scrobbleTraktParam = JSON.parse(event.payload.scrobble_trakt_param)
                         scrobbleTraktParam.progress = progress
                         traktApi.stop(scrobbleTraktParam).then(response => {
-                            if (response.status_code == 401 || response.status_code == 429) {
-                                return
-                            }
-                            if (response.status_code != 201) {
-                                ElMessage.error('Trakt 同步失败：' + response.status_code + ' ' + response.status_text)
-                                return
-                            }
-                            const json: {progress: number, movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response.body);
+                            const json: {progress: number, movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response);
                             let message: VNode[] = []
                             if (json.movie) {
                                 message = [h('p', null, `${json.movie.title} (${json.movie.year})`)]
@@ -90,7 +83,7 @@ export const usePlayback = defineStore('playback', () => {
                         }).catch(e => ElMessage.error("Trakt 同步失败：" + e))
                     }
                 } else {
-                    embyApi.playingProgress(embyServer!, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, event.payload.progress)
+                    embyApi.playingProgress(embyServer!.id!, event.payload.item_id, event.payload.media_source_id, event.payload.play_session_id, progress)
                 }
             })
         });
@@ -100,7 +93,7 @@ export const usePlayback = defineStore('playback', () => {
 })
 
 export type PlaybackProgress = {
-    server_id: string;
+    emby_server_id: string;
     item_id: string;
     item_type: string;
     item_name: string;

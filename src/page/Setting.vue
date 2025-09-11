@@ -4,8 +4,17 @@
             <el-scrollbar style="height: calc(100vh - 120px);">
                 <el-form label-position="top">
                     <el-form-item label="应用更新">
-                        <span style="margin-right: 10px;">当前版本: {{ version }}</span>
+                        <span style="margin-right: 10px;">当前版本: {{ runtimeConfig?.version }}</span>
                         <el-button type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
+                    </el-form-item>
+                    <el-form-item label="日志等级">
+                        <span>{{ runtimeConfig?.app_config.log_level }}</span>
+                    </el-form-item>
+                    <el-form-item label="接受不安全证书">
+                        <span>{{ runtimeConfig?.app_config.danger_accept_invalid_certs }}</span>
+                    </el-form-item>
+                    <el-form-item label="Web端口">
+                        <span>{{ runtimeConfig?.axum_port }}</span>
                     </el-form-item>
                 </el-form>
             </el-scrollbar>
@@ -271,8 +280,8 @@ demuxer-readahead-secs=180" />
                     </el-form-item>
                     <el-form-item label="禁用图片缓存">
                         <el-switch 
-                            v-model="disabledCache"
-                            @change="configValueChange('disabledCache', disabledCache + '', getDisabledCache, '禁用图片缓存')"
+                            v-model="disabled_image_cache"
+                            @change="configValueChange('disabled_image_cache', disabled_image_cache + '', getDisabledImageCache, '禁用图片缓存')"
                             active-value="off" inactive-value="on"
                             style="margin-left: 10px;"
                             active-text="使用图片缓存" inactive-text="禁用图片缓存" />
@@ -396,9 +405,8 @@ import { listen } from '@tauri-apps/api/event';
 import traktApi from '../api/traktApi';
 import {useRuntimeConfig} from "../store/runtimeConfig.ts";
 import { EmbyIconLibrary, useEmbyIconLibrary } from '../store/db/embyIconLibrary.ts';
-import { useCache } from '../store/cache.ts';
 
-const version = useRuntimeConfig().runtimeConfig?.version
+const runtimeConfig = useRuntimeConfig().runtimeConfig;
 
 const proxyServer = ref<ProxyServer[]>([]);
 function listAllProxyServer() {
@@ -681,7 +689,7 @@ const global_browse_proxy_name = ref<string>('不使用代理');
 function getGlobalBrowseProxy() {
     useGlobalConfig().getGlobalConfigValue("global_browse_proxy_id").then(async value => {
         global_browse_proxy_id.value = value ? value : "no";
-        global_browse_proxy_name.value = await useProxyServer().getGlobalProxyServerName(value);
+        global_browse_proxy_name.value = await useProxyServer().getProxyServerName(value);
     }).catch(e => ElMessage.error('获取全局浏览代理失败' + e))
 }
 getGlobalBrowseProxy()
@@ -690,7 +698,7 @@ const global_play_proxy_name = ref<string>('不使用代理');
 function getGlobalPlayProxy() {
     useGlobalConfig().getGlobalConfigValue("global_play_proxy_id").then(async value => {
         global_play_proxy_id.value = value ? value : "no";
-        global_play_proxy_name.value = await useProxyServer().getGlobalProxyServerName(value);
+        global_play_proxy_name.value = await useProxyServer().getProxyServerName(value);
     }).catch(e => ElMessage.error('获取全局播放代理失败' + e))
 }
 getGlobalPlayProxy()
@@ -780,10 +788,10 @@ function getLogStoredDays() {
     }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
-const disabledCache = ref<string>('off');
-function getDisabledCache() {
-    useGlobalConfig().getGlobalConfigValue("disabledCache").then(value => {
-        disabledCache.value = value ? value : 'off';
+const disabled_image_cache = ref<string>('off');
+function getDisabledImageCache() {
+    useGlobalConfig().getGlobalConfigValue("disabled_image_cache").then(value => {
+        disabled_image_cache.value = value ? value : 'off';
     }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
@@ -832,22 +840,22 @@ function configValueChange(key: string, value: string, callback: () => void, key
 const cleanIconCacheLoading = ref(false)
 function cleanIconCache() {
     cleanIconCacheLoading.value = true
-    useCache().cleanIcons(true).finally(() => {
+    invokeApi.clean_icon_cache().finally(() => {
         cleanIconCacheLoading.value = false
     })
 }
 const cleanEmbyCacheLoading = ref(false)
 function cleanEmbyCache(server: EmbyServer) {
     cleanEmbyCacheLoading.value = true
-    useCache().cleanEmbyCache(true, server.id).finally(() => {
+    invokeApi.clean_emby_image_cache(server.id).finally(() => {
         cleanEmbyCacheLoading.value = false
     })
 }
 const cleanAllEmbyCacheLoading = ref(false)
 function cleanAllEmbyCache() {
     cleanAllEmbyCacheLoading.value = true
-    useCache().cleanEmbyCache(true).finally(() => {
-        cleanAllEmbyCacheLoading.value = false
+    invokeApi.clean_emby_image_cache().finally(() => {
+        cleanEmbyCacheLoading.value = false
     })
 }
 
@@ -876,7 +884,7 @@ function handlePaneChange() {
         listAllEmbyIconLibrary()
     } else if (activePane.value == 'CacheAndLog') {
         getLogStoredDays()
-        getDisabledCache()
+        getDisabledImageCache()
         getDisabledImage()
         getCoverImageStoredDays()
         getIconStoredDays()

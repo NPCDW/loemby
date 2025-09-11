@@ -1,30 +1,22 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import embyApi, { BaseItem, EpisodeItem, MediaLibraryItem } from '../api/embyApi';
+import { BaseItem, EpisodeItem, MediaLibraryItem } from '../api/embyApi';
 import { useGlobalConfig } from './db/globalConfig';
-import invokeApi from '../api/invokeApi';
-import { useProxyServer } from './db/proxyServer';
 import { EmbyServer } from './db/embyServer';
+import { useRuntimeConfig } from './runtimeConfig';
 
 export const useImage = defineStore('image', () => {
     const images = ref<{[key: string]: string}>({})
 
     async function loadImage(imageKey: string, embyServer: EmbyServer, itemId: string, imageType: string) {
-        if (images.value[imageKey]) {
-            return images.value[imageKey];
+        const disabledImage = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
+        if (disabledImage != 'on') {
+            return;
         }
-        const image_url = await embyApi.getImageUrl(embyServer, itemId, imageType);
-        if (image_url) {
-            const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledCache") || 'off'
-            images.value[imageKey] = invokeApi.loadImage({
-                image_url,
-                proxy_url: await useProxyServer().getBrowseProxyUrl(embyServer.browse_proxy_id),
-                user_agent: embyServer.user_agent!,
-                cache_prefix: ['image', embyServer.id!, imageType],
-                disabled_cache: disabledCache == 'on',
-            })
-            return images.value[imageKey];
-        }
+        let port = useRuntimeConfig().runtimeConfig!.axum_port;
+        let url = `http://127.0.0.1:${port}/image?param.type=Emby&param.emby_server_id=${embyServer.id!}&param.item_id=${itemId}&param.image_type=${imageType}`;
+        images.value[imageKey] = url
+        return images.value[imageKey];
     }
 
     async function loadLogo(embyServer: EmbyServer, item: EpisodeItem) {
@@ -70,14 +62,8 @@ export const useImage = defineStore('image', () => {
     }
 
     async function loadIcon(icon_url: string) {
-        const disabledCache = await useGlobalConfig().getGlobalConfigValue("disabledCache") || 'off'
-        return invokeApi.loadImage({
-            image_url: icon_url,
-            proxy_url: await useProxyServer().getAppProxyUrl(),
-            user_agent: 'loemby/' + import.meta.env.VITE_APP_VERSION,
-            cache_prefix: ['icon'],
-            disabled_cache: disabledCache == 'on',
-        })
+        let port = useRuntimeConfig().runtimeConfig!.axum_port;
+        return `http://127.0.0.1:${port}/image?param.type=Icon&param.image_url=${encodeURIComponent(icon_url)}`;
     }
 
     return { images, loadImage, loadIcon, loadLogo, loadCover }

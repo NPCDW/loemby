@@ -6,7 +6,7 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, service::player_svc};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::emby_http_svc};
 
 pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -25,7 +25,6 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
         .route("/stream/{types}/{id}", get(stream))
         .route("/image", get(image))
         .route("/trakt_auth", get(trakt_auth))
-        .route("/play_media", get(play_media))
         .with_state(axum_app_state);
 
     axum::serve(listener, router).await?;
@@ -44,21 +43,6 @@ pub struct PlayParam {
     pub audio_select: i32,
     pub subtitle_select: i32,
     pub version_select: i32,
-}
-
-async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(params): Query<PlayParam>) -> axum::response::Response {
-    tracing::debug!("play_media: {:?}", params);
-    let axum_app_state = axum_app_state.read().await.clone().unwrap();
-    let res = player_svc::play_media(&axum_app_state, &params).await;
-    if let Err(err) = res {
-        tracing::error!("play_media: {:?} {:?}", params, err);
-        return (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            axum::http::HeaderMap::new(),
-            axum::body::Body::new(format!("play_media: {:?} {:?}", params, err))
-        ).into_response();
-    }
-    axum::response::Redirect::permanent(&res.unwrap()).into_response()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -210,22 +194,65 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ImageParam {
+pub struct EmbyImageParam {
+    pub emby_server_id: String,
+    pub item_id: String,
+    pub image_type: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IconImageParam {
     pub image_url: String,
-    pub proxy_url: Option<String>,
-    pub user_agent: String,
-    pub cache_prefix: String,
-    pub disabled_cache: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum ImageParamType {
+    Emby(EmbyImageParam),
+    Icon(IconImageParam),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ImageParam {
+    pub param: ImageParamType,
 }
 
 async fn image(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<ImageParam>) -> axum::response::Response {
     tracing::debug!("image: {:?}", param);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
+    let state = axum_app_state.app.state::<AppState>().clone();
+    let disabled_image_cache = global_config_mapper::get_cache("disabled_image_cache", &state).await.unwrap_or("off".to_string()) == "on";
+    let user_agent;
+    let image_url;
+    let cache_prefix;
+    let proxy_url;
+    match &param.param {
+        ImageParamType::Emby(param) => {
+            let emby_server = match emby_server_mapper::get_cache(param.emby_server_id.clone(), &state).await {
+                Some(emby_server) => emby_server,
+                None => return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    axum::http::HeaderMap::new(),
+                    axum::body::Body::new(format!("emby_server not found"))
+                ).into_response(),
+            };
+            proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, &state).await;
+            user_agent = emby_server.user_agent.unwrap();
+            image_url = emby_http_svc::get_image_url(&emby_server.base_url.unwrap(), &param.item_id, &param.image_type);
+            cache_prefix = format!("image/{}/{}", param.emby_server_id, param.image_type);
+        },
+        ImageParamType::Icon(param) => {
+            let app_proxy_id = global_config_mapper::get_cache("app_proxy_id", &state).await;
+            proxy_url = proxy_server_mapper::get_app_proxy_url(app_proxy_id, &state).await;
+            user_agent = format!("loemby/{}", env!("CARGO_PKG_VERSION"));
+            image_url = param.image_url.clone();
+            cache_prefix = "icon".to_string();
+        },
+    }
 
-    let cache_digest = sha256::digest(&param.image_url);
-    let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.png", param.cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
-    let metadata_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.metadata", param.cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
-    if cache_file_path.exists() && !param.disabled_cache {
+    let cache_digest = sha256::digest(&image_url);
+    let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.png", cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+    let metadata_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.metadata", cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+    if cache_file_path.exists() && !disabled_image_cache {
         tracing::debug!("image: {:?} {:?} 从缓存读取", cache_file_path, param);
         let file = match tokio::fs::File::open(&cache_file_path).await {
             Ok(file) => file,
@@ -260,7 +287,7 @@ async fn image(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<
     }
 
     let app_state = axum_app_state.app.state::<AppState>().clone();
-    let client = match http_pool::get_image_http_client(param.proxy_url.clone(), &app_state).await {
+    let client = match http_pool::get_image_http_client(proxy_url.clone(), &app_state).await {
         Ok(client) => client,
         Err(err) => return (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -272,10 +299,10 @@ async fn image(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
-    req_headers.insert(axum::http::header::USER_AGENT, param.user_agent.clone().parse().unwrap());
-    req_headers.insert(axum::http::header::REFERER, param.image_url.clone().parse().unwrap());
+    req_headers.insert(axum::http::header::USER_AGENT, user_agent.clone().parse().unwrap());
+    req_headers.insert(axum::http::header::REFERER, image_url.clone().parse().unwrap());
     let res = client
-        .get(param.image_url.clone())
+        .get(image_url.clone())
         .headers(req_headers.clone())
         .send()
         .await;
@@ -291,7 +318,7 @@ async fn image(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<
     let status = response.status();
     let header = response.headers().clone();
     let mut stream = response.bytes_stream();
-    if param.disabled_cache {
+    if disabled_image_cache {
         return (
             status,
             header,

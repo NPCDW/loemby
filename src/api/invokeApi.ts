@@ -1,22 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
-import { useProxyServer } from '../store/db/proxyServer';
-import {RuntimeConfig, useRuntimeConfig} from "../store/runtimeConfig.ts";
+import {RuntimeConfig} from "../store/runtimeConfig.ts";
 
 async function getSysInfo(): Promise<string> {
     return invoke('get_sys_info');
 }
 
 interface PlaybackParam {
-    mpv_path: string,
-    mpv_startup_dir?: string,
-    mpv_args?: string,
-    mpv_cache_max_bytes?: number,
-    mpv_cache_back_max_bytes?: number,
     path: string,
-    proxy?: string,
     title: string,
-    user_agent: string,
-    server_id: string,
     item_id: string,
     item_type: string,
     item_name: string,
@@ -28,6 +19,7 @@ interface PlaybackParam {
     play_session_id: string,
     playback_position_ticks: number,
     run_time_ticks: number,
+    bitrate?: number,
     vid: number,
     aid: number,
     sid: number,
@@ -35,14 +27,6 @@ interface PlaybackParam {
     external_subtitle: string[],
     scrobble_trakt_param?: string,
     start_time: number,
-    playlist: {item_id: string, title: string}[],
-    direct_link: string,
-    select_policy: string,
-    video_select: number,
-    audio_select: number,
-    subtitle_select: number,
-    version_select: number,
-    mpv_ipc?: string,
 }
 
 async function playback(param: PlaybackParam): Promise<string> {
@@ -68,23 +52,6 @@ async function httpForward(param: HttpForwardParam): Promise<HttpForwardResult> 
     return invoke('http_forward', {param});
 }
 
-interface LoadImageParam {
-    image_url: string,
-    proxy_url?: string,
-    user_agent: string,
-    cache_prefix: string[],
-    disabled_cache: boolean,
-}
-
-function loadImage(param: LoadImageParam): string {
-    let port = useRuntimeConfig().runtimeConfig!.axum_port;
-    let url = `http://127.0.0.1:${port}/image?image_url=${encodeURIComponent(param.image_url)}&user_agent=${encodeURIComponent(param.user_agent)}&cache_prefix=${encodeURIComponent(param.cache_prefix.join("/"))}&disabled_cache=${param.disabled_cache}`;
-    if (param.proxy_url) {
-        url += `&proxy_url=${encodeURIComponent(param.proxy_url)}`
-    }
-    return url
-}
-
 async function go_trakt_auth(): Promise<void> {
     return invoke('go_trakt_auth');
 }
@@ -95,7 +62,6 @@ async function open_url(url: string): Promise<string> {
 
 async function updater(): Promise<boolean> {
     return invoke('updater', {body: {
-        proxy_url: await useProxyServer().getAppProxyUrl(),
         user_agent: 'loemby/' + import.meta.env.VITE_APP_VERSION,
     }});
 }
@@ -108,10 +74,14 @@ async function get_runtime_config(): Promise<RuntimeConfig> {
     return invoke('get_runtime_config', {});
 }
 
-async function clean_cache(dir: string, cutoff_day: number, force_clean: boolean = false): Promise<void> {
-    return invoke('clean_cache', {body: {dir, cutoff_day, force_clean}});
+async function clean_emby_image_cache(emby_server_id?: string): Promise<void> {
+    return invoke('clean_emby_image_cache', {body: {emby_server_id}});
+}
+
+async function clean_icon_cache(): Promise<void> {
+    return invoke('clean_icon_cache');
 }
 
 export default {
-    getSysInfo, playback, httpForward, loadImage, go_trakt_auth, open_url, updater, restartApp, get_runtime_config, clean_cache
+    getSysInfo, playback, httpForward, go_trakt_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache
 }

@@ -345,22 +345,6 @@ pub async fn emby_get_subtitle_stream_url(body: EmbyGetSubtitleStreamUrlParam, s
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct EmbyGetImageUrlParam {
-    pub emby_server_id: String,
-    pub item_id: String,
-    pub image_type: String,
-}
-
-#[tauri::command]
-pub async fn emby_get_image_url(body: EmbyGetImageUrlParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_image_url(body, &state).await;
-    if res.is_err() {
-        return Err(res.err().unwrap().to_string());
-    }
-    Ok(res.unwrap())
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct EmbyStarParam {
     pub emby_server_id: String,
     pub item_id: String,

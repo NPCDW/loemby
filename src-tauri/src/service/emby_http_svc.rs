@@ -4,7 +4,7 @@ use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 
 use crate::{
     config::{app_state::AppState, http_pool},
-    controller::emby_http_ctl::{EmbyAuthenticateByNameParam, EmbyCountParam, EmbyEpisodesParam, EmbyGetAudioStreamUrlParam, EmbyGetContinuePlayListParam, EmbyGetDirectStreamUrlParam, EmbyGetFavoriteListParam, EmbyGetImageUrlParam, EmbyGetMediaLibraryChildLatestParam, EmbyGetMediaLibraryChildParam, EmbyGetMediaLibraryListParam, EmbyGetServerInfoParam, EmbyGetSubtitleStreamUrlParam, EmbyHideFromResumeParam, EmbyItemsParam, EmbyLogoutParam, EmbyNextUpParam, EmbyPlaybackInfoParam, EmbyPlayedParam, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EmbySearchParam, EmbySeasonsParam, EmbyStarParam, EmbyUnplayedParam, EmbyUnstarParam},
+    controller::emby_http_ctl::{EmbyAuthenticateByNameParam, EmbyCountParam, EmbyEpisodesParam, EmbyGetAudioStreamUrlParam, EmbyGetContinuePlayListParam, EmbyGetDirectStreamUrlParam, EmbyGetFavoriteListParam, EmbyGetMediaLibraryChildLatestParam, EmbyGetMediaLibraryChildParam, EmbyGetMediaLibraryListParam, EmbyGetServerInfoParam, EmbyGetSubtitleStreamUrlParam, EmbyHideFromResumeParam, EmbyItemsParam, EmbyLogoutParam, EmbyNextUpParam, EmbyPlaybackInfoParam, EmbyPlayedParam, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EmbySearchParam, EmbySeasonsParam, EmbyStarParam, EmbyUnplayedParam, EmbyUnstarParam},
     mapper::{emby_server_mapper, proxy_server_mapper}
 };
 
@@ -673,11 +673,6 @@ pub async fn get_subtitle_stream_url(param: EmbyGetSubtitleStreamUrlParam, state
     Ok(url)
 }
 
-pub async fn get_image_url(param: EmbyGetImageUrlParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
-        Some(emby_server) => emby_server,
-        None => return Err(anyhow::anyhow!("emby_server not found")),
-    };
-    let url = format!("{}/emby/Items/{}/Images/{}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.image_type);
-    Ok(url)
+pub fn get_image_url(base_url: &str, item_id: &str, image_type: &str) -> String {
+    format!("{}/emby/Items/{}/Images/{}", base_url, item_id, image_type)
 }

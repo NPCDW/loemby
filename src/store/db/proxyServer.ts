@@ -1,25 +1,24 @@
 import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
-import { useGlobalConfig } from './globalConfig';
 import { ref } from 'vue';
 
 export const useProxyServer = defineStore('proxyServer', () => {
-    const cacheProxyServer = ref<{[key: string]: ProxyServer}>({});
+    const cacheProxyServer = ref<{[key: string]: string}>({});
 
     async function refreshCache(id: string) {
         let server = await getProxyServer(id)
         if (!server) {
-            cacheProxyServer.value[id] = {};
+            cacheProxyServer.value[id] = '';
             return;
         }
-        cacheProxyServer.value[id] = server;
+        cacheProxyServer.value[id] = server.name!;
     }
 
     async function initCache() {
         let proxyServer = await listAllProxyServer();
         cacheProxyServer.value = {};
         for (let i = 0; i < proxyServer.length; i++) {
-            cacheProxyServer.value[proxyServer[i].id!] = proxyServer[i];
+            cacheProxyServer.value[proxyServer[i].id!] = proxyServer[i].name!;
         }
     }
 
@@ -31,112 +30,36 @@ export const useProxyServer = defineStore('proxyServer', () => {
         return invoke('list_all_proxy_server');
     }
 
-    async function addProxyServer(proxyServer: ProxyServer): Promise<number> {
-        return invoke('add_proxy_server', {body: proxyServer});
+    async function addProxyServer(proxyServer: ProxyServer): Promise<unknown> {
+        return invoke('add_proxy_server', {body: proxyServer}).then(async response => {
+            await refreshCache(proxyServer.id!)
+            return response
+        })
     }
 
-    async function updateProxyServer(proxyServer: ProxyServer): Promise<number> {
-        return invoke('update_proxy_server', {body: proxyServer});
+    async function updateProxyServer(proxyServer: ProxyServer): Promise<unknown> {
+        return invoke('update_proxy_server', {body: proxyServer}).then(async response => {
+            await refreshCache(proxyServer.id!)
+            return response
+        })
     }
 
-    async function delProxyServer(id: string): Promise<number> {
-        return invoke('delete_proxy_server', {id: id});
+    async function delProxyServer(id: string): Promise<unknown> {
+        return invoke('delete_proxy_server', {id: id}).then(async response => {
+            await refreshCache(id)
+            return response
+        })
     }
 
-    async function getGlobalProxyServerName(id: string) {
+    async function getProxyServerName(id: string) {
         if (!id || id == 'no') {
             return '不使用代理'
         }
-        if (!cacheProxyServer.value[id]) {
-            await refreshCache(id);
-        }
-        let proxyServer = cacheProxyServer.value[id]
-        return proxyServer.name!
+        let proxyServerName = cacheProxyServer.value[id]
+        return proxyServerName || "不使用代理"
     }
 
-    async function getBrowseProxyUrl(id?: string) {
-        if (!id || id == 'follow') {
-            return useGlobalConfig().getGlobalConfigValue('global_browse_proxy_id').then(value => {
-                if (value) {
-                    return getProxyUrl(value)
-                }
-                return
-            })
-        }
-        return getProxyUrl(id)
-    }
-
-    async function getPlayProxyUrl(id?: string) {
-        if (!id || id == 'follow') {
-            return useGlobalConfig().getGlobalConfigValue('global_play_proxy_id').then(value => {
-                if (value) {
-                    return getProxyUrl(value)
-                }
-                return
-            })
-        }
-        return getProxyUrl(id)
-    }
-
-    async function getTraktProxyUrl() {
-        return useGlobalConfig().getGlobalConfigValue('trakt_proxy_id').then(value => {
-            if (!value || value == 'followBrowse') {
-                return useGlobalConfig().getGlobalConfigValue('global_browse_proxy_id').then(value => {
-                    if (value) {
-                        return getProxyUrl(value)
-                    }
-                    return
-                })
-            }
-            if (value == 'followPlay') {
-                return useGlobalConfig().getGlobalConfigValue('global_play_proxy_id').then(value => {
-                    if (value) {
-                        return getProxyUrl(value)
-                    }
-                    return
-                })
-            }
-            return getProxyUrl(value)
-        })
-    }
-
-    async function getAppProxyUrl() {
-        return useGlobalConfig().getGlobalConfigValue('app_proxy_id').then(value => {
-            if (!value || value == 'followBrowse') {
-                return useGlobalConfig().getGlobalConfigValue('global_browse_proxy_id').then(value => {
-                    if (value) {
-                        return getProxyUrl(value)
-                    }
-                    return
-                })
-            }
-            if (value == 'followPlay') {
-                return useGlobalConfig().getGlobalConfigValue('global_play_proxy_id').then(value => {
-                    if (value) {
-                        return getProxyUrl(value)
-                    }
-                    return
-                })
-            }
-            return getProxyUrl(value)
-        })
-    }
-
-    async function getProxyUrl(id: string) {
-        if (id == 'no') {
-            return
-        }
-        if (!cacheProxyServer.value[id]) {
-            await refreshCache(id);
-        }
-        let proxyServer = cacheProxyServer.value[id]
-        let username = proxyServer.username ? proxyServer.username : ""
-        let password = proxyServer.password ? ":" + proxyServer.password : ""
-        let auth = username || password ? username + password + "@" : ""
-        return proxyServer.proxy_type + "://" + auth + proxyServer.addr
-    }
-
-    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, getBrowseProxyUrl, getPlayProxyUrl, getTraktProxyUrl, getProxyUrl, getAppProxyUrl, initCache, refreshCache, getGlobalProxyServerName }
+    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, initCache, refreshCache, getProxyServerName }
 })
 
 export interface ProxyServer {

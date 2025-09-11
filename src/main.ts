@@ -11,10 +11,7 @@ import 'virtual:svg-icons-register'
 import VueLazyLoad from 'vue3-lazyload'
 import updaer_util from './util/updater_util'
 import {useRuntimeConfig} from "./store/runtimeConfig.ts";
-import { useGlobalConfig } from './store/db/globalConfig.ts'
-import { useProxyServer } from './store/db/proxyServer.ts'
 import { useTauriNotify } from './store/tauriNotify.ts'
-import { useCache } from './store/cache.ts'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -24,8 +21,6 @@ app.use(router)
 app.component('svg-icon', svgIcon)
 app.use(VueLazyLoad, {})
 
-useGlobalConfig().initCache()
-useProxyServer().initCache()
 await useRuntimeConfig().getRuntimeConfig()
 
 app.mount('#app')
@@ -33,7 +28,3 @@ app.mount('#app')
 usePlayback().listen_playback_progress()
 useTauriNotify().listen_tauri_notify()
 updaer_util.getUpdate()
-
-useCache().cleanLogs()
-useCache().cleanIconsTime()
-useCache().cleanEmbyCacheTime()

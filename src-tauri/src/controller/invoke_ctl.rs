@@ -22,16 +22,8 @@ pub struct PlayVideoPlaylistParam {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlayVideoParam {
-    pub mpv_path: String,
-    pub mpv_startup_dir: Option<String>,
-    pub mpv_args: Option<String>,
-    pub mpv_cache_max_bytes: Option<u32>,
-    pub mpv_cache_back_max_bytes: Option<u32>,
     pub path: String,
-    pub proxy: Option<String>,
     pub title: String,
-    pub user_agent: String,
-    pub server_id: String,
     pub item_id: String,
     pub item_type: String,
     pub item_name: String,
@@ -40,9 +32,10 @@ pub struct PlayVideoParam {
     pub series_id: Option<String>,
     pub series_name: Option<String>,
     pub media_source_id: String,
+    pub play_session_id: String,
     pub playback_position_ticks: u64,
     pub run_time_ticks: u64,
-    pub play_session_id: String,
+    pub bitrate: Option<u64>,
     pub vid: i32,
     pub aid: i32,
     pub sid: i32,
@@ -50,19 +43,11 @@ pub struct PlayVideoParam {
     pub external_subtitle: Vec<String>,
     pub scrobble_trakt_param: Option<String>,
     pub start_time: u64,
-    pub playlist: Vec<PlayVideoPlaylistParam>,
-    pub direct_link: String,
-    pub select_policy: String,
-    pub video_select: i32,
-    pub audio_select: i32,
-    pub subtitle_select: i32,
-    pub version_select: i32,
-    pub mpv_ipc: Option<String>,
 }
 
 #[tauri::command]
 pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
-    player_svc::play_video(body, state, app_handle).await
+    player_svc::play_video(body, &state, app_handle).await
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -159,15 +144,22 @@ pub async fn get_runtime_config(state: tauri::State<'_, AppState>) -> Result<run
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CleanCacheParam {
-    pub dir: String,
-    pub cutoff_day: u32,
-    pub force_clean: bool,
+pub struct CleanEmbyCacheParam {
+    pub emby_server_id: Option<String>,
 }
 
 #[tauri::command]
-pub async fn clean_cache(body: CleanCacheParam, app_handle: tauri::AppHandle) -> Result<(), String> {
-    let res = cache_svc::clean(body, app_handle).await;
+pub async fn clean_emby_image_cache(body: CleanEmbyCacheParam, app_handle: tauri::AppHandle) -> Result<(), String> {
+    let res = cache_svc::clean_emby_image(body.emby_server_id, true, &app_handle).await;
+    if let Err(err) = res {
+        return Err(format!("清理失败: {} ", err.to_string()));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn clean_icon_cache(app_handle: tauri::AppHandle) -> Result<(), String> {
+    let res = cache_svc::clean_icon(true, &app_handle).await;
     if let Err(err) = res {
         return Err(format!("清理失败: {} ", err.to_string()));
     }

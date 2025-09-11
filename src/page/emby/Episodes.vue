@@ -186,7 +186,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElNotification } from 'element-plus';
 import { PlaybackProgress } from '../../store/playback';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import { useProxyServer } from '../../store/db/proxyServer';
 import dayjs from 'dayjs'
 import { useGlobalConfig } from '../../store/db/globalConfig';
 import { useEventBus } from '../../store/eventBus';
@@ -222,15 +221,6 @@ const audioSelect = ref(-1)
 const subtitleSelect = ref(-1)
 const displayTimeLength = ref('')
 const runTimeTicks = ref(0)
-const mpv_path = ref('')
-const mpv_startup_dir = ref('')
-const mpv_args = ref('')
-const mpv_cache_seconds = ref(0)
-const mpv_cache_min_bytes = ref(0)
-const mpv_cache_max_bytes = ref(0)
-const mpv_cache_back_seconds = ref(0)
-const mpv_cache_back_min_bytes = ref(0)
-const mpv_cache_back_max_bytes = ref(0)
 
 const autoplay = ref(true)
 const rememberSelect = ref(route.query.rememberSelect === 'true' ? true : false)
@@ -254,42 +244,6 @@ watchEffect(async () => {
         }
     })
 })
-
-useGlobalConfig().getGlobalConfigValue("mpv_path").then(value => {
-    mpv_path.value = value;
-}).catch(e => ElMessage.error('获取MPV路径失败' + e))
-
-useGlobalConfig().getGlobalConfigValue("mpv_startup_dir").then(value => {
-    mpv_startup_dir.value = value;
-}).catch(e => ElMessage.error('获取MPV启动目录失败' + e))
-
-useGlobalConfig().getGlobalConfigValue("mpv_args").then(value => {
-    mpv_args.value = value;
-}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
-
-useGlobalConfig().getGlobalConfigValue("mpv_cache_seconds").then(value => {
-    mpv_cache_seconds.value = value ? Number(value) : 0;
-}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
-
-useGlobalConfig().getGlobalConfigValue("mpv_cache_min_bytes").then(value => {
-    mpv_cache_min_bytes.value = value ? Number(value) : 0;
-}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
-
-useGlobalConfig().getGlobalConfigValue("mpv_cache_max_bytes").then(value => {
-    mpv_cache_max_bytes.value = value ? Number(value) : 0;
-}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
-
-useGlobalConfig().getGlobalConfigValue("mpv_cache_back_seconds").then(value => {
-    mpv_cache_back_seconds.value = value ? Number(value) : 0;
-}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
-
-useGlobalConfig().getGlobalConfigValue("mpv_cache_back_min_bytes").then(value => {
-    mpv_cache_back_min_bytes.value = value ? Number(value) : 0;
-}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
-
-useGlobalConfig().getGlobalConfigValue("mpv_cache_back_max_bytes").then(value => {
-    mpv_cache_back_max_bytes.value = value ? Number(value) : 0;
-}).catch(e => ElMessage.error('获取MPV启动参数失败' + e))
 
 const currentEpisodes = ref<EpisodeItem>()
 function updateCurrentEpisodes(silent: boolean = false) {
@@ -609,10 +563,6 @@ function getPlaybackInfo(item_id: string) {
 
 // const playingProgressTask = ref<NodeJS.Timeout>()
 function playing(item_id: string, playbackPositionTicks: number, directLink: boolean) {
-    if (!mpv_path) {
-        ElMessage.error('未设置mpv路径')
-        return
-    }
     let nextUpEpisodeAwait = undefined
     if (currentEpisodes.value?.Type !== 'Movie') {
         nextUpEpisodeAwait = nextUp(1)
@@ -643,8 +593,6 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
         let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
                 : 'S' + (currentEpisodes.value?.ParentIndexNumber || -1) + 'E' + (currentEpisodes.value?.IndexNumber || -1) + '. ' + currentEpisodes.value?.Name
         const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
-        const cache_max_bytes = Math.max(Math.min(Math.round(mpv_cache_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_max_bytes.value * 1024 * 1024), mpv_cache_min_bytes.value * 1024 * 1024)
-        const cache_back_max_bytes = Math.max(Math.min(Math.round(mpv_cache_back_seconds.value * currentMediaSources.Bitrate / 8), mpv_cache_back_max_bytes.value * 1024 * 1024), mpv_cache_back_min_bytes.value * 1024 * 1024)
         addPlayHistory(episodesName)
         if (nextUpEpisodeAwait) { await Promise.resolve(nextUpEpisodeAwait) }
         let playlist = []
@@ -655,16 +603,8 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             })
         }
         return invokeApi.playback({
-            mpv_path: mpv_path.value,
-            mpv_startup_dir: mpv_startup_dir.value,
-            mpv_args: mpv_args.value,
-            mpv_cache_max_bytes: cache_max_bytes,
-            mpv_cache_back_max_bytes: cache_back_max_bytes,
             path: playUrl,
-            proxy: await useProxyServer().getPlayProxyUrl(embyServer.value.play_proxy_id),
             title: episodesName + " | " + (currentEpisodes.value?.SeriesName || "🎬电影") + " | " + embyServer.value.server_name,
-            user_agent: embyServer.value!.user_agent!,
-            server_id: embyServer.value!.id!,
             item_id: item_id,
             item_type: currentEpisodes.value!.Type || 'Movie',
             item_name: episodesName,
@@ -676,6 +616,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             play_session_id: playbackInfo.PlaySessionId,
             playback_position_ticks: playbackPositionTicks,
             run_time_ticks: runTimeTicks.value ? runTimeTicks.value : 0,
+            bitrate: currentMediaSources.Bitrate,
             vid: videoSelect.value,
             aid: audioSelect.value,
             sid: subtitleSelect.value,
@@ -683,14 +624,6 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             external_subtitle: externalSubtitle,
             scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
             start_time: new Date().getTime(),
-            playlist,
-            direct_link: useDirectLink.value.toString(),
-            select_policy: rememberSelect.value.toString(),
-            video_select: videoSelect.value,
-            audio_select: audioSelect.value,
-            subtitle_select: subtitleSelect.value,
-            version_select: versionSelect.value,
-            mpv_ipc: <string | undefined>route.query.mpv_ipc,
         }).then(async () => {
             embyApi.playing(embyServer.value!.id!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
                 ElMessage.success('开始播放，请稍候')
@@ -716,7 +649,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
 }
 
 function playingStopped(payload: PlaybackProgress) {
-    if (embyServer.value.id === payload.server_id && payload.item_id === currentEpisodes.value?.Id) {
+    if (embyServer.value.id === payload.emby_server_id && payload.item_id === currentEpisodes.value?.Id) {
         updateCurrentEpisodes(true).then(async () => {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
                 nextUpCurrentPage.value = 1
