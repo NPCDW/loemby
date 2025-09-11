@@ -376,11 +376,7 @@ pub async fn play_media(axum_app_state: &AxumAppState, params: &PlayParam) -> an
     //     }
     // });
 
-    let m3u8 = format!(r#"#EXTM3U
-#EXT-X-VERSION:3
-##EXTINF:-1,{}
-{}"#, final_video_title, final_video_url);
-    Ok(m3u8)
+    Ok(final_video_url)
 }
 
 #[cfg(not(windows))]

@@ -58,8 +58,7 @@ async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>
             axum::body::Body::new(format!("play_media: {:?} {:?}", params, err))
         ).into_response();
     }
-    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-    axum::response::Html(res.unwrap()).into_response()
+    axum::response::Redirect::permanent(&res.unwrap()).into_response()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
