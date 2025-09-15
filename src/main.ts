@@ -5,7 +5,6 @@ import './style.css'
 import App from './App.vue'
 import router from './router/router'
 import { createPinia } from 'pinia'
-import { usePlayback } from './store/playback'
 import svgIcon from "./components/SvgIcon/index.vue";
 import 'virtual:svg-icons-register'
 import VueLazyLoad from 'vue3-lazyload'
@@ -25,6 +24,5 @@ await useRuntimeConfig().getRuntimeConfig()
 
 app.mount('#app')
 
-usePlayback().listen_playback_progress()
 useTauriNotify().listen_tauri_notify()
 updaer_util.getUpdate()
