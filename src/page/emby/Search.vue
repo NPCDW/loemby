@@ -15,7 +15,7 @@
     
         <el-scrollbar style="height: calc(100vh - 82px); padding: 0 20px;">
             <div v-if="emby_search_result.success" style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                <ItemCard v-for="rootItem in emby_search_result.result?.Items" :key="rootItem.Id" :item="rootItem" :embyServer="embyServer" />
+                <ItemCard v-for="rootItem in emby_search_result.result?.Items" :key="rootItem.Id" :item="rootItem" :embyServerId="embyServerId" />
             </div>
             <div v-else style="text-align: center;">
                 <el-text type="danger" style="word-break: break-all;display: block;">{{ emby_search_result.message }}</el-text>
@@ -29,29 +29,14 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { ref } from 'vue';
 import { useRoute } from 'vue-router';
 import embyApi, { EmbyPageList, SearchItem } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
-import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import { ElMessage } from 'element-plus';
-import { useEventBus } from '../../store/eventBus';
 
 const route = useRoute()
 
-const embyServer = ref<EmbyServer>({})
-async function getEmbyServer() {
-    return useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
-        embyServer.value = value!;
-    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
-}
-function embyServerChanged(payload?: {event?: string, id?: string}) {
-    if (payload?.id === route.params.embyId) {
-        getEmbyServer()
-    }
-}
-onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
-onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
+const embyServerId = <string>route.params.embyId
 
 const search_str = ref(<string>route.query.search)
 // const search_type = ref<string>('keyword')
@@ -64,14 +49,14 @@ const search = async () => {
     }
     search_loading.value = true
     emby_search_result.value = {success: true}
-    return embyApi.search(embyServer.value.id!, search_str.value, item_types.value, 0, 30).then(async response => {
+    return embyApi.search(embyServerId, search_str.value, item_types.value, 0, 30).then(async response => {
         let json: EmbyPageList<SearchItem> = JSON.parse(response);
         emby_search_result.value = {success: true, result: json}
     }).catch(e => {
         emby_search_result.value = {success: false, message: e}
     }).finally(() => search_loading.value = false)
 }
-getEmbyServer().then(() => search())
+search()
 </script>
 
 <style scoped>

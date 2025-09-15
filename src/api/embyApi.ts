@@ -1,4 +1,3 @@
-import { EmbyServer } from '../store/db/embyServer';
 import { invoke } from '@tauri-apps/api/core';
 
 /**
@@ -179,80 +178,36 @@ async function playbackInfo(emby_server_id: string, item_id: string): Promise<st
 }
 
 /**
- * 开始播放
- * @param positionTicks 播放位置 / 一千万 换算成秒 
- * @returns 204
- */
-async function playing(emby_server_id: string, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number): Promise<string> {
-    return invoke('emby_playing', {body: {
-        emby_server_id,
-        item_id,
-        media_source_id,
-        play_session_id,
-        positionTicks
-    }});
-}
-
-/**
- * 播放进度（保活），只要还在播放就需要定时调用播放进度，长时间没有播放进度，服务器会认为已经停止播放
- * @param positionTicks 播放位置 / 一千万 换算成秒 
- * @returns 204
- */
-async function playingProgress(emby_server_id: string, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number): Promise<string> {
-    return invoke('emby_playing_progress', {body: {
-        emby_server_id,
-        item_id,
-        media_source_id,
-        play_session_id,
-        positionTicks
-    }});
-}
-
-/**
- * 结束播放
- * @returns 204
- */
-async function playingStopped(emby_server_id: string, item_id: string, media_source_id: string, play_session_id: string, positionTicks: number): Promise<string> {
-    return invoke('emby_playing_stopped', {body: {
-        emby_server_id,
-        item_id,
-        media_source_id,
-        play_session_id,
-        positionTicks
-    }});
-}
-
-/**
  * 组装直连视频流地址
  * @returns
  */
-function getDirectStreamUrl(embyServer: EmbyServer, directStreamUrl: string) {
+function getDirectStreamUrl(directStreamUrl: string) {
     if (!directStreamUrl) {
         return null;
     }
-    return embyServer.base_url + "/emby" + directStreamUrl;
+    return "/emby" + directStreamUrl;
 }
 
 /**
  * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
  * @returns
  */
-function getAudioStreamUrl(embyServer: EmbyServer, item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
+function getAudioStreamUrl(item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
-    return embyServer.base_url + `/emby/Audio/${mediaSource.ItemId || item.Id}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
+    return `/emby/Audio/${mediaSource.ItemId || item.Id}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
 }
 
 /**
  * 组装字幕流地址，请确保字幕流支持外部流
  * @returns
  */
-function getSubtitleStreamUrl(embyServer: EmbyServer, item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
+function getSubtitleStreamUrl(item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
     if (!mediaStreams.IsExternal) {
         return null;
     }
-    return embyServer.base_url + `/emby/Videos/${mediaSource.ItemId || item.Id}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
+    return `/emby/Videos/${mediaSource.ItemId || item.Id}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
 }
 
 /**
@@ -312,7 +267,7 @@ async function hideFromResume(emby_server_id: string, item_id: string, hide: boo
 }
 
 export default {
-    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, playing, playingProgress, playingStopped, getContinuePlayList, nextUp,
+    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, getContinuePlayList, nextUp,
     getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
     count, hideFromResume, getMediaLibraryChild, 
 }

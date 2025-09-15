@@ -75,7 +75,7 @@
                         </div>
                     </template>
                     <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <ItemCard v-for="favoriteItem in favoriteList" :key="favoriteItem.Id" :item="favoriteItem" :embyServer="embyServer" :show-series-name="true" />
+                        <ItemCard v-for="favoriteItem in favoriteList" :key="favoriteItem.Id" :item="favoriteItem" :embyServerId="embyServerId" :show-series-name="true" />
                     </div>
                 </el-skeleton>
                 <el-pagination
@@ -108,39 +108,25 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { ref, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, EpisodeItem, SearchItem, MediaLibraryCount } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
 import ItemCard from '../../components/ItemCard.vue';
-import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import { useEventBus } from '../../store/eventBus';
 
 const router = useRouter()
 const route = useRoute()
 
-const embyServer = ref<EmbyServer>({})
-async function getEmbyServer(embyId: string) {
-    return useEmbyServer().getEmbyServer(embyId).then(value => {
-        embyServer.value = value!;
-    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
-}
-function embyServerChanged(payload?: {event?: string, id?: string}) {
-    if (payload?.id === route.params.embyId) {
-        getEmbyServer(payload?.id)
-    }
-}
-onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
-onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
+const embyServerId = ref(<string>route.params.embyId)
 
 watchEffect(async () => {
-    await getEmbyServer(<string>route.params.embyId)
+    embyServerId.value = <string>route.params.embyId
     handlePaneChange()
 })
 
 const search_str = ref('')
 const search = async () => {
-    router.push('/nav/emby/' + embyServer.value.id + '/search?search=' + encodeURIComponent(search_str.value))
+    router.push('/nav/emby/' + embyServerId.value + '/search?search=' + encodeURIComponent(search_str.value))
 }
 
 const episodesLoading = ref(false)
@@ -158,7 +144,7 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
     episodesLoading.value = true
     episodesCurrentPage.value = currentPage
     episodesPageSize.value = pageSize
-    return embyApi.getContinuePlayList(embyServer.value.id!, (currentPage - 1) * pageSize, pageSize).then(async response => {
+    return embyApi.getContinuePlayList(embyServerId.value!, (currentPage - 1) * pageSize, pageSize).then(async response => {
         let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
@@ -166,19 +152,19 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
 }
 
 function gotoEpisodes(episodesId: string) {
-    router.push('/nav/emby/' + embyServer.value.id + '/episodes/' + episodesId)
+    router.push('/nav/emby/' + embyServerId.value + '/episodes/' + episodesId)
 }
 function gotoSeries(seriesId: string) {
-    router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
+    router.push('/nav/emby/' + embyServerId.value + '/series/' + seriesId)
 }
 function gotoMediaLibrary() {
-    router.push('/nav/emby/' + embyServer.value.id + '/mediaLibrary')
+    router.push('/nav/emby/' + embyServerId.value + '/mediaLibrary')
 }
 
 const deleteContinuePlayLoading = ref<{[key: string]: boolean}>({})
 function deleteContinuePlay(episodesId: string, hide: boolean) {
     deleteContinuePlayLoading.value[episodesId] = true
-    return embyApi.hideFromResume(embyServer.value.id!, episodesId, hide).then(async () => {
+    return embyApi.hideFromResume(embyServerId.value, episodesId, hide).then(async () => {
         if (hide) {
             deletedContinuePlayList.value.push(episodesId)
         } else {
@@ -201,7 +187,7 @@ function getFavoriteList(currentPage: number, pageSize: number) {
     favoriteLoading.value = true
     favoriteCurrentPage.value = currentPage
     favoritePageSize.value = pageSize
-    return embyApi.getFavoriteList(embyServer.value.id!, (currentPage - 1) * pageSize, pageSize).then(async response => {
+    return embyApi.getFavoriteList(embyServerId.value!, (currentPage - 1) * pageSize, pageSize).then(async response => {
         let json: EmbyPageList<SearchItem> = JSON.parse(response);
         favoriteList.value = json.Items
         favoriteTotal.value = json.TotalRecordCount
@@ -212,7 +198,7 @@ const mediaLibraryCountLoading = ref(false)
 const mediaLibraryCount = ref<MediaLibraryCount>()
 function getMediaLibraryCount() {
     mediaLibraryCountLoading.value = true
-    return embyApi.count(embyServer.value.id!).then(async response => {
+    return embyApi.count(embyServerId.value!).then(async response => {
         let json: MediaLibraryCount = JSON.parse(response);
         mediaLibraryCount.value = json
     }).catch(e => ElMessage.error(e)).finally(() => mediaLibraryCountLoading.value = false)

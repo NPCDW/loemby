@@ -22,7 +22,7 @@
                     <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
                         <div v-for="item in mediaLibraryList" :key="item.Id" @click="gotoMediaLibraryItems(item.Id)" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
                             <div style="min-width: 267px; min-height: 150px;" class="loe-cover-img">
-                                <img v-lazy="useImage().images[embyServer.id + ':cover:' + item.Id]" style="max-width: 267px; max-height: 150px; cursor: pointer;" />
+                                <img v-lazy="useImage().images[embyServerId + ':cover:' + item.Id]" style="max-width: 267px; max-height: 150px; cursor: pointer;" />
                             </div>
                             <span>{{ item.Name }}</span>
                         </div>
@@ -52,7 +52,7 @@
                                     @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
                                     style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
                                     <div style="min-width: 115px; min-height: 160px;" class="loe-cover-img">
-                                        <img v-lazy="useImage().images[embyServer.id + ':cover:' + item.Id]" style="max-height: 160px; cursor: pointer;" />
+                                        <img v-lazy="useImage().images[embyServerId + ':cover:' + item.Id]" style="max-height: 160px; cursor: pointer;" />
                                     </div>
                                     <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
                                 </div>
@@ -66,55 +66,41 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, SearchItem, MediaLibraryItem } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
-import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import { useEventBus } from '../../store/eventBus';
 import { useImage } from '../../store/image';
 
 const router = useRouter()
 const route = useRoute()
 
-const embyServer = ref<EmbyServer>({})
-async function getEmbyServer(embyId: string) {
-    return useEmbyServer().getEmbyServer(embyId).then(value => {
-        embyServer.value = value!;
-    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
-}
-function embyServerChanged(payload?: {event?: string, id?: string}) {
-    if (payload?.id === route.params.embyId) {
-        getEmbyServer(payload?.id)
-    }
-}
-onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
-onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
+const embyServerId = <string>route.params.embyId
 
 const search_str = ref('')
 const search = async () => {
-    router.push('/nav/emby/' + embyServer.value.id + '/search?search=' + encodeURIComponent(search_str.value))
+    router.push('/nav/emby/' + embyServerId + '/search?search=' + encodeURIComponent(search_str.value))
 }
 
 function gotoEpisodes(episodesId: string) {
-    router.push('/nav/emby/' + embyServer.value.id + '/episodes/' + episodesId)
+    router.push('/nav/emby/' + embyServerId + '/episodes/' + episodesId)
 }
 function gotoSeries(seriesId: string) {
-    router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
+    router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
 }
 function gotoMediaLibraryItems(parentId: string) {
-    router.push('/nav/emby/' + embyServer.value.id + '/mediaLibrary/items/' + parentId)
+    router.push('/nav/emby/' + embyServerId + '/mediaLibrary/items/' + parentId)
 }
 
 const mediaLibraryLoading = ref(false)
 const mediaLibraryList = ref<MediaLibraryItem[]>([])
 function getMediaLibraryList() {
     mediaLibraryLoading.value = true
-    return embyApi.getMediaLibraryList(embyServer.value.id!).then(async response => {
+    return embyApi.getMediaLibraryList(embyServerId).then(async response => {
         let json: EmbyPageList<MediaLibraryItem> = JSON.parse(response);
         mediaLibraryList.value = json.Items
         for (let item of mediaLibraryList.value) {
-            useImage().loadCover(embyServer.value, item)
+            useImage().loadCover(embyServerId, item)
             getMediaLibraryChildLatest(item.Id)
         }
     }).catch(e => ElMessage.error(e)).finally(() => mediaLibraryLoading.value = false)
@@ -123,18 +109,16 @@ const mediaLibraryChildLoading = ref<{[key: string]: boolean}>({})
 const mediaLibraryChildList = ref<{[key: string]: SearchItem[]}>({})
 function getMediaLibraryChildLatest(parentId: string) {
     mediaLibraryChildLoading.value[parentId] = true
-    return embyApi.getMediaLibraryChildLatest(embyServer.value.id!, parentId, 16).then(async response => {
+    return embyApi.getMediaLibraryChildLatest(embyServerId, parentId, 16).then(async response => {
         let json: SearchItem[] = JSON.parse(response);
         mediaLibraryChildList.value[parentId] = json
         for (let item of mediaLibraryChildList.value[parentId]) {
-            useImage().loadCover(embyServer.value, item)
+            useImage().loadCover(embyServerId, item)
         }
     }).catch(e => ElMessage.error(e)).finally(() => mediaLibraryChildLoading.value[parentId] = false)
 }
 
-getEmbyServer(<string>route.params.embyId).then(() => {
-    getMediaLibraryList()
-})
+getMediaLibraryList()
 </script>
 
 <style scoped>

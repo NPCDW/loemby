@@ -237,60 +237,6 @@ pub async fn emby_playback_info(body: EmbyPlaybackInfoParam, state: tauri::State
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct EmbyPlayingParam {
-    pub emby_server_id: String,
-    pub item_id: String,
-    pub media_source_id: String,
-    pub play_session_id: String,
-    pub position_ticks: u64,
-}
-
-#[tauri::command]
-pub async fn emby_playing(body: EmbyPlayingParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::playing(body, &state).await;
-    if res.is_err() {
-        return Err(res.err().unwrap().to_string());
-    }
-    Ok(res.unwrap())
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EmbyPlayingProgressParam {
-    pub emby_server_id: String,
-    pub item_id: String,
-    pub media_source_id: String,
-    pub play_session_id: String,
-    pub position_ticks: u64,
-}
-
-#[tauri::command]
-pub async fn emby_playing_progress(body: EmbyPlayingProgressParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::playing_progress(body, &state).await;
-    if res.is_err() {
-        return Err(res.err().unwrap().to_string());
-    }
-    Ok(res.unwrap())
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EmbyPlayingStoppedParam {
-    pub emby_server_id: String,
-    pub item_id: String,
-    pub media_source_id: String,
-    pub play_session_id: String,
-    pub position_ticks: u64,
-}
-
-#[tauri::command]
-pub async fn emby_playing_stopped(body: EmbyPlayingStoppedParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::playing_stopped(body, &state).await;
-    if res.is_err() {
-        return Err(res.err().unwrap().to_string());
-    }
-    Ok(res.unwrap())
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct EmbyGetDirectStreamUrlParam {
     pub emby_server_id: String,
     pub direct_stream_url: String,

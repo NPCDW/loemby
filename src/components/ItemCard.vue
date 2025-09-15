@@ -76,7 +76,7 @@
                             :key="seasonItem.Id"
                             class="box-item"
                             :class="{ active: dialogSeasons?.Id === seasonItem.Id }"
-                            @click="getEpisodes(dialogEmbyServer!, dialogSeries!.Id, seasonItem, 1, 10)"
+                            @click="getEpisodes(dialogEmbyServerId!, dialogSeries!.Id, seasonItem, 1, 10)"
                         >
                             <h3>{{ 'S' + seasonItem.IndexNumber + '. ' + seasonItem.Name }}</h3>
                             <div style="display: flex;justify-content: space-between;">
@@ -138,7 +138,7 @@
                         v-model:page-size="dialogEpisodesPageSize"
                         layout="total, prev, pager, next, jumper"
                         :total="episodes_result[dialogSeries!.Id + '|' + dialogSeasons!.Id].total"
-                        @current-change="handleEpisodesPageChange(dialogEpisodesCurrentPage, dialogEmbyServer!, dialogSeries!.Id, dialogSeasons!)"
+                        @current-change="handleEpisodesPageChange(dialogEpisodesCurrentPage, dialogEmbyServerId!, dialogSeries!.Id, dialogSeasons!)"
                         hide-on-single-page
                     />
                 </el-scrollbar>
@@ -206,7 +206,7 @@
                 v-model:page-size="dialogEpisodesPageSize"
                 layout="total, prev, pager, next, jumper"
                 :total="episodes_result[dialogSeasons!.SeriesId + '|' + dialogSeasons!.Id].total"
-                @current-change="handleEpisodesPageChange(dialogEpisodesCurrentPage, dialogEmbyServer!, dialogSeasons!.SeriesId, dialogSeasons!)"
+                @current-change="handleEpisodesPageChange(dialogEpisodesCurrentPage, dialogEmbyServerId!, dialogSeasons!.SeriesId, dialogSeasons!)"
                 hide-on-single-page
             />
         </el-scrollbar>
@@ -220,13 +220,12 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../util/str_util'
 import { getResolutionFromMediaSources } from '../util/play_info_util'
-import { EmbyServer } from '../store/db/embyServer';
 
 const router = useRouter()
 
-const {item, embyServer} = defineProps<{
+const {item, embyServerId, showSeriesName} = defineProps<{
   item: SearchItem,
-  embyServer: EmbyServer,
+  embyServerId: string,
   showSeriesName?: boolean,
 }>()
 
@@ -248,10 +247,10 @@ function getTag(itemId: string, mediaSources?: MediaSource[]) {
 getTag(item.Id, (item as EpisodeItem).MediaSources)
 
 function gotoEpisodes(episodesId: string) {
-    router.push('/nav/emby/' + embyServer.id + '/episodes/' + episodesId)
+    router.push('/nav/emby/' + embyServerId + '/episodes/' + episodesId)
 }
 function gotoSeries(seriesId: string) {
-    router.push('/nav/emby/' + embyServer.id + '/series/' + seriesId)
+    router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
 }
 
 const starLoading = ref<{[key: string]: boolean}>({})
@@ -262,9 +261,9 @@ function star(item: SearchItem | SeasonItem | EpisodeItem) {
     starLoading.value[item.Id] = true
     let fun;
     if (item.UserData.IsFavorite) {
-        fun = embyApi.unstar(embyServer.id!, item.Id)
+        fun = embyApi.unstar(embyServerId!, item.Id)
     } else {
-        fun = embyApi.star(embyServer.id!, item.Id)
+        fun = embyApi.star(embyServerId!, item.Id)
     }
     return fun.then(async response => {
         let json: UserData = JSON.parse(response);
@@ -280,9 +279,9 @@ function played(item: SearchItem | SeasonItem | EpisodeItem) {
     playedLoading.value[item.Id] = true
     let fun;
     if (item.UserData.Played) {
-        fun = embyApi.unplayed(embyServer.id!, item.Id)
+        fun = embyApi.unplayed(embyServerId!, item.Id)
     } else {
-        fun = embyApi.played(embyServer.id!, item.Id)
+        fun = embyApi.played(embyServerId!, item.Id)
     }
     return fun.then(async response => {
         let json: UserData = JSON.parse(response);
@@ -295,7 +294,7 @@ const episodes_result = ref<{[key: string]: {total: number, [key: number]: Episo
 
 const dialogSeriesVisible = ref(false)
 const dialogSeasonsVisible = ref(false)
-const dialogEmbyServer = ref<EmbyServer>()
+const dialogEmbyServerId = ref<string>()
 const dialogSeries = ref<SearchItem>()
 const dialogSeasons = ref<SeasonItem>()
 const dialogSeasonsList = ref<SeasonItem[]>([])
@@ -310,7 +309,7 @@ async function showSeries(series: SeriesItem) {
     dialogSeasonsLoading.value = true
     dialogSeasonsList.value = []
     dialogEpisodesList.value = []
-    dialogEmbyServer.value = embyServer
+    dialogEmbyServerId.value = embyServerId
     dialogSeries.value = series
     dialogSeriesVisible.value = true
     if (seasons_result.value[series.Id]) {
@@ -318,13 +317,13 @@ async function showSeries(series: SeriesItem) {
         dialogSeasonsLoading.value = false
         return
     }
-    return embyApi.seasons(embyServer.id!, series.Id).then(async response => {
+    return embyApi.seasons(embyServerId!, series.Id).then(async response => {
         let json: EmbyPageList<SeasonItem> = JSON.parse(response);
         seasons_result.value[series.Id] = json
         dialogSeasonsList.value = json.Items
     }).catch(e => ElMessage.error(e)).finally(() => dialogSeasonsLoading.value = false)
 }
-async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: SeasonItem, currentPage: number, pageSize: number) {
+async function getEpisodes(embyServerId: string, series_id: string, seasons: SeasonItem, currentPage: number, pageSize: number) {
     dialogEpisodesLoading.value = true
     dialogEpisodesList.value = []
     dialogEpisodesCurrentPage.value = currentPage
@@ -338,7 +337,7 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
         dialogEpisodesLoading.value = false
         return
     }
-    return embyApi.episodes(embyServer.id!, series_id, seasons.Id, (currentPage - 1) * pageSize, pageSize).then(async response => {
+    return embyApi.episodes(embyServerId!, series_id, seasons.Id, (currentPage - 1) * pageSize, pageSize).then(async response => {
         let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         episodes_result.value[series_id + '|' + seasons.Id].total = json.TotalRecordCount
         episodes_result.value[series_id + '|' + seasons.Id][currentPage]= json.Items
@@ -348,15 +347,15 @@ async function getEpisodes(embyServer: EmbyServer, series_id: string, seasons: S
         }
     }).catch(e => ElMessage.error(e)).finally(() => dialogEpisodesLoading.value = false)
 }
-async function handleEpisodesPageChange(val: number, embyServer: EmbyServer, series_id: string, seasons: SeasonItem) {
-    await getEpisodes(embyServer, series_id, seasons, val, dialogEpisodesPageSize.value)
+async function handleEpisodesPageChange(val: number, embyServerId: string, series_id: string, seasons: SeasonItem) {
+    await getEpisodes(embyServerId, series_id, seasons, val, dialogEpisodesPageSize.value)
 }
 async function showSeason(season: SeasonItem) {
     dialogSeasons.value = season
     dialogEpisodesList.value = []
-    dialogEmbyServer.value = embyServer
+    dialogEmbyServerId.value = embyServerId
     dialogSeasonsVisible.value = true
-    getEpisodes(embyServer, season.SeriesId, season, 1, 10)
+    getEpisodes(embyServerId, season.SeriesId, season, 1, 10)
 }
 
 </script>

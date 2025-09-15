@@ -46,8 +46,7 @@ pub struct PlayVideoParam {
 }
 
 #[tauri::command]
-pub async fn play_video(mut body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
-    body.start_time = chrono::Local::now().timestamp();
+pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     player_svc::play_video(body, &state, app_handle).await
 }
 

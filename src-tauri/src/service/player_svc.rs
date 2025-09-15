@@ -6,13 +6,16 @@ use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-use crate::{config::app_state::{AppState, TauriNotify}, controller::{emby_http_ctl::{EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::AxumAppStateRequest, emby_http_svc, trakt_http_svc}, util::file_util};
+use crate::{config::app_state::{AppState, TauriNotify}, controller::invoke_ctl::PlayVideoParam, service::{emby_http_svc::{EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam}}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::AxumAppStateRequest, emby_http_svc, trakt_http_svc}, util::file_util};
 
-pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+    body.start_time = chrono::Local::now().timestamp();
     let emby_server = match emby_server_mapper::get_cache(body.emby_server_id.clone(), state).await {
         Some(emby_server) => emby_server,
         None => return Err("emby_server not found".to_string()),
     };
+    body.emby_server_name = emby_server.server_name.clone().unwrap();
+    body.title = format!("{}{}", body.title.clone(), emby_server.server_name.clone().unwrap());
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mpv_path = match global_config_mapper::get_cache("mpv_path", state).await {
         None => return Err("未配置 mpv 路径".to_string()),
@@ -48,7 +51,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     let video_path = if proxy_url.is_some() {
         let uuid = uuid::Uuid::new_v4().to_string();
         app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
-            stream_url: body.path.clone(),
+            stream_url: format!("{}{}", emby_server.base_url.clone().unwrap(), body.path.clone()),
             proxy_url: proxy_url.clone(),
             user_agent: emby_server.user_agent.clone().unwrap(),
         });
@@ -101,7 +104,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         let audio_path = if proxy_url.is_some() {
             let uuid = uuid::Uuid::new_v4().to_string();
             app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
-                stream_url: audio.clone(),
+                stream_url: format!("{}{}", emby_server.base_url.clone().unwrap(), audio.clone()),
                 proxy_url: proxy_url.clone(),
                 user_agent: emby_server.user_agent.clone().unwrap().clone(),
             });
@@ -115,7 +118,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         let subtitle_path = if proxy_url.is_some() {
             let uuid = uuid::Uuid::new_v4().to_string();
             app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
-                stream_url: subtitle.clone(),
+                stream_url: format!("{}{}", emby_server.base_url.clone().unwrap(), subtitle.clone()),
                 proxy_url: proxy_url.clone(),
                 user_agent: emby_server.user_agent.clone().unwrap().clone(),
             });

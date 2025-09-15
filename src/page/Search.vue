@@ -25,7 +25,7 @@
                         </span>
                     </template>
                     <div v-if="embySearchItem.success" style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <ItemCard v-for="rootItem in embySearchItem.result?.Items" :key="rootItem.Id" :item="rootItem" :embyServer="embySearchItem.embyServer" />
+                        <ItemCard v-for="rootItem in embySearchItem.result?.Items" :key="rootItem.Id" :item="rootItem" :embyServerId="embySearchItem.embyServer.id!" />
                     </div>
                     <div v-else style="text-align: center;">
                         <el-text type="danger" style="word-break: break-all;display: block;">{{ embySearchItem.message }}</el-text>
@@ -39,12 +39,11 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import embyApi, { EmbyPageList, SearchItem } from '../api/embyApi'
 import ItemCard from '../components/ItemCard.vue';
 import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
 import { ElMessage, ScrollbarInstance } from 'element-plus';
-import { useEventBus } from '../store/eventBus';
 
 const embyServers = ref<EmbyServer[]>([])
 function listAllEmbyServer() {
@@ -58,8 +57,6 @@ function listAllEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
-onMounted(() => useEventBus().on('EmbyServerChanged', listAllEmbyServer))
-onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
 
 const scrollbarRef = ref<ScrollbarInstance>()
 const search_loading = ref(false)

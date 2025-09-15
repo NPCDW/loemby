@@ -22,7 +22,7 @@
                     @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
                     style="display: flex; flex-direction: column; align-items: center; padding: 18px;">
                     <div style="min-width: 115px; min-height: 160px;" class="loe-cover-img">
-                        <img v-lazy="useImage().images[embyServer.id + ':cover:' + item.Id]" style="max-width: 270px; max-height: 160px; cursor: pointer;" />
+                        <img v-lazy="useImage().images[embyServerId + ':cover:' + item.Id]" style="max-width: 270px; max-height: 160px; cursor: pointer;" />
                     </div>
                     <el-text truncated style="max-width: 115px;">{{ item.Name }}</el-text>
                 </div>
@@ -41,42 +41,28 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, SearchItem } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
-import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import { useEventBus } from '../../store/eventBus';
 import { useImage } from '../../store/image';
 
 const router = useRouter()
 const route = useRoute()
 
-const parentId = ref(<string>route.params.parentId)
-const embyServer = ref<EmbyServer>({})
-async function getEmbyServer(embyId: string) {
-    return useEmbyServer().getEmbyServer(embyId).then(value => {
-        embyServer.value = value!;
-    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
-}
-function embyServerChanged(payload?: {event?: string, id?: string}) {
-    if (payload?.id === route.params.embyId) {
-        getEmbyServer(payload?.id)
-    }
-}
-onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
-onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
+const parentId = <string>route.params.parentId
+const embyServerId = <string>route.params.embyId
 
 const search_str = ref('')
 const search = async () => {
-    router.push('/nav/emby/' + embyServer.value.id + '/search?search=' + encodeURIComponent(search_str.value))
+    router.push('/nav/emby/' + embyServerId + '/search?search=' + encodeURIComponent(search_str.value))
 }
 
 function gotoEpisodes(episodesId: string) {
-    router.push('/nav/emby/' + embyServer.value.id + '/episodes/' + episodesId)
+    router.push('/nav/emby/' + embyServerId + '/episodes/' + episodesId)
 }
 function gotoSeries(seriesId: string) {
-    router.push('/nav/emby/' + embyServer.value.id + '/series/' + seriesId)
+    router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
 }
 
 const mediaLibraryChildLoading = ref<boolean>(false)
@@ -90,19 +76,17 @@ const handleMediaLibraryChildPageChange = (val: number) => {
 }
 function getMediaLibraryChild(currentPage: number, pageSize: number) {
     mediaLibraryChildLoading.value = true
-    return embyApi.getMediaLibraryChild(embyServer.value.id!, parentId.value, (currentPage - 1) * pageSize, pageSize).then(async response => {
+    return embyApi.getMediaLibraryChild(embyServerId, parentId, (currentPage - 1) * pageSize, pageSize).then(async response => {
         let json: EmbyPageList<SearchItem> = JSON.parse(response);
         mediaLibraryChildList.value = json.Items
         mediaLibraryChildTotal.value = json.TotalRecordCount
         for (let item of mediaLibraryChildList.value) {
-            useImage().loadCover(embyServer.value, item)
+            useImage().loadCover(embyServerId, item)
         }
     }).catch(e => ElMessage.error(e)).finally(() => mediaLibraryChildLoading.value = false)
 }
 
-getEmbyServer(<string>route.params.embyId).then(() => {
-    handleMediaLibraryChildPageChange(1)
-})
+handleMediaLibraryChildPageChange(1)
 </script>
 
 <style scoped>

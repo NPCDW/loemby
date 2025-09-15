@@ -22,7 +22,7 @@
             </template>
             <div style="display: flex; padding: 20px;" v-if="currentSeries">
                 <div style="min-height: 416px; min-width: 300px;" class="loe-cover-img">
-                    <img v-lazy="useImage().images[embyServer.id + ':cover:' + currentSeries.Id]" style="max-height: 416px; max-width: 300px;" />
+                    <img v-lazy="useImage().images[embyServerId + ':cover:' + currentSeries.Id]" style="max-height: 416px; max-width: 300px;" />
                 </div>
                 <div style="padding: 20px;">
                     <h1>{{ currentSeries.Name }}</h1>
@@ -62,7 +62,7 @@
                 </div>
             </template>
             <div v-if="episodesList && episodesList.length > 0" style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;">
-                <ItemCard v-for="episodeItem in episodesList" :key="episodeItem.Id" :item="episodeItem" :embyServer="embyServer" />
+                <ItemCard v-for="episodeItem in episodesList" :key="episodeItem.Id" :item="episodeItem" :embyServerId="embyServerId" />
                 <el-pagination
                     v-model:current-page="episodesCurrentPage"
                     v-model:page-size="episodesPageSize"
@@ -85,7 +85,7 @@
             <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;" v-if="currentSeries && seasonsList && seasonsList.length > 0">
                 <div v-for="season in seasonsList" @click="showSeasons(season)" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
                     <div style="min-height: 160px; min-width: 115px;" class="loe-cover-img">
-                        <img v-lazy="useImage().images[embyServer.id + ':cover:' + season.Id]" style="max-height: 160px; max-width: 115px; cursor: pointer;" />
+                        <img v-lazy="useImage().images[embyServerId + ':cover:' + season.Id]" style="max-height: 160px; max-width: 115px; cursor: pointer;" />
                     </div>
                     <el-text truncated style="max-width: 115px;">{{ season.Name }}</el-text>
                 </div>
@@ -162,39 +162,23 @@
 
 <script lang="ts" setup>
 import { useRoute, useRouter } from 'vue-router';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, SeasonItem, SeriesItem, UserData } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../../util/str_util'
 import { getResolutionFromMediaSources } from '../../util/play_info_util'
 import invokeApi from '../../api/invokeApi';
-import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import { useEventBus } from '../../store/eventBus';
 import { useImage } from '../../store/image';
 
 const router = useRouter()
 const route = useRoute()
 
-const embyServer = ref<EmbyServer>({})
-async function getEmbyServer() {
-    return useEmbyServer().getEmbyServer(<string>route.params.embyId).then(value => {
-        embyServer.value = value!;
-    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
-}
-function embyServerChanged(payload?: {event?: string, id?: string}) {
-    if (payload?.id === route.params.embyId) {
-        getEmbyServer()
-    }
-}
-onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
-onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
+const embyServerId = <string>route.params.embyId
 
-getEmbyServer().then(() => {
-    updateCurrentSerie()
-    getSeasons()
-    getEpisodes()
-})
+updateCurrentSerie()
+getSeasons()
+getEpisodes()
 
 const mediaSourceTag = ref<{[key: string]: string[]}>({})
 function getTag(itemId: string, mediaSources?: MediaSource[]) {
@@ -216,10 +200,10 @@ const serieInfoLoading = ref(false)
 const currentSeries = ref<SeriesItem>()
 function updateCurrentSerie() {
     serieInfoLoading.value = true
-    return embyApi.items(embyServer.value.id!, <string>route.params.serieId).then(async response => {
+    return embyApi.items(embyServerId, <string>route.params.serieId).then(async response => {
         let json: SeriesItem = JSON.parse(response);
         currentSeries.value = json
-        useImage().loadCover(embyServer.value, json)
+        useImage().loadCover(embyServerId, json)
     }).catch(e => ElMessage.error('更新当前剧集信息失败' + e)).finally(() => serieInfoLoading.value = false)
 }
 
@@ -231,9 +215,9 @@ function star(item: SeriesItem | SeasonItem | EpisodeItem) {
     starLoading.value[item.Id] = true
     let fun;
     if (item.UserData!.IsFavorite) {
-        fun = embyApi.unstar(embyServer.value.id!, item.Id)
+        fun = embyApi.unstar(embyServerId, item.Id)
     } else {
-        fun = embyApi.star(embyServer.value.id!, item.Id)
+        fun = embyApi.star(embyServerId, item.Id)
     }
     return fun.then(async response => {
         let json: UserData = JSON.parse(response);
@@ -249,9 +233,9 @@ function played(item: SeriesItem | SeasonItem | EpisodeItem) {
     playedLoading.value[item.Id] = true
     let fun;
     if (item.UserData!.Played) {
-        fun = embyApi.unplayed(embyServer.value.id!, item.Id)
+        fun = embyApi.unplayed(embyServerId, item.Id)
     } else {
-        fun = embyApi.played(embyServer.value.id!, item.Id)
+        fun = embyApi.played(embyServerId, item.Id)
     }
     return fun.then(async response => {
         let json: UserData = JSON.parse(response);
@@ -263,11 +247,11 @@ const seasonsLoading = ref<boolean>(false)
 const seasonsList = ref<SeasonItem[]>([])
 async function getSeasons() {
     seasonsLoading.value = true
-    return embyApi.seasons(embyServer.value.id!, <string>route.params.serieId).then(async response => {
+    return embyApi.seasons(embyServerId, <string>route.params.serieId).then(async response => {
         let json: EmbyPageList<SeasonItem> = JSON.parse(response);
         seasonsList.value = json.Items
         json.Items.forEach(item => {
-            useImage().loadCover(embyServer.value, item)
+            useImage().loadCover(embyServerId, item)
         })
     }).catch(e => ElMessage.error('获取季失败' + e)).finally(() => seasonsLoading.value = false)
 }
@@ -279,7 +263,7 @@ const episodesPageSize = ref<number>(6)
 const episodesTotal = ref<number>(0)
 async function getEpisodes() {
     episodesLoading.value = true
-    return embyApi.episodes(embyServer.value.id!, <string>route.params.serieId, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
+    return embyApi.episodes(embyServerId, <string>route.params.serieId, '', (episodesCurrentPage.value - 1) * episodesPageSize.value, episodesPageSize.value).then(async response => {
         let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
@@ -290,7 +274,7 @@ function handleEpisodesPageChange(page: number) {
     getEpisodes()
 }
 function gotoEpisodes(episodesId: string) {
-    router.push('/nav/emby/' + embyServer.value.id + '/episodes/' + episodesId)
+    router.push('/nav/emby/' + embyServerId + '/episodes/' + episodesId)
 }
 
 const dialogSeasonsVisible = ref<boolean>(false)
@@ -311,7 +295,7 @@ function showSeasons(season: SeasonItem) {
 }
 function getDialogEpisodes() {
     dialogEpisodesLoading.value = true
-    return embyApi.episodes(embyServer.value.id!, currentSeries.value?.Id!, dialogSeasons.value?.Id!, (dialogEpisodesCurrentPage.value - 1) * dialogEpisodesPageSize.value, dialogEpisodesPageSize.value).then(async response => {
+    return embyApi.episodes(embyServerId, currentSeries.value?.Id!, dialogSeasons.value?.Id!, (dialogEpisodesCurrentPage.value - 1) * dialogEpisodesPageSize.value, dialogEpisodesPageSize.value).then(async response => {
         let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         dialogEpisodesList.value = json.Items
         dialogEpisodesTotal.value = json.TotalRecordCount

@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{app_state::AppState, http_pool},
-    controller::emby_http_ctl::{EmbyAuthenticateByNameParam, EmbyCountParam, EmbyEpisodesParam, EmbyGetAudioStreamUrlParam, EmbyGetContinuePlayListParam, EmbyGetDirectStreamUrlParam, EmbyGetFavoriteListParam, EmbyGetMediaLibraryChildLatestParam, EmbyGetMediaLibraryChildParam, EmbyGetMediaLibraryListParam, EmbyGetServerInfoParam, EmbyGetSubtitleStreamUrlParam, EmbyHideFromResumeParam, EmbyItemsParam, EmbyLogoutParam, EmbyNextUpParam, EmbyPlaybackInfoParam, EmbyPlayedParam, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EmbySearchParam, EmbySeasonsParam, EmbyStarParam, EmbyUnplayedParam, EmbyUnstarParam},
+    controller::emby_http_ctl::{EmbyAuthenticateByNameParam, EmbyCountParam, EmbyEpisodesParam, EmbyGetAudioStreamUrlParam, EmbyGetContinuePlayListParam, EmbyGetDirectStreamUrlParam, EmbyGetFavoriteListParam, EmbyGetMediaLibraryChildLatestParam, EmbyGetMediaLibraryChildParam, EmbyGetMediaLibraryListParam, EmbyGetServerInfoParam, EmbyGetSubtitleStreamUrlParam, EmbyHideFromResumeParam, EmbyItemsParam, EmbyLogoutParam, EmbyNextUpParam, EmbyPlaybackInfoParam, EmbyPlayedParam, EmbySearchParam, EmbySeasonsParam, EmbyStarParam, EmbyUnplayedParam, EmbyUnstarParam},
     mapper::{emby_server_mapper, proxy_server_mapper}
 };
 
@@ -408,6 +409,15 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
     Ok(response.text().await?)
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct EmbyPlayingParam {
+    pub emby_server_id: String,
+    pub item_id: String,
+    pub media_source_id: String,
+    pub play_session_id: String,
+    pub position_ticks: u64,
+}
+
 pub async fn playing(param: EmbyPlayingParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
     let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
@@ -441,6 +451,15 @@ pub async fn playing(param: EmbyPlayingParam, state: &tauri::State<'_, AppState>
     Ok(response.text().await?)
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct EmbyPlayingProgressParam {
+    pub emby_server_id: String,
+    pub item_id: String,
+    pub media_source_id: String,
+    pub play_session_id: String,
+    pub position_ticks: u64,
+}
+
 pub async fn playing_progress(param: EmbyPlayingProgressParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
     let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
@@ -472,6 +491,15 @@ pub async fn playing_progress(param: EmbyPlayingProgressParam, state: &tauri::St
         return Err(anyhow::anyhow!("{}", response.status()));
     }
     Ok(response.text().await?)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EmbyPlayingStoppedParam {
+    pub emby_server_id: String,
+    pub item_id: String,
+    pub media_source_id: String,
+    pub play_session_id: String,
+    pub position_ticks: u64,
 }
 
 pub async fn playing_stopped(param: EmbyPlayingStoppedParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
