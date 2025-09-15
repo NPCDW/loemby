@@ -45,6 +45,13 @@ pub async fn list_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<GlobalConfig>> 
     anyhow::Ok(res?)
 }
 
+pub async fn create_or_update(entity: GlobalConfig, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
+    anyhow::Ok(match get_cache(entity.config_key.as_ref().unwrap(), state).await {
+        Some(_) => update_by_key(entity, state).await,
+        None => create(entity, state).await,
+    }?)
+}
+
 pub async fn create(entity: GlobalConfig, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
     let entity_clone = entity.clone();
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into global_config(");

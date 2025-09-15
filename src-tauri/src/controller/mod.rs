@@ -7,4 +7,3 @@ pub mod play_history_ctl;
 pub mod proxy_server_ctl;
 pub mod emby_http_ctl;
 pub mod app_http_ctl;
-pub mod trakt_http_ctl;

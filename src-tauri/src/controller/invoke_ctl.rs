@@ -42,11 +42,12 @@ pub struct PlayVideoParam {
     pub external_audio: Vec<String>,
     pub external_subtitle: Vec<String>,
     pub scrobble_trakt_param: Option<String>,
-    pub start_time: u64,
+    pub start_time: i64,
 }
 
 #[tauri::command]
-pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+pub async fn play_video(mut body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+    body.start_time = chrono::Local::now().timestamp();
     player_svc::play_video(body, &state, app_handle).await
 }
 

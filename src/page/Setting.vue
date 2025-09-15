@@ -132,8 +132,8 @@ demuxer-readahead-secs=180" />
             <el-scrollbar style="height: calc(100vh - 120px);">
                 <el-form label-position="top">
                     <el-form-item label="Trakt （剧集或电影播放完成时可以在网页端看到记录，未播放完成的可以通过接口查询记录）">
-                        <div v-if="trakt_info.username">
-                            <el-text>{{ trakt_info.username }}</el-text>
+                        <div v-if="trakt_username">
+                            <el-text>{{ trakt_username }}</el-text>
                             <el-switch
                                 v-model="trakt_sync_switch"
                                 @change="configValueChange('trakt_sync_switch', trakt_sync_switch + '', getTraktSyncSwitch, 'Trakt同步开关')"
@@ -402,7 +402,6 @@ import { useGlobalConfig } from '../store/db/globalConfig';
 import { useEventBus } from '../store/eventBus';
 import invokeApi from '../api/invokeApi';
 import { listen } from '@tauri-apps/api/event';
-import traktApi from '../api/traktApi';
 import {useRuntimeConfig} from "../store/runtimeConfig.ts";
 import { EmbyIconLibrary, useEmbyIconLibrary } from '../store/db/embyIconLibrary.ts';
 
@@ -612,13 +611,13 @@ function getTraktSyncSwitch() {
 }
 
 const traktAuthLoading = ref(false)
-const trakt_info = ref<{access_token?: string, refresh_token?: string, expires_in?: number, username?: string, redirect_uri?: string}>({});
+const trakt_username = ref<string>('');
 const traktAuthStatus = ref('去授权')
 function getTraktInfo() {
-    return useGlobalConfig().getGlobalConfigValue("trakt_info").then(value => {
-        trakt_info.value = value ? JSON.parse(value) : {};
+    return useGlobalConfig().getGlobalConfigValue("trakt_username").then(value => {
+        trakt_username.value = value;
         if (!traktAuthLoading.value) {
-            traktAuthStatus.value = trakt_info.value.username ? '换个账户？授权失效？' : '去授权'
+            traktAuthStatus.value = trakt_username.value ? '换个账户？授权失效？' : '去授权'
         }
     }).catch(e => ElMessage.error('获取Trakt信息失败' + e))
 }
@@ -632,7 +631,11 @@ function delAuthTrakt() {
       type: 'warning',
     }
   ).then(async () => {
-        useGlobalConfig().delGlobalConfig("trakt_info").then(() => {
+        useGlobalConfig().delGlobalConfig("trakt_username").then(() => {
+            useGlobalConfig().delGlobalConfig("trakt_refresh_token")
+            useGlobalConfig().delGlobalConfig("trakt_expires_in")
+            useGlobalConfig().delGlobalConfig("trakt_access_token")
+            useGlobalConfig().delGlobalConfig("trakt_redirect_uri")
             getTraktInfo()
             ElMessageBox.alert('删除成功，同时建议前往 Trakt 官网吊销应用授权，这将删除该应用获取的所有授权，官网地址: https://trakt.tv/oauth/authorized_applications')
         })
@@ -645,31 +648,12 @@ function goAuthTrakt() {
         ElMessage.success('打开浏览器成功，您也可以手动复制地址，去其他浏览器授权');
     }).catch(e => ElMessage.error('授权Trakt失败' + e))
 }
-listen<string>('trakt_auth', (event) => {
-    console.log(`trakt_auth: code: ${event.payload}`);
-    traktAuthStatus.value = '授权成功，正在获取授权信息'
-    const redirect_uri = `http://127.0.0.1:${useRuntimeConfig().runtimeConfig?.axum_port}/trakt_auth`
-    traktApi.token({code: event.payload, redirect_uri}).then(async response => {
-        let json: {access_token: string, refresh_token: string, expires_in: number, created_at: number} = JSON.parse(response);
-        trakt_info.value = {
-            access_token: json.access_token,
-            refresh_token: json.refresh_token,
-            expires_in: json.expires_in + json.created_at,
-            redirect_uri: redirect_uri,
-        };
-        await configValueChange('trakt_info', JSON.stringify(trakt_info.value), getTraktInfo, "Trakt信息")
-        traktAuthStatus.value = '正在获取用户信息'
-        traktApi.getUserInfo().then(response => {
-            let json: {user: {username: string}} = JSON.parse(response);
-            trakt_info.value.username = json.user.username;
-            configValueChange('trakt_info', JSON.stringify(trakt_info.value), getTraktInfo, "Trakt信息")
-            traktAuthLoading.value = false
-            traktAuthStatus.value = '换个账户？授权失效？'
-        }).catch(e => {
-            ElMessage.error('获取Trakt用户信息失败' + e)
-            traktAuthStatus.value = '获取Trakt用户信息失败'
-        })
-    }).catch(e => ElMessage.error('授权Trakt失败' + e))
+listen<string>('trakt_auth', () => {
+    console.log(`trakt_auth event`);
+    traktAuthStatus.value = '授权成功'
+    useGlobalConfig().refreshCache("trakt_username").then(() => {
+        getTraktInfo().then(() => traktAuthLoading.value = false)
+    })
 });
 
 const trakt_proxy_id = ref<string>('followBrowse');

@@ -6,7 +6,7 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::emby_http_svc};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::{emby_http_svc, trakt_http_svc::{self, TraktHttpTokenParam}}};
 
 pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -63,7 +63,31 @@ async fn trakt_auth(headers: axum::http::HeaderMap, State(axum_app_state): State
         ).into_response();
     }
     let app_handle = axum_app_state.app;
-    let res = app_handle.emit("trakt_auth", params.code);
+    let redirect_uri = format!("http://127.0.0.1:{}/trakt_auth", axum_app_state.port);
+    let res = trakt_http_svc::token(TraktHttpTokenParam {
+        redirect_uri: redirect_uri.clone(),
+        code: Some(params.code),
+        refresh_token: None,
+    }, &app_handle.state(), &app_handle).await;
+    if let Err(err) = res {
+        tracing::error!("trakt_auth: 根据code获取token失败 {}", err);
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("trakt_auth: 根据code获取token失败 {}", err))
+        ).into_response();
+    }
+    let res = trakt_http_svc::save_access_token(res.unwrap(), redirect_uri, &app_handle.state()).await;
+    if let Err(err) = res {
+        tracing::error!("trakt_auth: 保存token失败 {}", err);
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("trakt_auth: 保存token失败 {}", err))
+        ).into_response();
+    }
+
+    let res = app_handle.emit("trakt_auth", ());
     if let Err(err) = res {
         tracing::error!("trakt_auth: 向前台发送事件失败 {}", err);
         return (

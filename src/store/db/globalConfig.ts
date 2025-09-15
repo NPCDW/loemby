@@ -61,7 +61,7 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
         });
     }
 
-    return { getGlobalConfigValue, getGlobalConfig, delGlobalConfig, addGlobalConfig, updateGlobalConfig, initCache }
+    return { getGlobalConfigValue, getGlobalConfig, delGlobalConfig, addGlobalConfig, updateGlobalConfig, initCache, refreshCache }
 })
 
 export interface GlobalConfig {

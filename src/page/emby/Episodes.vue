@@ -176,23 +176,19 @@
 </template>
 
 <script lang="ts" setup>
-import { h, nextTick, onMounted, onUnmounted, ref, VNode, watchEffect } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS, isInternalUrl } from '../../util/str_util'
 import { getResolutionFromMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
 import invokeApi from '../../api/invokeApi';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElNotification } from 'element-plus';
-import { PlaybackProgress } from '../../store/playback';
+import { ElMessage } from 'element-plus';
 import { EmbyServer, useEmbyServer } from '../../store/db/embyServer';
-import dayjs from 'dayjs'
 import { useGlobalConfig } from '../../store/db/globalConfig';
 import { useEventBus } from '../../store/eventBus';
-import traktApi from '../../api/traktApi';
-import { usePlayHistory } from '../../store/db/playHistory';
-import { generateGuid } from '../../util/uuid_util';
 import { useImage } from '../../store/image';
+import { listen } from '@tauri-apps/api/event';
 
 const router = useRouter()
 const route = useRoute()
@@ -563,10 +559,6 @@ function getPlaybackInfo(item_id: string) {
 
 // const playingProgressTask = ref<NodeJS.Timeout>()
 function playing(item_id: string, playbackPositionTicks: number, directLink: boolean) {
-    let nextUpEpisodeAwait = undefined
-    if (currentEpisodes.value?.Type !== 'Movie') {
-        nextUpEpisodeAwait = nextUp(1)
-    }
     play_loading.value = true
     useDirectLink.value = directLink ? 1 : 0
     return getPlaybackInfo(item_id).then(async playbackInfo => {
@@ -593,15 +585,6 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
         let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
                 : 'S' + (currentEpisodes.value?.ParentIndexNumber || -1) + 'E' + (currentEpisodes.value?.IndexNumber || -1) + '. ' + currentEpisodes.value?.Name
         const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
-        addPlayHistory(episodesName)
-        if (nextUpEpisodeAwait) { await Promise.resolve(nextUpEpisodeAwait) }
-        let playlist = []
-        for (const element of nextUpList.value) {
-            playlist.push({
-                title: 'S' + element.ParentIndexNumber + 'E' + element.IndexNumber + ' ' + element.Name,
-                item_id: element.Id!
-            })
-        }
         return invokeApi.playback({
             path: playUrl,
             title: episodesName + " | " + (currentEpisodes.value?.SeriesName || "🎬电影") + " | " + embyServer.value.server_name,
@@ -624,32 +607,18 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             external_subtitle: externalSubtitle,
             scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
             start_time: new Date().getTime(),
-        }).then(async () => {
-            embyApi.playing(embyServer.value!.id!, item_id, currentMediaSources.Id, playbackInfo.PlaySessionId, playbackPositionTicks).then(() => {
-                ElMessage.success('开始播放，请稍候')
-            })
-            if (scrobbleTraktParam) {
-                traktApi.start(scrobbleTraktParam).then(response => {
-                    const json: {progress: number, movie?: {title: string, year: number}, episode?: {title: string, season: number, number: number}, show?: {title: string, year: number}} = JSON.parse(response);
-                    let message: VNode[] = []
-                    if (json.movie) {
-                        message = [h('p', null, `${json.movie.title} (${json.movie.year})`)]
-                    } else if (json.episode) {
-                        message = [h('p', null, `${json.show?.title} (${json.show?.year})`), h('p', null, `S${json.episode.season}E${json.episode.number} ${json.episode.title}`)]
-                    }
-                    ElNotification.success({
-                        title: 'Trakt 同步播放',
-                        message: h('div', null, message),
-                        position: 'bottom-right',
-                    })
-                }).catch(e => ElMessage.error("Trakt 同步失败：" + e))
-            }
         }).catch(res => ElMessage.error(res))
     }).finally(() => play_loading.value = false)
 }
 
-function playingStopped(payload: PlaybackProgress) {
-    if (embyServer.value.id === payload.emby_server_id && payload.item_id === currentEpisodes.value?.Id) {
+interface PlaybackProgress {
+    emby_server_id: string;
+    item_id: string;
+}
+listen<string>('playingStopped', (event) => {
+    console.log(`playingStopped event`, event);
+    let json: PlaybackProgress = JSON.parse(event.payload);
+    if (embyServer.value.id === json.emby_server_id && json.item_id === currentEpisodes.value?.Id) {
         updateCurrentEpisodes(true).then(async () => {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
                 nextUpCurrentPage.value = 1
@@ -660,49 +629,7 @@ function playingStopped(payload: PlaybackProgress) {
             }
         })
     }
-}
-onMounted(() => useEventBus().on('playingStopped', playingStopped))
-onUnmounted(() => useEventBus().remove('playingStopped', playingStopped))
-
-/**
- * 添加播放记录，
- * 如果当前记录为剧集，检查所有播放剧集是否有pinned，如果有，取消pinned，并设置此记录为pinned，如果没有，不设置pinned
- * 如果当前记录为电影，检查是否有播放记录为pinned，保持pinned，如果没有，不设置pinned
- */
-async function addPlayHistory(episodesName: string) {
-    let pinned = 0
-    if (currentEpisodes.value!.SeriesId) {
-        let pinnedUpdate = await usePlayHistory().cancelPinned(embyServer.value!.id!, currentEpisodes.value!.SeriesId)
-        pinned = pinnedUpdate ? 1 : 0
-    }
-    usePlayHistory().getPlayHistory(embyServer.value!.id!, currentEpisodes.value!.Id).then(response => {
-        if (response) {
-            usePlayHistory().updatePlayHistory({
-                id: response.id!,
-                update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
-                emby_server_name: embyServer.value!.server_name!,
-                item_name: episodesName,
-                item_type: currentEpisodes.value!.Type || 'Movie',
-                series_id: currentEpisodes.value!.SeriesId,
-                series_name: currentEpisodes.value!.SeriesName,
-                pinned: pinned || response.pinned ? 1 : 0})
-        } else {
-            usePlayHistory().addPlayHistory({
-                id: generateGuid(),
-                create_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
-                update_time: dayjs().locale('zh-cn').format('YYYY-MM-DD HH:mm:ss'),
-                emby_server_id: embyServer.value!.id!,
-                emby_server_name: embyServer.value!.server_name!,
-                item_id: currentEpisodes.value!.Id,
-                item_type: currentEpisodes.value!.Type || 'Movie',
-                item_name: episodesName,
-                series_id: currentEpisodes.value!.SeriesId,
-                series_name: currentEpisodes.value!.SeriesName,
-                played_duration: 0,
-                pinned})
-        }
-    })
-}
+});
 
 const starLoading = ref<boolean>(false)
 function star() {

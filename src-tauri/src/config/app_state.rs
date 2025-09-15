@@ -7,6 +7,7 @@ use tauri::async_runtime::RwLock;
 use crate::{config, service::axum_svc::AxumAppState};
 
 pub struct AppState {
+    pub app_handle: tauri::AppHandle,
     pub app_config: config::app_config::Config,
     pub auxm_app_state: Arc::<RwLock<Option<AxumAppState>>>,
     pub api_reqwest_pool: Arc::<RwLock<HashMap<String, Client>>>,
