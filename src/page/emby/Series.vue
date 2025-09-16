@@ -176,10 +176,6 @@ const route = useRoute()
 
 const embyServerId = <string>route.params.embyId
 
-updateCurrentSerie()
-getSeasons()
-getEpisodes()
-
 const mediaSourceTag = ref<{[key: string]: string[]}>({})
 function getTag(itemId: string, mediaSources?: MediaSource[]) {
     mediaSourceTag.value[itemId] = []
@@ -206,6 +202,7 @@ function updateCurrentSerie() {
         useImage().loadCover(embyServerId, json)
     }).catch(e => ElMessage.error('更新当前剧集信息失败' + e)).finally(() => serieInfoLoading.value = false)
 }
+updateCurrentSerie()
 
 const starLoading = ref<{[key: string]: boolean}>({})
 function star(item: SeriesItem | SeasonItem | EpisodeItem) {
@@ -255,6 +252,7 @@ async function getSeasons() {
         })
     }).catch(e => ElMessage.error('获取季失败' + e)).finally(() => seasonsLoading.value = false)
 }
+getSeasons()
 
 const episodesLoading = ref<boolean>(false)
 const episodesList = ref<EpisodeItem[]>([])
@@ -269,6 +267,8 @@ async function getEpisodes() {
         episodesTotal.value = json.TotalRecordCount
     }).catch(e => ElMessage.error('获取剧集失败' + e)).finally(() => episodesLoading.value = false)
 }
+getEpisodes()
+
 function handleEpisodesPageChange(page: number) {
     episodesCurrentPage.value = page
     getEpisodes()

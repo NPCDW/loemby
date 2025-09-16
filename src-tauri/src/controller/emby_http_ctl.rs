@@ -49,7 +49,7 @@ pub async fn emby_logout(body: EmbyLogoutParam, state: tauri::State<'_, AppState
 pub struct EmbySearchParam {
     pub emby_server_id: String,
     pub search_str: String,
-    pub item_types: String,
+    pub item_types: Vec<String>,
     pub start_index: u32,
     pub limit: u32,
 }

@@ -9,11 +9,11 @@ export const useImage = defineStore('image', () => {
 
     async function loadImage(imageKey: string, embyServerId: string, itemId: string, imageType: string) {
         const disabledImage = await useGlobalConfig().getGlobalConfigValue("disabledImage") || 'off'
-        if (disabledImage != 'on') {
+        if (disabledImage == 'on') {
             return;
         }
         let port = useRuntimeConfig().runtimeConfig!.axum_port;
-        let url = `http://127.0.0.1:${port}/image?param.type=Emby&param.emby_server_id=${embyServerId}&param.item_id=${itemId}&param.image_type=${imageType}`;
+        let url = `http://127.0.0.1:${port}/image/emby?emby_server_id=${embyServerId}&item_id=${itemId}&image_type=${imageType}`;
         images.value[imageKey] = url
         return images.value[imageKey];
     }
@@ -62,7 +62,7 @@ export const useImage = defineStore('image', () => {
 
     async function loadIcon(icon_url: string) {
         let port = useRuntimeConfig().runtimeConfig!.axum_port;
-        return `http://127.0.0.1:${port}/image?param.type=Icon&param.image_url=${encodeURIComponent(icon_url)}`;
+        return `http://127.0.0.1:${port}/image/icon?image_url=${encodeURIComponent(icon_url)}`;
     }
 
     return { images, loadImage, loadIcon, loadLogo, loadCover }

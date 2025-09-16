@@ -1,9 +1,22 @@
 import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
 import { ref } from 'vue';
+import { waitUntilTrue } from '../../util/sleep';
 
 export const useProxyServer = defineStore('proxyServer', () => {
     const cacheProxyServer = ref<{[key: string]: string}>({});
+    const initCacheFinish = ref(false)
+
+    async function getProxyServerName(id: string) {
+        if (!id || id == 'no') {
+            return '不使用代理'
+        }
+        if (!initCacheFinish.value) {
+            await waitUntilTrue(() => initCacheFinish.value, 100)
+        }
+        let proxyServerName = cacheProxyServer.value[id]
+        return proxyServerName || "不使用代理"
+    }
 
     async function refreshCache(id: string) {
         let server = await getProxyServer(id)
@@ -20,6 +33,7 @@ export const useProxyServer = defineStore('proxyServer', () => {
         for (let i = 0; i < proxyServer.length; i++) {
             cacheProxyServer.value[proxyServer[i].id!] = proxyServer[i].name!;
         }
+        initCacheFinish.value = true
     }
 
     async function getProxyServer(id: string): Promise<ProxyServer> {
@@ -49,14 +63,6 @@ export const useProxyServer = defineStore('proxyServer', () => {
             await refreshCache(id)
             return response
         })
-    }
-
-    async function getProxyServerName(id: string) {
-        if (!id || id == 'no') {
-            return '不使用代理'
-        }
-        let proxyServerName = cacheProxyServer.value[id]
-        return proxyServerName || "不使用代理"
     }
 
     return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, initCache, refreshCache, getProxyServerName }

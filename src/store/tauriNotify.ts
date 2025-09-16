@@ -7,7 +7,7 @@ import { h, VNode } from 'vue';
 export const useTauriNotify = defineStore('tauriNotify', () => {
     async function listen_tauri_notify() {
         listen<TauriNotify>('tauri_notify', (event) => {
-            console.log(`store tauri_notify: ${JSON.stringify(event.payload)}`);
+            console.log("tauri tauri_notify event", event)
             if (event.payload.alert_type === 'ElMessage') {
                 ElMessage({
                     type: event.payload.message_type,

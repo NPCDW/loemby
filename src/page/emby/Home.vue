@@ -119,11 +119,6 @@ const route = useRoute()
 
 const embyServerId = ref(<string>route.params.embyId)
 
-watchEffect(async () => {
-    embyServerId.value = <string>route.params.embyId
-    handlePaneChange()
-})
-
 const search_str = ref('')
 const search = async () => {
     router.push('/nav/emby/' + embyServerId.value + '/search?search=' + encodeURIComponent(search_str.value))
@@ -225,6 +220,10 @@ function handlePaneChange() {
     }
 }
 
+watchEffect(async () => {
+    embyServerId.value = <string>route.params.embyId
+    handlePaneChange()
+})
 </script>
 
 <style scoped>

@@ -216,16 +216,6 @@ const nextUpCurrentPage = ref(1)
 const nextUpPageSize = ref(6)
 const nextUpTotal = ref(0)
 
-watchEffect(async () => {
-    updateCurrentEpisodes().then(() => {
-        if (route.query.autoplay === 'true') {
-            nextTick(() => {
-                playing(<string>route.params.episodeId, 0, Boolean(JSON.parse(<string>route.query.directLink)))
-            })
-        }
-    })
-})
-
 const currentEpisodes = ref<EpisodeItem>()
 function updateCurrentEpisodes(silent: boolean = false) {
     if (!silent) {
@@ -279,7 +269,6 @@ function nextUp(pageNumber: number, pageSize: number = nextUpPageSize.value) {
     }).catch(e => ElMessage.error(e)).finally(() => nextUpLoading.value = false)
 }
 function nextEpisode() {
-    nextUpCurrentPage.value = 1
     nextUp(1, 1).then(() => {
         if (nextUpList.value.length > 0) {
             router.replace({path: '/nav/emby/' + embyServerId + '/episodes/' + nextUpList.value[0].Id, query: {
@@ -591,22 +580,20 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             external_audio: externalAudio,
             external_subtitle: externalSubtitle,
             scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
-            start_time: new Date().getTime() / 1000,
+            start_time: Math.round(new Date().getTime() / 1000),
         }).catch(res => ElMessage.error(res))
     }).finally(() => play_loading.value = false)
 }
 
-interface PlaybackProgress {
+interface PlaybackStoppedParam {
     emby_server_id: string;
     item_id: string;
 }
-listen<string>('playingStopped', (event) => {
-    console.log(`playingStopped event`, event);
-    let json: PlaybackProgress = JSON.parse(event.payload);
-    if (embyServerId === json.emby_server_id && json.item_id === currentEpisodes.value?.Id) {
+listen<PlaybackStoppedParam>('playingStopped', (event) => {
+    console.log("tauri playingStopped event", event)
+    if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id) {
         updateCurrentEpisodes(true).then(async () => {
             if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
-                nextUpCurrentPage.value = 1
                 if (autoplay.value) {
                     ElMessage.success('即将播放下一集')
                 }
@@ -655,6 +642,16 @@ function played() {
 function gotoSeries(seriesId: string) {
     router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
 }
+
+watchEffect(async () => {
+    updateCurrentEpisodes().then(() => {
+        if (route.query.autoplay === 'true') {
+            nextTick(() => {
+                playing(<string>route.params.episodeId, 0, Boolean(JSON.parse(<string>route.query.directLink)))
+            })
+        }
+    })
+})
 </script>
 
 <style scoped>

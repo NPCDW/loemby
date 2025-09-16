@@ -103,7 +103,7 @@ pub async fn search(param: EmbySearchParam, state: &tauri::State<'_, AppState>) 
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Users/{}/Items?SearchTerm={}&IncludeItemTypes={}&Recursive=true&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex={}&Limit={}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.search_str, param.item_types, param.start_index, param.limit))
+        .get(format!("{}/emby/Users/{}/Items?SearchTerm={}&IncludeItemTypes={}&Recursive=true&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex={}&Limit={}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.search_str, param.item_types.join(","), param.start_index, param.limit))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;

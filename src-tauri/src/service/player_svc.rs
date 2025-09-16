@@ -406,18 +406,9 @@ async fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHa
         position_ticks: progress,
     }, &app_handle.state::<AppState>()).await?;
 
-    app_handle.emit("playback_progress", PlaybackProgress {
+    app_handle.emit("playingStopped", PlaybackStoppedParam {
         emby_server_id: &body.emby_server_id,
         item_id: &body.item_id,
-        item_type: &body.item_type,
-        item_name: &body.item_name,
-        series_id: body.series_id.clone(),
-        series_name: body.series_name.clone(),
-        media_source_id: &body.media_source_id,
-        play_session_id: &body.play_session_id,
-        progress: last_record_position,
-        run_time_ticks: body.run_time_ticks,
-        scrobble_trakt_param: body.scrobble_trakt_param.clone(),
     })?;
 
     Ok(())
@@ -440,18 +431,9 @@ struct MpvIpcResponse<'a> {
 }
 
 #[derive(Clone, Serialize)]
-struct PlaybackProgress<'a> {
+struct PlaybackStoppedParam<'a> {
     emby_server_id: &'a str,
     item_id: &'a str,
-    item_type: &'a str,
-    item_name: &'a str,
-    series_id: Option<String>,
-    series_name: Option<String>,
-    media_source_id: &'a str,
-    play_session_id: &'a str,
-    progress: Decimal,
-    pub run_time_ticks: u64,
-    pub scrobble_trakt_param: Option<String>,
 }
 
 #[cfg(not(windows))]
