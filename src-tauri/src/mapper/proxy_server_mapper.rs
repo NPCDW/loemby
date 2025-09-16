@@ -79,9 +79,25 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
     let mut cache_map_write = state.proxy_server_chache.write().await;
     cache_map_write.clear();
     for proxy in list {
-        let proxy_url = get_proxy_url(proxy.clone());
-        cache_map_write.insert(proxy.id.unwrap(), proxy_url);
+        let id = proxy.id.clone().unwrap();
+        let proxy_url = get_proxy_url(proxy);
+        cache_map_write.insert(id, proxy_url);
     }
+    anyhow::Ok(())
+}
+
+pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
+    let proxy_server = get_by_id(id.to_string(), &state.db_pool).await?;
+    let mut cache_map_write = state.proxy_server_chache.write().await;
+    match proxy_server {
+        Some(proxy_server) => {
+            let proxy_url = get_proxy_url(proxy_server);
+            cache_map_write.insert(id.to_string(), proxy_url);
+        },
+        None => {
+            cache_map_write.remove(id);
+        },
+    };
     anyhow::Ok(())
 }
 
@@ -110,7 +126,11 @@ pub async fn list_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<ProxyServer>> {
 }
 
 pub async fn create(entity: ProxyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
-    let entity_clone = entity.clone();
+    let id = if entity.id.is_some() {
+        entity.id.clone().unwrap()
+    } else {
+        uuid::Uuid::new_v4().to_string()
+    };
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into proxy_server(");
     let mut separated = query_builder.separated(", ");
     separated.push("id");
@@ -131,11 +151,7 @@ pub async fn create(entity: ProxyServer, state: &tauri::State<'_, AppState>) -> 
     }
     query_builder.push(")  values(");
     let mut separated = query_builder.separated(", ");
-    if entity.id.is_some() {
-        separated.push_bind(entity.id.unwrap());
-    } else {
-        separated.push_bind(uuid::Uuid::new_v4().to_string());
-    }
+    separated.push_bind(id.clone());
     if entity.name.is_some() {
         separated.push_bind(entity.name.unwrap());
     }
@@ -158,14 +174,13 @@ pub async fn create(entity: ProxyServer, state: &tauri::State<'_, AppState>) -> 
     let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 添加代理服务器: {} {:?}", sql, res);
     if res.is_ok() {
-        let proxy_url = get_proxy_url(entity_clone.clone());
-        state.proxy_server_chache.write().await.insert(entity_clone.id.clone().unwrap(), proxy_url);
+        refresh_cache(&id, state).await?;
     }
     anyhow::Ok(res?)
 }
 
 pub async fn update_by_id(entity: ProxyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
-    let entity_clone = entity.clone();
+    let id = entity.id.clone().unwrap();
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update proxy_server set ");
     let mut separated = query_builder.separated(", ");
     if entity.name.is_some() {
@@ -190,8 +205,7 @@ pub async fn update_by_id(entity: ProxyServer, state: &tauri::State<'_, AppState
     let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 更新代理服务器: {} {:?}", sql, res);
     if res.is_ok() {
-        let proxy_url = get_proxy_url(entity_clone.clone());
-        state.proxy_server_chache.write().await.insert(entity_clone.id.clone().unwrap(), proxy_url);
+        refresh_cache(&id, state).await?;
     }
     anyhow::Ok(res?)
 }
@@ -204,7 +218,7 @@ pub async fn delete_by_id(id: String, state: &tauri::State<'_, AppState>) -> any
     let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 删除代理服务器: {} {:?}", sql, res);
     if res.is_ok() {
-        state.proxy_server_chache.write().await.remove(&id);
+        refresh_cache(&id, state).await?;
     }
     anyhow::Ok(res?)
 }

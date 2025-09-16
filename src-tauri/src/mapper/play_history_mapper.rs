@@ -53,6 +53,11 @@ pub async fn get(emby_server_id: String, item_id: String, pool: &Pool<Sqlite>) -
 }
 
 pub async fn create(entity: PlayHistory, pool: &Pool<Sqlite>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
+    let id = if entity.id.is_some() {
+        entity.id.clone().unwrap()
+    } else {
+        uuid::Uuid::new_v4().to_string()
+    };
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into play_history(");
     let mut separated = query_builder.separated(", ");
     separated.push("id");
@@ -85,11 +90,7 @@ pub async fn create(entity: PlayHistory, pool: &Pool<Sqlite>) -> anyhow::Result<
     }
     query_builder.push(")  values(");
     let mut separated = query_builder.separated(", ");
-    if entity.id.is_some() {
-        separated.push_bind(entity.id.unwrap());
-    } else {
-        separated.push_bind(uuid::Uuid::new_v4().to_string());
-    }
+    separated.push_bind(id);
     if entity.emby_server_id.is_some() {
         separated.push_bind(entity.emby_server_id.unwrap());
     }

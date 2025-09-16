@@ -46,9 +46,23 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
     anyhow::Ok(())
 }
 
-pub async fn get_cache(id: String, state: &tauri::State<'_, AppState>) -> Option<EmbyServer> {
+pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
+    let emby_server = get_by_id(id.to_string(), &state.db_pool).await?;
+    let mut cache_map_write = state.emby_server_chache.write().await;
+    match emby_server {
+        Some(emby_server) => {
+            cache_map_write.insert(id.to_string(), emby_server);
+        },
+        None => {
+            cache_map_write.remove(id);
+        },
+    };
+    anyhow::Ok(())
+}
+
+pub async fn get_cache(id: &str, state: &tauri::State<'_, AppState>) -> Option<EmbyServer> {
     let cache_map = state.emby_server_chache.read().await;
-    cache_map.get(&id).cloned()
+    cache_map.get(id).cloned()
 }
 
 pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> anyhow::Result<Option<EmbyServer>> {
@@ -71,7 +85,11 @@ pub async fn list_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<EmbyServer>> {
 }
 
 pub async fn create(entity: EmbyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
-    let entity_clone = entity.clone();
+    let id = if entity.id.is_some() {
+        entity.id.clone().unwrap()
+    } else {
+        uuid::Uuid::new_v4().to_string()
+    };
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into emby_server(");
     let mut separated = query_builder.separated(", ");
     separated.push("id");
@@ -137,11 +155,7 @@ pub async fn create(entity: EmbyServer, state: &tauri::State<'_, AppState>) -> a
     }
     query_builder.push(")  values(");
     let mut separated = query_builder.separated(", ");
-    if entity.id.is_some() {
-        separated.push_bind(entity.id.unwrap());
-    } else {
-        separated.push_bind(uuid::Uuid::new_v4().to_string());
-    }
+    separated.push_bind(id.clone());
     if entity.base_url.is_some() {
         separated.push_bind(entity.base_url.unwrap());
     }
@@ -209,13 +223,13 @@ pub async fn create(entity: EmbyServer, state: &tauri::State<'_, AppState>) -> a
     let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 添加emby服务器: {} {:?}", sql, res);
     if res.is_ok() {
-        state.emby_server_chache.write().await.insert(entity_clone.id.clone().unwrap(), entity_clone.clone());
+        refresh_cache(&id, state).await?;
     }
     anyhow::Ok(res?)
 }
 
 pub async fn update_by_id(entity: EmbyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
-    let entity_clone = entity.clone();
+    let id = entity.id.clone().unwrap();
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update emby_server set ");
     let mut separated = query_builder.separated(", ");
     if entity.base_url.is_some() {
@@ -285,7 +299,7 @@ pub async fn update_by_id(entity: EmbyServer, state: &tauri::State<'_, AppState>
     let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 更新emby服务器: {} {:?}", sql, res);
     if res.is_ok() {
-        state.emby_server_chache.write().await.insert(entity_clone.id.clone().unwrap(), entity_clone.clone());
+        refresh_cache(&id, state).await?;
     }
     anyhow::Ok(res?)
 }
@@ -330,7 +344,7 @@ pub async fn delete_by_id(id: String, state: &tauri::State<'_, AppState>) -> any
     let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 删除emby服务器: {} {:?}", sql, res);
     if res.is_ok() {
-        state.emby_server_chache.write().await.remove(&id);
+        refresh_cache(&id, state).await?;
     }
     anyhow::Ok(res?)
 }

@@ -43,6 +43,11 @@ pub async fn list_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<EmbyLine>> {
 }
 
 pub async fn create(entity: EmbyLine, pool: &Pool<Sqlite>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
+    let id = if entity.id.is_some() {
+        entity.id.clone().unwrap()
+    } else {
+        uuid::Uuid::new_v4().to_string()
+    };
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into emby_line(");
     let mut separated = query_builder.separated(", ");
     separated.push("id");
@@ -66,11 +71,7 @@ pub async fn create(entity: EmbyLine, pool: &Pool<Sqlite>) -> anyhow::Result<sql
     }
     query_builder.push(")  values(");
     let mut separated = query_builder.separated(", ");
-    if entity.id.is_some() {
-        separated.push_bind(entity.id.unwrap());
-    } else {
-        separated.push_bind(uuid::Uuid::new_v4().to_string());
-    }
+    separated.push_bind(id);
     if entity.name.is_some() {
         separated.push_bind(entity.name.unwrap());
     }

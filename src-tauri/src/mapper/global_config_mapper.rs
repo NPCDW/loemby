@@ -21,6 +21,20 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
     anyhow::Ok(())
 }
 
+pub async fn refresh_cache(config_key: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
+    let global_config = get_by_key(config_key.to_string(), &state.db_pool).await?;
+    let mut cache_map_write = state.global_config_chache.write().await;
+    match global_config {
+        Some(global_config) => {
+            cache_map_write.insert(config_key.to_string(), global_config.config_value.unwrap());
+        },
+        None => {
+            cache_map_write.remove(config_key);
+        },
+    };
+    anyhow::Ok(())
+}
+
 pub async fn get_cache(config_key: &str, state: &tauri::State<'_, AppState>) -> Option<String> {
     let cache_map = state.global_config_chache.read().await;
     cache_map.get(config_key).cloned()
@@ -53,7 +67,11 @@ pub async fn create_or_update(entity: GlobalConfig, state: &tauri::State<'_, App
 }
 
 pub async fn create(entity: GlobalConfig, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
-    let entity_clone = entity.clone();
+    let id = if entity.id.is_some() {
+        entity.id.clone().unwrap()
+    } else {
+        uuid::Uuid::new_v4().to_string()
+    };
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into global_config(");
     let mut separated = query_builder.separated(", ");
     separated.push("id");
@@ -65,13 +83,9 @@ pub async fn create(entity: GlobalConfig, state: &tauri::State<'_, AppState>) ->
     }
     query_builder.push(")  values(");
     let mut separated = query_builder.separated(", ");
-    if entity.id.is_some() {
-        separated.push_bind(entity.id.unwrap());
-    } else {
-        separated.push_bind(uuid::Uuid::new_v4().to_string());
-    }
+    separated.push_bind(id);
     if entity.config_key.is_some() {
-        separated.push_bind(entity.config_key.unwrap());
+        separated.push_bind(entity.config_key.clone().unwrap());
     }
     if entity.config_value.is_some() {
         separated.push_bind(entity.config_value.unwrap());
@@ -83,26 +97,25 @@ pub async fn create(entity: GlobalConfig, state: &tauri::State<'_, AppState>) ->
     let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 添加配置: {} {:?}", sql, res);
     if res.is_ok() {
-        state.global_config_chache.write().await.insert(entity_clone.config_key.unwrap(), entity_clone.config_value.unwrap());
+        refresh_cache(&entity.config_key.unwrap(), state).await?;
     }
     anyhow::Ok(res?)
 }
 
 pub async fn update_by_key(entity: GlobalConfig, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
-    let entity_clone = entity.clone();
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update global_config set ");
     let mut separated = query_builder.separated(", ");
     if entity.config_value.is_some() {
         separated.push("config_value = ").push_bind_unseparated(entity.config_value.unwrap());
     }
-    query_builder.push(" where config_key = ").push_bind(entity.config_key.unwrap());
+    query_builder.push(" where config_key = ").push_bind(entity.config_key.clone().unwrap());
 
     let query = query_builder.build();
     let sql = query.sql();
     let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 更新配置: {} {:?}", sql, res);
     if res.is_ok() {
-        state.global_config_chache.write().await.insert(entity_clone.config_key.unwrap(), entity_clone.config_value.unwrap());
+        refresh_cache(&entity.config_key.unwrap(), state).await?;
     }
     anyhow::Ok(res?)
 }
@@ -115,7 +128,7 @@ pub async fn delete_by_key(config_key: String, state: &tauri::State<'_, AppState
     let res = query.execute(&state.db_pool).await;
     tracing::debug!("sqlx: 删除配置: {} {:?}", sql, res);
     if res.is_ok() {
-        state.global_config_chache.write().await.remove(&config_key);
+        refresh_cache(&config_key, state).await?;
     }
     anyhow::Ok(res?)
 }

@@ -10,7 +10,7 @@ use crate::{config::app_state::{AppState, TauriNotify}, controller::invoke_ctl::
 
 pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     body.start_time = chrono::Local::now().timestamp();
-    let emby_server = match emby_server_mapper::get_cache(body.emby_server_id.clone(), state).await {
+    let emby_server = match emby_server_mapper::get_cache(&body.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err("emby_server not found".to_string()),
     };

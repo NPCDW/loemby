@@ -314,16 +314,14 @@ function handleMediaSources(mediaSources: MediaSource[]) {
             maxVersionId = i + 1
         }
     }
-    if (rememberSelect.value) {
-        playbackVersionChange(Number(<string>route.query.versionSelect))
-    } else if (versionSelect.value > 0) {
+    if (versionSelect.value > 0) {
         playbackVersionChange(versionSelect.value)
     } else {
-        playbackVersionChange(maxVersionId)
+        playbackVersionChange(maxVersionId, true)
     }
 }
 
-function playbackVersionChange(versionId: number) {
+function playbackVersionChange(versionId: number, firstTime: boolean = false) {
     let currentMediaSources = currentEpisodes.value!.MediaSources!.find(mediaSource => mediaSource.Id == versionOptions.value[versionId - 1].mediaSourceId)
     if (!currentMediaSources) {
         return
@@ -437,7 +435,7 @@ function playbackVersionChange(versionId: number) {
     if (subtitleSelect.value === -1 && subtitleOptions.value.length > 1) {
         subtitleSelect.value = subtitleOptions.value[0].value
     }
-    if (rememberSelect.value) {
+    if (rememberSelect.value && firstTime) {
         videoSelect.value = Number(<string>route.query.videoSelect)
         audioSelect.value = Number(<string>route.query.audioSelect)
         subtitleSelect.value = Number(<string>route.query.subtitleSelect)
@@ -652,6 +650,12 @@ function gotoSeries(seriesId: string) {
 
 watchEffect(async () => {
     updateCurrentEpisodes().then(() => {
+        if (rememberSelect.value) {
+            versionSelect.value = Number(<string>route.query.versionSelect)
+            videoSelect.value = Number(<string>route.query.videoSelect)
+            audioSelect.value = Number(<string>route.query.audioSelect)
+            subtitleSelect.value = Number(<string>route.query.subtitleSelect)
+        } 
         if (route.query.autoplay === 'true') {
             nextTick(() => {
                 playing(<string>route.params.episodeId, 0, Boolean(JSON.parse(<string>route.query.directLink)))

@@ -10,14 +10,14 @@ use crate::{
 };
 
 pub async fn get_server_info(param: EmbyGetServerInfoParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
@@ -34,14 +34,14 @@ pub async fn get_server_info(param: EmbyGetServerInfoParam, state: &tauri::State
 }
 
 pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Authorization").unwrap(), HeaderValue::from_str(&format!(r#"Emby Client="{}", Device="{}", DeviceId="{}", Version="{}""#, emby_server.client.unwrap(), emby_server.device.unwrap(), emby_server.device_id.unwrap(), emby_server.client_version.unwrap())).unwrap());
 
@@ -65,14 +65,14 @@ pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &ta
 }
 
 pub async fn logout(param: EmbyLogoutParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
@@ -92,14 +92,14 @@ pub async fn logout(param: EmbyLogoutParam, state: &tauri::State<'_, AppState>) 
 }
 
 pub async fn search(param: EmbySearchParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -117,14 +117,14 @@ pub async fn search(param: EmbySearchParam, state: &tauri::State<'_, AppState>) 
 }
 
 pub async fn get_continue_play_list(param: EmbyGetContinuePlayListParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -142,14 +142,14 @@ pub async fn get_continue_play_list(param: EmbyGetContinuePlayListParam, state: 
 }
 
 pub async fn get_favorite_list(param: EmbyGetFavoriteListParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -167,14 +167,14 @@ pub async fn get_favorite_list(param: EmbyGetFavoriteListParam, state: &tauri::S
 }
 
 pub async fn next_up(param: EmbyNextUpParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -192,14 +192,14 @@ pub async fn next_up(param: EmbyNextUpParam, state: &tauri::State<'_, AppState>)
 }
 
 pub async fn get_media_library_list(param: EmbyGetMediaLibraryListParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -217,14 +217,14 @@ pub async fn get_media_library_list(param: EmbyGetMediaLibraryListParam, state: 
 }
 
 pub async fn get_media_library_child_latest(param: EmbyGetMediaLibraryChildLatestParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -242,14 +242,14 @@ pub async fn get_media_library_child_latest(param: EmbyGetMediaLibraryChildLates
 }
 
 pub async fn get_media_library_child(param: EmbyGetMediaLibraryChildParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -267,14 +267,14 @@ pub async fn get_media_library_child(param: EmbyGetMediaLibraryChildParam, state
 }
 
 pub async fn count(param: EmbyCountParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -292,14 +292,14 @@ pub async fn count(param: EmbyCountParam, state: &tauri::State<'_, AppState>) ->
 }
 
 pub async fn items(param: EmbyItemsParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -317,14 +317,14 @@ pub async fn items(param: EmbyItemsParam, state: &tauri::State<'_, AppState>) ->
 }
 
 pub async fn seasons(param: EmbySeasonsParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -342,14 +342,14 @@ pub async fn seasons(param: EmbySeasonsParam, state: &tauri::State<'_, AppState>
 }
 
 pub async fn episodes(param: EmbyEpisodesParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -367,14 +367,14 @@ pub async fn episodes(param: EmbyEpisodesParam, state: &tauri::State<'_, AppStat
 }
 
 pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
@@ -421,14 +421,14 @@ pub struct EmbyPlayingParam {
 }
 
 pub async fn playing(param: EmbyPlayingParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
@@ -464,14 +464,14 @@ pub struct EmbyPlayingProgressParam {
 }
 
 pub async fn playing_progress(param: EmbyPlayingProgressParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
@@ -507,14 +507,14 @@ pub struct EmbyPlayingStoppedParam {
 }
 
 pub async fn playing_stopped(param: EmbyPlayingStoppedParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
@@ -541,14 +541,14 @@ pub async fn playing_stopped(param: EmbyPlayingStoppedParam, state: &tauri::Stat
 }
 
 pub async fn star(param: EmbyStarParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
@@ -568,14 +568,14 @@ pub async fn star(param: EmbyStarParam, state: &tauri::State<'_, AppState>) -> a
 }
 
 pub async fn unstar(param: EmbyUnstarParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -593,14 +593,14 @@ pub async fn unstar(param: EmbyUnstarParam, state: &tauri::State<'_, AppState>) 
 }
 
 pub async fn played(param: EmbyPlayedParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
@@ -620,14 +620,14 @@ pub async fn played(param: EmbyPlayedParam, state: &tauri::State<'_, AppState>) 
 }
 
 pub async fn unplayed(param: EmbyUnplayedParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server: emby_server_mapper::EmbyServer = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
@@ -645,14 +645,14 @@ pub async fn unplayed(param: EmbyUnplayedParam, state: &tauri::State<'_, AppStat
 }
 
 pub async fn hide_from_resume(param: EmbyHideFromResumeParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
@@ -675,7 +675,7 @@ pub async fn hide_from_resume(param: EmbyHideFromResumeParam, state: &tauri::Sta
 }
 
 pub async fn get_direct_stream_url(param: EmbyGetDirectStreamUrlParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
@@ -684,7 +684,7 @@ pub async fn get_direct_stream_url(param: EmbyGetDirectStreamUrlParam, state: &t
 }
 
 pub async fn get_audio_stream_url(param: EmbyGetAudioStreamUrlParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
@@ -696,7 +696,7 @@ pub async fn get_audio_stream_url(param: EmbyGetAudioStreamUrlParam, state: &tau
 }
 
 pub async fn get_subtitle_stream_url(param: EmbyGetSubtitleStreamUrlParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id, state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };

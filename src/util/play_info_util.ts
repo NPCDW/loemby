@@ -54,3 +54,32 @@ export const getResolution = (width: number, height: number) => {
         return '240p'
     }
 }
+
+export const getResolutionLevelFromMediaSources = (mediaSources?: MediaSource) => {
+    if (!mediaSources || !mediaSources.MediaStreams || mediaSources.MediaStreams.length == 0) {
+        return -1
+    }
+    return getResolutionLevel(mediaSources.MediaStreams[0].Width, mediaSources.MediaStreams[0].Height)
+}
+
+const getResolutionLevel = (width: number, height: number) => {
+    if (!width || !height) {
+        return -1
+    } else if (width >= 7680 || height >= 4320) {
+        return 8
+    } else if (width >= 3840 || height >= 2160) {
+        return 7
+    } else if (width >= 2560 || height >= 1440) {
+        return 6
+    } else if (width >= 1920 || height >= 1080) {
+        return 5
+    } else if (width >= 1280 || height >= 720) {
+        return 4
+    } else if (width >= 854 || height >= 480) {
+        return 3
+    } else if (width >= 640 || height >= 360) {
+        return 2
+    } else {
+        return 1
+    }
+}

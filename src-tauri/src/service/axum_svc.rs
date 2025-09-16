@@ -216,7 +216,7 @@ async fn image_emby(headers: axum::http::HeaderMap, State(axum_app_state): State
     tracing::debug!("image: {:?}", param);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
     let state = axum_app_state.app.state::<AppState>().clone();
-    let emby_server = match emby_server_mapper::get_cache(param.emby_server_id.clone(), &state).await {
+    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, &state).await {
         Some(emby_server) => emby_server,
         None => return (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
