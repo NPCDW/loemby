@@ -33,25 +33,6 @@ async function playback(param: PlaybackParam): Promise<string> {
     return invoke('play_video', {body: param});
 }
 
-interface HttpForwardParam {
-    method: string,
-    url: string,
-    headers: {[key: string]: string},
-    body?: string,
-    proxy?: string,
-}
-
-export interface HttpForwardResult {
-    status_code: number,
-    status_text: string,
-    headers: {[key: string]: string},
-    body: string,
-}
-
-async function httpForward(param: HttpForwardParam): Promise<HttpForwardResult> {
-    return invoke('http_forward', {param});
-}
-
 async function go_trakt_auth(): Promise<void> {
     return invoke('go_trakt_auth');
 }
@@ -61,9 +42,7 @@ async function open_url(url: string): Promise<string> {
 }
 
 async function updater(): Promise<boolean> {
-    return invoke('updater', {body: {
-        user_agent: 'loemby/' + import.meta.env.VITE_APP_VERSION,
-    }});
+    return invoke('updater');
 }
 
 async function restartApp(): Promise<boolean> {
@@ -83,5 +62,5 @@ async function clean_icon_cache(): Promise<void> {
 }
 
 export default {
-    getSysInfo, playback, httpForward, go_trakt_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache
+    getSysInfo, playback, go_trakt_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache
 }

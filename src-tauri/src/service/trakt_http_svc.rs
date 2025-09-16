@@ -231,3 +231,19 @@ pub async fn stop(body: String, state: &tauri::State<'_, AppState>, retry: u32) 
     }
     Ok(response.text().await?)
 }
+
+pub async fn go_trakt_auth(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
+    let auxm_app_state = state.auxm_app_state.read().await.clone();
+    let auxm_app_state = auxm_app_state.as_ref().unwrap();
+
+    let redirect_uri = format!("http://127.0.0.1:{}/trakt_auth", auxm_app_state.port);
+    let state = uuid::Uuid::new_v4().to_string();
+    let url = format!("https://api.trakt.tv/oauth/authorize?response_type=code&client_id={}&redirect_uri={}&state={}", TRAKT_CLIENT_ID, redirect_uri, state);
+    auxm_app_state.trakt_auth_state.write().await.push(state);
+    let res = webbrowser::open(&url);
+    if let Err(err) = res {
+        return Err(anyhow::anyhow!("打开浏览器失败: {} 您可尝试手动复制链接到浏览器中打开 {}", err.to_string(), &url));
+    }
+    tracing::debug!("打开浏览器成功: {}", &url);
+    Ok(())
+}

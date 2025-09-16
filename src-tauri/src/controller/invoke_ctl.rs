@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use crate::config::app_state::AppState;
 use crate::config::runtime_config;
-use crate::service::{cache_svc, http_forward_svc, player_svc, updater_svc};
+use crate::service::{cache_svc, player_svc, trakt_http_svc, updater_svc};
 
 #[tauri::command]
 pub async fn get_sys_info() -> Result<String, String> {
@@ -50,61 +48,11 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
     player_svc::play_video(body, &state, app_handle).await
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct HttpForwardParam {
-    pub method: String,
-    pub url: String,
-    pub headers: HashMap<String, String>,
-    pub body: Option<String>,
-    pub proxy: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct HttpForwardResult {
-    pub status_code: u16,
-    pub status_text: Option<&'static str>,
-    pub headers: HashMap<String, String>,
-    pub body: String,
-}
-
-#[tauri::command]
-pub async fn http_forward(param: HttpForwardParam, state: tauri::State<'_, AppState>) -> Result<HttpForwardResult, String> {
-    let res = http_forward_svc::forward(param, &state).await;
-    if res.is_err() {
-        return Err(res.unwrap_err().to_string());
-    }
-    let res = res.unwrap();
-    Ok(HttpForwardResult {
-        status_code: res.status().as_u16(),
-        status_text: res.status().canonical_reason(),
-        headers: res.headers().iter().map(|(k, v)| (k.to_string(), v.to_str().unwrap().to_string())).collect(),
-        body: res.text().await.unwrap_or_else(|e| {
-            return format!("http 转发解析响应体失败: {:?}", e);
-        }),
-    })
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct LoadImageParam {
-    pub image_url: String,
-    pub proxy_url: Option<String>,
-    pub user_agent: String,
-}
-
 #[tauri::command]
 pub async fn go_trakt_auth(state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let auxm_app_state = state.auxm_app_state.clone();
-    let auxm_app_state = auxm_app_state.read().await.clone();
-    let auxm_app_state = auxm_app_state.as_ref().unwrap();
-
-    let client_id = "05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572";
-    let redirect_uri = format!("http://127.0.0.1:{}/trakt_auth", auxm_app_state.port);
-    let state = uuid::Uuid::new_v4().to_string();
-    let url = format!("https://api.trakt.tv/oauth/authorize?response_type=code&client_id={}&redirect_uri={}&state={}", client_id, redirect_uri, state);
-    auxm_app_state.trakt_auth_state.write().await.push(state);
-    let res = webbrowser::open(&url);
+    let res = trakt_http_svc::go_trakt_auth(&state).await;
     if let Err(err) = res {
-        return Err(format!("打开浏览器失败: {} 您可尝试手动复制链接到浏览器中打开 {}", err.to_string(), &url));
+        return Err(format!("{}", err.to_string()));
     }
     Ok(())
 }
@@ -118,15 +66,9 @@ pub async fn open_url(url: String) -> Result<(), String> {
     Ok(())
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct UpdaterParam {
-    pub proxy_url: Option<String>,
-    pub user_agent: String,
-}
-
 #[tauri::command]
-pub async fn updater(body: UpdaterParam, app_handle: tauri::AppHandle) -> Result<bool, String> {
-    let res = updater_svc::update(body, app_handle).await;
+pub async fn updater(app_handle: tauri::AppHandle) -> Result<bool, String> {
+    let res = updater_svc::update(app_handle).await;
     if let Err(err) = res {
         return Err(format!("更新失败: {} ", err.to_string()));
     }
