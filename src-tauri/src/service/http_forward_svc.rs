@@ -14,10 +14,10 @@ pub async fn forward(param: HttpForwardParam, state: &tauri::State<'_, AppState>
     let mut builder = client
         .request(Method::from_str(&param.method)?, param.url)
         .headers(headers);
-    if let Some(body) = param.body {
+    if let Some(body) = param.body.clone() {
         builder = builder.body(body);
     }
-    let builder_print = format!("{:?}", &builder);
+    let builder_print = format!("{:?} {:?}", &builder, param.body);
     let response = builder.send().await;
     tracing::debug!("reqwest response {} {:?}", builder_print, &response);
     Ok(response?)

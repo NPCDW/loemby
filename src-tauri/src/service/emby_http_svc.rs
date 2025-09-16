@@ -46,14 +46,15 @@ pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &ta
     headers.insert(HeaderName::from_str("X-Emby-Authorization").unwrap(), HeaderValue::from_str(&format!(r#"Emby Client="{}", Device="{}", DeviceId="{}", Version="{}""#, emby_server.client.unwrap(), emby_server.device.unwrap(), emby_server.device_id.unwrap(), emby_server.client_version.unwrap())).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
+    let body = serde_json::json!({
+            "Username": emby_server.username,
+            "Pw": emby_server.password,
+        }).to_string();
     let builder = client
         .post(format!("{}/emby/Users/AuthenticateByName", emby_server.base_url.as_ref().unwrap()))
         .headers(headers)
-        .body(serde_json::json!({
-            "Username": emby_server.username,
-            "Pw": emby_server.password,
-        }).to_string());
-    let builder_print = format!("{:?}", &builder);
+        .body(body.clone());
+    let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("登录emby服务器 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -378,10 +379,7 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
-    let builder = client
-        .post(format!("{}/emby/Items/{}/PlaybackInfo?IsPlayback=false", emby_server.base_url.as_ref().unwrap(), param.item_id))
-        .headers(headers)
-        .body(serde_json::json!({
+    let body = serde_json::json!({
             "UserId": emby_server.user_id.as_ref().unwrap(),
             "MaxStreamingBitrate": 1400000000,
             "MaxStaticBitrate": 1400000000,
@@ -398,8 +396,12 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
                     }
                 ]
             }
-        }).to_string());
-    let builder_print = format!("{:?}", &builder);
+        }).to_string();
+    let builder = client
+        .post(format!("{}/emby/Items/{}/PlaybackInfo?IsPlayback=false", emby_server.base_url.as_ref().unwrap(), param.item_id))
+        .headers(headers)
+        .body(body.clone());
+    let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("播放流媒体详情 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -431,17 +433,18 @@ pub async fn playing(param: EmbyPlayingParam, state: &tauri::State<'_, AppState>
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
-    let builder = client
-        .post(format!("{}/emby/Sessions/Playing?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
-        .headers(headers)
-        .body(serde_json::json!({
+    let body = serde_json::json!({
             "ItemId": param.item_id,
             "MediaSourceId": param.media_source_id,
             "PlayMethod": "DirectStream",
             "PlaySessionId": param.play_session_id,
             "PositionTicks": param.position_ticks,
-        }).to_string());
-    let builder_print = format!("{:?}", &builder);
+        }).to_string();
+    let builder = client
+        .post(format!("{}/emby/Sessions/Playing?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
+        .headers(headers)
+        .body(body.clone());
+    let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("开始播放 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -473,17 +476,18 @@ pub async fn playing_progress(param: EmbyPlayingProgressParam, state: &tauri::St
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
-    let builder = client
-        .post(format!("{}/emby/Sessions/Playing/Progress?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
-        .headers(headers)
-        .body(serde_json::json!({
+    let body = serde_json::json!({
             "ItemId": param.item_id,
             "MediaSourceId": param.media_source_id,
             "PlayMethod": "DirectStream",
             "PlaySessionId": param.play_session_id,
             "PositionTicks": param.position_ticks,
-        }).to_string());
-    let builder_print = format!("{:?}", &builder);
+        }).to_string();
+    let builder = client
+        .post(format!("{}/emby/Sessions/Playing/Progress?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
+        .headers(headers)
+        .body(body.clone());
+    let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("播放进度 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -515,17 +519,18 @@ pub async fn playing_stopped(param: EmbyPlayingStoppedParam, state: &tauri::Stat
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
-    let builder = client
-        .post(format!("{}/emby/Sessions/Playing/Stopped?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
-        .headers(headers)
-        .body(serde_json::json!({
+    let body = serde_json::json!({
             "ItemId": param.item_id,
             "MediaSourceId": param.media_source_id,
             "PlayMethod": "DirectStream",
             "PlaySessionId": param.play_session_id,
             "PositionTicks": param.position_ticks,
-        }).to_string());
-    let builder_print = format!("{:?}", &builder);
+        }).to_string();
+    let builder = client
+        .post(format!("{}/emby/Sessions/Playing/Stopped?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
+        .headers(headers)
+        .body(body.clone());
+    let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("播放停止 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -652,13 +657,14 @@ pub async fn hide_from_resume(param: EmbyHideFromResumeParam, state: &tauri::Sta
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
+    let body = serde_json::json!({
+            "Hide": param.hide,
+        }).to_string();
     let builder = client
         .post(format!("{}/emby/Users/{}/Items/{}/HideFromResume", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.item_id))
         .headers(headers)
-        .body(serde_json::json!({
-            "Hide": param.hide,
-        }).to_string());
-    let builder_print = format!("{:?}", &builder);
+        .body(body.clone());
+    let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("隐藏观看记录 request {} response {:?}", builder_print, &response);
     let response = response?;

@@ -97,15 +97,16 @@ pub async fn token(param: TraktHttpTokenParam, state: &tauri::State<'_, AppState
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
-    let builder = client
-        .post(TRAKT_TOKEN_EXCHANGE_URL)
-        .headers(headers)
-        .body(serde_json::json!({
+    let body = serde_json::json!({
             "code": param.code,
             "refresh_token": param.refresh_token,
             "redirect_uri": param.redirect_uri,
-        }).to_string());
-    let builder_print = format!("{:?}", &builder);
+        }).to_string();
+    let builder = client
+        .post(TRAKT_TOKEN_EXCHANGE_URL)
+        .headers(headers)
+        .body(body.clone());
+    let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("获取trakt token request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -175,7 +176,7 @@ pub async fn start(body: String, state: &tauri::State<'_, AppState>, retry: u32)
         .post("https://api.trakt.tv/scrobble/start")
         .headers(headers)
         .body(body.clone());
-    let builder_print = format!("{:?}", &builder);
+    let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("trakt开始播放 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -209,7 +210,7 @@ pub async fn stop(body: String, state: &tauri::State<'_, AppState>, retry: u32) 
         .post("https://api.trakt.tv/scrobble/stop")
         .headers(headers)
         .body(body.clone());
-    let builder_print = format!("{:?}", &builder);
+    let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("trakt停止播放 request {} response {:?}", builder_print, &response);
     let response = response?;
