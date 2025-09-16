@@ -839,7 +839,7 @@ const cleanAllEmbyCacheLoading = ref(false)
 function cleanAllEmbyCache() {
     cleanAllEmbyCacheLoading.value = true
     invokeApi.clean_emby_image_cache().finally(() => {
-        cleanEmbyCacheLoading.value = false
+        cleanAllEmbyCacheLoading.value = false
     })
 }
 

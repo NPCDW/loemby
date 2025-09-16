@@ -233,8 +233,7 @@ pub async fn stop(body: String, state: &tauri::State<'_, AppState>, retry: u32) 
 }
 
 pub async fn go_trakt_auth(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
-    let auxm_app_state = state.auxm_app_state.read().await.clone();
-    let auxm_app_state = auxm_app_state.as_ref().unwrap();
+    let auxm_app_state = state.auxm_app_state.read().await.clone().unwrap();
 
     let redirect_uri = format!("http://127.0.0.1:{}/trakt_auth", auxm_app_state.port);
     let state = uuid::Uuid::new_v4().to_string();

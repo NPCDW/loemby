@@ -45,8 +45,7 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
     file_util::write_file(&mpv_config_path, &mpv_args);
 
     let auxm_app_state = state.auxm_app_state.clone();
-    let app_state = auxm_app_state.read().await.clone();
-    let app_state = app_state.as_ref().unwrap();
+    let app_state = auxm_app_state.read().await.clone().unwrap();
 
     let video_path = if proxy_url.is_some() {
         let uuid = uuid::Uuid::new_v4().to_string();

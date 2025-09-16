@@ -16,12 +16,12 @@ pub async fn get_server_info(param: EmbyGetServerInfoParam, state: &tauri::State
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/System/Info/Public", emby_server.base_url.as_ref().unwrap()))
+        .get(format!("{}/emby/System/Info/Public", emby_server.base_url.clone().unwrap()))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -40,8 +40,8 @@ pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &ta
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Authorization").unwrap(), HeaderValue::from_str(&format!(r#"Emby Client="{}", Device="{}", DeviceId="{}", Version="{}""#, emby_server.client.unwrap(), emby_server.device.unwrap(), emby_server.device_id.unwrap(), emby_server.client_version.unwrap())).unwrap());
 
@@ -51,7 +51,7 @@ pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &ta
             "Pw": emby_server.password,
         }).to_string();
     let builder = client
-        .post(format!("{}/emby/Users/AuthenticateByName", emby_server.base_url.as_ref().unwrap()))
+        .post(format!("{}/emby/Users/AuthenticateByName", emby_server.base_url.clone().unwrap()))
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -71,14 +71,14 @@ pub async fn logout(param: EmbyLogoutParam, state: &tauri::State<'_, AppState>) 
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .post(format!("{}/emby/Sessions/Logout", emby_server.base_url.as_ref().unwrap()))
+        .post(format!("{}/emby/Sessions/Logout", emby_server.base_url.clone().unwrap()))
         .headers(headers)
         .body(serde_json::json!({}).to_string());
     let builder_print = format!("{:?}", &builder);
@@ -98,13 +98,13 @@ pub async fn search(param: EmbySearchParam, state: &tauri::State<'_, AppState>) 
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Users/{}/Items?SearchTerm={}&IncludeItemTypes={}&Recursive=true&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex={}&Limit={}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.search_str, param.item_types.join(","), param.start_index, param.limit))
+        .get(format!("{}/emby/Users/{}/Items?SearchTerm={}&IncludeItemTypes={}&Recursive=true&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate&StartIndex={}&Limit={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.search_str, param.item_types.join(","), param.start_index, param.limit))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -123,13 +123,13 @@ pub async fn get_continue_play_list(param: EmbyGetContinuePlayListParam, state: 
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Users/{}/Items/Resume?MediaTypes=Video&Recursive=true&Fields=AlternateMediaSources,MediaSources&StartIndex={}&Limit={}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.start_index, param.limit))
+        .get(format!("{}/emby/Users/{}/Items/Resume?MediaTypes=Video&Recursive=true&Fields=AlternateMediaSources,MediaSources&StartIndex={}&Limit={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.start_index, param.limit))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -148,13 +148,13 @@ pub async fn get_favorite_list(param: EmbyGetFavoriteListParam, state: &tauri::S
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Users/{}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie,Season&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate,Overview&StartIndex={}&Limit={}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.start_index, param.limit))
+        .get(format!("{}/emby/Users/{}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie,Season&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate,Overview&StartIndex={}&Limit={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.start_index, param.limit))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -173,13 +173,13 @@ pub async fn next_up(param: EmbyNextUpParam, state: &tauri::State<'_, AppState>)
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Shows/NextUp?UserId={}&SeriesId={}&StartIndex={}&Limit={}&Fields=AlternateMediaSources,MediaSources", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.series_id, param.start_index, param.limit))
+        .get(format!("{}/emby/Shows/NextUp?UserId={}&SeriesId={}&StartIndex={}&Limit={}&Fields=AlternateMediaSources,MediaSources", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.series_id, param.start_index, param.limit))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -198,13 +198,13 @@ pub async fn get_media_library_list(param: EmbyGetMediaLibraryListParam, state: 
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Users/{}/Views", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap()))
+        .get(format!("{}/emby/Users/{}/Views", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -223,13 +223,13 @@ pub async fn get_media_library_child_latest(param: EmbyGetMediaLibraryChildLates
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Users/{}/Items/Latest?Limit={}&ParentId={}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.limit, param.parent_id))
+        .get(format!("{}/emby/Users/{}/Items/Latest?Limit={}&ParentId={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.limit, param.parent_id))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -248,13 +248,13 @@ pub async fn get_media_library_child(param: EmbyGetMediaLibraryChildParam, state
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Users/{}/Items?Recursive=true&IncludeItemTypes=Series,Movie&ParentId={}&StartIndex={}&Limit={}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.parent_id, param.start_index, param.limit))
+        .get(format!("{}/emby/Users/{}/Items?Recursive=true&IncludeItemTypes=Series,Movie&ParentId={}&StartIndex={}&Limit={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.parent_id, param.start_index, param.limit))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -273,13 +273,13 @@ pub async fn count(param: EmbyCountParam, state: &tauri::State<'_, AppState>) ->
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Items/Counts?UserId={}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap()))
+        .get(format!("{}/emby/Items/Counts?UserId={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -298,13 +298,13 @@ pub async fn items(param: EmbyItemsParam, state: &tauri::State<'_, AppState>) ->
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Users/{}/Items/{}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.item_id))
+        .get(format!("{}/emby/Users/{}/Items/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -323,13 +323,13 @@ pub async fn seasons(param: EmbySeasonsParam, state: &tauri::State<'_, AppState>
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Shows/{}/Seasons?Fields=ProductionYear,Overview&UserId={}", emby_server.base_url.as_ref().unwrap(), param.item_id, emby_server.user_id.as_ref().unwrap()))
+        .get(format!("{}/emby/Shows/{}/Seasons?Fields=ProductionYear,Overview&UserId={}", emby_server.base_url.clone().unwrap(), param.item_id, emby_server.user_id.clone().unwrap()))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -348,13 +348,13 @@ pub async fn episodes(param: EmbyEpisodesParam, state: &tauri::State<'_, AppStat
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Shows/{}/Episodes?StartIndex={}&Limit={}&SeasonId={}&Fields=AlternateMediaSources,MediaSources&UserId={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.start_index, param.limit, param.season_id, emby_server.user_id.as_ref().unwrap()))
+        .get(format!("{}/emby/Shows/{}/Episodes?StartIndex={}&Limit={}&SeasonId={}&Fields=AlternateMediaSources,MediaSources&UserId={}", emby_server.base_url.clone().unwrap(), param.item_id, param.start_index, param.limit, param.season_id, emby_server.user_id.clone().unwrap()))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -373,14 +373,14 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let body = serde_json::json!({
-            "UserId": emby_server.user_id.as_ref().unwrap(),
+            "UserId": emby_server.user_id.clone().unwrap(),
             "MaxStreamingBitrate": 1400000000,
             "MaxStaticBitrate": 1400000000,
             "MusicStreamingTranscodingBitrate": 1920000,
@@ -398,7 +398,7 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
             }
         }).to_string();
     let builder = client
-        .post(format!("{}/emby/Items/{}/PlaybackInfo?IsPlayback=false", emby_server.base_url.as_ref().unwrap(), param.item_id))
+        .post(format!("{}/emby/Items/{}/PlaybackInfo?IsPlayback=false", emby_server.base_url.clone().unwrap(), param.item_id))
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -427,10 +427,10 @@ pub async fn playing(param: EmbyPlayingParam, state: &tauri::State<'_, AppState>
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let body = serde_json::json!({
@@ -441,7 +441,7 @@ pub async fn playing(param: EmbyPlayingParam, state: &tauri::State<'_, AppState>
             "PositionTicks": param.position_ticks,
         }).to_string();
     let builder = client
-        .post(format!("{}/emby/Sessions/Playing?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
+        .post(format!("{}/emby/Sessions/Playing?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.clone().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -470,10 +470,10 @@ pub async fn playing_progress(param: EmbyPlayingProgressParam, state: &tauri::St
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let body = serde_json::json!({
@@ -484,7 +484,7 @@ pub async fn playing_progress(param: EmbyPlayingProgressParam, state: &tauri::St
             "PositionTicks": param.position_ticks,
         }).to_string();
     let builder = client
-        .post(format!("{}/emby/Sessions/Playing/Progress?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
+        .post(format!("{}/emby/Sessions/Playing/Progress?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.clone().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -513,10 +513,10 @@ pub async fn playing_stopped(param: EmbyPlayingStoppedParam, state: &tauri::Stat
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let body = serde_json::json!({
@@ -527,7 +527,7 @@ pub async fn playing_stopped(param: EmbyPlayingStoppedParam, state: &tauri::Stat
             "PositionTicks": param.position_ticks,
         }).to_string();
     let builder = client
-        .post(format!("{}/emby/Sessions/Playing/Stopped?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.as_ref().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
+        .post(format!("{}/emby/Sessions/Playing/Stopped?ItemId={}&MediaSourceId={}&PlayMethod=DirectStream&PlaySessionId={}&PositionTicks={}", emby_server.base_url.clone().unwrap(), param.item_id, param.media_source_id, param.play_session_id, param.position_ticks))
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -547,14 +547,14 @@ pub async fn star(param: EmbyStarParam, state: &tauri::State<'_, AppState>) -> a
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .post(format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.item_id))
+        .post(format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))
         .headers(headers)
         .body(serde_json::json!({}).to_string());
     let builder_print = format!("{:?}", &builder);
@@ -574,13 +574,13 @@ pub async fn unstar(param: EmbyUnstarParam, state: &tauri::State<'_, AppState>) 
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .delete(format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.item_id))
+        .delete(format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -599,14 +599,14 @@ pub async fn played(param: EmbyPlayedParam, state: &tauri::State<'_, AppState>) 
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .post(format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.item_id))
+        .post(format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))
         .headers(headers)
         .body(serde_json::json!({}).to_string());
     let builder_print = format!("{:?}", &builder);
@@ -626,13 +626,13 @@ pub async fn unplayed(param: EmbyUnplayedParam, state: &tauri::State<'_, AppStat
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .delete(format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.item_id))
+        .delete(format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -651,17 +651,17 @@ pub async fn hide_from_resume(param: EmbyHideFromResumeParam, state: &tauri::Sta
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
-    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.as_ref().unwrap()).unwrap());
+    headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&emby_server.user_agent.clone().unwrap()).unwrap());
+    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(&emby_server.base_url.clone().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
-    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let body = serde_json::json!({
             "Hide": param.hide,
         }).to_string();
     let builder = client
-        .post(format!("{}/emby/Users/{}/Items/{}/HideFromResume", emby_server.base_url.as_ref().unwrap(), emby_server.user_id.as_ref().unwrap(), param.item_id))
+        .post(format!("{}/emby/Users/{}/Items/{}/HideFromResume", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -679,7 +679,7 @@ pub async fn get_direct_stream_url(param: EmbyGetDirectStreamUrlParam, state: &t
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
-    let url = format!("{}/emby{}", emby_server.base_url.as_ref().unwrap(), param.direct_stream_url);
+    let url = format!("{}/emby{}", emby_server.base_url.clone().unwrap(), param.direct_stream_url);
     Ok(url)
 }
 
@@ -691,7 +691,7 @@ pub async fn get_audio_stream_url(param: EmbyGetAudioStreamUrlParam, state: &tau
     if !param.media_streams_is_external {
         return Err(anyhow::anyhow!("media_streams audio not external"));
     }
-    let url = format!("{}/emby/Audio/{}/stream.{}?AudioStreamIndex={}&Static=true", emby_server.base_url.as_ref().unwrap(), if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id}, param.media_streams_codec, param.media_streams_index);
+    let url = format!("{}/emby/Audio/{}/stream.{}?AudioStreamIndex={}&Static=true", emby_server.base_url.clone().unwrap(), if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id}, param.media_streams_codec, param.media_streams_index);
     Ok(url)
 }
 
@@ -703,7 +703,7 @@ pub async fn get_subtitle_stream_url(param: EmbyGetSubtitleStreamUrlParam, state
     if !param.media_streams_is_external {
         return Err(anyhow::anyhow!("media_streams Subtitles not external"));
     }
-    let url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.base_url.as_ref().unwrap(), if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id}, param.media_source_id, param.media_streams_index, param.media_streams_codec);
+    let url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.base_url.clone().unwrap(), if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id}, param.media_source_id, param.media_streams_index, param.media_streams_codec);
     Ok(url)
 }
 
