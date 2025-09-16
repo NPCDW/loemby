@@ -84,6 +84,11 @@ pub fn run() {
                 }
             });
 
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap_or_else(|err| {
+                tracing::error!("Updater plugin error: {}", err)
+            });
+            
             let app_handle = app.app_handle().clone();
             tauri::async_runtime::spawn(async move {
                 let res = updater_svc::update(app_handle).await;
@@ -92,10 +97,6 @@ pub fn run() {
                 }
             });
 
-            #[cfg(desktop)]
-            app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap_or_else(|err| {
-                tracing::error!("Updater plugin error: {}", err)
-            });
             Ok(())
         })
         .run(tauri::generate_context!())
