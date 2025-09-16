@@ -451,9 +451,16 @@ function getTraktSyncSwitch() {
     }).catch(e => ElMessage.error('获取Trakt同步开关失败' + e))
 }
 getTraktSyncSwitch()
+const trakt_username = ref("")
+function getTraktUsername() {
+    return useGlobalConfig().getGlobalConfigValue("trakt_username").then(value => {
+        trakt_username.value = value;
+    }).catch(e => ElMessage.error('获取Trakt同步开关失败' + e))
+}
+getTraktUsername()
 
 function getScrobbleTraktParam(playbackPositionTicks: number) {
-    if (trakt_sync_switch.value == 'off') {
+    if (trakt_sync_switch.value != 'on' || !trakt_username.value) {
         return
     }
     const type = currentEpisodes.value!.Type == 'Movie' ? 'movie' : 'episode'

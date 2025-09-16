@@ -310,8 +310,7 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
             let progress = json.data;
             if let Some(progress) = progress {
                 tracing::debug!("MPV IPC 播放进度 {}", progress);
-                last_record_position = Decimal::from_f64(progress).unwrap() * Decimal::from_i64(1000_0000).unwrap();
-                last_record_position = last_record_position.round();
+                last_record_position = Decimal::from_f64(progress).unwrap().round();
                 if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
                     last_save_time = chrono::Local::now();
                     save_playback_progress(&body, &app_handle, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
@@ -326,7 +325,7 @@ async fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHa
     let progress = if body.run_time_ticks == 0 {
         if last_record_position.to_u64().unwrap() > 80 { 100_0000_0000 } else { 0 }
     } else {
-        last_record_position.to_u64().unwrap()
+        (last_record_position * Decimal::from_i64(1000_0000).unwrap()).to_u64().unwrap()
     };
     let state = app_handle.state::<AppState>();
     if playback_status == PlayingProgressEnum::Playing {
@@ -380,21 +379,32 @@ async fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHa
     window.set_focus().expect("Can't Bring Window to Focus");
     
     if let Some(scrobble_trakt_param) = body.scrobble_trakt_param.clone() {
-        match trakt_http_svc::stop(scrobble_trakt_param, &app_handle.state(), 0).await {
-            Ok(json) => 
-                app_handle.emit("tauri_notify", TauriNotify {
-                    alert_type: "TraktStop".to_string(),
-                    message_type: "success".to_string(),
-                    title: None,
-                    message: json,
-                }).unwrap(),
-            Err(err) => 
-                app_handle.emit("tauri_notify", TauriNotify {
-                    alert_type: "ElMessage".to_string(),
-                    message_type: "error".to_string(),
-                    title: None,
-                    message: format!("调用trakt停止播放失败: {}", err),
-                }).unwrap()
+        let progress = if body.run_time_ticks == 0 {
+            last_record_position
+        } else {
+            (last_record_position * Decimal::from_i64(1000_0000).unwrap() / Decimal::from_u64(body.run_time_ticks).unwrap() * Decimal::from_u64(100).unwrap()).trunc_with_scale(2)
+        };
+        match serde_json::from_str::<serde_json::Value>(&scrobble_trakt_param) {
+            Err(err) => tracing::error!("解析scrobble_trakt_param失败: {}", err),
+            Ok(mut scrobble_trakt_param) => {
+                scrobble_trakt_param["progress"] = serde_json::to_value(progress).unwrap();
+                match trakt_http_svc::stop(scrobble_trakt_param.to_string(), &app_handle.state(), 0).await {
+                    Ok(json) => 
+                        app_handle.emit("tauri_notify", TauriNotify {
+                            alert_type: "TraktStop".to_string(),
+                            message_type: "success".to_string(),
+                            title: None,
+                            message: json,
+                        }).unwrap(),
+                    Err(err) => 
+                        app_handle.emit("tauri_notify", TauriNotify {
+                            alert_type: "ElMessage".to_string(),
+                            message_type: "error".to_string(),
+                            title: None,
+                            message: format!("调用trakt停止播放失败: {}", err),
+                        }).unwrap()
+                }
+            },
         }
     }
 

@@ -50,6 +50,10 @@ pub async fn save_access_token(response: TraktTokenResponse, redirect_uri: Strin
         config_key: Some("trakt_username".to_string()),
         config_value: Some(user_info.unwrap().user.username),
         ..Default::default()}, state).await?;
+    global_config_mapper::create_or_update(GlobalConfig {
+        config_key: Some("trakt_sync_switch".to_string()),
+        config_value: Some("on".to_string()),
+        ..Default::default()}, state).await?;
     Ok(())
 }
 
