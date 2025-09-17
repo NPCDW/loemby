@@ -657,13 +657,18 @@ function goAuthTrakt() {
         ElMessage.success('打开浏览器成功，您也可以手动复制地址，去其他浏览器授权');
     }).catch(e => ElMessage.error('授权Trakt失败' + e))
 }
-listen<string>('trakt_auth', () => {
-    console.log(`trakt_auth event`);
-    traktAuthStatus.value = '授权成功'
-    useGlobalConfig().refreshCache("trakt_username").then(() => {
-        getTraktInfo().then(() => traktAuthLoading.value = false)
-    })
-});
+const unlistenTraktAuth = ref<() => void>()
+async function listenTraktAuth() {
+    unlistenTraktAuth.value = await listen<string>('trakt_auth', () => {
+        console.log(`trakt_auth event`);
+        traktAuthStatus.value = '授权成功'
+        useGlobalConfig().refreshCache("trakt_username").then(() => {
+            getTraktInfo().then(() => traktAuthLoading.value = false)
+        })
+    });
+}
+onMounted(() => listenTraktAuth)
+onUnmounted(() => unlistenTraktAuth.value?.())
 
 const trakt_proxy_id = ref<string>('followBrowse');
 function getTraktProxy() {

@@ -176,7 +176,7 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, ref, watchEffect } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS, isInternalUrl } from '../../util/str_util'
 import { getResolutionFromMediaSources, getResolutionLevelFromMediaSources } from '../../util/play_info_util'
@@ -364,7 +364,7 @@ function playbackVersionChange(versionId: number, firstTime: boolean = false) {
         if (mediaStream.Type == 'Video') {
             videoIndex++
             videoOptions.value.push({
-                label: mediaStream.DisplayTitle,
+                label: mediaStream.DisplayTitle + (mediaStream.IsExternal ? ' (外挂)' : ''),
                 value: videoIndex
             })
             if (mediaStream.IsDefault) {
@@ -373,7 +373,7 @@ function playbackVersionChange(versionId: number, firstTime: boolean = false) {
         } else if (mediaStream.Type == 'Audio') {
             audioIndex++
             audioOptions.value.push({
-                label: mediaStream.DisplayTitle,
+                label: mediaStream.DisplayTitle + (mediaStream.IsExternal ? ' (外挂)' : ''),
                 value: audioIndex
             })
             if (mediaStream.IsDefault && audioSelect.value === -1) {
@@ -382,7 +382,7 @@ function playbackVersionChange(versionId: number, firstTime: boolean = false) {
         } else if (mediaStream.Type == 'Subtitle') {
             subtitleIndex++
             subtitleOptions.value.push({
-                label: mediaStream.DisplayTitle + (mediaStream.DisplayLanguage ? (" / " + mediaStream.DisplayLanguage) : ""),
+                label: mediaStream.DisplayTitle + (mediaStream.DisplayLanguage ? (" / " + mediaStream.DisplayLanguage) : "") + (mediaStream.IsExternal ? ' (外挂)' : ''),
                 value: subtitleIndex
             })
             let score = 0;
@@ -612,19 +612,24 @@ interface PlaybackStoppedParam {
     emby_server_id: string;
     item_id: string;
 }
-listen<PlaybackStoppedParam>('playingStopped', (event) => {
-    console.log("tauri playingStopped event", event)
-    if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id) {
-        updateCurrentEpisodes(true).then(async () => {
-            if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
-                if (autoplay.value) {
-                    ElMessage.success('即将播放下一集')
+const unlistenPlayingStopped = ref<() => void>()
+async function listenPlayingStopped() {
+    unlistenPlayingStopped.value = await listen<PlaybackStoppedParam>('playingStopped', (event) => {
+        console.log("tauri playingStopped event", event)
+        if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id) {
+            updateCurrentEpisodes(true).then(async () => {
+                if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
+                    if (autoplay.value) {
+                        ElMessage.success('即将播放下一集')
+                    }
+                    nextEpisode()
                 }
-                nextEpisode()
-            }
-        })
-    }
-});
+            })
+        }
+    });
+}
+onMounted(() => listenPlayingStopped)
+onUnmounted(() => unlistenPlayingStopped.value?.())
 
 const starLoading = ref<boolean>(false)
 function star() {
