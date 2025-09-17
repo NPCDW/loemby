@@ -19,7 +19,8 @@ export const getResolutionFromMediaSources = (mediaSources?: MediaSource) => {
     if (!mediaSources || !mediaSources.MediaStreams || mediaSources.MediaStreams.length == 0) {
         return 'Unknown'
     }
-    return getResolution(mediaSources.MediaStreams[0].Width, mediaSources.MediaStreams[0].Height)
+    const videoMediaStream = mediaSources.MediaStreams.find(item => item.Type == 'Video') || mediaSources.MediaStreams[0]
+    return getResolution(videoMediaStream.Width, videoMediaStream.Height)
 }
 
 /**
@@ -56,13 +57,15 @@ export const getResolution = (width: number, height: number) => {
 }
 
 export const getResolutionLevelFromMediaSources = (mediaSources?: MediaSource) => {
+    // 需要返回0，否则排序时相减会导致错误
     if (!mediaSources || !mediaSources.MediaStreams || mediaSources.MediaStreams.length == 0) {
-        return -1
+        return 0
     }
-    const level = getResolutionLevel(mediaSources.MediaStreams[0].Width, mediaSources.MediaStreams[0].Height)
-    if (level == -1) {
+    const videoMediaStream = mediaSources.MediaStreams.find(item => item.Type == 'Video') || mediaSources.MediaStreams[0]
+    const level = getResolutionLevel(videoMediaStream.Width, videoMediaStream.Height)
+    if (level == 0) {
         const mediaSourcesName = mediaSources.Name ? mediaSources.Name.toLowerCase() : ''
-        const mediaStreamsDisplayTitle = mediaSources.MediaStreams[0].DisplayTitle ? mediaSources.MediaStreams[0].DisplayTitle.toLowerCase() : ''
+        const mediaStreamsDisplayTitle = videoMediaStream.DisplayTitle ? videoMediaStream.DisplayTitle.toLowerCase() : ''
         if (mediaSourcesName.includes('2k') || mediaSourcesName.includes('1440p')
             || mediaStreamsDisplayTitle.includes('2k') || mediaStreamsDisplayTitle.includes('1440p')) {
             return 6
@@ -76,12 +79,12 @@ export const getResolutionLevelFromMediaSources = (mediaSources?: MediaSource) =
             return 5
         }
     }
-    return -1
+    return level
 }
 
 const getResolutionLevel = (width: number, height: number) => {
     if (!width || !height) {
-        return -1
+        return 0
     } else if (width >= 7680 || height >= 4320) {
         return 8
     } else if (width >= 3840 || height >= 2160) {

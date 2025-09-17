@@ -27,7 +27,7 @@
                         <el-card style="width: 300px; margin: 5px;" v-for="episodeItem in episodesList" :key="episodeItem.Id">
                             <template v-if="episodeItem.Type == 'Episode'">
                                 <el-link :underline="false" @click="gotoSeries(episodeItem.SeriesId)"><h2>{{ episodeItem.SeriesName }}</h2></el-link>
-                                <p><el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)">{{ 'S' + (episodeItem.ParentIndexNumber || -1) + 'E' + (episodeItem.IndexNumber || -1) + '. ' + episodeItem.Name }}</el-link></p>
+                                <p><el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)">{{ 'S' + (episodeItem.ParentIndexNumber || '-') + 'E' + (episodeItem.IndexNumber || '-') + '. ' + episodeItem.Name }}</el-link></p>
                             </template>
                             <template v-else>
                                 <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)"><h2>{{ episodeItem.Name }}</h2></el-link>

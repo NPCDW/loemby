@@ -8,10 +8,10 @@
         <div>
             <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)">{{ item.Name }}</el-link>
             <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)">
-                {{ 'S' + ((item as EpisodeItem).ParentIndexNumber || -1) + 'E' + ((item as EpisodeItem).IndexNumber || -1) + '. ' + item.Name }}
+                {{ 'S' + ((item as EpisodeItem).ParentIndexNumber || '-') + 'E' + ((item as EpisodeItem).IndexNumber || '-') + '. ' + item.Name }}
             </el-link>
             <el-link v-else-if="item.Type == 'Season'" :underline="false" @click="showSeason(item as SeasonItem)">
-                {{ 'S' + ((item as SeasonItem).IndexNumber || -1) + '. ' + item.Name }}
+                {{ 'S' + ((item as SeasonItem).IndexNumber || '-') + '. ' + item.Name }}
             </el-link>
             <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)">{{ item.Name }}</el-link>
         </div>

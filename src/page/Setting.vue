@@ -27,7 +27,7 @@
                         <el-select
                             v-model="play_version_auto_select_policy"
                             @change="configValueChange('play_version_auto_select_policy', play_version_auto_select_policy + '', getPlayVersionAutoSelectPolicy, '播放版本自动选择策略')"
-                            style="width: 220px;">
+                            style="width: 230px;">
                             <el-option key="high-resolution" label="高分辨率优先，后高码率优先" value="high-resolution"/>
                             <el-option key="high-bitrate" label="高码率优先" value="high-bitrate"/>
                         </el-select>

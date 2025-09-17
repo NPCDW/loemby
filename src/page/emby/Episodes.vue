@@ -27,7 +27,7 @@
                                 <h1 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h1>
                                 <template v-else>
                                     <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
-                                    <p>{{ 'S' + (currentEpisodes.ParentIndexNumber || -1) + 'E' + (currentEpisodes.IndexNumber || -1) + '. ' + currentEpisodes.Name }}</p>
+                                    <p>{{ 'S' + (currentEpisodes.ParentIndexNumber || '-') + 'E' + (currentEpisodes.IndexNumber || '-') + '. ' + currentEpisodes.Name }}</p>
                                 </template>
                                 <p>
                                     <span>外部链接：</span>
@@ -580,7 +580,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             }
         }
         let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
-                : 'S' + (currentEpisodes.value?.ParentIndexNumber || -1) + 'E' + (currentEpisodes.value?.IndexNumber || -1) + '. ' + currentEpisodes.value?.Name
+                : 'S' + (currentEpisodes.value?.ParentIndexNumber || '-') + 'E' + (currentEpisodes.value?.IndexNumber || '-') + '. ' + currentEpisodes.value?.Name
         const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
         return invokeApi.playback({
             path: playUrl,
