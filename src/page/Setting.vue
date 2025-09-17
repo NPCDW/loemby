@@ -23,6 +23,15 @@
         <el-tab-pane label="MPV" name="MPV">
             <el-scrollbar style="height: calc(100vh - 120px);">
                 <el-form label-position="top">
+                    <el-form-item label="播放版本自动选择策略">
+                        <el-select
+                            v-model="play_version_auto_select_policy"
+                            @change="configValueChange('play_version_auto_select_policy', play_version_auto_select_policy + '', getPlayVersionAutoSelectPolicy, '播放版本自动选择策略')"
+                            style="width: 220px;">
+                            <el-option key="high-resolution" label="高分辨率优先，后高码率优先" value="high-resolution"/>
+                            <el-option key="high-bitrate" label="高码率优先" value="high-bitrate"/>
+                        </el-select>
+                    </el-form-item>
                     <el-form-item label="MPV文件路径">
                         <el-input
                             v-model="mpv_path"
@@ -702,11 +711,18 @@ function proxyChange(line: EmbyLine) {
     }).catch(e => ElMessage.error('修改失败' + e));
 }
 
+const play_version_auto_select_policy = ref<string>('');
+function getPlayVersionAutoSelectPolicy() {
+    useGlobalConfig().getGlobalConfigValue("play_version_auto_select_policy").then(value => {
+        play_version_auto_select_policy.value = value ? value : "high-resolution";
+    }).catch(e => ElMessage.error('获取播放版本自动选择策略失败' + e))
+}
+
 const mpv_path = ref<string>('');
 function getMpvPath() {
     useGlobalConfig().getGlobalConfigValue("mpv_path").then(value => {
         mpv_path.value = value ? value : "";
-    }).catch(e => ElMessage.error('获取配置失败' + e))
+    }).catch(e => ElMessage.error('获取MPV路径失败' + e))
 }
 
 const mpv_startup_dir = ref<string>('');
@@ -847,6 +863,7 @@ const activePane = ref('Common')
 function handlePaneChange() {
     if (activePane.value == 'Common') {
     } else if (activePane.value == 'MPV') {
+        getPlayVersionAutoSelectPolicy()
         getMpvPath()
         getMpvStartupDir()
         getMpvArgs()

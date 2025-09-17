@@ -59,7 +59,24 @@ export const getResolutionLevelFromMediaSources = (mediaSources?: MediaSource) =
     if (!mediaSources || !mediaSources.MediaStreams || mediaSources.MediaStreams.length == 0) {
         return -1
     }
-    return getResolutionLevel(mediaSources.MediaStreams[0].Width, mediaSources.MediaStreams[0].Height)
+    const level = getResolutionLevel(mediaSources.MediaStreams[0].Width, mediaSources.MediaStreams[0].Height)
+    if (level == -1) {
+        const mediaSourcesName = mediaSources.Name ? mediaSources.Name.toLowerCase() : ''
+        const mediaStreamsDisplayTitle = mediaSources.MediaStreams[0].DisplayTitle ? mediaSources.MediaStreams[0].DisplayTitle.toLowerCase() : ''
+        if (mediaSourcesName.includes('2k') || mediaSourcesName.includes('1440p')
+            || mediaStreamsDisplayTitle.includes('2k') || mediaStreamsDisplayTitle.includes('1440p')) {
+            return 6
+        } else if (mediaSourcesName.includes('4k') || mediaSourcesName.includes('2160p')
+            || mediaStreamsDisplayTitle.includes('4k') || mediaStreamsDisplayTitle.includes('2160p')) {
+            return 7
+        } else if (mediaSourcesName.includes('8k') || mediaSourcesName.includes('4320p')
+            || mediaStreamsDisplayTitle.includes('8k') || mediaStreamsDisplayTitle.includes('4320p')) {
+            return 8
+        } else {
+            return 5
+        }
+    }
+    return -1
 }
 
 const getResolutionLevel = (width: number, height: number) => {

@@ -179,7 +179,7 @@
 import { nextTick, ref, watchEffect } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS, isInternalUrl } from '../../util/str_util'
-import { getResolutionFromMediaSources } from '../../util/play_info_util'
+import { getResolutionFromMediaSources, getResolutionLevelFromMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
 import invokeApi from '../../api/invokeApi';
 import { useRoute, useRouter } from 'vue-router';
@@ -296,8 +296,7 @@ function handleMediaSources(mediaSources: MediaSource[]) {
         return
     }
     versionOptions.value = []
-    let maxMediaSourceSize = 0;
-    let maxVersionId = 1
+    let versionSelectList: {versionId: number, size: number, resolutionLevel: number}[] = [];
     for (let i = 0; i < mediaSources.length; i++) {
         let mediaSource = mediaSources[i]
         versionOptions.value.push({
@@ -309,15 +308,27 @@ function handleMediaSources(mediaSources: MediaSource[]) {
             bitrate: formatMbps(mediaSource.Bitrate),
             resolution: getResolutionFromMediaSources(mediaSource),
         })
-        if (maxMediaSourceSize < mediaSource.Size) {
-            maxMediaSourceSize = mediaSource.Size
-            maxVersionId = i + 1
-        }
+        versionSelectList.push({
+            versionId: i + 1,
+            size: mediaSource.Size,
+            resolutionLevel: getResolutionLevelFromMediaSources(mediaSource)
+        })
     }
+    // 已经选择了版本（记住了选择或手动选择），则不更新版本
     if (versionSelect.value > 0) {
         playbackVersionChange(versionSelect.value)
     } else {
-        playbackVersionChange(maxVersionId, true)
+        // 自动选择版本
+        if (play_version_auto_select_policy.value === 'high-bitrate') {
+            versionSelectList.sort((a, b) => b.size - a.size)
+        } else if (play_version_auto_select_policy.value === 'high-resolution') {
+            versionSelectList.sort((a, b) => {
+                if (a.resolutionLevel !== b.resolutionLevel) return b.resolutionLevel - a.resolutionLevel
+                else if (a.size !== b.size) return b.size - a.size
+                else return 0
+            })
+        }
+        playbackVersionChange(versionSelectList[0].versionId, true)
     }
 }
 
@@ -442,6 +453,13 @@ function playbackVersionChange(versionId: number, firstTime: boolean = false) {
     }
 }
 
+const play_version_auto_select_policy = ref<string>('');
+function getPlayVersionAutoSelectPolicy() {
+    useGlobalConfig().getGlobalConfigValue("play_version_auto_select_policy").then(value => {
+        play_version_auto_select_policy.value = value ? value : "high-resolution";
+    }).catch(e => ElMessage.error('获取播放版本自动选择策略失败' + e))
+}
+getPlayVersionAutoSelectPolicy()
 const trakt_sync_switch = ref("on")
 function getTraktSyncSwitch() {
     return useGlobalConfig().getGlobalConfigValue("trakt_sync_switch").then(value => {
