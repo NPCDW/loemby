@@ -351,6 +351,10 @@ async fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHa
             last_playback_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
             ..Default::default()
         }, &state).await?;
+        app_handle.emit("EmbyServerChange", EmbyServerChangeParam {
+            id: &body.emby_server_id,
+            event: "update",
+        })?;
     } else {
         app_handle.emit("tauri_notify", TauriNotify {
             alert_type: "ElMessage".to_string(),
@@ -449,6 +453,12 @@ struct MpvIpcResponse<'a> {
 struct PlaybackStoppedParam<'a> {
     emby_server_id: &'a str,
     item_id: &'a str,
+}
+
+#[derive(Clone, Serialize)]
+struct EmbyServerChangeParam<'a> {
+    id: &'a str,
+    event: &'a str,
 }
 
 #[cfg(not(windows))]

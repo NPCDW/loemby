@@ -13,6 +13,7 @@ import {useRuntimeConfig} from "./store/runtimeConfig.ts";
 import { useTauriNotify } from './store/tauriNotify.ts'
 import { useGlobalConfig } from './store/db/globalConfig.ts'
 import { useProxyServer } from './store/db/proxyServer.ts'
+import { useEmbyServer } from './store/db/embyServer.ts'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -29,4 +30,5 @@ app.mount('#app')
 useGlobalConfig().initCache()
 useProxyServer().initCache()
 useTauriNotify().listen_tauri_notify()
+useEmbyServer().listenEmbyServerChange()
 // updaer_util.getUpdate()
