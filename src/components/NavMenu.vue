@@ -342,19 +342,30 @@ const embyServers = ref<EmbyServer[]>([])
 function listAllEmbyServer() {
     useEmbyServer().listAllEmbyServer().then(list => {
         embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
-        getEmbyIconLocalUrl()
+        for (const emby of embyServers.value) {
+            getEmbyIconLocalUrl(emby.id!, emby.icon_url)
+        }
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
-onMounted(() => useEventBus().on('EmbyServerChanged', listAllEmbyServer))
-onUnmounted(() => useEventBus().remove('EmbyServerChanged', listAllEmbyServer))
+async function embyServerChanged({id}: {event: string, id?: string}) {
+    if (id) {
+        const index = embyServers.value.findIndex(emby => emby.id === id)
+        if (index !== -1) {
+            embyServers.value[index] = await useEmbyServer().getEmbyServer(id)
+            getEmbyIconLocalUrl(embyServers.value[index].id!, embyServers.value[index].icon_url)
+        }
+    } else {
+        listAllEmbyServer()
+    }
+}
+onMounted(() => useEventBus().on('EmbyServerChanged', embyServerChanged))
+onUnmounted(() => useEventBus().remove('EmbyServerChanged', embyServerChanged))
 
 const embyIconLocalUrl = ref<{[key: string]: string}>({})
-function getEmbyIconLocalUrl() {
-    for (const emby of embyServers.value) {
-        if (emby.icon_url) {
-            useImage().loadIcon(emby.icon_url!).then(local_url => embyIconLocalUrl.value[emby.id!] = local_url)
-        }
+function getEmbyIconLocalUrl(emby_server_id: string, icon_url?: string) {
+    if (icon_url) {
+        useImage().loadIcon(icon_url!).then(local_url => embyIconLocalUrl.value[emby_server_id] = local_url)
     }
 }
 
@@ -612,7 +623,7 @@ async function jumpRoute(route: string) {
 
 async function onDrop({removedIndex, addedIndex}: {removedIndex: number, addedIndex: number}) {
     useEmbyServer().updateOrder(embyServers.value[removedIndex].id!, embyServers.value[removedIndex].order_by!, embyServers.value[addedIndex].order_by!).then(() => {
-        useEventBus().emit('EmbyServerChanged', {})
+        useEventBus().emit('EmbyServerChanged', {event: 'order'})
     }).catch(e => ElMessage.error("排序失败" + e))
     // 页面操作，防止刷新Emby列表闪烁
     let element = embyServers.value.splice(removedIndex, 1);

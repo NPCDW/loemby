@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { useEventBus } from '../eventBus';
 
 export const useEmbyServer = defineStore('embyServer', () => {
     async function getEmbyServer(id: string): Promise<EmbyServer> {
@@ -30,7 +32,14 @@ export const useEmbyServer = defineStore('embyServer', () => {
         return invoke('delete_emby_server', {id: id});
     }
 
-    return { getEmbyServer, delEmbyServer, addEmbyServer, updateEmbyServer, listAllEmbyServer, updateOrder, deferOrder }
+    async function listenEmbyServerChange() {
+        listen<EmbyServerChangeParam>('EmbyServerChange', (event) => {
+            console.log("tauri EmbyServerChange event", event)
+            useEventBus().emit('EmbyServerChanged', {event: event.payload.event, id: event.payload.id})
+        });
+    }
+
+    return { getEmbyServer, delEmbyServer, addEmbyServer, updateEmbyServer, listAllEmbyServer, updateOrder, deferOrder, listenEmbyServerChange }
 })
 
 export interface EmbyServer {
@@ -63,4 +72,9 @@ export interface EmbyServer {
     keep_alive_days?: number,
 
     disabled?: number,
+}
+
+interface EmbyServerChangeParam {
+    id: string;
+    event: string;
 }
