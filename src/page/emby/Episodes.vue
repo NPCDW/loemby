@@ -260,12 +260,15 @@ const handleNextUpPageChange = (val: number) => {
 }
 
 function nextUp(pageNumber: number, pageSize: number = nextUpPageSize.value) {
+    nextUpCurrentPage.value = pageNumber
+    nextUpPageSize.value = pageSize
     nextUpShow.value = true
     nextUpLoading.value = true
-    return embyApi.nextUp(embyServerId, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, pageSize).then(async response => {
+    return embyApi.nextUp(embyServerId, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
         let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         nextUpList.value = json.Items
         nextUpTotal.value = json.TotalRecordCount
+        return Promise.resolve()
     }).catch(e => ElMessage.error(e)).finally(() => nextUpLoading.value = false)
 }
 function nextEpisode() {
@@ -628,7 +631,7 @@ async function listenPlayingStopped() {
         }
     });
 }
-onMounted(() => listenPlayingStopped)
+onMounted(() => listenPlayingStopped())
 onUnmounted(() => unlistenPlayingStopped.value?.())
 
 const starLoading = ref<boolean>(false)

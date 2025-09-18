@@ -271,11 +271,15 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
         let read = recver.read_line(&mut buffer).await;
         if read.is_err() {
             tracing::error!("MPV IPC Failed to read pipe {:?}", read);
+            send_task.abort();
+            let _ = player.kill().await;
             save_playback_progress(&body, &app_handle, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
         tracing::debug!("MPV IPC Server answered: {}", buffer.trim());
         if buffer.trim().is_empty() {
+            send_task.abort();
+            let _ = player.kill().await;
             save_playback_progress(&body, &app_handle, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             tracing::error!("mpv-ipc 响应为空，连接已断开");
             break;
@@ -283,6 +287,8 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
         let json = serde_json::from_str::<MpvIpcResponse>(&buffer);
         if json.is_err() {
             tracing::error!("解析 mpv-ipc 响应失败 {:?}", json);
+            send_task.abort();
+            let _ = player.kill().await;
             save_playback_progress(&body, &app_handle, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }

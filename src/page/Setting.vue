@@ -667,7 +667,7 @@ async function listenTraktAuth() {
         })
     });
 }
-onMounted(() => listenTraktAuth)
+onMounted(() => listenTraktAuth())
 onUnmounted(() => unlistenTraktAuth.value?.())
 
 const trakt_proxy_id = ref<string>('followBrowse');
