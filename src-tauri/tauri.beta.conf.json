@@ -34,7 +34,7 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "resources/config/*": "resources/config/",
+      "resources/config/**": "resources/config/",
       "resources/mpv/*": "resources/mpv/"
     }
   },
