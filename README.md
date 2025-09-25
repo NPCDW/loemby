@@ -1,8 +1,8 @@
 # loemby
 
-该客户端主要针对找剧看的用户，对于有什么看什么的用户支持有限。
+一个毛坯 Emby 客户端。
 
-当前仅支持 Windows 平台，理论上兼容 Linux 和 macOS，但尚未经过完整测试，不保证稳定性。
+当前仅支持 Windows 平台，理论上兼容 Linux 和 macOS，但尚未经过测试，不保证可用性。
 
 # 使用
 前往 [Release](https://github.com/NPCDW/loemby/releases) 下载对应平台的安装包，安装后即可使用。
