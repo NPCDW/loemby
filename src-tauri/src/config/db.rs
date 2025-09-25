@@ -1,11 +1,11 @@
-use std::path::PathBuf;
-
 use anyhow::Ok;
 use sqlx::{sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions}, Pool, Sqlite};
+use tauri::Manager;
 
 use crate::util::file_util;
 
-pub async fn init(db_dir: PathBuf) -> anyhow::Result<Pool<Sqlite>> {
+pub async fn init(app: &tauri::App) -> anyhow::Result<Pool<Sqlite>> {
+    let db_dir = app.path().resolve("", tauri::path::BaseDirectory::AppConfig)?;
     let db_path = db_dir.join("db/loemby.db");
     file_util::create_file_if_not_exist(&db_path)?;
 

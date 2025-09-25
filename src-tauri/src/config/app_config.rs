@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use serde_inline_default::serde_inline_default;
 
 use crate::util::file_util;
@@ -18,7 +16,8 @@ pub struct Config {
 const APP_CONFIG_PATH: &'static str = "config/app-config.json";
 const RESOURCES_CONFIG_PATH: &'static str = "resources/config/app-config.default.json";
 
-pub fn get_config(app: &tauri::App, config_dir: &PathBuf) -> anyhow::Result<Config> {
+pub fn get_config(app: &tauri::App) -> anyhow::Result<Config> {
+    let config_dir = app.path().resolve("", tauri::path::BaseDirectory::AppConfig)?;
     let config_path = config_dir.join(APP_CONFIG_PATH);
     if !config_path.exists() {
         file_util::mkdir(config_path.parent().unwrap())?;

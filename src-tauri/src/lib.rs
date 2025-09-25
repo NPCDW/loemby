@@ -37,18 +37,16 @@ pub fn run() {
             get_sys_info, play_video, go_trakt_auth, open_url, updater, restart_app, get_runtime_config, clean_emby_image_cache, clean_icon_cache
         ])
         .setup(|app| {
-            let config_dir = app.path().resolve("", tauri::path::BaseDirectory::AppConfig)?;
-            let config = config::app_config::get_config(app, &config_dir);
+            let config = config::app_config::get_config(app);
             if config.is_err() {
                 panic!("Read Config error: {}", config.unwrap_err())
             }
             let config = config.unwrap();
             println!("Read Config: {:?}", &config);
 
-            let local_data_dir = app.path().resolve("", tauri::path::BaseDirectory::AppLocalData)?;
-            config::log::init(&local_data_dir, &config.log_level);
+            config::log::init(app, &config.log_level);
 
-            let db_pool = tauri::async_runtime::block_on(config::db::init(config_dir))?;
+            let db_pool = tauri::async_runtime::block_on(config::db::init(app))?;
             
             let axum_app_state = Arc::new(RwLock::new(None));
             let axum_app_state_clone = axum_app_state.clone();
