@@ -20,7 +20,7 @@
             </el-scrollbar>
         </el-tab-pane>
         
-        <el-tab-pane label="MPV" name="MPV">
+        <el-tab-pane label="播放" name="MPV">
             <el-scrollbar style="height: calc(100vh - 120px);">
                 <el-form label-position="top">
                     <el-form-item label="播放版本自动选择策略">
@@ -31,18 +31,6 @@
                             <el-option key="high-resolution" label="高分辨率优先，后高码率优先" value="high-resolution"/>
                             <el-option key="high-bitrate" label="高码率优先" value="high-bitrate"/>
                         </el-select>
-                    </el-form-item>
-                    <el-form-item label="MPV文件路径">
-                        <el-input
-                            v-model="mpv_path"
-                            @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径')"
-                            :rows="4" type="textarea" placeholder="每行一个，示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
-                    </el-form-item>
-                    <el-form-item label="MPV启动目录">
-                        <el-input
-                            v-model="mpv_startup_dir"
-                            @change="configValueChange('mpv_startup_dir', mpv_startup_dir, getMpvStartupDir, 'MPV启动目录')"
-                            placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
                     </el-form-item>
                     <el-form-item label="MPV缓存（按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小）" style="display: flex; flex-direction: column;">
                         <div style="flex: auto;">
@@ -129,9 +117,27 @@
                             @change="configValueChange('mpv_args', mpv_args, getMpvArgs, 'MPV参数')"
                             :rows="4" type="textarea" placeholder="每行一个，示例: 
 ontop=no
+volume=130
 demuxer-max-bytes=512MiB
-demuxer-max-back-bytes=512MiB
-demuxer-readahead-secs=180" />
+demuxer-max-back-bytes=512MiB" />
+                    </el-form-item>
+                    <el-form-item label="使用外部MPV播放器">
+                        <el-switch
+                            v-model="external_mpv_switch"
+                            @change="configValueChange('external_mpv_switch', external_mpv_switch + '', getExternalMpvSwitch, '使用外部MPV播放器开关')"
+                            active-value="on" inactive-value="off" />
+                    </el-form-item>
+                    <el-form-item label="MPV文件路径">
+                        <el-input
+                            v-model="mpv_path"
+                            @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径')"
+                            placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
+                    </el-form-item>
+                    <el-form-item label="MPV启动目录">
+                        <el-input
+                            v-model="mpv_startup_dir"
+                            @change="configValueChange('mpv_startup_dir', mpv_startup_dir, getMpvStartupDir, 'MPV启动目录')"
+                            placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
                     </el-form-item>
                 </el-form>
             </el-scrollbar>
@@ -723,6 +729,13 @@ function getPlayVersionAutoSelectPolicy() {
     }).catch(e => ElMessage.error('获取播放版本自动选择策略失败' + e))
 }
 
+const external_mpv_switch = ref<string>('');
+function getExternalMpvSwitch() {
+    useGlobalConfig().getGlobalConfigValue("external_mpv_switch").then(value => {
+        external_mpv_switch.value = value ? value : "off";
+    }).catch(e => ElMessage.error('获取是否使用外部播放器失败' + e))
+}
+
 const mpv_path = ref<string>('');
 function getMpvPath() {
     useGlobalConfig().getGlobalConfigValue("mpv_path").then(value => {
@@ -869,6 +882,7 @@ function handlePaneChange() {
     if (activePane.value == 'Common') {
     } else if (activePane.value == 'MPV') {
         getPlayVersionAutoSelectPolicy()
+        getExternalMpvSwitch()
         getMpvPath()
         getMpvStartupDir()
         getMpvArgs()

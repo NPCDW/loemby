@@ -577,11 +577,7 @@ async function reLogin(embyServerConfig: EmbyServer) {
       type: 'warning',
     }
   ).then(async () => {
-    login(embyServerConfig).then(() => {
-        ElMessage.success({
-            message: "登录成功"
-        })
-    }).catch(e => ElMessage.error(e))
+    login(embyServerConfig)
     })
 }
 async function login(embyServerConfig: EmbyServer) {
@@ -592,6 +588,9 @@ async function login(embyServerConfig: EmbyServer) {
         embyServerConfig.user_id = json["User"]['Id']
         embyServerConfig.disabled = 0
         await updateEmbyServerDb(embyServerConfig);
+        ElMessage.success({
+            message: "登录成功"
+        })
     }).catch(e => ElMessage.error('登录失败 ' + e))
 }
 async function saveEditEmbyServer() {

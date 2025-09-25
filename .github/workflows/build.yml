@@ -31,10 +31,23 @@ jobs:
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         cache: false
-    - name: Build release
+    - name: Install web dependencies
       shell: bash
       run: npm install -g pnpm && pnpm i
-    - uses: tauri-apps/tauri-action@v0
+    - name: Add Mpv
+      shell: bash
+      run: |
+        mkdir -p src-tauri/resources/mpv/portable_config src-tauri/resources/mpv/portable_config/scripts-opts src-tauri/resources/mpv/portable_config/scripts 
+        mkdir mpv-build && cd mpv-build
+        curl -s https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest | jq -r '.assets[] | select(.name | startswith("mpv-x86_64-20")) | .browser_download_url' | xargs -I {} curl -L -O {}
+        7z x mpv-x86_64-20*.7z && rm mpv-x86_64-20*.7z
+        mv ./* ../src-tauri/resources/mpv
+        git clone https://github.com/NPCDW/uosc.git
+        mv uosc/src/fonts uosc/src/input.conf ../src-tauri/resources/mpv/portable_config/
+        mv uosc/src/uosc ../src-tauri/resources/mpv/portable_config/scripts/
+        mv uosc/src/uosc.conf ../src-tauri/resources/mpv/portable_config/scripts-opts/
+    - name: Build release
+      uses: tauri-apps/tauri-action@v0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}

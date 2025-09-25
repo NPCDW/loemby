@@ -17,21 +17,35 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
     body.emby_server_name = emby_server.server_name.clone().unwrap();
     body.title = format!("{}{}", body.title.clone(), emby_server.server_name.clone().unwrap());
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mpv_path = match global_config_mapper::get_cache("mpv_path", state).await {
-        None => return Err("未配置 mpv 路径".to_string()),
-        Some(mpv_path) => {
-            let mpv_path = mpv_path.trim().replace("\r", "");
-            let mpv_path_vec = mpv_path.split("\n").collect::<Vec<&str>>();
-            match mpv_path_vec.iter().find(|&&path| PathBuf::from(path).is_file()) {
-                None => return Err(format!("所有的 mpv 路径都不存在: {}", mpv_path)),
-                Some(&mpv_path) => PathBuf::from(mpv_path),
-            }
-        },
+    let external_mpv_switch = global_config_mapper::get_cache("external_mpv_switch", state).await.unwrap_or("off".to_string());
+    let mpv_path = if external_mpv_switch == "on" {
+        match app_handle.path().resolve("resources/mpv/mpv.exe", tauri::path::BaseDirectory::Resource,) {
+            Err(err) => return Err(format!("内置 mpv 路径获取失败: {}", err.to_string())),
+            Ok(mpv_path) => mpv_path,
+        }
+    } else {
+        match global_config_mapper::get_cache("mpv_path", state).await {
+            None => return Err("未配置 mpv 路径".to_string()),
+            Some(mpv_path) => {
+                let mpv_path = mpv_path.trim().replace("\r", "");
+                PathBuf::from(&mpv_path)
+            },
+        }
     };
-    let mpv_startup_dir = match global_config_mapper::get_cache("mpv_startup_dir", state).await {
-        Some(mpv_startup_dir) => mpv_startup_dir,
-        None => mpv_path.parent().unwrap().as_os_str().to_str().unwrap().to_string(),
+    if mpv_path.is_file() {
+        return Err(format!("mpv 路径都不存在: {}", mpv_path.display()));
+    }
+    let mpv_startup_dir = if external_mpv_switch == "on" {
+        mpv_path.parent().unwrap().as_os_str().to_str().unwrap().to_string()
+    } else {
+        match global_config_mapper::get_cache("mpv_startup_dir", state).await {
+            Some(mpv_startup_dir) => mpv_startup_dir,
+            None => mpv_path.parent().unwrap().as_os_str().to_str().unwrap().to_string(),
+        }
     };
+    if !PathBuf::from(&mpv_startup_dir).is_dir() {
+        return Err(format!("mpv 启动目录不存在: {}", mpv_startup_dir))
+    }
     let mpv_args = global_config_mapper::get_cache("mpv_args", state).await.unwrap_or("".to_string());
 
     let mpv_config_path = app_handle.path().app_config_dir().unwrap().join("mpv_config");
