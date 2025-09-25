@@ -731,7 +731,7 @@ function getPlayVersionAutoSelectPolicy() {
     }).catch(e => ElMessage.error('获取播放版本自动选择策略失败' + e))
 }
 
-const external_mpv_switch = ref<string>('');
+const external_mpv_switch = ref<string>('off');
 function getExternalMpvSwitch() {
     useGlobalConfig().getGlobalConfigValue("external_mpv_switch").then(value => {
         external_mpv_switch.value = value ? value : "off";
