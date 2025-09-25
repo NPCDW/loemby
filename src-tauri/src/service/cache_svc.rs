@@ -1,14 +1,6 @@
-use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::{config::app_state::AppState, mapper::global_config_mapper::{self, GlobalConfig}};
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CleanCacheParam {
-    pub dir: String,
-    pub days_to_keep: u32,
-    pub force_clean: bool,
-}
 
 pub async fn clean_plan(app_handle: &tauri::AppHandle) -> anyhow::Result<()> {
     tracing::info!("60秒后开始清理日志文件");

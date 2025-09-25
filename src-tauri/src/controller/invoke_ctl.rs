@@ -13,12 +13,6 @@ pub async fn get_sys_info() -> Result<String, String> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct PlayVideoPlaylistParam {
-    pub item_id: String,
-    pub title: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlayVideoParam {
     pub path: String,
     pub title: String,
