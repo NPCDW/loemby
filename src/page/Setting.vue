@@ -131,12 +131,14 @@ demuxer-max-back-bytes=512MiB" />
                         <el-input
                             v-model="mpv_path"
                             @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径')"
+                            :disabled="external_mpv_switch != 'on'"
                             placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
                     </el-form-item>
                     <el-form-item label="MPV启动目录">
                         <el-input
                             v-model="mpv_startup_dir"
                             @change="configValueChange('mpv_startup_dir', mpv_startup_dir, getMpvStartupDir, 'MPV启动目录')"
+                            :disabled="external_mpv_switch != 'on'"
                             placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
                     </el-form-item>
                 </el-form>

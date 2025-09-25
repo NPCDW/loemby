@@ -19,11 +19,6 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let external_mpv_switch = global_config_mapper::get_cache("external_mpv_switch", state).await.unwrap_or("off".to_string());
     let mpv_path = if external_mpv_switch == "on" {
-        match app_handle.path().resolve("resources/mpv/mpv.exe", tauri::path::BaseDirectory::Resource,) {
-            Err(err) => return Err(format!("内置 mpv 路径获取失败: {}", err.to_string())),
-            Ok(mpv_path) => mpv_path,
-        }
-    } else {
         match global_config_mapper::get_cache("mpv_path", state).await {
             None => return Err("未配置 mpv 路径".to_string()),
             Some(mpv_path) => {
@@ -31,17 +26,22 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
                 PathBuf::from(&mpv_path)
             },
         }
+    } else {
+        match app_handle.path().resolve("resources/mpv/mpv.exe", tauri::path::BaseDirectory::Resource,) {
+            Err(err) => return Err(format!("内置 mpv 路径获取失败: {}", err.to_string())),
+            Ok(mpv_path) => mpv_path,
+        }
     };
-    if mpv_path.is_file() {
-        return Err(format!("mpv 路径都不存在: {}", mpv_path.display()));
+    if !mpv_path.is_file() {
+        return Err(format!("mpv 路径不存在: {}", mpv_path.display()));
     }
     let mpv_startup_dir = if external_mpv_switch == "on" {
-        mpv_path.parent().unwrap().as_os_str().to_str().unwrap().to_string()
-    } else {
         match global_config_mapper::get_cache("mpv_startup_dir", state).await {
             Some(mpv_startup_dir) => mpv_startup_dir,
             None => mpv_path.parent().unwrap().as_os_str().to_str().unwrap().to_string(),
         }
+    } else {
+        mpv_path.parent().unwrap().as_os_str().to_str().unwrap().to_string()
     };
     if !PathBuf::from(&mpv_startup_dir).is_dir() {
         return Err(format!("mpv 启动目录不存在: {}", mpv_startup_dir))
