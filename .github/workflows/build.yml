@@ -43,7 +43,7 @@ jobs:
         7z x mpv-x86_64-*.7z && rm -rf mpv-x86_64-*.7z
         mv ./* ../src-tauri/resources/mpv
         git clone https://github.com/NPCDW/uosc.git
-        mv uosc/src/fonts uosc/src/input.conf ../src-tauri/resources/mpv/portable_config/
+        mv uosc/src/fonts ../src-tauri/resources/mpv/portable_config/
         mv uosc/src/uosc ../src-tauri/resources/mpv/portable_config/scripts/
         mv uosc/src/uosc.conf ../src-tauri/resources/mpv/portable_config/script-opts/
     - name: Build release

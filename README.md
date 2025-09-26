@@ -46,3 +46,4 @@ pnpm run tauri icon app-icon.svg
 - Mpv [官方文档](https://mpv.io/manual/stable/) [中文文档](https://hooke007.github.io/official_man/mpv.html)
 - Mpv osc [修改版](https://github.com/NPCDW/uosc.git) forked from [tomasklaen/uosc](https://github.com/tomasklaen/uosc)
 - Mpv windows build [shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake)
+- Anime4K for Mpv [bloc97/Anime4K](https://github.com/bloc97/Anime4K)
