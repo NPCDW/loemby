@@ -27,6 +27,7 @@ interface PlaybackParam {
     external_subtitle: string[],
     scrobble_trakt_param?: string,
     start_time: number,
+    track_titles: string,
 }
 
 async function playback(param: PlaybackParam): Promise<string> {

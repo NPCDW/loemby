@@ -367,7 +367,7 @@ function playbackVersionChange(versionId: number, firstTime: boolean = false) {
         if (mediaStream.Type == 'Video') {
             videoIndex++
             videoOptions.value.push({
-                label: mediaStream.DisplayTitle + (mediaStream.IsExternal ? ' (外挂)' : ''),
+                label: mediaStream.DisplayTitle + (mediaStream.IsExternal ? ' (外置)' : ''),
                 value: videoIndex
             })
             if (mediaStream.IsDefault) {
@@ -376,7 +376,7 @@ function playbackVersionChange(versionId: number, firstTime: boolean = false) {
         } else if (mediaStream.Type == 'Audio') {
             audioIndex++
             audioOptions.value.push({
-                label: mediaStream.DisplayTitle + (mediaStream.IsExternal ? ' (外挂)' : ''),
+                label: mediaStream.DisplayTitle + (mediaStream.IsExternal ? ' (外置)' : ''),
                 value: audioIndex
             })
             if (mediaStream.IsDefault && audioSelect.value === -1) {
@@ -385,7 +385,7 @@ function playbackVersionChange(versionId: number, firstTime: boolean = false) {
         } else if (mediaStream.Type == 'Subtitle') {
             subtitleIndex++
             subtitleOptions.value.push({
-                label: mediaStream.DisplayTitle + (mediaStream.DisplayLanguage ? (" / " + mediaStream.DisplayLanguage) : "") + (mediaStream.IsExternal ? ' (外挂)' : ''),
+                label: mediaStream.DisplayTitle + (mediaStream.DisplayLanguage ? (" / " + mediaStream.DisplayLanguage) : "") + (mediaStream.IsExternal ? ' (外置)' : ''),
                 value: subtitleIndex
             })
             let score = 0;
@@ -573,9 +573,17 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
         } else {
             playUrl = embyApi.getDirectStreamUrl(currentMediaSources.DirectStreamUrl!)!
         }
+        let track_titles: {video: string[], audio: string[], sub: string[]} = {"video": [], "audio": [], "sub": []}
         let externalAudio = []
         let externalSubtitle = []
         for (let mediaStream of currentMediaSources.MediaStreams) {
+            if (mediaStream.Type == 'Video') {
+                track_titles["video"].push(mediaStream.DisplayTitle)
+            } else if (mediaStream.Type == 'Audio') {
+                track_titles["audio"].push(mediaStream.DisplayTitle)
+            } else if (mediaStream.Type == 'Subtitle') {
+                track_titles["sub"].push(mediaStream.DisplayTitle)
+            }
             if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
                 externalAudio.push(embyApi.getAudioStreamUrl(currentEpisodes.value!, currentMediaSources, mediaStream)!)
             } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
@@ -607,6 +615,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             external_subtitle: externalSubtitle,
             scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
             start_time: Math.round(new Date().getTime() / 1000),
+            track_titles: JSON.stringify(track_titles),
         }).catch(res => ElMessage.error(res))
     }).finally(() => play_loading.value = false)
 }

@@ -262,6 +262,13 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
     let (recver, mut sender) = get_pipe_rw(pipe_name).await?;
     let mut recver = BufReader::new(recver);
 
+    let track_titles = body.track_titles.replace(r"\", r"\\").replace(r#"""#, r#"\""#);
+    let command = format!(r#"{{ "command": ["script-message-to", "uosc", "set-track-title", "{}"] }}{}"#, track_titles, "\n");
+    let write = sender.write_all(command.as_bytes()).await;
+    if write.is_err() {
+        tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
+    }
+
     let send_task = tokio::spawn(async move {
         let command = if body.run_time_ticks == 0 {
             r#"{ "command": ["get_property", "percent-pos"], "request_id": 10022 }"#.to_string() + "\n"
@@ -281,7 +288,7 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
     let mut last_save_time = chrono::Local::now();
     let mut last_record_position = Decimal::from_u64(body.playback_position_ticks).unwrap();
     loop {
-        let mut buffer = String::with_capacity(128);
+        let mut buffer = String::new();
         let read = recver.read_line(&mut buffer).await;
         if read.is_err() {
             tracing::error!("MPV IPC Failed to read pipe {:?}", read);
