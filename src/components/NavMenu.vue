@@ -348,8 +348,8 @@ function listAllEmbyServer() {
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
 listAllEmbyServer()
-async function embyServerChanged({id}: {event: string, id?: string}) {
-    if (id) {
+async function embyServerChanged({event, id}: {event: string, id?: string}) {
+    if (id && event == 'update') {
         const index = embyServers.value.findIndex(emby => emby.id === id)
         if (index !== -1) {
             embyServers.value[index] = await useEmbyServer().getEmbyServer(id)
