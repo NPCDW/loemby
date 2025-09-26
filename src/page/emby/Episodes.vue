@@ -578,7 +578,7 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
         let externalSubtitle = []
         for (let mediaStream of currentMediaSources.MediaStreams) {
             if (mediaStream.Type == 'Video') {
-                track_titles["video"].push(mediaStream.DisplayTitle)
+                track_titles["video"].push(currentMediaSources.Name + ' / ' + mediaStream.DisplayTitle)
             } else if (mediaStream.Type == 'Audio') {
                 track_titles["audio"].push(mediaStream.DisplayTitle)
             } else if (mediaStream.Type == 'Subtitle') {
