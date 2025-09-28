@@ -91,7 +91,7 @@
                             <el-button v-if="supportDirectLink" plain @click="useDirectLink = (useDirectLink + 1) % 2">
                                 <span>{{ useDirectLink == 2 ? '直链播放？' : useDirectLink == 1 ? '使用直链' : '不使用直链' }}</span>
                             </el-button>
-                            <el-button @click="nextUp(1)">接下来</el-button>
+                            <el-button @click="handleNextUpPageChange(1)">接下来</el-button>
                             <el-button @click="nextEpisode()">下一个</el-button>
                         </p>
                         <p style="display: flex; justify-content: center;">
@@ -256,37 +256,42 @@ async function getCurrentSeries() {
 
 const handleNextUpPageChange = (val: number) => {
     nextUpCurrentPage.value = val
-    nextUp(val)
-}
-
-function nextUp(pageNumber: number, pageSize: number = nextUpPageSize.value) {
-    nextUpCurrentPage.value = pageNumber
-    nextUpPageSize.value = pageSize
     nextUpShow.value = true
     nextUpLoading.value = true
-    return embyApi.nextUp(embyServerId, currentEpisodes.value?.SeriesId!, (pageNumber - 1) * nextUpPageSize.value, nextUpPageSize.value).then(async response => {
-        let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
+    episodes((val - 1) * nextUpPageSize.value, nextUpPageSize.value).then(json => {
         nextUpList.value = json.Items
         nextUpTotal.value = json.TotalRecordCount
-        return Promise.resolve()
-    }).catch(e => ElMessage.error(e)).finally(() => nextUpLoading.value = false)
+    }).finally(() => nextUpLoading.value = false)
+}
+
+function episodes(start_index: number, limit: number) {
+    return embyApi.episodes(embyServerId, currentEpisodes.value?.SeriesId!, currentEpisodes.value?.SeasonId!, start_index, limit, currentEpisodes.value?.Id).then(async response => {
+        let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
+        return Promise.resolve(json)
+    }).catch(e => {
+        ElMessage.error(e)
+        return Promise.reject(e)
+    })
 }
 function nextEpisode() {
-    nextUp(1, 1).then(() => {
-        if (nextUpList.value.length > 0) {
-            router.replace({path: '/nav/emby/' + embyServerId + '/episodes/' + nextUpList.value[0].Id, query: {
-                autoplay: autoplay.value ? 'true' : 'false',
-                directLink: useDirectLink.value.toString(),
-                rememberSelect: rememberSelect.value.toString(),
-                videoSelect: videoSelect.value,
-                audioSelect: audioSelect.value,
-                subtitleSelect: subtitleSelect.value,
-                versionSelect: versionSelect.value,
-            }})
-        } else {
+    episodes(1, 1).then(() => {
+        if (nextUpList.value.length < 1) {
             ElMessage.warning('已经是最后一集了')
+            return
         }
+        jumpToNextEpisode(nextUpList.value[0].Id)
     })
+}
+function jumpToNextEpisode(id: string) {
+    router.replace({path: '/nav/emby/' + embyServerId + '/episodes/' + id, query: {
+        autoplay: autoplay.value ? 'true' : 'false',
+        directLink: useDirectLink.value.toString(),
+        rememberSelect: rememberSelect.value.toString(),
+        videoSelect: videoSelect.value,
+        audioSelect: audioSelect.value,
+        subtitleSelect: subtitleSelect.value,
+        versionSelect: versionSelect.value,
+    }})
 }
 
 const mediaSourceSizeTag = ref('')
@@ -623,18 +628,35 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
 interface PlaybackStoppedParam {
     emby_server_id: string;
     item_id: string;
+    progress_percent: number;
 }
 const unlistenPlayingStopped = ref<() => void>()
 async function listenPlayingStopped() {
     unlistenPlayingStopped.value = await listen<PlaybackStoppedParam>('playingStopped', (event) => {
         console.log("tauri playingStopped event", event)
-        if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id) {
-            updateCurrentEpisodes(true).then(async () => {
+        if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id && event.payload.progress_percent > 50) {
+            episodes(0, 2).then(json => {
+                if (json.Items.length < 1) {
+                    ElMessage.error('获取当前播放信息失败')
+                    return
+                }
+                if (!json.Items[0].UserData) {
+                    updateCurrentEpisodes(true).then(async () => {
+                        if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
+                            if (autoplay.value) {
+                                ElMessage.success('即将播放下一集')
+                            }
+                            jumpToNextEpisode(json.Items[1].Id)
+                        }
+                    })
+                    return
+                }
+                currentEpisodes.value!.UserData = json.Items[0].UserData
                 if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
                     if (autoplay.value) {
                         ElMessage.success('即将播放下一集')
                     }
-                    nextEpisode()
+                    jumpToNextEpisode(json.Items[1].Id)
                 }
             })
         }

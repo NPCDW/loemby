@@ -191,7 +191,7 @@ pub async fn emby_items(body: EmbyItemsParam, state: tauri::State<'_, AppState>)
 #[derive(Serialize, Deserialize)]
 pub struct EmbySeasonsParam {
     pub emby_server_id: String,
-    pub item_id: String,
+    pub series_id: String,
 }
 
 #[tauri::command]
@@ -206,8 +206,9 @@ pub async fn emby_seasons(body: EmbySeasonsParam, state: tauri::State<'_, AppSta
 #[derive(Serialize, Deserialize)]
 pub struct EmbyEpisodesParam {
     pub emby_server_id: String,
-    pub item_id: String,
+    pub series_id: String,
     pub season_id: String,
+    pub start_item_id: String,
     pub start_index: u32,
     pub limit: u32,
 }

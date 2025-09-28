@@ -73,7 +73,7 @@ async function getFavoriteList(emby_server_id: string, start_index: number, limi
 }
 
 /**
- * 系列剧集 接下来 应该播放的剧集
+ * 系列剧集 接下来 应该播放的剧集（按剧的排序，有些特别季不会按顺序排序）
  * @returns EmbyPageList<EpisodeItems>
  */
 async function nextUp(emby_server_id: string, series_id: string, start_index: number, limit: number): Promise<string> {
@@ -145,10 +145,10 @@ async function items(emby_server_id: string, item_id: string): Promise<string> {
  * 系列 下的 季列表
  * @returns EmbyPageList<SeasonItem>
  */
-async function seasons(emby_server_id: string, item_id: string): Promise<string> {
+async function seasons(emby_server_id: string, series_id: string): Promise<string> {
     return invoke('emby_seasons', {body: {
         emby_server_id,
-        item_id,
+        series_id,
     }});
 }
 
@@ -156,11 +156,12 @@ async function seasons(emby_server_id: string, item_id: string): Promise<string>
  * 季 下的 剧集列表
  * @returns EmbyPageList<EpisodeItems>
  */
-async function episodes(emby_server_id: string, item_id: string, season_id: string, start_index: number, limit: number): Promise<string> {
+async function episodes(emby_server_id: string, series_id: string, season_id: string, start_index: number, limit: number, start_item_id?: string): Promise<string> {
     return invoke('emby_episodes', {body: {
         emby_server_id,
-        item_id,
+        series_id,
         season_id,
+        start_item_id,
         start_index,
         limit
     }});
@@ -319,6 +320,8 @@ export interface EpisodeItem extends BaseItem {
     IndexNumber: number,
     MediaSources?: MediaSource[],    // 搜索时，zdz无媒体源字段
     SeriesId: string,
+    SeasonId: string,
+    SeasonName: string,
     ParentLogoItemId: string,
     ParentThumbItemId: string,
     SeriesPrimaryImageTag: string,

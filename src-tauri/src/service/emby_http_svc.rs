@@ -329,7 +329,7 @@ pub async fn seasons(param: EmbySeasonsParam, state: &tauri::State<'_, AppState>
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Shows/{}/Seasons?Fields=ProductionYear,Overview&UserId={}", emby_server.base_url.clone().unwrap(), param.item_id, emby_server.user_id.clone().unwrap()))
+        .get(format!("{}/emby/Shows/{}/Seasons?Fields=ProductionYear,Overview&UserId={}", emby_server.base_url.clone().unwrap(), param.series_id, emby_server.user_id.clone().unwrap()))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -354,7 +354,7 @@ pub async fn episodes(param: EmbyEpisodesParam, state: &tauri::State<'_, AppStat
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Shows/{}/Episodes?StartIndex={}&Limit={}&SeasonId={}&Fields=AlternateMediaSources,MediaSources&UserId={}", emby_server.base_url.clone().unwrap(), param.item_id, param.start_index, param.limit, param.season_id, emby_server.user_id.clone().unwrap()))
+        .get(format!("{}/emby/Shows/{}/Episodes?StartIndex={}&Limit={}&SeasonId={}&StartItemId={}&Fields=AlternateMediaSources,MediaSources&UserId={}", emby_server.base_url.clone().unwrap(), param.series_id, param.start_index, param.limit, param.season_id, param.start_item_id, emby_server.user_id.clone().unwrap()))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;

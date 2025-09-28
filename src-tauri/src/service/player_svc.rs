@@ -270,11 +270,7 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
     }
 
     let send_task = tokio::spawn(async move {
-        let command = if body.run_time_ticks == 0 {
-            r#"{ "command": ["get_property", "percent-pos"], "request_id": 10022 }"#.to_string() + "\n"
-        } else {
-            r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n"
-        };
+        let command = r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n";
         loop {
             let write = sender.write_all(command.as_bytes()).await;
             if write.is_err() {
@@ -321,17 +317,6 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
             save_playback_progress(&body, &app_handle, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
-        if let Some(10022) = json.request_id {
-            let progress_percent = json.data;
-            if let Some(progress_percent) = progress_percent {
-                tracing::debug!("MPV IPC 播放进度百分比 {}", progress_percent);
-                last_record_position = Decimal::from_f64(progress_percent).unwrap().round();
-                if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
-                    last_save_time = chrono::Local::now();
-                    save_playback_progress(&body, &app_handle, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
-                }
-            }
-        }
         if let Some(10023) = json.request_id {
             let progress = json.data;
             if let Some(progress) = progress {
@@ -348,11 +333,7 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
 }
 
 async fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHandle, last_record_position: Decimal, playback_status: PlayingProgressEnum) -> anyhow::Result<()> {
-    let progress = if body.run_time_ticks == 0 {
-        if last_record_position.to_u64().unwrap() > 80 { 100_0000_0000 } else { 0 }
-    } else {
-        (last_record_position * Decimal::from_i64(1000_0000).unwrap()).to_u64().unwrap()
-    };
+    let position_ticks = (last_record_position * Decimal::from_i64(1000_0000).unwrap()).to_u64().unwrap();
     let state = app_handle.state::<AppState>();
     if playback_status == PlayingProgressEnum::Playing {
         emby_http_svc::playing_progress(EmbyPlayingProgressParam {
@@ -360,7 +341,7 @@ async fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHa
             item_id: body.item_id.clone(),
             media_source_id: body.media_source_id.clone(),
             play_session_id: body.play_session_id.clone(),
-            position_ticks: progress,
+            position_ticks: position_ticks,
         }, &state).await?;
         return Ok(());
     }
@@ -408,16 +389,16 @@ async fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHa
     window.show().expect("Sorry, no window show");
     window.set_focus().expect("Can't Bring Window to Focus");
     
+    let progress_percent = if body.run_time_ticks == 0 {
+        last_record_position
+    } else {
+        (last_record_position * Decimal::from_i64(1000_0000).unwrap() / Decimal::from_u64(body.run_time_ticks).unwrap() * Decimal::from_u64(100).unwrap()).trunc_with_scale(2)
+    };
     if let Some(scrobble_trakt_param) = body.scrobble_trakt_param.clone() {
-        let progress = if body.run_time_ticks == 0 {
-            last_record_position
-        } else {
-            (last_record_position * Decimal::from_i64(1000_0000).unwrap() / Decimal::from_u64(body.run_time_ticks).unwrap() * Decimal::from_u64(100).unwrap()).trunc_with_scale(2)
-        };
         match serde_json::from_str::<serde_json::Value>(&scrobble_trakt_param) {
             Err(err) => tracing::error!("解析scrobble_trakt_param失败: {}", err),
             Ok(mut scrobble_trakt_param) => {
-                scrobble_trakt_param["progress"] = serde_json::to_value(progress).unwrap();
+                scrobble_trakt_param["progress"] = serde_json::to_value(progress_percent).unwrap();
                 match trakt_http_svc::stop(scrobble_trakt_param.to_string(), &app_handle.state(), 0).await {
                     Ok(json) => 
                         app_handle.emit("tauri_notify", TauriNotify {
@@ -443,12 +424,13 @@ async fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHa
         item_id: body.item_id.clone(),
         media_source_id: body.media_source_id.clone(),
         play_session_id: body.play_session_id.clone(),
-        position_ticks: progress,
+        position_ticks: position_ticks,
     }, &app_handle.state::<AppState>()).await?;
 
     app_handle.emit("playingStopped", PlaybackStoppedParam {
         emby_server_id: &body.emby_server_id,
         item_id: &body.item_id,
+        progress_percent: &progress_percent,
     })?;
 
     Ok(())
@@ -474,6 +456,7 @@ struct MpvIpcResponse<'a> {
 struct PlaybackStoppedParam<'a> {
     emby_server_id: &'a str,
     item_id: &'a str,
+    progress_percent: &'a Decimal,
 }
 
 #[derive(Clone, Serialize)]
