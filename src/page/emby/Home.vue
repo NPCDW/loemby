@@ -108,7 +108,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watchEffect } from 'vue';
+import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, EpisodeItem, SearchItem, MediaLibraryCount } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
@@ -219,11 +219,7 @@ function handlePaneChange() {
         getMediaLibraryCount()
     }
 }
-
-watchEffect(async () => {
-    embyServerId.value = <string>route.params.embyId
-    handlePaneChange()
-})
+handlePaneChange()
 </script>
 
 <style scoped>

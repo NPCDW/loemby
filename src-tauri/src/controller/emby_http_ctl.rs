@@ -208,7 +208,7 @@ pub struct EmbyEpisodesParam {
     pub emby_server_id: String,
     pub series_id: String,
     pub season_id: String,
-    pub start_item_id: String,
+    pub start_item_id: Option<String>,
     pub start_index: u32,
     pub limit: u32,
 }

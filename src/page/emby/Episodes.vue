@@ -176,7 +176,7 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS, isInternalUrl } from '../../util/str_util'
 import { getResolutionFromMediaSources, getResolutionLevelFromMediaSources } from '../../util/play_info_util'
@@ -274,12 +274,12 @@ function episodes(start_index: number, limit: number) {
     })
 }
 function nextEpisode() {
-    episodes(1, 1).then(() => {
-        if (nextUpList.value.length < 1) {
+    episodes(1, 1).then(json => {
+        if (json.Items.length < 1) {
             ElMessage.warning('已经是最后一集了')
             return
         }
-        jumpToNextEpisode(nextUpList.value[0].Id)
+        jumpToNextEpisode(json.Items[0].Id)
     })
 }
 function jumpToNextEpisode(id: string) {
@@ -634,7 +634,7 @@ const unlistenPlayingStopped = ref<() => void>()
 async function listenPlayingStopped() {
     unlistenPlayingStopped.value = await listen<PlaybackStoppedParam>('playingStopped', (event) => {
         console.log("tauri playingStopped event", event)
-        if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id && event.payload.progress_percent > 50) {
+        if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id) {
             episodes(0, 2).then(json => {
                 if (json.Items.length < 1) {
                     ElMessage.error('获取当前播放信息失败')
@@ -642,21 +642,29 @@ async function listenPlayingStopped() {
                 }
                 if (!json.Items[0].UserData) {
                     updateCurrentEpisodes(true).then(async () => {
-                        if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
+                        if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && event.payload.progress_percent > 50) {
                             if (autoplay.value) {
                                 ElMessage.success('即将播放下一集')
                             }
-                            jumpToNextEpisode(json.Items[1].Id)
+                            if (json.Items.length < 2) {
+                                ElMessage.success('已经是最后一集了')
+                            } else {
+                                jumpToNextEpisode(json.Items[1].Id)
+                            }
                         }
                     })
                     return
                 }
                 currentEpisodes.value!.UserData = json.Items[0].UserData
-                if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie') {
+                if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && event.payload.progress_percent > 50) {
                     if (autoplay.value) {
                         ElMessage.success('即将播放下一集')
                     }
-                    jumpToNextEpisode(json.Items[1].Id)
+                    if (json.Items.length < 2) {
+                        ElMessage.success('已经是最后一集了')
+                    } else {
+                        jumpToNextEpisode(json.Items[1].Id)
+                    }
                 }
             })
         }
@@ -705,20 +713,18 @@ function gotoSeries(seriesId: string) {
     router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
 }
 
-watchEffect(async () => {
-    updateCurrentEpisodes().then(() => {
-        if (rememberSelect.value) {
-            versionSelect.value = Number(<string>route.query.versionSelect)
-            videoSelect.value = Number(<string>route.query.videoSelect)
-            audioSelect.value = Number(<string>route.query.audioSelect)
-            subtitleSelect.value = Number(<string>route.query.subtitleSelect)
-        } 
-        if (route.query.autoplay === 'true') {
-            nextTick(() => {
-                playing(<string>route.params.episodeId, 0, Boolean(JSON.parse(<string>route.query.directLink)))
-            })
-        }
-    })
+updateCurrentEpisodes().then(() => {
+    if (rememberSelect.value) {
+        versionSelect.value = Number(<string>route.query.versionSelect)
+        videoSelect.value = Number(<string>route.query.videoSelect)
+        audioSelect.value = Number(<string>route.query.audioSelect)
+        subtitleSelect.value = Number(<string>route.query.subtitleSelect)
+    } 
+    if (route.query.autoplay === 'true') {
+        nextTick(() => {
+            playing(<string>route.params.episodeId, 0, Boolean(JSON.parse(<string>route.query.directLink)))
+        })
+    }
 })
 </script>
 
