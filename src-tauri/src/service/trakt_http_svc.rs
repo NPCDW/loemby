@@ -8,6 +8,8 @@ use crate::{
     config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{global_config_mapper::{self, GlobalConfig}, proxy_server_mapper}
 };
 
+static TRAKT_WEBSITE_BASE_URL: &str = "https://trakt.tv";
+static TRAKT_API_BASE_URL: &str = "https://api.trakt.tv";
 static TRAKT_TOKEN_EXCHANGE_URL: &str = "https://token-exchange.i101.workers.dev/trakt";
 static TRAKT_CLIENT_ID: &str = "05521c50a5a5ac1fb238648a15e8da57ea7c708127e49711303c9b9691913572";
 
@@ -114,7 +116,7 @@ pub async fn token(param: TraktHttpTokenParam, state: &tauri::State<'_, AppState
     let response = builder.send().await;
     tracing::debug!("获取trakt token request {} response {:?}", builder_print, &response);
     let response = response?;
-    if response.status().as_u16() == 401 {
+    if response.status().as_u16() == 401 || response.status().as_u16() == 403 {
         app_handle.emit("tauri_notify", TauriNotify {
             alert_type: "ElMessageBox".to_string(),
             message_type: "warning".to_string(),
@@ -152,7 +154,7 @@ pub async fn get_user_info(state: &tauri::State<'_, AppState>) -> anyhow::Result
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get("https://api.trakt.tv/users/settings")
+        .get(format!("{}/users/settings", TRAKT_API_BASE_URL))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -177,7 +179,7 @@ pub async fn start(body: String, state: &tauri::State<'_, AppState>, retry: u32)
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .post("https://api.trakt.tv/scrobble/start")
+        .post(format!("{}/scrobble/start", TRAKT_API_BASE_URL))
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -211,7 +213,7 @@ pub async fn stop(body: String, state: &tauri::State<'_, AppState>, retry: u32) 
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .post("https://api.trakt.tv/scrobble/stop")
+        .post(format!("{}/scrobble/stop", TRAKT_API_BASE_URL))
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -237,7 +239,7 @@ pub async fn go_trakt_auth(state: &tauri::State<'_, AppState>) -> anyhow::Result
 
     let redirect_uri = format!("http://127.0.0.1:{}/trakt_auth", auxm_app_state.port);
     let state = uuid::Uuid::new_v4().to_string();
-    let url = format!("https://api.trakt.tv/oauth/authorize?response_type=code&client_id={}&redirect_uri={}&state={}", TRAKT_CLIENT_ID, redirect_uri, state);
+    let url = format!("{}/oauth/authorize?response_type=code&client_id={}&redirect_uri={}&state={}", TRAKT_WEBSITE_BASE_URL, TRAKT_CLIENT_ID, redirect_uri, state);
     auxm_app_state.trakt_auth_state.write().await.push(state);
     let res = webbrowser::open(&url);
     if let Err(err) = res {

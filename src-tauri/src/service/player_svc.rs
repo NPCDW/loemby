@@ -263,16 +263,23 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
     let mut recver = BufReader::new(recver);
 
     let track_titles = body.track_titles.replace(r"\", r"\\").replace(r#"""#, r#"\""#);
-    let command = format!(r#"{{ "command": ["script-message-to", "uosc", "set-track-title", "{}"] }}{}"#, track_titles, "\n");
-    let write = sender.write_all(command.as_bytes()).await;
+    let set_track_titles_command = format!(r#"{{ "command": ["script-message-to", "uosc", "set-track-title", "{}"] }}{}"#, track_titles, "\n");
+    let write = sender.write_all(set_track_titles_command.as_bytes()).await;
     if write.is_err() {
         tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
     }
 
+    // 观测播放进度，返回太频繁，改为每5秒获取一次，用户跳转时立即获取一次
+    // let observe_property_progress_command = r#"{ "command": ["observe_property", 10023, "playback-time"]}"#.to_string() + "\n";
+    // let write = sender.write_all(observe_property_progress_command.as_bytes()).await;
+    // if write.is_err() {
+    //     tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
+    // }
+
     let send_task = tokio::spawn(async move {
-        let command = r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n";
+        let get_progress_command = r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n";
         loop {
-            let write = sender.write_all(command.as_bytes()).await;
+            let write = sender.write_all(get_progress_command.as_bytes()).await;
             if write.is_err() {
                 tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
                 break;
@@ -316,6 +323,9 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
             let _ = player.kill().await;
             save_playback_progress(&body, &app_handle, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
+        }
+        if let Some("seek") = json.event {
+            continue;
         }
         if let Some(10023) = json.request_id {
             let progress = json.data;
