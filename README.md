@@ -37,6 +37,9 @@ pnpm run tauri build
 pnpm run tauri icon app-icon.svg
 ```
 
+## 子项目
+- [Trakt授权](https://github.com/NPCDW/token-exchange.git)
+
 ## 相关文档
 - Emby Github [https://github.com/MediaBrowser/Emby/wiki](https://github.com/MediaBrowser/Emby/wiki)
 - Emby Swagger [https://swagger.emby.media/?staticview=true#/](https://swagger.emby.media/?staticview=true#/) 或者 `http[s]://自建地址[:8096]/emby/[openapi | swagger]`

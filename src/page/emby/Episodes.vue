@@ -635,38 +635,42 @@ async function listenPlayingStopped() {
     unlistenPlayingStopped.value = await listen<PlaybackStoppedParam>('playingStopped', (event) => {
         console.log("tauri playingStopped event", event)
         if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id) {
-            episodes(0, 2).then(json => {
-                if (json.Items.length < 1) {
-                    ElMessage.error('获取当前播放信息失败')
-                    return
-                }
-                if (!json.Items[0].UserData) {
-                    updateCurrentEpisodes(true).then(async () => {
-                        if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && event.payload.progress_percent > 50) {
-                            if (autoplay.value) {
-                                ElMessage.success('即将播放下一集')
+            if (currentEpisodes.value.Type !== 'Movie') {
+                updateCurrentEpisodes(true)
+            } else {
+                episodes(0, 2).then(json => {
+                    if (json.Items.length < 1) {
+                        ElMessage.error('获取当前播放信息失败')
+                        return
+                    }
+                    if (!json.Items[0].UserData) {
+                        updateCurrentEpisodes(true).then(async () => {
+                            if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 50) {
+                                if (autoplay.value) {
+                                    ElMessage.success('即将播放下一集')
+                                }
+                                if (json.Items.length < 2) {
+                                    ElMessage.success('已经是最后一集了')
+                                } else {
+                                    jumpToNextEpisode(json.Items[1].Id)
+                                }
                             }
-                            if (json.Items.length < 2) {
-                                ElMessage.success('已经是最后一集了')
-                            } else {
-                                jumpToNextEpisode(json.Items[1].Id)
-                            }
+                        })
+                        return
+                    }
+                    currentEpisodes.value!.UserData = json.Items[0].UserData
+                    if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 50) {
+                        if (autoplay.value) {
+                            ElMessage.success('即将播放下一集')
                         }
-                    })
-                    return
-                }
-                currentEpisodes.value!.UserData = json.Items[0].UserData
-                if (currentEpisodes.value?.UserData?.Played && currentEpisodes.value.Type !== 'Movie' && event.payload.progress_percent > 50) {
-                    if (autoplay.value) {
-                        ElMessage.success('即将播放下一集')
+                        if (json.Items.length < 2) {
+                            ElMessage.success('已经是最后一集了')
+                        } else {
+                            jumpToNextEpisode(json.Items[1].Id)
+                        }
                     }
-                    if (json.Items.length < 2) {
-                        ElMessage.success('已经是最后一集了')
-                    } else {
-                        jumpToNextEpisode(json.Items[1].Id)
-                    }
-                }
-            })
+                })
+            }
         }
     });
 }
