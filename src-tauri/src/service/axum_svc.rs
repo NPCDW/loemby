@@ -44,11 +44,7 @@ async fn trakt_auth(headers: axum::http::HeaderMap, State(axum_app_state): State
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
     if !axum_app_state.trakt_auth_state.read().await.contains(&params.state) {
         tracing::error!("trakt_auth: {} 无效的 state", &params.state);
-        return (
-            axum::http::StatusCode::BAD_REQUEST,
-            axum::http::HeaderMap::new(),
-            axum::body::Body::new(format!("trakt_auth: {} 无效的 state", &params.state))
-        ).into_response();
+        return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>trakt_auth: {} 无效的 state</body></html>", &params.state)).into_response();
     }
     let app_handle = axum_app_state.app;
     let redirect_uri = format!("http://127.0.0.1:{}/trakt_auth", axum_app_state.port);
@@ -59,30 +55,18 @@ async fn trakt_auth(headers: axum::http::HeaderMap, State(axum_app_state): State
     }, &app_handle.state(), &app_handle).await;
     if let Err(err) = res {
         tracing::error!("trakt_auth: 根据code获取token失败 {}", err);
-        return (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            axum::http::HeaderMap::new(),
-            axum::body::Body::new(format!("trakt_auth: 根据code获取token失败 {}", err))
-        ).into_response();
+        return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>trakt_auth: 根据code获取token失败 {}</body></html>", err)).into_response();
     }
     let res = trakt_http_svc::save_access_token(res.unwrap(), redirect_uri, &app_handle.state()).await;
     if let Err(err) = res {
         tracing::error!("trakt_auth: 保存token失败 {}", err);
-        return (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            axum::http::HeaderMap::new(),
-            axum::body::Body::new(format!("trakt_auth: 保存token失败 {}", err))
-        ).into_response();
+        return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>trakt_auth: 保存token失败 {}</body></html>", err)).into_response();
     }
 
     let res = app_handle.emit("trakt_auth", ());
     if let Err(err) = res {
         tracing::error!("trakt_auth: 向前台发送事件失败 {}", err);
-        return (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            axum::http::HeaderMap::new(),
-            axum::body::Body::new(format!("trakt_auth: 向前台发送事件失败 {}", err))
-        ).into_response();
+        return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>trakt_auth: 向前台发送事件失败 {}</body></html>", err)).into_response();
     }
     let window = app_handle.webview_windows();
     let window = window.values().next().expect("Sorry, no window found");

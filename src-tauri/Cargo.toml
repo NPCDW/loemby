@@ -1,6 +1,6 @@
 [package]
 name = "loemby"
-version = "0.28.4"
+version = "0.28.5"
 description = "Emby Client"
 authors = ["NPCDW"]
 edition = "2024"
@@ -16,7 +16,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2.4.1", features = [] }
-regex = "1.11.2"
+regex = "1.11.3"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-updater = "2.9.0"
@@ -29,10 +29,10 @@ tokio = { version = "1.47.1", features = ["full"] }
 tokio-util = "0.7.16"
 tokio-stream = "0.1.17"
 interprocess = { version = "2.2.3", features = ["tokio"] }
-axum = "0.8.4"
+axum = "0.8.6"
 sqlx = { version = "0.8.6", features = [ "runtime-tokio", "sqlite", "macros", "chrono", "json", "migrate" ] }
 
-serde = { version = "1.0.226", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 serde-inline-default = "1.0.0"
 
