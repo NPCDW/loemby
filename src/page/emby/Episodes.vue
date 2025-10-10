@@ -635,7 +635,7 @@ async function listenPlayingStopped() {
     unlistenPlayingStopped.value = await listen<PlaybackStoppedParam>('playingStopped', (event) => {
         console.log("tauri playingStopped event", event)
         if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id) {
-            if (currentEpisodes.value.Type !== 'Movie') {
+            if (currentEpisodes.value.Type == 'Movie') {
                 updateCurrentEpisodes(true)
             } else {
                 episodes(0, 2).then(json => {
