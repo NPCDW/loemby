@@ -97,6 +97,18 @@ pub fn run() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            match event {
+                tauri::RunEvent::Exit => {
+                    tracing::debug!("Application exiting, closing database connections...");
+                    if let Some(state) = app_handle.try_state::<AppState>() {
+                        tauri::async_runtime::block_on(state.db_pool.close());
+                        tracing::debug!("Database connection closed successfully");
+                    }
+                }
+                _ => {}
+            }
+        });
 }
