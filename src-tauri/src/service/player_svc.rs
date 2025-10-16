@@ -16,7 +16,7 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
     };
     body.emby_server_name = emby_server.server_name.clone().unwrap();
     body.title = format!("{}{}", body.title.clone(), emby_server.server_name.clone().unwrap());
-    let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
+    let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id, state).await;
     let external_mpv_switch = global_config_mapper::get_cache("external_mpv_switch", state).await.unwrap_or("off".to_string());
     let mpv_path = if external_mpv_switch == "on" {
         match global_config_mapper::get_cache("mpv_path", state).await {
