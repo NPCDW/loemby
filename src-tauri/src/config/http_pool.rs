@@ -10,7 +10,8 @@ pub async fn get_api_http_client(proxy_url: Option<String>, state: &tauri::State
         client.unwrap().to_owned()
     } else {
         let mut client = reqwest::Client::builder()
-            .use_rustls_tls()
+            // 結束バンド 不支持 rustls
+            // .use_rustls_tls()
             .danger_accept_invalid_certs(config.danger_accept_invalid_certs)
             .pool_max_idle_per_host(6)
             .pool_idle_timeout(tokio::time::Duration::from_secs(90))
@@ -40,7 +41,8 @@ pub async fn get_image_http_client(proxy_url: Option<String>, state: &tauri::Sta
         client.unwrap().to_owned()
     } else {
         let mut client = reqwest::Client::builder()
-            .use_rustls_tls()
+            // 結束バンド 不支持 rustls
+            // .use_rustls_tls()
             .danger_accept_invalid_certs(config.danger_accept_invalid_certs)
             .pool_max_idle_per_host(6)
             .pool_idle_timeout(tokio::time::Duration::from_secs(90))
@@ -63,7 +65,8 @@ pub async fn get_image_http_client(proxy_url: Option<String>, state: &tauri::Sta
 pub async fn get_stream_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
     let config = state.app_config.clone();
     let mut client = reqwest::Client::builder()
-        .use_rustls_tls()
+        // 結束バンド 不支持 rustls
+        // .use_rustls_tls()
         .danger_accept_invalid_certs(config.danger_accept_invalid_certs);
     if let Some(proxy_url) = proxy_url {
         let proxy = reqwest::Proxy::all(&proxy_url);
