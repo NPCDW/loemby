@@ -64,7 +64,7 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
     let video_path = if proxy_url.is_some() {
         let uuid = uuid::Uuid::new_v4().to_string();
         app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
-            stream_url: format!("{}{}", emby_server.base_url.clone().unwrap(), body.path.clone()),
+            stream_url: if body.path.starts_with("http") { body.path.clone() } else { format!("{}{}", emby_server.base_url.clone().unwrap(), body.path.clone()) },
             proxy_url: proxy_url.clone(),
             user_agent: emby_server.user_agent.clone().unwrap(),
         });
