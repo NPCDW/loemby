@@ -171,15 +171,6 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
         return Err(player.err().unwrap().to_string());
     }
 
-    let body_clone = body.clone();
-    let app_handle_clone = app_handle.clone();
-    tauri::async_runtime::spawn(async move {
-        let res = playback_progress(&pipe_name, &mut player.unwrap(), body_clone, app_handle_clone).await;
-        if res.is_err() {
-            tracing::error!("播放进度失败: {:?}", res.unwrap_err());
-        }
-    });
-
     let mut pinned = 0;
     if let Some(series_id) = body.series_id.clone() {
         let pinned_update = play_history_mapper::cancel_pinned(body.emby_server_id.clone(), series_id, &state.db_pool).await.unwrap();
@@ -193,11 +184,11 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
             play_history_mapper::update_by_id(PlayHistory {
                 id: response.id,
                 update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                emby_server_name: Some(body.emby_server_name),
-                item_name: Some(body.item_name),
-                item_type: Some(body.item_type),
-                series_id: body.series_id,
-                series_name: body.series_name,
+                emby_server_name: Some(body.emby_server_name.clone()),
+                item_name: Some(body.item_name.clone()),
+                item_type: Some(body.item_type.clone()),
+                series_id: body.series_id.clone(),
+                series_name: body.series_name.clone(),
                 pinned: Some(pinned),
                 ..Default::default()
             }, &state.db_pool).await.unwrap();
@@ -208,12 +199,12 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
                 create_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
                 update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
                 emby_server_id: Some(body.emby_server_id.clone()),
-                emby_server_name: Some(body.emby_server_name),
+                emby_server_name: Some(body.emby_server_name.clone()),
                 item_id: Some(body.item_id.clone()),
-                item_name: Some(body.item_name),
-                item_type: Some(body.item_type),
-                series_id: body.series_id,
-                series_name: body.series_name,
+                item_name: Some(body.item_name.clone()),
+                item_type: Some(body.item_type.clone()),
+                series_id: body.series_id.clone(),
+                series_name: body.series_name.clone(),
                 played_duration: Some(0),
                 pinned: Some(pinned),
             }, &state.db_pool).await.unwrap();
@@ -235,6 +226,15 @@ pub async fn play_video(mut body: PlayVideoParam, state: &tauri::State<'_, AppSt
             message: format!("调用emby播放进度失败: {}", res.unwrap_err()),
         }).unwrap()
     }
+
+    let body_clone = body.clone();
+    let app_handle_clone = app_handle.clone();
+    tauri::async_runtime::spawn(async move {
+        let res = playback_progress(&pipe_name, &mut player.unwrap(), body_clone, app_handle_clone).await;
+        if res.is_err() {
+            tracing::error!("播放进度失败: {:?}", res.unwrap_err());
+        }
+    });
 
     if let Some(scrobble_trakt_param) = body.scrobble_trakt_param.clone() {
         match trakt_http_svc::start(scrobble_trakt_param, state, 0).await {
@@ -269,7 +269,7 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
         tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
     }
 
-    // 观测播放进度，返回太频繁，改为每5秒获取一次，用户跳转时立即获取一次
+    // 观测播放进度，返回太频繁，改为每2秒获取一次，用户跳转时立即获取一次
     // let observe_property_progress_command = r#"{ "command": ["observe_property", 10023, "playback-time"]}"#.to_string() + "\n";
     // let write = sender.write_all(observe_property_progress_command.as_bytes()).await;
     // if write.is_err() {
@@ -277,9 +277,13 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
     // }
 
     let send_task = tokio::spawn(async move {
-        let get_progress_command = r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n";
+        let command = if body.run_time_ticks == 0 {
+            r#"{ "command": ["get_property", "percent-pos"], "request_id": 10022 }"#.to_string() + "\n"
+        } else {
+            r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n"
+        };
         loop {
-            let write = sender.write_all(get_progress_command.as_bytes()).await;
+            let write = sender.write_all(command.as_bytes()).await;
             if write.is_err() {
                 tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
                 break;
@@ -326,6 +330,17 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
         }
         if let Some("seek") = json.event {
             continue;
+        }
+        if let Some(10022) = json.request_id {
+            let progress_percent = json.data;
+            if let Some(progress_percent) = progress_percent {
+                tracing::debug!("MPV IPC 播放进度百分比 {}", progress_percent);
+                last_record_position = Decimal::from_f64(progress_percent).unwrap().round();
+                if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
+                    last_save_time = chrono::Local::now();
+                    save_playback_progress(&body, &app_handle, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                }
+            }
         }
         if let Some(10023) = json.request_id {
             let progress = json.data;

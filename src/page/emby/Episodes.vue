@@ -567,61 +567,63 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
     play_loading.value = true
     useDirectLink.value = directLink ? 1 : 0
     return getPlaybackInfo(item_id).then(async playbackInfo => {
-        let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionOptions.value[versionSelect.value - 1].mediaSourceId)
-        if (!currentMediaSources) {
-            ElMessage.error('未获取到播放信息')
-            return
-        }
-        let playUrl
-        if (directLink && supportDirectLink.value) {
-            playUrl = currentMediaSources.Path
-        } else {
-            playUrl = embyApi.getDirectStreamUrl(currentMediaSources.DirectStreamUrl!)!
-        }
-        let track_titles: {video: string[], audio: string[], sub: string[]} = {"video": [], "audio": [], "sub": []}
-        let externalAudio = []
-        let externalSubtitle = []
-        for (let mediaStream of currentMediaSources.MediaStreams) {
-            if (mediaStream.Type == 'Video') {
-                track_titles["video"].push(currentMediaSources.Name + ' / ' + mediaStream.DisplayTitle)
-            } else if (mediaStream.Type == 'Audio') {
-                track_titles["audio"].push(mediaStream.DisplayTitle)
-            } else if (mediaStream.Type == 'Subtitle') {
-                track_titles["sub"].push(mediaStream.DisplayTitle)
+        nextTick(() => {
+            let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionOptions.value[versionSelect.value - 1].mediaSourceId)
+            if (!currentMediaSources) {
+                ElMessage.error('未获取到播放信息')
+                return
             }
-            if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
-                externalAudio.push(embyApi.getAudioStreamUrl(currentEpisodes.value!, currentMediaSources, mediaStream)!)
-            } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
-                externalSubtitle.push(embyApi.getSubtitleStreamUrl(currentEpisodes.value!, currentMediaSources, mediaStream)!)
+            let playUrl
+            if (directLink && supportDirectLink.value) {
+                playUrl = currentMediaSources.Path
+            } else {
+                playUrl = embyApi.getDirectStreamUrl(currentMediaSources.DirectStreamUrl!)!
             }
-        }
-        let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
-                : 'S' + (currentEpisodes.value?.ParentIndexNumber || '-') + 'E' + (currentEpisodes.value?.IndexNumber || '-') + '. ' + currentEpisodes.value?.Name
-        const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
-        return invokeApi.playback({
-            path: playUrl,
-            title: episodesName + " | " + (currentEpisodes.value?.SeriesName || "🎬电影") + " | ",
-            item_id: item_id,
-            item_type: currentEpisodes.value!.Type || 'Movie',
-            item_name: episodesName,
-            emby_server_id: embyServerId,
-            emby_server_name: '',
-            series_id: currentEpisodes.value!.SeriesId,
-            series_name: currentEpisodes.value!.SeriesName,
-            media_source_id: currentMediaSources.Id,
-            play_session_id: playbackInfo.PlaySessionId,
-            playback_position_ticks: playbackPositionTicks,
-            run_time_ticks: runTimeTicks.value ? runTimeTicks.value : 0,
-            bitrate: currentMediaSources.Bitrate,
-            vid: videoSelect.value,
-            aid: audioSelect.value,
-            sid: subtitleSelect.value,
-            external_audio: externalAudio,
-            external_subtitle: externalSubtitle,
-            scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
-            start_time: Math.round(new Date().getTime() / 1000),
-            track_titles: JSON.stringify(track_titles),
-        }).catch(res => ElMessage.error(res))
+            let track_titles: {video: string[], audio: string[], sub: string[]} = {"video": [], "audio": [], "sub": []}
+            let externalAudio = []
+            let externalSubtitle = []
+            for (let mediaStream of currentMediaSources.MediaStreams) {
+                if (mediaStream.Type == 'Video') {
+                    track_titles["video"].push(currentMediaSources.Name + ' / ' + mediaStream.DisplayTitle)
+                } else if (mediaStream.Type == 'Audio') {
+                    track_titles["audio"].push(mediaStream.DisplayTitle)
+                } else if (mediaStream.Type == 'Subtitle') {
+                    track_titles["sub"].push(mediaStream.DisplayTitle)
+                }
+                if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
+                    externalAudio.push(embyApi.getAudioStreamUrl(currentEpisodes.value!, currentMediaSources, mediaStream)!)
+                } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
+                    externalSubtitle.push(embyApi.getSubtitleStreamUrl(currentEpisodes.value!, currentMediaSources, mediaStream)!)
+                }
+            }
+            let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
+                    : 'S' + (currentEpisodes.value?.ParentIndexNumber || '-') + 'E' + (currentEpisodes.value?.IndexNumber || '-') + '. ' + currentEpisodes.value?.Name
+            const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
+            return invokeApi.playback({
+                path: playUrl,
+                title: episodesName + " | " + (currentEpisodes.value?.SeriesName || "🎬电影") + " | ",
+                item_id: item_id,
+                item_type: currentEpisodes.value!.Type || 'Movie',
+                item_name: episodesName,
+                emby_server_id: embyServerId,
+                emby_server_name: '',
+                series_id: currentEpisodes.value!.SeriesId,
+                series_name: currentEpisodes.value!.SeriesName,
+                media_source_id: currentMediaSources.Id,
+                play_session_id: playbackInfo.PlaySessionId,
+                playback_position_ticks: playbackPositionTicks,
+                run_time_ticks: runTimeTicks.value ? runTimeTicks.value : 0,
+                bitrate: currentMediaSources.Bitrate,
+                vid: videoSelect.value,
+                aid: audioSelect.value,
+                sid: subtitleSelect.value,
+                external_audio: externalAudio,
+                external_subtitle: externalSubtitle,
+                scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
+                start_time: Math.round(new Date().getTime() / 1000),
+                track_titles: JSON.stringify(track_titles),
+            }).catch(res => ElMessage.error(res))
+        })
     }).finally(() => play_loading.value = false)
 }
 
@@ -646,28 +648,32 @@ async function listenPlayingStopped() {
                     if (!json.Items[0].UserData) {
                         updateCurrentEpisodes(true).then(async () => {
                             if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 50) {
-                                if (autoplay.value) {
-                                    ElMessage.success('即将播放下一集')
-                                }
-                                if (json.Items.length < 2) {
-                                    ElMessage.success('已经是最后一集了')
-                                } else {
-                                    jumpToNextEpisode(json.Items[1].Id)
-                                }
+                                nextTick(() => {
+                                    if (autoplay.value) {
+                                        ElMessage.success('即将播放下一集')
+                                    }
+                                    if (json.Items.length < 2) {
+                                        ElMessage.success('已经是最后一集了')
+                                    } else {
+                                        jumpToNextEpisode(json.Items[1].Id)
+                                    }
+                                })
                             }
                         })
                         return
                     }
                     currentEpisodes.value!.UserData = json.Items[0].UserData
                     if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 50) {
-                        if (autoplay.value) {
-                            ElMessage.success('即将播放下一集')
-                        }
-                        if (json.Items.length < 2) {
-                            ElMessage.success('已经是最后一集了')
-                        } else {
-                            jumpToNextEpisode(json.Items[1].Id)
-                        }
+                        nextTick(() => {
+                            if (autoplay.value) {
+                                ElMessage.success('即将播放下一集')
+                            }
+                            if (json.Items.length < 2) {
+                                ElMessage.success('已经是最后一集了')
+                            } else {
+                                jumpToNextEpisode(json.Items[1].Id)
+                            }
+                        })
                     }
                 })
             }
