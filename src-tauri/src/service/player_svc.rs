@@ -288,12 +288,13 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
                 tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
                 break;
             }
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
     });
 
     let mut last_save_time = chrono::Local::now();
-    let mut last_record_position = Decimal::from_u64(body.playback_position_ticks).unwrap();
+    let mut last_record_position = Decimal::from_u64(body.playback_position_ticks / 1000_0000).unwrap();
+    let mut start_recording = false;
     loop {
         let mut buffer = String::new();
         let read = recver.read_line(&mut buffer).await;
@@ -329,6 +330,12 @@ async fn playback_progress(pipe_name: &str, player: &mut tokio::process::Child, 
             break;
         }
         if let Some("seek") = json.event {
+            continue;
+        }
+        if let Some("file-loaded") = json.event {
+            start_recording = true;
+        }
+        if !start_recording {
             continue;
         }
         if let Some(10022) = json.request_id {
@@ -423,6 +430,7 @@ async fn save_playback_progress(body: &PlayVideoParam, app_handle: &tauri::AppHa
         match serde_json::from_str::<serde_json::Value>(&scrobble_trakt_param) {
             Err(err) => tracing::error!("解析scrobble_trakt_param失败: {}", err),
             Ok(mut scrobble_trakt_param) => {
+                let progress_percent = if progress_percent < Decimal::from_i64(1).unwrap() { Decimal::from_i64(1).unwrap() } else { progress_percent };
                 scrobble_trakt_param["progress"] = serde_json::to_value(progress_percent).unwrap();
                 match trakt_http_svc::stop(scrobble_trakt_param.to_string(), &app_handle.state(), 0).await {
                     Ok(json) => 

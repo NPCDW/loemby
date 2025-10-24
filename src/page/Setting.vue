@@ -32,6 +32,12 @@
                             <el-option key="high-bitrate" label="高码率优先" value="high-bitrate"/>
                         </el-select>
                     </el-form-item>
+                    <el-form-item label="播放参数IsPlayback">
+                        <el-switch
+                            v-model="play_param_IsPlayback"
+                            @change="configValueChange('play_param_IsPlayback', play_param_IsPlayback + '', getPlayParamIsPlayback, '播放参数IsPlayback开关')"
+                            active-value="true" inactive-value="false" />
+                    </el-form-item>
                     <el-form-item label="MPV缓存（按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小）" style="display: flex; flex-direction: column;">
                         <div style="flex: auto;">
                             <el-input-number
@@ -729,6 +735,13 @@ function getPlayVersionAutoSelectPolicy() {
     useGlobalConfig().getGlobalConfigValue("play_version_auto_select_policy").then(value => {
         play_version_auto_select_policy.value = value ? value : "high-resolution";
     }).catch(e => ElMessage.error('获取播放版本自动选择策略失败' + e))
+}
+
+const play_param_IsPlayback = ref<string>('true');
+function getPlayParamIsPlayback() {
+    useGlobalConfig().getGlobalConfigValue("play_param_IsPlayback").then(value => {
+        play_param_IsPlayback.value = value ? value : "true";
+    }).catch(e => ElMessage.error('获取播放参数IsPlayback开关失败' + e))
 }
 
 const external_mpv_switch = ref<string>('off');

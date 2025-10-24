@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     config::{app_state::AppState, http_pool},
     controller::emby_http_ctl::{EmbyAuthenticateByNameParam, EmbyCountParam, EmbyEpisodesParam, EmbyGetAudioStreamUrlParam, EmbyGetContinuePlayListParam, EmbyGetDirectStreamUrlParam, EmbyGetFavoriteListParam, EmbyGetMediaLibraryChildLatestParam, EmbyGetMediaLibraryChildParam, EmbyGetMediaLibraryListParam, EmbyGetServerInfoParam, EmbyGetSubtitleStreamUrlParam, EmbyHideFromResumeParam, EmbyItemsParam, EmbyLogoutParam, EmbyNextUpParam, EmbyPlaybackInfoParam, EmbyPlayedParam, EmbySearchParam, EmbySeasonsParam, EmbyStarParam, EmbyUnplayedParam, EmbyUnstarParam},
-    mapper::{emby_server_mapper, proxy_server_mapper}
+    mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}
 };
 
 pub async fn get_server_info(param: EmbyGetServerInfoParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
@@ -372,6 +372,7 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
+    let is_playback = global_config_mapper::get_cache("play_param_IsPlayback", state).await;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -381,6 +382,7 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let body = serde_json::json!({
             "UserId": emby_server.user_id.clone().unwrap(),
+            "IsPlayback": Some("true".to_string()) == is_playback || None == is_playback,
             "MaxStreamingBitrate": 1400000000,
             "MaxStaticBitrate": 1400000000,
             "MusicStreamingTranscodingBitrate": 1920000,
@@ -398,7 +400,7 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
             }
         }).to_string();
     let builder = client
-        .post(format!("{}/emby/Items/{}/PlaybackInfo?IsPlayback=false", emby_server.base_url.clone().unwrap(), param.item_id))
+        .post(format!("{}/emby/Items/{}/PlaybackInfo", emby_server.base_url.clone().unwrap(), param.item_id))
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
