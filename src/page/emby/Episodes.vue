@@ -5,19 +5,7 @@
                 <template #template>
                     <div style="width: 100%;padding: 10px;">
                         <h2><el-skeleton-item variant="h1" style="width: 50%;" /></h2>
-                        <p><el-skeleton-item variant="text" style="width: 40%; margin: 5px 0;" /></p>
-                        <p><el-skeleton-item variant="text" style="width: 100%; margin: 5px 0;" /></p>
-                        <p><el-skeleton-item variant="button" style="width: 100%; margin: 5px 0;" /></p>
-                        <p>
-                            <el-skeleton-item variant="button" style="width: 30%; margin: 5px; margin-left: 0;" />
-                            <el-skeleton-item variant="button" style="width: 30%; margin: 5px;" />
-                            <el-skeleton-item variant="button" style="width: 30%; margin: 5px;" />
-                        </p>
-                        <p>
-                            <el-skeleton-item variant="button" style="width: 15%; margin: 5px; margin-left: 0;" />
-                            <el-skeleton-item variant="button" style="width: 15%; margin: 5px;" />
-                            <el-skeleton-item variant="button" style="width: 15%; margin: 5px;" />
-                        </p>
+                        <p v-for="_i in 15"><el-skeleton-item variant="text" style="width: 97%;" /></p>
                     </div>
                 </template>
                 <div v-if="currentEpisodes">
@@ -647,34 +635,34 @@ async function listenPlayingStopped() {
                     }
                     if (!json.Items[0].UserData) {
                         updateCurrentEpisodes(true).then(async () => {
-                            if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 50) {
-                                nextTick(() => {
-                                    if (autoplay.value) {
-                                        ElMessage.success('即将播放下一集')
-                                    }
-                                    if (json.Items.length < 2) {
-                                        ElMessage.success('已经是最后一集了')
-                                    } else {
-                                        jumpToNextEpisode(json.Items[1].Id)
-                                    }
-                                })
-                            }
+                            nextTick(() => {
+                                if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 80) {
+                                        if (autoplay.value) {
+                                            if (json.Items.length < 2) {
+                                                ElMessage.success('已经是最后一集了')
+                                            } else {
+                                                ElMessage.success('即将播放下一集')
+                                                jumpToNextEpisode(json.Items[1].Id)
+                                            }
+                                        }
+                                }
+                            })
                         })
                         return
                     }
                     currentEpisodes.value!.UserData = json.Items[0].UserData
-                    if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 50) {
-                        nextTick(() => {
-                            if (autoplay.value) {
-                                ElMessage.success('即将播放下一集')
-                            }
-                            if (json.Items.length < 2) {
-                                ElMessage.success('已经是最后一集了')
-                            } else {
-                                jumpToNextEpisode(json.Items[1].Id)
-                            }
-                        })
-                    }
+                    nextTick(() => {
+                        if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 80) {
+                                if (autoplay.value) {
+                                    if (json.Items.length < 2) {
+                                        ElMessage.success('已经是最后一集了')
+                                    } else {
+                                        ElMessage.success('即将播放下一集')
+                                        jumpToNextEpisode(json.Items[1].Id)
+                                    }
+                                }
+                        }
+                    })
                 })
             }
         }
