@@ -386,6 +386,9 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
             "MaxStreamingBitrate": 1400000000,
             "MaxStaticBitrate": 1400000000,
             "MusicStreamingTranscodingBitrate": 1920000,
+            "EnableDirectPlay": true,
+            "EnableDirectStream": true,
+            "EnableTranscoding": false,
             "DeviceProfile": {
                 "DirectPlayProfiles": [
                     {

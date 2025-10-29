@@ -190,6 +190,17 @@ function getDirectStreamUrl(directStreamUrl: string) {
 }
 
 /**
+ * 组装视频流地址
+ * @returns
+ */
+function getVideoStreamUrl(item: EpisodeItem, mediaSource: MediaSource, playSessionId: string) {
+    if (!item || !mediaSource) {
+        return null;
+    }
+    return `/emby/Videos/${item.Id}/stream.${mediaSource.Container}?Static=true&mediaSourceId=${mediaSource.Id}&playSessionId=${playSessionId}`;
+}
+
+/**
  * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
  * @returns
  */
@@ -269,7 +280,7 @@ async function hideFromResume(emby_server_id: string, item_id: string, hide: boo
 
 export default {
     getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, getContinuePlayList, nextUp,
-    getFavoriteList, getDirectStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
+    getFavoriteList, getDirectStreamUrl, getVideoStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
     count, hideFromResume, getMediaLibraryChild, 
 }
 
@@ -346,6 +357,7 @@ export interface MediaSource {
     MediaStreams: MediaStream[],
     IsRemote: boolean,
     Path: string,
+    Container: string,
 }
 
 export interface MediaStream {

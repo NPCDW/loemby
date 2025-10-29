@@ -564,8 +564,10 @@ function playing(item_id: string, playbackPositionTicks: number, directLink: boo
             let playUrl
             if (directLink && supportDirectLink.value) {
                 playUrl = currentMediaSources.Path
+            } else if (currentMediaSources.DirectStreamUrl) {
+                playUrl = embyApi.getDirectStreamUrl(currentMediaSources.DirectStreamUrl)!
             } else {
-                playUrl = embyApi.getDirectStreamUrl(currentMediaSources.DirectStreamUrl!)!
+                playUrl = embyApi.getVideoStreamUrl(currentEpisodes.value!, currentMediaSources, playbackInfo.PlaySessionId)!
             }
             let track_titles: {video: string[], audio: string[], sub: string[]} = {"video": [], "audio": [], "sub": []}
             let externalAudio = []
