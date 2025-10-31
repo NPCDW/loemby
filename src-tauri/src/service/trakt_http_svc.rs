@@ -303,61 +303,65 @@ fn has_valid_ids(ids: &TraktIds) -> bool {
 }
 
 // 从 MediaItem 获取 Trakt IDs
-fn get_scrobble_trakt_ids_param(provider_ids: &HashMap<String, String>, external_urls: &Vec<ExternalUrl>) -> TraktIds {
+fn get_scrobble_trakt_ids_param(provider_ids: &Option<HashMap<String, String>>, external_urls: &Option<Vec<ExternalUrl>>) -> TraktIds {
     let mut ids = TraktIds::default();
     
     // 从 ProviderIds 提取
-    for (key, value) in provider_ids {
-        match key.to_lowercase().as_str() {
-            "imdb" => ids.imdb = Some(value.clone()),
-            "tmdb" => ids.tmdb = Some(value.clone()),
-            "tvdb" => ids.tvdb = Some(value.clone()),
-            "trakt" => ids.trakt = Some(value.clone()),
-            _ => {}
+    if let Some(provider_ids) = provider_ids {
+        for (key, value) in provider_ids {
+            match key.to_lowercase().as_str() {
+                "imdb" => ids.imdb = Some(value.clone()),
+                "tmdb" => ids.tmdb = Some(value.clone()),
+                "tvdb" => ids.tvdb = Some(value.clone()),
+                "trakt" => ids.trakt = Some(value.clone()),
+                _ => {}
+            }
         }
     }
     
     // 从 ExternalUrls 提取
-    for external_url in external_urls {
-        let url_str = external_url.url.to_string();
-        if let Ok(url) = url::Url::parse(&url_str) {
-            // IMDb
-            if url_str.starts_with("https://www.imdb.com") {
-                if !url.path().ends_with('/') && ids.imdb.is_none() {
-                    if let Some(last_part) = url.path().split('/').last() {
-                        ids.imdb = Some(last_part.to_string());
+    if let Some(external_urls) = external_urls {
+        for external_url in external_urls {
+            let url_str = external_url.url.to_string();
+            if let Ok(url) = url::Url::parse(&url_str) {
+                // IMDb
+                if url_str.starts_with("https://www.imdb.com") {
+                    if !url.path().ends_with('/') && ids.imdb.is_none() {
+                        if let Some(last_part) = url.path().split('/').last() {
+                            ids.imdb = Some(last_part.to_string());
+                        }
                     }
                 }
-            }
-            // TMDb
-            else if url_str.starts_with("https://www.themoviedb.org") {
-                if !url.path().ends_with('/') && ids.tmdb.is_none() {
-                    if let Some(last_part) = url.path().split('/').last() {
-                        ids.tmdb = Some(last_part.to_string());
+                // TMDb
+                else if url_str.starts_with("https://www.themoviedb.org") {
+                    if !url.path().ends_with('/') && ids.tmdb.is_none() {
+                        if let Some(last_part) = url.path().split('/').last() {
+                            ids.tmdb = Some(last_part.to_string());
+                        }
                     }
                 }
-            }
-            // TVDB
-            else if url_str.starts_with("https://thetvdb.com") {
-                if ids.tvdb.is_none() {
-                    if let Some(id) = url.query_pairs().find(|(k, _)| k == "id") {
-                        ids.tvdb = Some(id.1.to_string());
+                // TVDB
+                else if url_str.starts_with("https://thetvdb.com") {
+                    if ids.tvdb.is_none() {
+                        if let Some(id) = url.query_pairs().find(|(k, _)| k == "id") {
+                            ids.tvdb = Some(id.1.to_string());
+                        }
                     }
                 }
-            }
-            // Trakt
-            else if url_str.starts_with("https://trakt.tv/search/") {
-                let path_segments: Vec<&str> = url.path().split('/').collect();
-                if path_segments.len() == 4 {
-                    let provider = path_segments[2];
-                    let id_value = path_segments[3];
-                    
-                    match provider {
-                        "imdb" if ids.imdb.is_none() => ids.imdb = Some(id_value.to_string()),
-                        "tmdb" if ids.tmdb.is_none() => ids.tmdb = Some(id_value.to_string()),
-                        "tvdb" if ids.tvdb.is_none() => ids.tvdb = Some(id_value.to_string()),
-                        "trakt" if ids.trakt.is_none() => ids.trakt = Some(id_value.to_string()),
-                        _ => {}
+                // Trakt
+                else if url_str.starts_with("https://trakt.tv/search/") {
+                    let path_segments: Vec<&str> = url.path().split('/').collect();
+                    if path_segments.len() == 4 {
+                        let provider = path_segments[2];
+                        let id_value = path_segments[3];
+                        
+                        match provider {
+                            "imdb" if ids.imdb.is_none() => ids.imdb = Some(id_value.to_string()),
+                            "tmdb" if ids.tmdb.is_none() => ids.tmdb = Some(id_value.to_string()),
+                            "tvdb" if ids.tvdb.is_none() => ids.tvdb = Some(id_value.to_string()),
+                            "trakt" if ids.trakt.is_none() => ids.trakt = Some(id_value.to_string()),
+                            _ => {}
+                        }
                     }
                 }
             }

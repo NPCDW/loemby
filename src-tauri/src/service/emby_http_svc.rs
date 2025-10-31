@@ -845,9 +845,9 @@ pub struct EpisodeItem {
     #[serde(rename = "SeasonName")]
     pub season_name: Option<String>,
     #[serde(rename = "ProviderIds")]
-    pub provider_ids: HashMap<String, String>,
+    pub provider_ids: Option<HashMap<String, String>>,
     #[serde(rename = "ExternalUrls")]
-    pub external_urls: Vec<ExternalUrl>,
+    pub external_urls: Option<Vec<ExternalUrl>>,
     #[serde(rename = "IndexNumber")]
     pub index_number: Option<u32>,
     #[serde(rename = "ParentIndexNumber")]
@@ -863,9 +863,9 @@ pub struct SeriesItem {
     #[serde(rename = "Type")]
     pub type_: String,
     #[serde(rename = "ProviderIds")]
-    pub provider_ids: HashMap<String, String>,
+    pub provider_ids: Option<HashMap<String, String>>,
     #[serde(rename = "ExternalUrls")]
-    pub external_urls: Vec<ExternalUrl>,
+    pub external_urls: Option<Vec<ExternalUrl>>,
 }
 
 // 定义外部链接结构体

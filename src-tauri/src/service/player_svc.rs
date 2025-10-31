@@ -110,9 +110,13 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             mpv_ipc: pipe_name.clone(),
         });
         let series_name = episode.series_name.clone().unwrap_or("🎬电影".to_string());
-        mpv_playlist = format!("{}\n#EXTINF:-1,{} | {} | {}\nhttp://127.0.0.1:{}/play_media/{}", mpv_playlist, episode.name, series_name, emby_server.server_name.clone().unwrap(), &app_state.port, &uuid);
+        let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
+        let index_number = episode.index_number.map_or("_".to_string(), |n| n.to_string());
+        let title = format!("S{}E{}. {} | {} | {}", parent_index_number, index_number, episode.name, series_name, emby_server.server_name.clone().unwrap());
+        mpv_playlist = format!("{}\n#EXTINF:-1,{}\nhttp://127.0.0.1:{}/play_media/{}", mpv_playlist, title, &app_state.port, &uuid);
     }
     let mpv_playlist_path = mpv_config_dir.join("mpv_playlist.m3u8");
+    file_util::write_file(&mpv_playlist_path, &mpv_playlist);
 
     let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap());
     command.current_dir(&mpv_startup_dir)
@@ -661,11 +665,12 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
         None => tracing::error!("播放记录不存在，无法更新播放记录"),
     }
 
-    let window = playback_progress_param.app_handle.webview_windows();
-    let window = window.values().next().expect("Sorry, no window found");
-    window.unminimize().expect("Sorry, no window unminimize");
-    window.show().expect("Sorry, no window show");
-    window.set_focus().expect("Can't Bring Window to Focus");
+    // 播放完成展示通知
+    // let window = playback_progress_param.app_handle.webview_windows();
+    // let window = window.values().next().expect("Sorry, no window found");
+    // window.unminimize().expect("Sorry, no window unminimize");
+    // window.show().expect("Sorry, no window show");
+    // window.set_focus().expect("Can't Bring Window to Focus");
     
     let progress_percent = if let Some(run_time_ticks) = playback_progress_param.media_source.run_time_ticks {
         (last_record_position * Decimal::from_i64(1000_0000).unwrap() / Decimal::from_u64(run_time_ticks).unwrap() * Decimal::from_u64(100).unwrap()).trunc_with_scale(2)
