@@ -181,12 +181,13 @@ pub async fn start(body: &ScrobbleParam, state: &tauri::State<'_, AppState>, ret
     headers.insert(HeaderName::from_str("trakt-api-version").unwrap(), HeaderValue::from_str("2").unwrap());
     headers.insert(HeaderName::from_str("trakt-api-key").unwrap(), HeaderValue::from_str(TRAKT_CLIENT_ID).unwrap());
 
+    let body_str = serde_json::to_string(body)?;
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
         .post(format!("{}/scrobble/start", TRAKT_API_BASE_URL))
         .headers(headers)
-        .body(serde_json::to_string(body)?);
-    let builder_print = format!("{:?} {:?}", &builder, body);
+        .body(body_str.clone());
+    let builder_print = format!("{:?} {}", &builder, body_str);
     let response = builder.send().await;
     tracing::debug!("trakt开始播放 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -217,12 +218,13 @@ pub async fn stop(body: &ScrobbleParam, state: &tauri::State<'_, AppState>, retr
     headers.insert(HeaderName::from_str("trakt-api-version").unwrap(), HeaderValue::from_str("2").unwrap());
     headers.insert(HeaderName::from_str("trakt-api-key").unwrap(), HeaderValue::from_str(TRAKT_CLIENT_ID).unwrap());
 
+    let body_str = serde_json::to_string(body)?;
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
         .post(format!("{}/scrobble/stop", TRAKT_API_BASE_URL))
         .headers(headers)
-        .body(serde_json::to_string(body)?);
-    let builder_print = format!("{:?} {:?}", &builder, body);
+        .body(body_str.clone());
+    let builder_print = format!("{:?} {}", &builder, body_str);
     let response = builder.send().await;
     tracing::debug!("trakt停止播放 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -374,16 +376,23 @@ fn get_scrobble_trakt_ids_param(provider_ids: &Option<HashMap<String, String>>, 
 // 定义 Trakt ID 类型
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct TraktIds {
+    #[serde(skip_serializing_if = "Option::is_none")]
     imdb: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     tmdb: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     tvdb: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     trakt: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct ScrobbleEpisodeParam {
+    #[serde(skip_serializing_if = "Option::is_none")]
     ids: Option<TraktIds>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     season: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     number: Option<u32>,
 }
 
@@ -396,7 +405,10 @@ struct ScrobbleIdsParam {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct  ScrobbleParam {
     pub progress: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     movie: Option<ScrobbleIdsParam>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     episode: Option<ScrobbleEpisodeParam>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     show: Option<ScrobbleIdsParam>,
 }

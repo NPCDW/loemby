@@ -124,6 +124,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         .arg(&format!("--input-ipc-server={}", pipe_name))
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
+        .arg("--autoload-files=no")  // 不自动加载外部文件
         // .arg("--force-seekable=yes")  // 某些视频格式在没缓存到的情况下不支持跳转，需要打开此配置，测试后发现强制跳转到没有缓存的位置后，mpv会从头开始缓存，一直缓存到跳转位置，与打开此设置的初衷相违背
         .arg(&format!("--user-agent={}", &emby_server.user_agent.clone().unwrap()))
         .arg(&format!("--playlist={}", mpv_playlist_path.to_str().unwrap()));
@@ -201,8 +202,7 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str) -> anyhow::Resu
         }
         &playback_info.media_sources[version_select_list[0].version_id as usize - 1]
     };
-    // 向mpv添加音频字幕
-    let (_recver, mut sender) = get_pipe_rw(&params.mpv_ipc).await?;
+    // 选中媒体源的视频地址
     let support_direct_link = media_source.is_remote == Some(true) && media_source.path.is_some() && media_source.path.as_ref().unwrap().contains("://") && !media_source_util::is_internal_url(&media_source.path.as_ref().unwrap());
     let mut video_url = if params.use_direct_link && support_direct_link {
         media_source.path.clone().unwrap()
@@ -230,6 +230,150 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str) -> anyhow::Resu
         video_url = format!("http://127.0.0.1:{}/stream/video/{}", &axum_app_state.port, &uuid);
     }
 
+    // 本地播放历史记录
+    let episode = match emby_http_svc::items(EmbyItemsParam {
+        emby_server_id: params.emby_server_id.clone(),
+        item_id: params.item_id.clone(),
+    }, &app_state, true).await {
+        Err(e) => return Err(anyhow::anyhow!("获取剧集信息失败: {}", e.to_string())),
+        Ok(episode) => serde_json::from_str::<EpisodeItem>(&episode).unwrap(),
+    };
+    let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
+    let index_number = episode.index_number.map_or("_".to_string(), |n| n.to_string());
+    let episode_name = format!("S{}E{}. {}", parent_index_number, index_number, episode.name.clone());
+    let mut pinned = 0;
+    if let Some(series_id) = episode.series_id.clone() {
+        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await.unwrap();
+        if pinned_update.rows_affected() > 0 { pinned = 1 }
+    }
+    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &app_state.db_pool).await.unwrap() {
+        Some(response) => {
+            if episode.series_id.is_none() {
+                pinned = response.pinned.unwrap();
+            }
+            play_history_mapper::update_by_id(PlayHistory {
+                id: response.id,
+                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                emby_server_name: emby_server.server_name.clone(),
+                item_name: Some(episode_name),
+                item_type: Some(episode.type_.clone()),
+                series_id: episode.series_id.clone(),
+                series_name: episode.series_name.clone(),
+                pinned: Some(pinned),
+                ..Default::default()
+            }, &app_state.db_pool).await.unwrap();
+        },
+        None => {
+            play_history_mapper::create(PlayHistory {
+                id: Some(uuid::Uuid::new_v4().to_string()),
+                create_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                emby_server_id: emby_server.id.clone(),
+                emby_server_name: emby_server.server_name.clone(),
+                item_id: Some(episode.id.clone()),
+                item_name: Some(episode_name),
+                item_type: Some(episode.type_.clone()),
+                series_id: episode.series_id.clone(),
+                series_name: episode.series_name.clone(),
+                played_duration: Some(0),
+                pinned: Some(pinned),
+            }, &app_state.db_pool).await.unwrap();
+        },
+    }
+
+    // emby开始播放api
+    let res = emby_http_svc::playing(EmbyPlayingParam {
+        emby_server_id: params.emby_server_id.clone(),
+        item_id: params.item_id.clone(),
+        media_source_id: media_source.id.clone(),
+        play_session_id: playback_info.play_session_id.clone(),
+        position_ticks: params.playback_position_ticks,
+    }, &app_state).await;
+    if res.is_err() {
+        axum_app_state.app.emit("tauri_notify", TauriNotify {
+            alert_type: "ElMessage".to_string(),
+            message_type: "error".to_string(),
+            title: None,
+            message: format!("调用emby播放进度失败: {}", res.unwrap_err()),
+        }).unwrap()
+    }
+
+    // trakt 开始播放
+    let series = if let Some(series_id) = episode.series_id.clone() {
+        match emby_http_svc::items(EmbyItemsParam {
+            emby_server_id: params.emby_server_id.clone(),
+            item_id: series_id,
+        }, &app_state, true).await {
+            Err(e) => return Err(anyhow::anyhow!("获取系列信息失败: {}", e.to_string())),
+            Ok(series) => serde_json::from_str::<SeriesItem>(&series).ok(),
+        }
+    } else { None };
+    let trakt_sync_switch = global_config_mapper::get_cache("trakt_sync_switch", &app_state).await;
+    let trakt_username = global_config_mapper::get_cache("trakt_username", &app_state).await;
+    let scrobble_trakt_param = if trakt_sync_switch != Some("off".to_string()) && trakt_username.is_some() {
+        let progress = if let Some(run_time_ticks) = media_source.run_time_ticks {
+            (params.playback_position_ticks as f64 / (run_time_ticks as f64 / 100.0)).round() / 100.0
+        } else { 0.0 };
+        let trakt_scrobble_param = trakt_http_svc::get_scrobble_trakt_param(&episode, &series, progress);
+        if let Some(scrobble_trakt_param) = &trakt_scrobble_param {
+            match trakt_http_svc::start(scrobble_trakt_param, &app_state, 0).await {
+                Ok(json) => 
+                    axum_app_state.app.emit("tauri_notify", TauriNotify {
+                        alert_type: "TraktStart".to_string(),
+                        message_type: "success".to_string(),
+                        title: None,
+                        message: json,
+                    }).unwrap(),
+                Err(err) => 
+                    axum_app_state.app.emit("tauri_notify", TauriNotify {
+                        alert_type: "ElMessage".to_string(),
+                        message_type: "error".to_string(),
+                        title: None,
+                        message: format!("调用trakt开始播放失败: {}", err),
+                    }).unwrap()
+            }
+        }
+        trakt_scrobble_param
+    } else { None };
+
+    // 播放进度
+    let playback_progress_param = PlaybackProgressParam {
+        params: params.clone(),
+        episode: episode,
+        media_source: media_source.clone(),
+        playback_info: playback_info,
+        app_handle: axum_app_state.app.clone(),
+        scrobble_trakt_param,
+        start_time: chrono::Local::now().timestamp(),
+        emby_server: emby_server,
+        play_proxy_url,
+    };
+    tauri::async_runtime::spawn(async move {
+        let res = playback_progress(playback_progress_param).await;
+        if res.is_err() {
+            tracing::error!("播放进度失败: {:?}", res.unwrap_err());
+        }
+    });
+
+    Ok(video_url)
+}
+
+async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressParam) -> anyhow::Result<()> {
+    // 向mpv添加音频字幕
+    let PlaybackProgressParam {
+        params,
+        episode: _,
+        media_source,
+        playback_info: _,
+        app_handle,
+        scrobble_trakt_param: _,
+        start_time: _,
+        emby_server,
+        play_proxy_url,
+    } = playback_progress_param;
+    let app_state = app_handle.state::<AppState>();
+    let axum_app_state = app_state.auxm_app_state.read().await.clone().unwrap();
+    let (_recver, mut sender) = get_pipe_rw(&params.mpv_ipc).await?;
     for media_stream in &media_source.media_streams {
         if media_stream.is_external != Some(true) {
             continue;
@@ -345,29 +489,26 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str) -> anyhow::Resu
             sid = 1;
         }
     }
-    let command = if vid == -1 {
-        format!(r#"{{ "command": ["vid", "no"] }}{}"#, "\n")
-    } else if vid == 0 {
-        format!(r#"{{ "command": ["vid", "auto"] }}{}"#, "\n")
-    } else {
-        format!(r#"{{ "command": ["vid", "{}"] }}{}"#, vid, "\n")
+    let property = match vid {
+        -1 => "no".to_string(),
+        0 => "auto".to_string(),
+        _ => vid.to_string()
     };
+    let command = format!(r#"{{ "command": ["set_property", "vid", "{}"] }}{}"#, property, "\n");
     sender.write_all(command.as_bytes()).await?;
-    let command = if aid == -1 {
-        format!(r#"{{ "command": ["aid", "no"] }}{}"#, "\n")
-    } else if aid == 0 {
-        format!(r#"{{ "command": ["aid", "auto"] }}{}"#, "\n")
-    } else {
-        format!(r#"{{ "command": ["aid", "{}"] }}{}"#, aid, "\n")
+    let property = match aid {
+        -1 => "no".to_string(),
+        0 => "auto".to_string(),
+        _ => aid.to_string()
     };
+    let command = format!(r#"{{ "command": ["set_property", "aid", "{}"] }}{}"#, property, "\n");
     sender.write_all(command.as_bytes()).await?;
-    let command = if sid == -1 {
-        format!(r#"{{ "command": ["sid", "no"] }}{}"#, "\n")
-    } else if sid == 0 {
-        format!(r#"{{ "command": ["sid", "auto"] }}{}"#, "\n")
-    } else {
-        format!(r#"{{ "command": ["sid", "{}"] }}{}"#, sid, "\n")
+    let property = match sid {
+        -1 => "no".to_string(),
+        0 => "auto".to_string(),
+        _ => sid.to_string()
     };
+    let command = format!(r#"{{ "command": ["set_property", "sid", "{}"] }}{}"#, property, "\n");
     sender.write_all(command.as_bytes()).await?;
 
     let mut cache_max_bytes = 300 * 1024 * 1024;
@@ -389,133 +530,11 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str) -> anyhow::Resu
             cache_back_max_bytes = mpv_cache_back_max_bytes;
         }
     }
-    let command = format!(r#"{{ "command": ["demuxer-max-bytes", "{}"] }}{}"#, cache_max_bytes, "\n");
+    let command = format!(r#"{{ "command": ["set_property", "demuxer-max-bytes", "{}"] }}{}"#, cache_max_bytes, "\n");
     sender.write_all(command.as_bytes()).await?;
-    let command = format!(r#"{{ "command": ["demuxer-max-back-bytes", "{}"] }}{}"#, cache_back_max_bytes, "\n");
+    let command = format!(r#"{{ "command": ["set_property", "demuxer-max-back-bytes", "{}"] }}{}"#, cache_back_max_bytes, "\n");
     sender.write_all(command.as_bytes()).await?;
-
-    // 本地播放历史记录
-    let episode = match emby_http_svc::items(EmbyItemsParam {
-        emby_server_id: params.emby_server_id.clone(),
-        item_id: params.item_id.clone(),
-    }, &app_state, true).await {
-        Err(e) => return Err(anyhow::anyhow!("获取剧集信息失败: {}", e.to_string())),
-        Ok(episode) => serde_json::from_str::<EpisodeItem>(&episode).unwrap(),
-    };
-    let mut pinned = 0;
-    if let Some(series_id) = episode.series_id.clone() {
-        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await.unwrap();
-        if pinned_update.rows_affected() > 0 { pinned = 1 }
-    }
-    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &app_state.db_pool).await.unwrap() {
-        Some(response) => {
-            if episode.series_id.is_none() {
-                pinned = response.pinned.unwrap();
-            }
-            play_history_mapper::update_by_id(PlayHistory {
-                id: response.id,
-                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                emby_server_name: emby_server.server_name.clone(),
-                item_name: Some(episode.name.clone()),
-                item_type: Some(episode.type_.clone()),
-                series_id: episode.series_id.clone(),
-                series_name: episode.series_name.clone(),
-                pinned: Some(pinned),
-                ..Default::default()
-            }, &app_state.db_pool).await.unwrap();
-        },
-        None => {
-            play_history_mapper::create(PlayHistory {
-                id: Some(uuid::Uuid::new_v4().to_string()),
-                create_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                emby_server_id: emby_server.id.clone(),
-                emby_server_name: emby_server.server_name.clone(),
-                item_id: Some(episode.id.clone()),
-                item_name: Some(episode.name.clone()),
-                item_type: Some(episode.type_.clone()),
-                series_id: episode.series_id.clone(),
-                series_name: episode.series_name.clone(),
-                played_duration: Some(0),
-                pinned: Some(pinned),
-            }, &app_state.db_pool).await.unwrap();
-        },
-    }
-
-    // emby开始播放api
-    let res = emby_http_svc::playing(EmbyPlayingParam {
-        emby_server_id: params.emby_server_id.clone(),
-        item_id: params.item_id.clone(),
-        media_source_id: media_source.id.clone(),
-        play_session_id: playback_info.play_session_id.clone(),
-        position_ticks: params.playback_position_ticks,
-    }, &app_state).await;
-    if res.is_err() {
-        axum_app_state.app.emit("tauri_notify", TauriNotify {
-            alert_type: "ElMessage".to_string(),
-            message_type: "error".to_string(),
-            title: None,
-            message: format!("调用emby播放进度失败: {}", res.unwrap_err()),
-        }).unwrap()
-    }
-
-    // trakt 开始播放
-    let series = if let Some(series_id) = episode.series_id.clone() {
-        match emby_http_svc::items(EmbyItemsParam {
-            emby_server_id: params.emby_server_id.clone(),
-            item_id: series_id,
-        }, &app_state, true).await {
-            Err(e) => return Err(anyhow::anyhow!("获取系列信息失败: {}", e.to_string())),
-            Ok(series) => serde_json::from_str::<SeriesItem>(&series).ok(),
-        }
-    } else { None };
-    let trakt_sync_switch = global_config_mapper::get_cache("trakt_sync_switch", &app_state).await;
-    let trakt_username = global_config_mapper::get_cache("trakt_username", &app_state).await;
-    let scrobble_trakt_param = if trakt_sync_switch != Some("off".to_string()) && trakt_username.is_some() {
-        let progress = if let Some(run_time_ticks) = media_source.run_time_ticks {
-            (params.playback_position_ticks as f64 / (run_time_ticks as f64 / 100.0)).round() / 100.0
-        } else { 0.0 };
-        let trakt_scrobble_param = trakt_http_svc::get_scrobble_trakt_param(&episode, &series, progress);
-        if let Some(scrobble_trakt_param) = &trakt_scrobble_param {
-            match trakt_http_svc::start(scrobble_trakt_param, &app_state, 0).await {
-                Ok(json) => 
-                    axum_app_state.app.emit("tauri_notify", TauriNotify {
-                        alert_type: "TraktStart".to_string(),
-                        message_type: "success".to_string(),
-                        title: None,
-                        message: json,
-                    }).unwrap(),
-                Err(err) => 
-                    axum_app_state.app.emit("tauri_notify", TauriNotify {
-                        alert_type: "ElMessage".to_string(),
-                        message_type: "error".to_string(),
-                        title: None,
-                        message: format!("调用trakt开始播放失败: {}", err),
-                    }).unwrap()
-            }
-        }
-        trakt_scrobble_param
-    } else { None };
-
-    // 播放进度
-    let playback_progress_param = PlaybackProgressParam {
-        params: params.clone(),
-        episode: episode,
-        media_source: media_source.clone(),
-        playback_info: playback_info,
-        app_handle: axum_app_state.app.clone(),
-        scrobble_trakt_param,
-        start_time: chrono::Local::now().timestamp(),
-        emby_server: emby_server,
-    };
-    tauri::async_runtime::spawn(async move {
-        let res = playback_progress(playback_progress_param).await;
-        if res.is_err() {
-            tracing::error!("播放进度失败: {:?}", res.unwrap_err());
-        }
-    });
-
-    Ok(video_url)
+    Ok(())
 }
 
 async fn playback_progress(playback_progress_param: PlaybackProgressParam) -> anyhow::Result<()> {
@@ -576,7 +595,11 @@ async fn playback_progress(playback_progress_param: PlaybackProgressParam) -> an
         if let Some("end-file") = json.event {
             tracing::debug!("MPV IPC 播放结束");
             send_task.abort();
-            save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            if json.reason == Some("quit") {
+                save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            } else {
+                save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            }
             break;
         }
         if let Some("seek") = json.event {
@@ -584,6 +607,7 @@ async fn playback_progress(playback_progress_param: PlaybackProgressParam) -> an
         }
         if let Some("file-loaded") = json.event {
             start_recording = true;
+            mpv_add_external_and_select(&playback_progress_param).await?;
         }
         if !start_recording {
             continue;
@@ -615,32 +639,43 @@ async fn playback_progress(playback_progress_param: PlaybackProgressParam) -> an
 }
 
 async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam, last_record_position: Decimal, playback_status: PlayingProgressEnum) -> anyhow::Result<()> {
+    let PlaybackProgressParam {
+        params,
+        episode,
+        media_source,
+        playback_info,
+        app_handle,
+        scrobble_trakt_param,
+        start_time,
+        emby_server,
+        play_proxy_url: _,
+    } = playback_progress_param;
     let position_ticks = (last_record_position * Decimal::from_i64(1000_0000).unwrap()).to_u64().unwrap();
-    let state = playback_progress_param.app_handle.state::<AppState>();
+    let state = app_handle.state::<AppState>();
     if playback_status == PlayingProgressEnum::Playing {
         emby_http_svc::playing_progress(EmbyPlayingProgressParam {
-            emby_server_id: playback_progress_param.params.emby_server_id.clone(),
-            item_id: playback_progress_param.params.item_id.clone(),
-            media_source_id: playback_progress_param.media_source.id.clone(),
-            play_session_id: playback_progress_param.playback_info.play_session_id.clone(),
+            emby_server_id: params.emby_server_id.clone(),
+            item_id: params.item_id.clone(),
+            media_source_id: media_source.id.clone(),
+            play_session_id: playback_info.play_session_id.clone(),
             position_ticks: position_ticks,
         }, &state).await?;
         return Ok(());
     }
 
-    let played_duration = chrono::Local::now().timestamp() - playback_progress_param.start_time;
+    let played_duration = chrono::Local::now().timestamp() - start_time;
     if played_duration > 300 {
         emby_server_mapper::update_by_id(EmbyServer {
-            id: Some(playback_progress_param.params.emby_server_id.clone()),
+            id: Some(params.emby_server_id.clone()),
             last_playback_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
             ..Default::default()
         }, &state).await?;
-        playback_progress_param.app_handle.emit("EmbyServerChange", EmbyServerChangeParam {
-            id: &playback_progress_param.params.emby_server_id,
+        app_handle.emit("EmbyServerChange", EmbyServerChangeParam {
+            id: &params.emby_server_id,
             event: "update",
         })?;
     } else {
-        playback_progress_param.app_handle.emit("tauri_notify", TauriNotify {
+        app_handle.emit("tauri_notify", TauriNotify {
             alert_type: "ElMessage".to_string(),
             message_type: "warning".to_string(),
             title: None,
@@ -648,16 +683,19 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
         }).unwrap()
     }
     
-    match play_history_mapper::get(playback_progress_param.params.emby_server_id.clone(), playback_progress_param.params.item_id.clone(), &state.db_pool).await? {
+    let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
+    let index_number = episode.index_number.map_or("_".to_string(), |n| n.to_string());
+    let episode_name = format!("S{}E{}. {}", parent_index_number, index_number, episode.name.clone());
+    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &state.db_pool).await? {
         Some(response) => {
             play_history_mapper::update_by_id(PlayHistory {
                 id: response.id,
                 update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                emby_server_name: playback_progress_param.emby_server.server_name.clone(),
-                item_name: Some(playback_progress_param.episode.name.clone()),
-                item_type: Some(playback_progress_param.episode.type_.clone()),
-                series_id: playback_progress_param.episode.series_id.clone(),
-                series_name: playback_progress_param.episode.series_name.clone(),
+                emby_server_name: emby_server.server_name.clone(),
+                item_name: Some(episode_name),
+                item_type: Some(episode.type_.clone()),
+                series_id: episode.series_id.clone(),
+                series_name: episode.series_name.clone(),
                 played_duration: Some(played_duration + response.played_duration.unwrap()),
                 ..Default::default()
             }, &state.db_pool).await?;
@@ -665,31 +703,33 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
         None => tracing::error!("播放记录不存在，无法更新播放记录"),
     }
 
-    // 播放完成展示通知
-    // let window = playback_progress_param.app_handle.webview_windows();
-    // let window = window.values().next().expect("Sorry, no window found");
-    // window.unminimize().expect("Sorry, no window unminimize");
-    // window.show().expect("Sorry, no window show");
-    // window.set_focus().expect("Can't Bring Window to Focus");
+    // 退出调起APP
+    if playback_status == PlayingProgressEnum::Quit {
+        let window = app_handle.webview_windows();
+        let window = window.values().next().expect("Sorry, no window found");
+        window.unminimize().expect("Sorry, no window unminimize");
+        window.show().expect("Sorry, no window show");
+        window.set_focus().expect("Can't Bring Window to Focus");
+    }
     
-    let progress_percent = if let Some(run_time_ticks) = playback_progress_param.media_source.run_time_ticks {
+    let progress_percent = if let Some(run_time_ticks) = media_source.run_time_ticks {
         (last_record_position * Decimal::from_i64(1000_0000).unwrap() / Decimal::from_u64(run_time_ticks).unwrap() * Decimal::from_u64(100).unwrap()).trunc_with_scale(2)
     } else {
         last_record_position
     };
-    if let Some(mut scrobble_trakt_param) = playback_progress_param.scrobble_trakt_param.clone() {
+    if let Some(mut scrobble_trakt_param) = scrobble_trakt_param.clone() {
         let progress_percent = if progress_percent < Decimal::from_i64(1).unwrap() { Decimal::from_i64(1).unwrap() } else { progress_percent };
         scrobble_trakt_param.progress = progress_percent.to_f64().unwrap();
-        match trakt_http_svc::stop(&scrobble_trakt_param, &playback_progress_param.app_handle.state(), 0).await {
+        match trakt_http_svc::stop(&scrobble_trakt_param, &app_handle.state(), 0).await {
             Ok(json) => 
-                playback_progress_param.app_handle.emit("tauri_notify", TauriNotify {
+                app_handle.emit("tauri_notify", TauriNotify {
                     alert_type: "TraktStop".to_string(),
                     message_type: "success".to_string(),
                     title: None,
                     message: json,
                 }).unwrap(),
             Err(err) => 
-                playback_progress_param.app_handle.emit("tauri_notify", TauriNotify {
+                app_handle.emit("tauri_notify", TauriNotify {
                     alert_type: "ElMessage".to_string(),
                     message_type: "error".to_string(),
                     title: None,
@@ -699,16 +739,17 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
     }
 
     emby_http_svc::playing_stopped(EmbyPlayingStoppedParam {
-        emby_server_id: playback_progress_param.params.emby_server_id.clone(),
-        item_id: playback_progress_param.params.item_id.clone(),
-        media_source_id: playback_progress_param.media_source.id.clone(),
-        play_session_id: playback_progress_param.playback_info.play_session_id.clone(),
+        emby_server_id: params.emby_server_id.clone(),
+        item_id: params.item_id.clone(),
+        media_source_id: media_source.id.clone(),
+        play_session_id: playback_info.play_session_id.clone(),
         position_ticks: position_ticks,
-    }, &playback_progress_param.app_handle.state::<AppState>()).await?;
+    }, &app_handle.state::<AppState>()).await?;
 
-    playback_progress_param.app_handle.emit("playingStopped", PlaybackStoppedParam {
-        emby_server_id: &playback_progress_param.params.emby_server_id,
-        item_id: &playback_progress_param.params.item_id,
+    app_handle.emit("playingStopped", PlaybackStoppedParam {
+        emby_server_id: &params.emby_server_id,
+        item_id: &params.item_id,
+        series_id: &episode.series_id,
         progress_percent: &progress_percent,
     })?;
 
@@ -717,6 +758,7 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
 
 #[derive(PartialEq)]
 enum PlayingProgressEnum {
+    Quit,
     Stop,
     Playing,
 }
@@ -735,6 +777,7 @@ struct MpvIpcResponse<'a> {
 struct PlaybackStoppedParam<'a> {
     emby_server_id: &'a str,
     item_id: &'a str,
+    series_id: &'a Option<String>,
     progress_percent: &'a Decimal,
 }
 
@@ -761,6 +804,7 @@ struct PlaybackProgressParam {
     scrobble_trakt_param: Option<ScrobbleParam>,
     start_time: i64,
     emby_server: EmbyServer,
+    play_proxy_url: Option<String>,
 }
 
 #[cfg(not(windows))]

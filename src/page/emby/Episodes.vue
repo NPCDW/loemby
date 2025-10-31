@@ -458,7 +458,7 @@ function play_video(item_id: string, playbackPositionTicks: number, directLink: 
         item_id: item_id,
         playback_position_ticks: playbackPositionTicks,
         use_direct_link: directLink,
-        select_policy: rememberSelect.value.toString(),
+        select_policy: rememberSelect.value ? 'manual' : 'auto',
         video_select: videoSelect.value,
         audio_select: audioSelect.value,
         subtitle_select: subtitleSelect.value,
@@ -468,7 +468,7 @@ function play_video(item_id: string, playbackPositionTicks: number, directLink: 
 
 interface PlaybackStoppedParam {
     emby_server_id: string;
-    series_id: string;
+    series_id?: string;
     item_id: string;
     progress_percent: number;
 }
@@ -479,7 +479,7 @@ async function listenPlayingStopped() {
         if (embyServerId === event.payload.emby_server_id) {
             if (event.payload.item_id === currentEpisodes.value?.Id) {
                 updateCurrentEpisodes(true)
-            } else if (event.payload.series_id === currentEpisodes.value?.SeriesId) {
+            } else if (event.payload.series_id && event.payload.series_id === currentEpisodes.value?.SeriesId) {
                 jumpToNextEpisode(event.payload.item_id)
             }
         }
