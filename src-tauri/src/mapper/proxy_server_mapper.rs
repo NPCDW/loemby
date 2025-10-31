@@ -76,7 +76,7 @@ pub async fn get_app_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_
 
 pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
     let list = list_all(&state.db_pool).await?;
-    let mut cache_map_write = state.proxy_server_chache.write().await;
+    let mut cache_map_write = state.proxy_server_cache.write().await;
     cache_map_write.clear();
     for proxy in list {
         let id = proxy.id.clone().unwrap();
@@ -88,7 +88,7 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
 
 pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
     let proxy_server = get_by_id(id.to_string(), &state.db_pool).await?;
-    let mut cache_map_write = state.proxy_server_chache.write().await;
+    let mut cache_map_write = state.proxy_server_cache.write().await;
     match proxy_server {
         Some(proxy_server) => {
             let proxy_url = get_proxy_url(proxy_server);
@@ -102,7 +102,7 @@ pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyh
 }
 
 pub async fn get_cache(id: String, state: &tauri::State<'_, AppState>) -> Option<String> {
-    let cache_map = state.proxy_server_chache.read().await;
+    let cache_map = state.proxy_server_cache.read().await;
     cache_map.get(&id).cloned()
 }
 

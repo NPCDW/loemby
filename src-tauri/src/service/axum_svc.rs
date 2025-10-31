@@ -6,7 +6,7 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::{emby_http_svc, trakt_http_svc::{self, TraktHttpTokenParam}}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::{emby_http_svc, player_svc, trakt_http_svc::{self, TraktHttpTokenParam}}};
 
 pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -17,6 +17,7 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
     *axum_app_state.write().await = Some(AxumAppState {
         app: app_handle,
         port: actual_port,
+        playlist: Arc::new(RwLock::new(HashMap::new())),
         request: Arc::new(RwLock::new(HashMap::new())),
         trakt_auth_state: Arc::new(RwLock::new(vec![])),
     });
@@ -26,11 +27,27 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
         .route("/image/icon", get(image_icon))
         .route("/image/emby", get(image_emby))
         .route("/trakt_auth", get(trakt_auth))
+        .route("/play_media/{id}", get(play_media))
         .with_state(axum_app_state);
 
     axum::serve(listener, router).await?;
 
     anyhow::Ok(())
+}
+
+async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path(id): Path<String>) -> axum::response::Response {
+    tracing::debug!("play_media: {:?}", id);
+    let axum_app_state = axum_app_state.read().await.clone().unwrap();
+    let res = player_svc::play_media(&axum_app_state, &id).await;
+    if let Err(err) = res {
+        tracing::error!("play_media: {:?} {:?}", id, err);
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("play_media: {:?} {:?}", id, err))
+        ).into_response();
+    }
+    axum::response::Redirect::permanent(&res.unwrap()).into_response()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -370,6 +387,20 @@ async fn image(headers: axum::http::HeaderMap, axum_app_state: AxumAppState, par
 }
 
 #[derive(Clone, Debug)]
+pub struct MediaPlaylistParam {
+    pub emby_server_id: String,
+    pub item_id: String,
+    pub playback_position_ticks: u64,
+    pub use_direct_link: bool,
+    pub select_policy: String,
+    pub video_select: i32,
+    pub audio_select: i32,
+    pub subtitle_select: i32,
+    pub version_select: i32,
+    pub mpv_ipc: String,
+}
+
+#[derive(Clone, Debug)]
 pub struct AxumAppStateRequest {
     pub stream_url: String,
     pub proxy_url: Option<String>,
@@ -380,6 +411,7 @@ pub struct AxumAppStateRequest {
 pub struct AxumAppState {
     pub app: tauri::AppHandle,
     pub port: u16,
+    pub playlist: Arc::<RwLock<HashMap<String, MediaPlaylistParam>>>,
     pub request: Arc::<RwLock<HashMap<String, AxumAppStateRequest>>>,
     pub trakt_auth_state: Arc::<RwLock<Vec<String>>>,
 }

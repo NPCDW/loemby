@@ -70,9 +70,6 @@
                             </el-select></span>
                         </div>
                         <p v-if="currentEpisodes?.SeriesId" style="display: flex; justify-content: center;">
-                            <el-button plain @click="autoplay = !autoplay">
-                                <span>{{ autoplay ? '连续播放' : '单集播放' }}</span>
-                            </el-button>
                             <el-button plain @click="rememberSelect = !rememberSelect">
                                 <span>{{ rememberSelect ? '记住媒体选项' : '自动选择媒体' }}</span>
                             </el-button>
@@ -84,17 +81,17 @@
                         </p>
                         <p style="display: flex; justify-content: center;">
                             <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, false)">
+                                <el-button plain type="success" :loading="play_loading" @click="play_video(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, false)">
                                     <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                     <span>继续播放</span>
                                 </el-button>
-                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, false)">
+                                <el-button plain type="success" :loading="play_loading" @click="play_video(currentEpisodes.Id, 0, false)">
                                     <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                     <span>从头播放</span>
                                 </el-button>
                             </template>
                             <template v-else>
-                                <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, false)">
+                                <el-button plain type="success" :loading="play_loading" @click="play_video(currentEpisodes.Id, 0, false)">
                                     <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                     <span>播放</span>
                                 </el-button>
@@ -116,17 +113,17 @@
                             </el-button>
                             <template v-if="supportDirectLink">
                                 <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                                    <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, true)">
+                                    <el-button plain type="success" :loading="play_loading" @click="play_video(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks, true)">
                                         <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                         <span>直链继续播放</span>
                                     </el-button>
-                                    <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, true)">
+                                    <el-button plain type="success" :loading="play_loading" @click="play_video(currentEpisodes.Id, 0, true)">
                                         <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                         <span>直链从头播放</span>
                                     </el-button>
                                 </template>
                                 <template v-else>
-                                    <el-button plain type="success" :loading="play_loading" @click="playing(currentEpisodes.Id, 0, true)">
+                                    <el-button plain type="success" :loading="play_loading" @click="play_video(currentEpisodes.Id, 0, true)">
                                         <el-icon :size="24" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                         <span>直链播放</span>
                                     </el-button>
@@ -164,8 +161,8 @@
 </template>
 
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref } from 'vue';
-import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem, UserData } from '../../api/embyApi';
+import { onMounted, onUnmounted, ref } from 'vue';
+import embyApi, { EmbyPageList, EpisodeItem, MediaSource, PlaybackInfo, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS, isInternalUrl } from '../../util/str_util'
 import { getResolutionFromMediaSources, getResolutionLevelFromMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
@@ -192,7 +189,6 @@ const subtitleSelect = ref(-1)
 const displayTimeLength = ref('')
 const runTimeTicks = ref(0)
 
-const autoplay = ref(true)
 const rememberSelect = ref(route.query.rememberSelect === 'true' ? true : false)
 const playbackInfoLoading = ref(false)
 const play_loading = ref(false)
@@ -217,29 +213,8 @@ function updateCurrentEpisodes(silent: boolean = false) {
                 handleMediaSources(json.MediaSources)
             }
             useImage().loadLogo(embyServerId, json)
-            if (json.SeriesId && !currentSeries.value) {
-                await getCurrentSeries()
-            }
         }
     }).catch(e => ElMessage.error(e)).finally(() => playbackInfoLoading.value = false)
-}
-
-const currentSeries = ref<SeriesItem>()
-async function getCurrentSeries() {
-    if (!currentEpisodes.value || !currentEpisodes.value.SeriesId) {
-        return
-    }
-    const storage = await sessionStorage.getItem(embyServerId + ':emby:' + currentEpisodes.value.SeriesId)
-    if (storage) {
-        currentSeries.value = JSON.parse(storage)
-        return Promise.resolve()
-    }
-    return embyApi.items(embyServerId, currentEpisodes.value.SeriesId).then(async response => {
-        let json: SeriesItem = JSON.parse(response);
-        currentSeries.value = json
-        sessionStorage.setItem(embyServerId + ':emby:' + currentEpisodes.value!.SeriesId, JSON.stringify(json))
-        return Promise.resolve()
-    }).catch(e => ElMessage.error(e))
 }
 
 const handleNextUpPageChange = (val: number) => {
@@ -272,7 +247,6 @@ function nextEpisode() {
 }
 function jumpToNextEpisode(id: string) {
     router.replace({path: '/nav/emby/' + embyServerId + '/episodes/' + id, query: {
-        autoplay: autoplay.value ? 'true' : 'false',
         directLink: useDirectLink.value.toString(),
         rememberSelect: rememberSelect.value.toString(),
         videoSelect: videoSelect.value,
@@ -456,80 +430,6 @@ function getPlayVersionAutoSelectPolicy() {
     }).catch(e => ElMessage.error('获取播放版本自动选择策略失败' + e))
 }
 getPlayVersionAutoSelectPolicy()
-const trakt_sync_switch = ref("on")
-function getTraktSyncSwitch() {
-    return useGlobalConfig().getGlobalConfigValue("trakt_sync_switch").then(value => {
-        trakt_sync_switch.value = value ? value : "on";
-    }).catch(e => ElMessage.error('获取Trakt同步开关失败' + e))
-}
-getTraktSyncSwitch()
-const trakt_username = ref("")
-function getTraktUsername() {
-    return useGlobalConfig().getGlobalConfigValue("trakt_username").then(value => {
-        trakt_username.value = value;
-    }).catch(e => ElMessage.error('获取Trakt同步开关失败' + e))
-}
-getTraktUsername()
-
-function getScrobbleTraktParam(playbackPositionTicks: number) {
-    if (trakt_sync_switch.value != 'on' || !trakt_username.value) {
-        return
-    }
-    const type = currentEpisodes.value!.Type == 'Movie' ? 'movie' : 'episode'
-    const progress = Number((playbackPositionTicks / (runTimeTicks.value / 100)).toFixed(2))
-    let param: any = {[type]: {}, progress}
-    let ids = getScrobbleTraktIdsParam(currentEpisodes.value!)
-    if (ids.imdb || ids.tmdb || ids.tvdb || ids.trakt) {
-        param[type].ids = ids
-        return param
-    }
-    if (currentSeries.value && currentEpisodes.value?.IndexNumber != undefined && currentEpisodes.value?.ParentIndexNumber != undefined) {
-        ids = getScrobbleTraktIdsParam(currentSeries.value!)
-        if (ids.imdb || ids.tmdb || ids.tvdb || ids.trakt) {
-            param.show = {ids}
-            param[type].season = currentEpisodes.value?.ParentIndexNumber
-            param[type].number = currentEpisodes.value?.IndexNumber
-            return param
-        }
-    }
-}
-function getScrobbleTraktIdsParam(item: EpisodeItem | SeriesItem) {
-    let ids: {[key in 'imdb' | 'tmdb' | 'tvdb' | 'trakt']?: string} = {}
-    for (const [key, value] of Object.entries(item.ProviderIds)) {
-        let provider = key.toLowerCase()
-        switch (provider) {
-            case 'imdb': ids.imdb = value; break;
-            case 'tmdb': ids.tmdb = value; break;
-            case 'tvdb': ids.tvdb = value; break;
-            case 'trakt': ids.trakt = value; break;
-        }
-    }
-    for (let externalUrl of item.ExternalUrls) {
-        if (externalUrl.Url.startsWith("https://www.imdb.com")) {
-            let url = new URL(externalUrl.Url)
-            if (!url.pathname.endsWith("/") && !ids.imdb) {
-                ids.imdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
-            }
-        } else if (externalUrl.Url.startsWith("https://www.themoviedb.org")) {
-            let url = new URL(externalUrl.Url)
-            if (!url.pathname.endsWith("/") && !ids.tmdb) {
-                ids.tmdb = url.pathname.substring(url.pathname.lastIndexOf("/") + 1)
-            }
-        } else if (externalUrl.Url.startsWith("https://thetvdb.com")) {
-            let url = new URL(externalUrl.Url)
-            if (url.searchParams.get("id") && !ids.tvdb) {
-                ids.tvdb = url.searchParams.get("id")!
-            }
-        } else if (externalUrl.Url.startsWith("https://trakt.tv/search/")) {
-            let url = new URL(externalUrl.Url)
-            const path = url.pathname.split('/')
-            if (path.length === 4 && ['imdb', 'tmdb', 'tvdb', 'trakt'].indexOf(path[2]) !== -1 && !ids[path[2] as 'imdb' | 'tmdb' | 'tvdb' | 'trakt']) {
-                ids[path[2] as 'imdb' | 'tmdb' | 'tvdb' | 'trakt'] = path[3]
-            }
-        }
-    }
-    return ids
-}
 
 const playback_info_loading = ref(false)
 function getPlaybackInfo(item_id: string) {
@@ -550,75 +450,25 @@ function getPlaybackInfo(item_id: string) {
     }).finally(() => playback_info_loading.value = false)
 }
 
-// const playingProgressTask = ref<NodeJS.Timeout>()
-function playing(item_id: string, playbackPositionTicks: number, directLink: boolean) {
+function play_video(item_id: string, playbackPositionTicks: number, directLink: boolean) {
     play_loading.value = true
     useDirectLink.value = directLink ? 1 : 0
-    return getPlaybackInfo(item_id).then(async playbackInfo => {
-        nextTick(() => {
-            let currentMediaSources = playbackInfo.MediaSources!.find(mediaSource => mediaSource.Id == versionOptions.value[versionSelect.value - 1].mediaSourceId)
-            if (!currentMediaSources) {
-                ElMessage.error('未获取到播放信息')
-                return
-            }
-            let playUrl
-            if (directLink && supportDirectLink.value) {
-                playUrl = currentMediaSources.Path
-            } else if (currentMediaSources.DirectStreamUrl) {
-                playUrl = embyApi.getDirectStreamUrl(currentMediaSources.DirectStreamUrl)!
-            } else {
-                playUrl = embyApi.getVideoStreamUrl(currentEpisodes.value!, currentMediaSources, playbackInfo.PlaySessionId)!
-            }
-            let track_titles: {video: string[], audio: string[], sub: string[]} = {"video": [], "audio": [], "sub": []}
-            let externalAudio = []
-            let externalSubtitle = []
-            for (let mediaStream of currentMediaSources.MediaStreams) {
-                if (mediaStream.Type == 'Video') {
-                    track_titles["video"].push(currentMediaSources.Name + ' / ' + mediaStream.DisplayTitle)
-                } else if (mediaStream.Type == 'Audio') {
-                    track_titles["audio"].push(mediaStream.DisplayTitle)
-                } else if (mediaStream.Type == 'Subtitle') {
-                    track_titles["sub"].push(mediaStream.DisplayTitle)
-                }
-                if (mediaStream.Type == 'Audio' && mediaStream.IsExternal) {
-                    externalAudio.push(embyApi.getAudioStreamUrl(currentEpisodes.value!, currentMediaSources, mediaStream)!)
-                } else if (mediaStream.Type == 'Subtitle' && mediaStream.IsExternal) {
-                    externalSubtitle.push(embyApi.getSubtitleStreamUrl(currentEpisodes.value!, currentMediaSources, mediaStream)!)
-                }
-            }
-            let episodesName = currentEpisodes.value?.Type === 'Movie' ? currentEpisodes.value?.Name
-                    : 'S' + (currentEpisodes.value?.ParentIndexNumber || '-') + 'E' + (currentEpisodes.value?.IndexNumber || '-') + '. ' + currentEpisodes.value?.Name
-            const scrobbleTraktParam = getScrobbleTraktParam(playbackPositionTicks)
-            return invokeApi.playback({
-                path: playUrl,
-                title: episodesName + " | " + (currentEpisodes.value?.SeriesName || "🎬电影") + " | ",
-                item_id: item_id,
-                item_type: currentEpisodes.value!.Type || 'Movie',
-                item_name: episodesName,
-                emby_server_id: embyServerId,
-                emby_server_name: '',
-                series_id: currentEpisodes.value!.SeriesId,
-                series_name: currentEpisodes.value!.SeriesName,
-                media_source_id: currentMediaSources.Id,
-                play_session_id: playbackInfo.PlaySessionId,
-                playback_position_ticks: playbackPositionTicks,
-                run_time_ticks: runTimeTicks.value ? runTimeTicks.value : 0,
-                bitrate: currentMediaSources.Bitrate,
-                vid: videoSelect.value,
-                aid: audioSelect.value,
-                sid: subtitleSelect.value,
-                external_audio: externalAudio,
-                external_subtitle: externalSubtitle,
-                scrobble_trakt_param: JSON.stringify(scrobbleTraktParam),
-                start_time: Math.round(new Date().getTime() / 1000),
-                track_titles: JSON.stringify(track_titles),
-            }).catch(res => ElMessage.error(res))
-        })
-    }).finally(() => play_loading.value = false)
+    return invokeApi.play_video({
+        emby_server_id: embyServerId,
+        item_id: item_id,
+        playback_position_ticks: playbackPositionTicks,
+        use_direct_link: directLink,
+        select_policy: rememberSelect.value.toString(),
+        video_select: videoSelect.value,
+        audio_select: audioSelect.value,
+        subtitle_select: subtitleSelect.value,
+        version_select: versionSelect.value,
+    }).catch(res => ElMessage.error(res)).finally(() => play_loading.value = false)
 }
 
 interface PlaybackStoppedParam {
     emby_server_id: string;
+    series_id: string;
     item_id: string;
     progress_percent: number;
 }
@@ -626,46 +476,11 @@ const unlistenPlayingStopped = ref<() => void>()
 async function listenPlayingStopped() {
     unlistenPlayingStopped.value = await listen<PlaybackStoppedParam>('playingStopped', (event) => {
         console.log("tauri playingStopped event", event)
-        if (embyServerId === event.payload.emby_server_id && event.payload.item_id === currentEpisodes.value?.Id) {
-            if (currentEpisodes.value.Type == 'Movie') {
+        if (embyServerId === event.payload.emby_server_id) {
+            if (event.payload.item_id === currentEpisodes.value?.Id) {
                 updateCurrentEpisodes(true)
-            } else {
-                episodes(0, 2).then(json => {
-                    if (json.Items.length < 1) {
-                        ElMessage.error('获取当前播放信息失败')
-                        return
-                    }
-                    if (!json.Items[0].UserData) {
-                        updateCurrentEpisodes(true).then(async () => {
-                            nextTick(() => {
-                                if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 80) {
-                                        if (autoplay.value) {
-                                            if (json.Items.length < 2) {
-                                                ElMessage.success('已经是最后一集了')
-                                            } else {
-                                                ElMessage.success('即将播放下一集')
-                                                jumpToNextEpisode(json.Items[1].Id)
-                                            }
-                                        }
-                                }
-                            })
-                        })
-                        return
-                    }
-                    currentEpisodes.value!.UserData = json.Items[0].UserData
-                    nextTick(() => {
-                        if (currentEpisodes.value?.UserData?.Played && event.payload.progress_percent > 80) {
-                                if (autoplay.value) {
-                                    if (json.Items.length < 2) {
-                                        ElMessage.success('已经是最后一集了')
-                                    } else {
-                                        ElMessage.success('即将播放下一集')
-                                        jumpToNextEpisode(json.Items[1].Id)
-                                    }
-                                }
-                        }
-                    })
-                })
+            } else if (event.payload.series_id === currentEpisodes.value?.SeriesId) {
+                jumpToNextEpisode(event.payload.item_id)
             }
         }
     });
@@ -719,11 +534,6 @@ updateCurrentEpisodes().then(() => {
         videoSelect.value = Number(<string>route.query.videoSelect)
         audioSelect.value = Number(<string>route.query.audioSelect)
         subtitleSelect.value = Number(<string>route.query.subtitleSelect)
-    } 
-    if (route.query.autoplay === 'true') {
-        nextTick(() => {
-            playing(<string>route.params.episodeId, 0, Boolean(JSON.parse(<string>route.query.directLink)))
-        })
     }
 })
 </script>

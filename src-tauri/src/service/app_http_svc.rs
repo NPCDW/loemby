@@ -20,7 +20,9 @@ pub async fn get_proxy_location(param: AppHttpGetProxyLocationParam, state: &tau
     if !response.status().is_success() {
         return Err(anyhow::anyhow!("{}", response.status()));
     }
-    Ok(response.text().await?)
+    let text = response.text().await?;
+    tracing::debug!("获取代理服务器IP信息 response text {}", text);
+    Ok(text)
 }
 
 pub async fn get_emby_icon_library(param: AppHttpGetEmbyIconLibraryParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
@@ -35,10 +37,12 @@ pub async fn get_emby_icon_library(param: AppHttpGetEmbyIconLibraryParam, state:
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
-    tracing::debug!("获取代理服务器IP信息 request {} response {:?}", builder_print, &response);
+    tracing::debug!("获取emby图标库 request {} response {:?}", builder_print, &response);
     let response = response?;
     if !response.status().is_success() {
         return Err(anyhow::anyhow!("{}", response.status()));
     }
-    Ok(response.text().await?)
+    let text = response.text().await?;
+    tracing::debug!("获取emby图标库 response text {}", text);
+    Ok(text)
 }

@@ -38,7 +38,7 @@ pub struct EmbyServer {
 
 pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
     let list = list_all(&state.db_pool).await?;
-    let mut cache_map_write = state.emby_server_chache.write().await;
+    let mut cache_map_write = state.emby_server_cache.write().await;
     cache_map_write.clear();
     for server in list {
         cache_map_write.insert(server.id.clone().unwrap(), server);
@@ -48,7 +48,7 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
 
 pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
     let emby_server = get_by_id(id.to_string(), &state.db_pool).await?;
-    let mut cache_map_write = state.emby_server_chache.write().await;
+    let mut cache_map_write = state.emby_server_cache.write().await;
     match emby_server {
         Some(emby_server) => {
             cache_map_write.insert(id.to_string(), emby_server);
@@ -61,7 +61,7 @@ pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyh
 }
 
 pub async fn get_cache(id: &str, state: &tauri::State<'_, AppState>) -> Option<EmbyServer> {
-    let cache_map = state.emby_server_chache.read().await;
+    let cache_map = state.emby_server_cache.read().await;
     cache_map.get(id).cloned()
 }
 

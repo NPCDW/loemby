@@ -181,7 +181,7 @@ pub struct EmbyItemsParam {
 
 #[tauri::command]
 pub async fn emby_items(body: EmbyItemsParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::items(body, &state).await;
+    let res = emby_http_svc::items(body, &state, false).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -211,6 +211,7 @@ pub struct EmbyEpisodesParam {
     pub start_item_id: Option<String>,
     pub start_index: u32,
     pub limit: u32,
+    pub extend_fields: Option<bool>,
 }
 
 #[tauri::command]
@@ -231,60 +232,6 @@ pub struct EmbyPlaybackInfoParam {
 #[tauri::command]
 pub async fn emby_playback_info(body: EmbyPlaybackInfoParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
     let res = emby_http_svc::playback_info(body, &state).await;
-    if res.is_err() {
-        return Err(res.err().unwrap().to_string());
-    }
-    Ok(res.unwrap())
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EmbyGetDirectStreamUrlParam {
-    pub emby_server_id: String,
-    pub direct_stream_url: String,
-}
-
-#[tauri::command]
-pub async fn emby_get_direct_stream_url(body: EmbyGetDirectStreamUrlParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_direct_stream_url(body, &state).await;
-    if res.is_err() {
-        return Err(res.err().unwrap().to_string());
-    }
-    Ok(res.unwrap())
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EmbyGetAudioStreamUrlParam {
-    pub emby_server_id: String,
-    pub item_id: String,
-    pub media_source_item_id: Option<String>,
-    pub media_streams_codec: String,
-    pub media_streams_index: String,
-    pub media_streams_is_external: bool,
-}
-
-#[tauri::command]
-pub async fn emby_get_audio_stream_url(body: EmbyGetAudioStreamUrlParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_audio_stream_url(body, &state).await;
-    if res.is_err() {
-        return Err(res.err().unwrap().to_string());
-    }
-    Ok(res.unwrap())
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EmbyGetSubtitleStreamUrlParam {
-    pub emby_server_id: String,
-    pub item_id: String,
-    pub media_source_id: String,
-    pub media_source_item_id: Option<String>,
-    pub media_streams_codec: String,
-    pub media_streams_index: String,
-    pub media_streams_is_external: bool,
-}
-
-#[tauri::command]
-pub async fn emby_get_subtitle_stream_url(body: EmbyGetSubtitleStreamUrlParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
-    let res = emby_http_svc::get_subtitle_stream_url(body, &state).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }

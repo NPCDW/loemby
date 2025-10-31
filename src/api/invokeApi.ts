@@ -5,32 +5,19 @@ async function getSysInfo(): Promise<string> {
     return invoke('get_sys_info');
 }
 
-interface PlaybackParam {
-    path: string,
-    title: string,
-    item_id: string,
-    item_type: string,
-    item_name: string,
+interface PlayVideoParam {
     emby_server_id: string,
-    emby_server_name: string,
-    series_id?: string,
-    series_name?: string,
-    media_source_id: string,
-    play_session_id: string,
+    item_id: string,
     playback_position_ticks: number,
-    run_time_ticks: number,
-    bitrate?: number,
-    vid: number,
-    aid: number,
-    sid: number,
-    external_audio: string[],
-    external_subtitle: string[],
-    scrobble_trakt_param?: string,
-    start_time: number,
-    track_titles: string,
+    use_direct_link: boolean,
+    select_policy: string,
+    video_select: number,
+    audio_select: number,
+    subtitle_select: number,
+    version_select: number,
 }
 
-async function playback(param: PlaybackParam): Promise<string> {
+async function play_video(param: PlayVideoParam): Promise<string> {
     return invoke('play_video', {body: param});
 }
 
@@ -63,5 +50,5 @@ async function clean_icon_cache(): Promise<void> {
 }
 
 export default {
-    getSysInfo, playback, go_trakt_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache
+    getSysInfo, play_video, go_trakt_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache
 }

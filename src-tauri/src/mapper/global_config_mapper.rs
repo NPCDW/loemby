@@ -13,7 +13,7 @@ pub struct GlobalConfig {
 
 pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
     let list = list_all(&state.db_pool).await?;
-    let mut cache_map_write = state.global_config_chache.write().await;
+    let mut cache_map_write = state.global_config_cache.write().await;
     cache_map_write.clear();
     for config in list {
         cache_map_write.insert(config.config_key.unwrap(), config.config_value.unwrap());
@@ -23,7 +23,7 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
 
 pub async fn refresh_cache(config_key: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
     let global_config = get_by_key(config_key.to_string(), &state.db_pool).await?;
-    let mut cache_map_write = state.global_config_chache.write().await;
+    let mut cache_map_write = state.global_config_cache.write().await;
     match global_config {
         Some(global_config) => {
             cache_map_write.insert(config_key.to_string(), global_config.config_value.unwrap());
@@ -36,7 +36,7 @@ pub async fn refresh_cache(config_key: &str, state: &tauri::State<'_, AppState>)
 }
 
 pub async fn get_cache(config_key: &str, state: &tauri::State<'_, AppState>) -> Option<String> {
-    let cache_map = state.global_config_chache.read().await;
+    let cache_map = state.global_config_cache.read().await;
     cache_map.get(config_key).cloned()
 }
 

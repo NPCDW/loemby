@@ -1,11 +1,11 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 
 use crate::{
-    config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{global_config_mapper::{self, GlobalConfig}, proxy_server_mapper}
+    config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{global_config_mapper::{self, GlobalConfig}, proxy_server_mapper}, service::emby_http_svc::{EpisodeItem, ExternalUrl, SeriesItem}
 };
 
 static TRAKT_WEBSITE_BASE_URL: &str = "https://trakt.tv";
@@ -128,7 +128,9 @@ pub async fn token(param: TraktHttpTokenParam, state: &tauri::State<'_, AppState
     if !response.status().is_success() {
         return Err(anyhow::anyhow!("{}", response.status()));
     }
-    Ok(response.json::<TraktTokenResponse>().await?)
+    let text = response.text().await?;
+    tracing::debug!("获取trakt token response text {}", text);
+    Ok(serde_json::from_str::<TraktTokenResponse>(&text)?)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -163,10 +165,12 @@ pub async fn get_user_info(state: &tauri::State<'_, AppState>) -> anyhow::Result
     if !response.status().is_success() {
         return Err(anyhow::anyhow!("{}", response.status()));
     }
-    Ok(response.json::<TraktUserInfoResponse>().await?)
+    let text = response.text().await?;
+    tracing::debug!("获取trakt用户信息 response text {}", text);
+    Ok(serde_json::from_str::<TraktUserInfoResponse>(&text)?)
 }
 
-pub async fn start(body: String, state: &tauri::State<'_, AppState>, retry: u32) -> anyhow::Result<String> {
+pub async fn start(body: &ScrobbleParam, state: &tauri::State<'_, AppState>, retry: u32) -> anyhow::Result<String> {
     let access_token = get_cache_access_token(state).await?;
     let trakt_proxy_id = global_config_mapper::get_cache("trakt_proxy_id", state).await;
     let proxy_url = proxy_server_mapper::get_app_proxy_url(trakt_proxy_id, state).await;
@@ -181,8 +185,8 @@ pub async fn start(body: String, state: &tauri::State<'_, AppState>, retry: u32)
     let builder = client
         .post(format!("{}/scrobble/start", TRAKT_API_BASE_URL))
         .headers(headers)
-        .body(body.clone());
-    let builder_print = format!("{:?} {}", &builder, body);
+        .body(serde_json::to_string(body)?);
+    let builder_print = format!("{:?} {:?}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("trakt开始播放 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -197,10 +201,12 @@ pub async fn start(body: String, state: &tauri::State<'_, AppState>, retry: u32)
     if !response.status().is_success() {
         return Err(anyhow::anyhow!("{}", response.status()));
     }
-    Ok(response.text().await?)
+    let text = response.text().await?;
+    tracing::debug!("trakt开始播放 response text {}", text);
+    Ok(text)
 }
 
-pub async fn stop(body: String, state: &tauri::State<'_, AppState>, retry: u32) -> anyhow::Result<String> {
+pub async fn stop(body: &ScrobbleParam, state: &tauri::State<'_, AppState>, retry: u32) -> anyhow::Result<String> {
     let access_token = get_cache_access_token(state).await?;
     let trakt_proxy_id = global_config_mapper::get_cache("trakt_proxy_id", state).await;
     let proxy_url = proxy_server_mapper::get_app_proxy_url(trakt_proxy_id, state).await;
@@ -215,8 +221,8 @@ pub async fn stop(body: String, state: &tauri::State<'_, AppState>, retry: u32) 
     let builder = client
         .post(format!("{}/scrobble/stop", TRAKT_API_BASE_URL))
         .headers(headers)
-        .body(body.clone());
-    let builder_print = format!("{:?} {}", &builder, body);
+        .body(serde_json::to_string(body)?);
+    let builder_print = format!("{:?} {:?}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("trakt停止播放 request {} response {:?}", builder_print, &response);
     let response = response?;
@@ -231,7 +237,9 @@ pub async fn stop(body: String, state: &tauri::State<'_, AppState>, retry: u32) 
     if !response.status().is_success() {
         return Err(anyhow::anyhow!("{}", response.status()));
     }
-    Ok(response.text().await?)
+    let text = response.text().await?;
+    tracing::debug!("trakt停止播放 response text {}", text);
+    Ok(text)
 }
 
 pub async fn go_trakt_auth(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
@@ -247,4 +255,144 @@ pub async fn go_trakt_auth(state: &tauri::State<'_, AppState>) -> anyhow::Result
     }
     tracing::debug!("打开浏览器成功: {}", &url);
     Ok(())
+}
+
+pub fn get_scrobble_trakt_param(episode: &EpisodeItem, series: &Option<SeriesItem>, progress: f64) -> Option<ScrobbleParam> {
+    if episode.type_ == "Movie" {
+        let ids = get_scrobble_trakt_ids_param(&episode.provider_ids, &episode.external_urls);
+        if has_valid_ids(&ids) {
+            return Some(ScrobbleParam {
+                movie: Some(ScrobbleIdsParam {ids}),
+                progress: progress,
+                ..Default::default()
+            });
+        }
+    } else if episode.type_ == "Episode" {
+        let ids = get_scrobble_trakt_ids_param(&episode.provider_ids, &episode.external_urls);
+        if has_valid_ids(&ids) {
+            return Some(ScrobbleParam {
+                episode: Some(ScrobbleEpisodeParam {ids: Some(ids), ..Default::default()}),
+                progress: progress,
+                ..Default::default()
+            });
+        } else if let (Some(series), Some(index_number), Some(parent_index_number)) = (
+            series,
+            episode.index_number,
+            episode.parent_index_number,
+        ) {
+            let series_ids = get_scrobble_trakt_ids_param(&series.provider_ids, &series.external_urls);
+            if has_valid_ids(&series_ids) {
+                return Some(ScrobbleParam {
+                    show: Some(ScrobbleIdsParam {ids: series_ids}),
+                    episode: Some(ScrobbleEpisodeParam {
+                        season: Some(parent_index_number),
+                        number: Some(index_number),
+                        ..Default::default()}),
+                    progress: progress,
+                    ..Default::default()
+                });
+            }
+        }
+    }
+    None
+}
+
+// 检查是否有有效的 ID
+fn has_valid_ids(ids: &TraktIds) -> bool {
+    ids.imdb.is_some() || ids.tmdb.is_some() || ids.tvdb.is_some() || ids.trakt.is_some()
+}
+
+// 从 MediaItem 获取 Trakt IDs
+fn get_scrobble_trakt_ids_param(provider_ids: &HashMap<String, String>, external_urls: &Vec<ExternalUrl>) -> TraktIds {
+    let mut ids = TraktIds::default();
+    
+    // 从 ProviderIds 提取
+    for (key, value) in provider_ids {
+        match key.to_lowercase().as_str() {
+            "imdb" => ids.imdb = Some(value.clone()),
+            "tmdb" => ids.tmdb = Some(value.clone()),
+            "tvdb" => ids.tvdb = Some(value.clone()),
+            "trakt" => ids.trakt = Some(value.clone()),
+            _ => {}
+        }
+    }
+    
+    // 从 ExternalUrls 提取
+    for external_url in external_urls {
+        let url_str = external_url.url.to_string();
+        if let Ok(url) = url::Url::parse(&url_str) {
+            // IMDb
+            if url_str.starts_with("https://www.imdb.com") {
+                if !url.path().ends_with('/') && ids.imdb.is_none() {
+                    if let Some(last_part) = url.path().split('/').last() {
+                        ids.imdb = Some(last_part.to_string());
+                    }
+                }
+            }
+            // TMDb
+            else if url_str.starts_with("https://www.themoviedb.org") {
+                if !url.path().ends_with('/') && ids.tmdb.is_none() {
+                    if let Some(last_part) = url.path().split('/').last() {
+                        ids.tmdb = Some(last_part.to_string());
+                    }
+                }
+            }
+            // TVDB
+            else if url_str.starts_with("https://thetvdb.com") {
+                if ids.tvdb.is_none() {
+                    if let Some(id) = url.query_pairs().find(|(k, _)| k == "id") {
+                        ids.tvdb = Some(id.1.to_string());
+                    }
+                }
+            }
+            // Trakt
+            else if url_str.starts_with("https://trakt.tv/search/") {
+                let path_segments: Vec<&str> = url.path().split('/').collect();
+                if path_segments.len() == 4 {
+                    let provider = path_segments[2];
+                    let id_value = path_segments[3];
+                    
+                    match provider {
+                        "imdb" if ids.imdb.is_none() => ids.imdb = Some(id_value.to_string()),
+                        "tmdb" if ids.tmdb.is_none() => ids.tmdb = Some(id_value.to_string()),
+                        "tvdb" if ids.tvdb.is_none() => ids.tvdb = Some(id_value.to_string()),
+                        "trakt" if ids.trakt.is_none() => ids.trakt = Some(id_value.to_string()),
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+    
+    ids
+}
+
+// 定义 Trakt ID 类型
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct TraktIds {
+    imdb: Option<String>,
+    tmdb: Option<String>,
+    tvdb: Option<String>,
+    trakt: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct ScrobbleEpisodeParam {
+    ids: Option<TraktIds>,
+    season: Option<u32>,
+    number: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ScrobbleIdsParam {
+    ids: TraktIds,
+}
+
+// 定义 Scrobble 参数
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct  ScrobbleParam {
+    pub progress: f64,
+    movie: Option<ScrobbleIdsParam>,
+    episode: Option<ScrobbleEpisodeParam>,
+    show: Option<ScrobbleIdsParam>,
 }

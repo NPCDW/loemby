@@ -13,9 +13,10 @@ pub struct AppState {
     pub api_reqwest_pool: Arc::<RwLock<HashMap<String, Client>>>,
     pub image_reqwest_pool: Arc::<RwLock<HashMap<String, Client>>>,
     pub db_pool: sqlx::Pool<sqlx::Sqlite>,
-    pub emby_server_chache: Arc::<RwLock<HashMap<String, crate::mapper::emby_server_mapper::EmbyServer>>>,
-    pub global_config_chache: Arc::<RwLock<HashMap<String, String>>>,
-    pub proxy_server_chache: Arc::<RwLock<HashMap<String, String>>>,
+    pub emby_server_cache: Arc::<RwLock<HashMap<String, crate::mapper::emby_server_mapper::EmbyServer>>>,
+    pub global_config_cache: Arc::<RwLock<HashMap<String, String>>>,
+    pub proxy_server_cache: Arc::<RwLock<HashMap<String, String>>>,
+    pub emby_http_cache: Arc::<RwLock<HashMap<String, String>>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
