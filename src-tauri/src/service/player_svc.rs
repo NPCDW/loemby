@@ -374,6 +374,11 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
     let app_state = app_handle.state::<AppState>();
     let axum_app_state = app_state.auxm_app_state.read().await.clone().unwrap();
     let (_recver, mut sender) = get_pipe_rw(&params.mpv_ipc).await?;
+    if params.playback_position_ticks != 0 {
+        let command = format!(r#"{{ "command": ["seek", "{}", "absolute"] }}{}"#, params.playback_position_ticks / 1000_0000, "\n");
+        sender.write_all(command.as_bytes()).await?;
+        tracing::debug!("MPV IPC Command seek: {}", command);
+    }
     for media_stream in &media_source.media_streams {
         if media_stream.is_external != Some(true) {
             continue;
@@ -396,8 +401,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
                 });
                 audio_url = format!("http://127.0.0.1:{}/stream/audio/{}", &axum_app_state.port, &uuid);
             }
-            let audio_title = format!("{} / {}", media_stream.display_title, media_stream.display_language.clone().unwrap_or_default());
-            let command = format!(r#"{{ "command": ["audio-add", "{}", "auto", "{}"] }}{}"#, audio_url, audio_title, "\n");
+            let command = format!(r#"{{ "command": ["audio-add", "{}", "auto"] }}{}"#, audio_url, "\n");
             sender.write_all(command.as_bytes()).await?;
             tracing::debug!("MPV IPC Command audio-add: {}", command);
         } else if media_stream.type_ == "Subtitle" {
@@ -419,8 +423,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
                 });
                 subtitle_url = format!("http://127.0.0.1:{}/stream/subtitle/{}", &axum_app_state.port, &uuid);
             }
-            let subtitle_title = format!("{} / {}", media_stream.display_title, media_stream.display_language.clone().unwrap_or_default());
-            let command = format!(r#"{{ "command": ["sub-add", "{}", "auto", "{}"] }}{}"#, subtitle_url, subtitle_title, "\n");
+            let command = format!(r#"{{ "command": ["sub-add", "{}"] }}{}"#, subtitle_url, "\n");
             sender.write_all(command.as_bytes()).await?;
             tracing::debug!("MPV IPC Command sub-add: {}", command);
         }
