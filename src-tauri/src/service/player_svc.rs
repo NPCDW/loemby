@@ -440,19 +440,19 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
     let mut track_titles = TrackTitleParam { video: Vec::new(), audio: Vec::new(), sub: Vec::new(), };
     for media_stream in &media_source.media_streams {
         if media_stream.type_ == "Video" {
-            track_titles.video.push(media_source.name.clone() + " / " + &media_stream.display_title);
+            track_titles.video.push(format!("{} / {}", media_source.name.clone(), media_stream.display_title.clone().unwrap_or("".to_string())));
             video_index += 1;
             if media_stream.is_default == Some(true) {
                 vid = video_index;
             }
         } else if media_stream.type_ == "Audio" {
-            track_titles.audio.push(media_stream.display_title.clone());
+            track_titles.audio.push(media_stream.display_title.clone().unwrap_or("".to_string()));
             audio_index += 1;
             if media_stream.is_default == Some(true) && aid == 0 {
                 aid = audio_index;
             }
         } else if media_stream.type_ == "Subtitle" {
-            track_titles.sub.push(media_stream.display_title.clone());
+            track_titles.sub.push(media_stream.display_title.clone().unwrap_or("".to_string()));
             subtitle_index += 1;
             let mut score = 0;
             if media_stream.is_default == Some(true) {

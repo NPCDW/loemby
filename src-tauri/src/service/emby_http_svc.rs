@@ -773,7 +773,7 @@ pub struct EmbyGetAudioStreamUrlParam {
     pub emby_server_id: String,
     pub item_id: String,
     pub media_source_item_id: Option<String>,
-    pub media_streams_codec: String,
+    pub media_streams_codec: Option<String>,
     pub media_streams_index: u32,
     pub media_streams_is_external: bool,
 }
@@ -786,7 +786,7 @@ pub async fn get_audio_stream_url(param: EmbyGetAudioStreamUrlParam, state: &tau
     if !param.media_streams_is_external {
         return Err(anyhow::anyhow!("media_streams audio not external"));
     }
-    let url = format!("{}/emby/Audio/{}/stream.{}?AudioStreamIndex={}&Static=true", emby_server.base_url.clone().unwrap(), if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id}, param.media_streams_codec, param.media_streams_index);
+    let url = format!("{}/emby/Audio/{}/stream.{}?AudioStreamIndex={}&Static=true", emby_server.base_url.clone().unwrap(), if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id}, param.media_streams_codec.unwrap_or("flac".to_string()), param.media_streams_index);
     tracing::debug!("拼接音频地址 {}", url);
     Ok(url)
 }
@@ -797,7 +797,7 @@ pub struct EmbyGetSubtitleStreamUrlParam {
     pub item_id: String,
     pub media_source_id: String,
     pub media_source_item_id: Option<String>,
-    pub media_streams_codec: String,
+    pub media_streams_codec: Option<String>,
     pub media_streams_index: u32,
     pub media_streams_is_external: bool,
 }
@@ -810,7 +810,7 @@ pub async fn get_subtitle_stream_url(param: EmbyGetSubtitleStreamUrlParam, state
     if !param.media_streams_is_external {
         return Err(anyhow::anyhow!("media_streams Subtitles not external"));
     }
-    let url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.base_url.clone().unwrap(), if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id}, param.media_source_id, param.media_streams_index, param.media_streams_codec);
+    let url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.base_url.clone().unwrap(), if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id}, param.media_source_id, param.media_streams_index, param.media_streams_codec.unwrap_or("flac".to_string()));
     tracing::debug!("拼接字幕地址 {}", url);
     Ok(url)
 }
@@ -929,10 +929,10 @@ pub struct MediaSource {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MediaStream {
     #[serde(rename = "Codec")]
-    pub codec: String,
+    pub codec: Option<String>,
 
     #[serde(rename = "DisplayTitle")]
-    pub display_title: String,
+    pub display_title: Option<String>,
 
     #[serde(rename = "DisplayLanguage")]
     pub display_language: Option<String>,

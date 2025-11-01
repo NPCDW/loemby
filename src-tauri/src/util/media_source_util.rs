@@ -68,7 +68,7 @@ pub fn get_resolution_level_from_media_sources(media_source: &MediaSource) -> u3
             let level = get_resolution_level(stream.width, stream.height);
             if level == 0 {
                 let name = media_source.name.to_lowercase();
-                let display_title = stream.display_title.to_lowercase();
+                let display_title = stream.display_title.clone().unwrap_or("".to_string()).to_lowercase();
 
                 if name.contains("2k") || name.contains("1440p") || display_title.contains("2k") || display_title.contains("1440p") {
                     6
