@@ -16,7 +16,19 @@ pub fn max_media_sources(media_sources: &[MediaSource]) -> &MediaSource {
     max_media_source
 }
 
-#[allow(dead_code)]
+pub fn get_display_title_from_media_sources(media_source: &MediaSource) -> String {
+    let video_stream = media_source
+        .media_streams
+        .iter()
+        .find(|stream| stream.type_ == "Video")
+        .or_else(|| media_source.media_streams.first());
+
+    match video_stream {
+        Some(stream) => format!("{} / {}", media_source.name.clone(), stream.display_title.clone().unwrap_or("".to_string())),
+        None => media_source.name.clone(),
+    }
+}
+
 pub fn get_resolution_from_media_sources(media_source: &MediaSource) -> String {
     let video_stream = media_source
         .media_streams
@@ -30,7 +42,6 @@ pub fn get_resolution_from_media_sources(media_source: &MediaSource) -> String {
     }
 }
 
-#[allow(dead_code)]
 pub fn get_resolution(width: Option<u32>, height: Option<u32>) -> String {
     match (width, height) {
         (Some(w), Some(h)) => {
@@ -113,14 +124,13 @@ fn get_resolution_level(width: Option<u32>, height: Option<u32>) -> u32 {
 }
 
 // 格式化字节大小
-#[allow(dead_code)]
-pub fn format_bytes(size: f64) -> String {
-    if size == 0.0 {
+pub fn format_bytes(size: u64) -> String {
+    if size == 0 {
         return "0 KB".to_string();
     }
     
     let units = ["KB", "MB", "GB", "TB"];
-    let mut size = size;
+    let mut size = size as f64;
     
     for (index, unit) in units.iter().enumerate() {
         size /= 1024.0;
@@ -133,14 +143,13 @@ pub fn format_bytes(size: f64) -> String {
 }
 
 // 格式化 Mbps
-#[allow(dead_code)]
-pub fn format_mbps(size: f64) -> String {
-    if size == 0.0 {
+pub fn format_mbps(size: u64) -> String {
+    if size == 0 {
         return "0 Kbps".to_string();
     }
     
     let units = ["Kbps", "Mbps", "Gbps", "Tbps"];
-    let mut size = size;
+    let mut size = size as f64;
     
     for (index, unit) in units.iter().enumerate() {
         size /= 1024.0;

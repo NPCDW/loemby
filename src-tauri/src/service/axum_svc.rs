@@ -27,7 +27,7 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
         .route("/image/icon", get(image_icon))
         .route("/image/emby", get(image_emby))
         .route("/trakt_auth", get(trakt_auth))
-        .route("/play_media/{id}", get(play_media))
+        .route("/play_media/{id}/{media_source_select}", get(play_media))
         .with_state(axum_app_state);
 
     axum::serve(listener, router).await?;
@@ -35,16 +35,16 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
     anyhow::Ok(())
 }
 
-async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path(id): Path<String>) -> axum::response::Response {
-    tracing::debug!("play_media: {:?}", id);
+async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((id, media_source_select)): Path<(String, usize)>) -> axum::response::Response {
+    tracing::debug!("play_media: {} {}", id, media_source_select);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
-    let res = player_svc::play_media(&axum_app_state, &id).await;
+    let res = player_svc::play_media(&axum_app_state, &id, media_source_select).await;
     if let Err(err) = res {
-        tracing::error!("play_media: {:?} {:?}", id, err);
+        tracing::error!("play_media: {} {} {:?}", id, media_source_select, err);
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
             axum::http::HeaderMap::new(),
-            axum::body::Body::new(format!("play_media: {:?} {:?}", id, err))
+            axum::body::Body::new(format!("play_media: {} {} {:?}", id, media_source_select, err))
         ).into_response();
     }
     axum::response::Redirect::permanent(&res.unwrap()).into_response()
@@ -389,6 +389,7 @@ async fn image(headers: axum::http::HeaderMap, axum_app_state: AxumAppState, par
 #[derive(Clone, Debug)]
 pub struct MediaPlaylistParam {
     pub emby_server_id: String,
+    pub series_id: Option<String>,
     pub item_id: String,
     pub playback_position_ticks: u64,
     pub use_direct_link: bool,
@@ -396,7 +397,6 @@ pub struct MediaPlaylistParam {
     pub video_select: i32,
     pub audio_select: i32,
     pub subtitle_select: i32,
-    pub version_select: i32,
     pub mpv_ipc: String,
 }
 

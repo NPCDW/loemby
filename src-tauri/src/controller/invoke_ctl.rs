@@ -15,6 +15,7 @@ pub async fn get_sys_info() -> Result<String, String> {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlayVideoParam {
     pub emby_server_id: String,
+    pub series_id: Option<String>,
     pub item_id: String,
     pub playback_position_ticks: u64,
     pub use_direct_link: bool,

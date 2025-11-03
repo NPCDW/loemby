@@ -76,7 +76,8 @@
                             <el-button v-if="supportDirectLink" plain @click="useDirectLink = (useDirectLink + 1) % 2">
                                 <span>{{ useDirectLink == 2 ? '直链播放？' : useDirectLink == 1 ? '使用直链' : '不使用直链' }}</span>
                             </el-button>
-                            <el-button @click="handleNextUpPageChange(1)">接下来</el-button>
+                            <el-button @click="handleNextUpPageChange(1, true)">本季所有</el-button>
+                            <el-button @click="handleNextUpPageChange(1)">本季接下来</el-button>
                             <el-button @click="nextEpisode()">下一个</el-button>
                         </p>
                         <p style="display: flex; justify-content: center;">
@@ -217,18 +218,19 @@ function updateCurrentEpisodes(silent: boolean = false) {
     }).catch(e => ElMessage.error(e)).finally(() => playbackInfoLoading.value = false)
 }
 
-const handleNextUpPageChange = (val: number) => {
+const handleNextUpPageChange = (val: number, query_all: boolean = false) => {
+    const start_item_id = query_all ? undefined : currentEpisodes.value?.Id
     nextUpCurrentPage.value = val
     nextUpShow.value = true
     nextUpLoading.value = true
-    episodes((val - 1) * nextUpPageSize.value, nextUpPageSize.value).then(json => {
+    episodes((val - 1) * nextUpPageSize.value, nextUpPageSize.value, start_item_id).then(json => {
         nextUpList.value = json.Items
         nextUpTotal.value = json.TotalRecordCount
     }).finally(() => nextUpLoading.value = false)
 }
 
-function episodes(start_index: number, limit: number) {
-    return embyApi.episodes(embyServerId, currentEpisodes.value?.SeriesId!, currentEpisodes.value?.SeasonId!, start_index, limit, currentEpisodes.value?.Id).then(async response => {
+function episodes(start_index: number, limit: number, start_item_id?: string) {
+    return embyApi.episodes(embyServerId, currentEpisodes.value?.SeriesId!, currentEpisodes.value?.SeasonId!, start_index, limit, start_item_id).then(async response => {
         let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         return Promise.resolve(json)
     }).catch(e => {
@@ -237,7 +239,7 @@ function episodes(start_index: number, limit: number) {
     })
 }
 function nextEpisode() {
-    episodes(1, 1).then(json => {
+    episodes(1, 1, currentEpisodes.value?.Id).then(json => {
         if (json.Items.length < 1) {
             ElMessage.warning('已经是最后一集了')
             return
@@ -455,6 +457,7 @@ function play_video(item_id: string, playbackPositionTicks: number, directLink: 
     useDirectLink.value = directLink ? 1 : 0
     return invokeApi.play_video({
         emby_server_id: embyServerId,
+        series_id: currentEpisodes.value?.SeriesId,
         item_id: item_id,
         playback_position_ticks: playbackPositionTicks,
         use_direct_link: directLink,
@@ -466,20 +469,20 @@ function play_video(item_id: string, playbackPositionTicks: number, directLink: 
     }).catch(res => ElMessage.error(res)).finally(() => play_loading.value = false)
 }
 
-interface PlaybackStoppedParam {
+interface PlaybackNotifyParam {
     emby_server_id: string;
     series_id?: string;
     item_id: string;
-    progress_percent: number;
+    event: string;
 }
 const unlistenPlayingStopped = ref<() => void>()
 async function listenPlayingStopped() {
-    unlistenPlayingStopped.value = await listen<PlaybackStoppedParam>('playingStopped', (event) => {
+    unlistenPlayingStopped.value = await listen<PlaybackNotifyParam>('playingNotify', (event) => {
         console.log("tauri playingStopped event", event)
         if (embyServerId === event.payload.emby_server_id) {
-            if (event.payload.item_id === currentEpisodes.value?.Id) {
+            if (event.payload.item_id === currentEpisodes.value?.Id && event.payload.event === 'stop') {
                 updateCurrentEpisodes(true)
-            } else if (event.payload.series_id && event.payload.series_id === currentEpisodes.value?.SeriesId) {
+            } else if (event.payload.series_id && event.payload.series_id === currentEpisodes.value?.SeriesId && event.payload.event === 'start') {
                 jumpToNextEpisode(event.payload.item_id)
             }
         }

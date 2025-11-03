@@ -99,6 +99,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         let uuid = uuid::Uuid::new_v4().to_string();
         app_state.playlist.write().await.insert(uuid.clone(), MediaPlaylistParam {
             emby_server_id: body.emby_server_id.clone(),
+            series_id: body.series_id.clone(),
             item_id: episode.id.clone(),
             playback_position_ticks: if episode.id == episode_playlist[0].id { body.playback_position_ticks } else { 0 },
             use_direct_link: body.use_direct_link.clone(),
@@ -106,14 +107,14 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             video_select: body.video_select,
             audio_select: body.audio_select,
             subtitle_select: body.subtitle_select,
-            version_select: body.version_select,
             mpv_ipc: pipe_name.clone(),
         });
         let series_name = episode.series_name.clone().unwrap_or("🎬电影".to_string());
         let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
         let index_number = episode.index_number.map_or("_".to_string(), |n| n.to_string());
         let title = format!("S{}E{}. {} | {} | {}", parent_index_number, index_number, episode.name, series_name, emby_server.server_name.clone().unwrap());
-        mpv_playlist = format!("{}\n#EXTINF:-1,{}\nhttp://127.0.0.1:{}/play_media/{}", mpv_playlist, title, &app_state.port, &uuid);
+        let media_source_select = if body.select_policy == "manual" { body.version_select } else { 0 };
+        mpv_playlist = format!("{}\n#EXTINF:-1,{}\nhttp://127.0.0.1:{}/play_media/{}/{}", mpv_playlist, title, &app_state.port, &uuid, media_source_select);
     }
     let mpv_playlist_path = mpv_config_dir.join("mpv_playlist.m3u8");
     file_util::write_file(&mpv_playlist_path, &mpv_playlist);
@@ -141,9 +142,16 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     Ok(())
 }
 
-pub async fn play_media(axum_app_state: &AxumAppState, id: &str) -> anyhow::Result<String> {
+pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_select: usize) -> anyhow::Result<String> {
     let playlist = axum_app_state.playlist.read().await.clone();
     let params = playlist.get(id).ok_or(anyhow::anyhow!("媒体ID不存在"))?;
+
+    axum_app_state.app.emit("playingNotify", PlaybackNotifyParam {
+        emby_server_id: &params.emby_server_id,
+        item_id: &params.item_id,
+        series_id: &params.series_id,
+        event: "start",
+    })?;
 
     let app_state = axum_app_state.app.state::<AppState>();
     let emby_server = match emby_server_mapper::get_cache(&params.emby_server_id, &app_state).await {
@@ -165,11 +173,11 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str) -> anyhow::Resu
         return Err(anyhow::anyhow!("Emby Playback Info Error: 没有可用的媒体源"));
     }
     // 自动或手动选择媒体源
-    let media_source = if params.select_policy == "manual" {
-        if playback_info.media_sources.len() >= params.version_select as usize {
-            &playback_info.media_sources[params.version_select as usize - 1]
+    let media_source_index = if media_source_select != 0 {
+        if playback_info.media_sources.len() >= media_source_select {
+            media_source_select - 1
         } else {
-            &playback_info.media_sources[0]
+            0
         }
     } else {
         #[derive(Debug, Clone)]
@@ -200,8 +208,30 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str) -> anyhow::Resu
                 }
             });
         }
-        &playback_info.media_sources[version_select_list[0].version_id as usize - 1]
+        version_select_list[0].version_id as usize - 1
     };
+    let media_source = &playback_info.media_sources[media_source_index];
+    #[derive(Debug, Serialize, Deserialize)]
+    struct MutiVersionCommand {
+        path: String,
+        title: String,
+        hint: String,
+    }
+    let mut muti_version_list: Vec<MutiVersionCommand> = Vec::new();
+    for (i, media_source) in playback_info.media_sources.iter().enumerate() {
+        let media_source_select = if media_source_select == 0 && media_source_index == i { 0 } else { i + 1 };
+        muti_version_list.push(MutiVersionCommand {
+            path: format!("http://127.0.0.1:{}/play_media/{}/{}", &axum_app_state.port, id, media_source_select),
+            title: media_source_util::get_display_title_from_media_sources(media_source),
+            hint: format!("{},{},{}", media_source_util::get_resolution_from_media_sources(media_source), media_source_util::format_bytes(media_source.size.unwrap_or(0)), media_source_util::format_mbps(media_source.bitrate.unwrap_or(0)))
+        });
+    }
+    let (_recver, mut sender) = get_pipe_rw(&params.mpv_ipc).await?;
+    let muti_version = serde_json::to_string(&muti_version_list)?.replace(r"\", r"\\").replace(r#"""#, r#"\""#);
+    let set_muti_version_command = format!(r#"{{ "command": ["script-message-to", "uosc", "set-muti-version", "{}"] }}{}"#, muti_version, "\n");
+    sender.write_all(set_muti_version_command.as_bytes()).await?;
+    tracing::debug!("MPV IPC Command set-muti-version: {}", set_muti_version_command);
+
     // 选中媒体源的视频地址
     let support_direct_link = media_source.is_remote == Some(true) && media_source.path.is_some() && media_source.path.as_ref().unwrap().contains("://") && !media_source_util::is_internal_url(&media_source.path.as_ref().unwrap());
     let mut video_url = if params.use_direct_link && support_direct_link {
@@ -749,11 +779,11 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
         position_ticks: position_ticks,
     }, &app_handle.state::<AppState>()).await?;
 
-    app_handle.emit("playingStopped", PlaybackStoppedParam {
+    app_handle.emit("playingNotify", PlaybackNotifyParam {
         emby_server_id: &params.emby_server_id,
         item_id: &params.item_id,
         series_id: &episode.series_id,
-        progress_percent: &progress_percent,
+        event: "stop",
     })?;
 
     Ok(())
@@ -777,11 +807,11 @@ struct MpvIpcResponse<'a> {
 }
 
 #[derive(Clone, Serialize)]
-struct PlaybackStoppedParam<'a> {
+struct PlaybackNotifyParam<'a> {
     emby_server_id: &'a str,
     item_id: &'a str,
     series_id: &'a Option<String>,
-    progress_percent: &'a Decimal,
+    event: &'a str,
 }
 
 #[derive(Clone, Serialize)]

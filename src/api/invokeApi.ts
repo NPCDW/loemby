@@ -7,6 +7,7 @@ async function getSysInfo(): Promise<string> {
 
 interface PlayVideoParam {
     emby_server_id: string,
+    series_id?: string,
     item_id: string,
     playback_position_ticks: number,
     use_direct_link: boolean,
