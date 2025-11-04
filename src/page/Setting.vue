@@ -133,19 +133,14 @@ demuxer-max-back-bytes=512MiB" />
                             @change="configValueChange('external_mpv_switch', external_mpv_switch + '', getExternalMpvSwitch, '使用外部MPV播放器开关')"
                             active-value="on" inactive-value="off" />
                     </el-form-item>
-                    <el-form-item label="MPV文件路径">
+                    <el-form-item label="MPV文件路径和启动目录">
                         <el-input
                             v-model="mpv_path"
-                            @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径')"
+                            @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径和启动目录')"
                             :disabled="external_mpv_switch != 'on'"
-                            placeholder="示例: C:\App\mpv_config-2024.12.04\mpv.exe 或 /usr/bin/mpv" />
-                    </el-form-item>
-                    <el-form-item label="MPV启动目录">
-                        <el-input
-                            v-model="mpv_startup_dir"
-                            @change="configValueChange('mpv_startup_dir', mpv_startup_dir, getMpvStartupDir, 'MPV启动目录')"
-                            :disabled="external_mpv_switch != 'on'"
-                            placeholder="示例: C:\App\mpv_config-2024.12.04 留空默认为 mpv 所在目录" />
+                            :rows="4" type="textarea" placeholder="每行一个mpv路径和目录，以英文分号;隔开，不写路径默认为mpv父级目录，示例: 
+C:\App\mpv_config-2024.12.04\mpv.exe
+/usr/bin/mpv;/usr/local/mpv/portable_config" />
                     </el-form-item>
                 </el-form>
             </el-scrollbar>
@@ -758,13 +753,6 @@ function getMpvPath() {
     }).catch(e => ElMessage.error('获取MPV路径失败' + e))
 }
 
-const mpv_startup_dir = ref<string>('');
-function getMpvStartupDir() {
-    useGlobalConfig().getGlobalConfigValue("mpv_startup_dir").then(value => {
-        mpv_startup_dir.value = value ? value : "";
-    }).catch(e => ElMessage.error('获取MPV启动目录失败' + e))
-}
-
 const mpv_args = ref<string>('');
 function getMpvArgs() {
     useGlobalConfig().getGlobalConfigValue("mpv_args").then(value => {
@@ -899,7 +887,6 @@ function handlePaneChange() {
         getPlayVersionAutoSelectPolicy()
         getExternalMpvSwitch()
         getMpvPath()
-        getMpvStartupDir()
         getMpvArgs()
         getMpvCacheSeconds()
         getMpvCacheMinBytes()
