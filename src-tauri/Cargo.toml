@@ -1,6 +1,6 @@
 [package]
 name = "loemby"
-version = "0.29.0"
+version = "0.29.1"
 description = "Emby Client"
 authors = ["NPCDW"]
 edition = "2024"
@@ -26,7 +26,7 @@ tauri = { version = "2.9.2", features = [] }
 tauri-plugin = "2.5.1"
 
 tokio = { version = "1.48.0", features = ["full"] }
-tokio-util = "0.7.16"
+tokio-util = "0.7.17"
 tokio-stream = "0.1.17"
 interprocess = { version = "2.2.3", features = ["tokio"] }
 axum = "0.8.6"

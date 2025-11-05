@@ -482,7 +482,7 @@ async function listenPlayingStopped() {
         if (embyServerId === event.payload.emby_server_id) {
             if (event.payload.item_id === currentEpisodes.value?.Id && event.payload.event === 'stop') {
                 updateCurrentEpisodes(true)
-            } else if (event.payload.series_id && event.payload.series_id === currentEpisodes.value?.SeriesId && event.payload.event === 'start') {
+            } else if (event.payload.series_id && event.payload.series_id === currentEpisodes.value?.SeriesId && event.payload.item_id !== currentEpisodes.value?.Id && event.payload.event === 'start') {
                 jumpToNextEpisode(event.payload.item_id)
             }
         }

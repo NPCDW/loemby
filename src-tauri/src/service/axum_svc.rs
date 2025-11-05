@@ -398,6 +398,8 @@ pub struct MediaPlaylistParam {
     pub audio_select: i32,
     pub subtitle_select: i32,
     pub mpv_ipc: String,
+    pub playlist_index: usize,
+    pub playlist_count: usize,
 }
 
 #[derive(Clone, Debug)]
