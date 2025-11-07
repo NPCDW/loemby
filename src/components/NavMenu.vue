@@ -20,8 +20,10 @@
                             <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
                                 <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" @click="jumpRoute('/nav/emby/' + embyServer.id)" :disabled="embyServer.disabled ? true : false">
                                     <div style="height: 100%; width: 100%; display: flex; align-items: center;">
-                                        <el-icon v-if="embyServer.icon_url" size="24" style="width: 24px; height: 24px;"><img v-lazy="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;"></el-icon>
-                                        <el-icon v-else size="24" style="width: 24px; height: 24px;"><svg-icon name="emby" /></el-icon>
+                                        <el-icon size="24" style="width: 24px; height: 24px;">
+                                            <img v-if="embyServer.icon_url" v-lazy="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;">
+                                            <svg-icon v-else name="emby" />
+                                        </el-icon>
                                         {{ embyServer.server_name }}
                                         <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
                                             {{ keep_alive_days[embyServer.id!] }}
@@ -82,6 +84,42 @@
         </div>
         <div style="height: 29px; border-top: 1px solid #4c4d4f; display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; margin-left: 3px;">
+                <el-popover
+                    :visible="dialogNotifyCenterVisible"
+                    :width="400"
+                    placement="top-start">
+                    <template #reference>
+                        <el-icon @click="dialogNotifyCenterVisible = !dialogNotifyCenterVisible" style="margin: 0 7px;"><i-ep-BellFilled /></el-icon>
+                    </template>
+                    <div>
+                        <div @click="dialogNotifyCenterVisible = false" style="display: flex; justify-content: space-between;">
+                            <el-text>消息中心</el-text>
+                            <el-icon><i-ep-ArrowDownBold /></el-icon>
+                        </div>
+                        <el-scrollbar max-height="500px" :ref="notifyScrollbarRef">
+                            <div v-if="!notifyMessages || notifyMessages.length <= 0" style="text-align: center;">
+                                无新通知
+                            </div>
+                            <div v-else v-for="message in notifyMessages" style="display: flex; margin: 10px 7px 0 3px;">
+                                <el-icon size="32" style="width: 32px; height: 32px; margin: 0 5px 0 0;">
+                                    <svg-icon v-if="message.username == 'trakt'" name="trakt" />
+                                    <svg-icon v-else-if="message.username == 'loemby'" name="app-icon" />
+                                    <template v-else>
+                                        <img v-if="message.icon && embyServerMap[message.icon] && embyServerMap[message.icon].icon_url" v-lazy="embyIconLocalUrl[embyServerMap[message.icon].id!]" style="max-width: 32px; max-height: 32px;">
+                                        <svg-icon v-else name="emby" />
+                                    </template>
+                                </el-icon>
+                                <div>
+                                    <el-text>{{ message.username }}</el-text>
+                                    <div :style="{'background-color': messageContentBg(message.level)}" class="message-content">
+                                        <component v-if="isVNode(message.content)" :is="message.content"></component>
+                                        <template v-else>{{ message.content }}</template>
+                                    </div>
+                                </div>
+                            </div>
+                        </el-scrollbar>
+                    </div>
+                </el-popover>
                 <el-text>服务器总数：{{ embyServers.length }}</el-text>
             </div>
             <div v-if="$route.path.startsWith('/nav/emby/')" style="display: flex; align-items: center; margin-right: 3px;">
@@ -301,10 +339,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect, isVNode } from "vue";
 import { useRoute, useRouter } from 'vue-router'
 import embyApi from '../api/embyApi'
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessage, ElMessageBox, ScrollbarInstance } from "element-plus";
 import { generateGuid } from "../util/uuid_util";
 import _ from "lodash";
 import { Container, Draggable } from "vue3-smooth-dnd";
@@ -319,6 +357,7 @@ import { EmbyIconLibrary, useEmbyIconLibrary } from "../store/db/embyIconLibrary
 import appApi from "../api/appApi";
 import { useGlobalConfig } from "../store/db/globalConfig";
 import { useImage } from "../store/image";
+import { useNotifyCenter } from "../store/notifyCenter";
 
 const active = ref("/nav/search");
 const route = useRoute();
@@ -339,11 +378,13 @@ onMounted(() => useEventBus().on('ProxyServerChanged', listAllProxyServer))
 onUnmounted(() => useEventBus().remove('ProxyServerChanged', listAllProxyServer))
 
 const embyServers = ref<EmbyServer[]>([])
+const embyServerMap = ref<{[key: string]: EmbyServer}>({})
 function listAllEmbyServer() {
     useEmbyServer().listAllEmbyServer().then(list => {
         embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
         for (const emby of embyServers.value) {
             getEmbyIconLocalUrl(emby.id!, emby.icon_url)
+            embyServerMap.value[emby.id!] = emby
         }
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
 }
@@ -809,7 +850,33 @@ function getGlobalProxy() {
 getGlobalProxy()
 onMounted(() => useEventBus().on('GlobalProxyChanged', getGlobalProxy))
 onUnmounted(() => useEventBus().remove('GlobalProxyChanged', getGlobalProxy))
+
+const dialogNotifyCenterVisible = ref(false)
+const notifyScrollbarRef = ref<ScrollbarInstance>()
+const notifyMessages = computed(() => useNotifyCenter().notifyMessages);
+function messageContentBg(level?: string): string {
+    switch (level) {
+        case "primary": return "rgb(33, 61, 91)";
+        case "success": return "rgb(45, 72, 31)";
+        case "warning": return "rgb(83, 63, 32)";
+        case "danger": return "rgb(88, 46, 46)";
+        case "info": return "rgb(57, 58, 60)";
+        default: return "rgb(57, 58, 60)";
+    }
+}
+watch(notifyMessages, () => {
+    if (notifyScrollbarRef.value && notifyScrollbarRef.value.wrapRef) {
+        notifyScrollbarRef.value.setScrollTop(notifyScrollbarRef.value.wrapRef.scrollHeight)
+    }
+})
 </script>
 
 <style scoped>
+.message-content {
+    margin: 0;
+    padding: 5px;
+    background-color: #303030;
+    word-break: break-all;
+    border-radius: 5px;
+}
 </style>

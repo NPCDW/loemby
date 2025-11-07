@@ -10,7 +10,7 @@ import 'virtual:svg-icons-register'
 import VueLazyLoad from 'vue3-lazyload'
 // import updaer_util from './util/updater_util'
 import {useRuntimeConfig} from "./store/runtimeConfig.ts";
-import { useTauriNotify } from './store/tauriNotify.ts'
+import { useNotifyCenter } from './store/notifyCenter.ts'
 import { useGlobalConfig } from './store/db/globalConfig.ts'
 import { useProxyServer } from './store/db/proxyServer.ts'
 import { useEmbyServer } from './store/db/embyServer.ts'
@@ -29,6 +29,7 @@ app.mount('#app')
 
 useGlobalConfig().initCache()
 useProxyServer().initCache()
-useTauriNotify().listen_tauri_notify()
+useNotifyCenter().listen_tauri_notify()
 useEmbyServer().listenEmbyServerChange()
+useNotifyCenter().refresh()
 // updaer_util.getUpdate()
