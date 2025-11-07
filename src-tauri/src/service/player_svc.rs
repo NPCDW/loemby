@@ -100,10 +100,17 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     let mut mpv_playlist = "#EXTM3U".to_string();
     for (i, episode) in episode_playlist.iter().enumerate() {
         let uuid = uuid::Uuid::new_v4().to_string();
+        let series_name = episode.series_name.clone().unwrap_or("🎬电影".to_string());
+        let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
+        let index_number = episode.index_number.map_or("_".to_string(), |n| n.to_string());
+        let prefix = if episode.series_id.is_some() { format!("S{}E{}. ", parent_index_number, index_number) } else { "".to_string() };
+        let title = format!("{}{} | {} | {}", prefix, episode.name, series_name, emby_server.server_name.clone().unwrap());
         auxm_app_state.playlist.write().await.insert(uuid.clone(), MediaPlaylistParam {
             emby_server_id: body.emby_server_id.clone(),
             series_id: body.series_id.clone(),
+            series_name: series_name.clone(),
             item_id: episode.id.clone(),
+            item_name: title.clone(),
             playback_position_ticks: if episode.id == episode_playlist[0].id { body.playback_position_ticks } else { 0 },
             use_direct_link: body.use_direct_link.clone(),
             select_policy: body.select_policy.clone(),
@@ -114,10 +121,6 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             playlist_index: i + 1,
             playlist_count: episode_playlist.len(),
         });
-        let series_name = episode.series_name.clone().unwrap_or("🎬电影".to_string());
-        let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
-        let index_number = episode.index_number.map_or("_".to_string(), |n| n.to_string());
-        let title = format!("S{}E{}. {} | {} | {}", parent_index_number, index_number, episode.name, series_name, emby_server.server_name.clone().unwrap());
         let media_source_select = if body.select_policy == "manual" { body.version_select } else { 0 };
         mpv_playlist = format!("{}\n#EXTINF:-1,{}\nhttp://127.0.0.1:{}/play_media/{}/{}", mpv_playlist, title, &auxm_app_state.port, &uuid, media_source_select);
     }
@@ -154,11 +157,18 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
     let playlist = axum_app_state.playlist.read().await.clone();
     let params = playlist.get(id).ok_or(anyhow::anyhow!("媒体ID不存在"))?;
 
-    axum_app_state.app.emit("playingNotify", PlaybackNotifyParam {
-        emby_server_id: &params.emby_server_id,
-        item_id: &params.item_id,
-        series_id: &params.series_id,
-        event: "start",
+    axum_app_state.app.emit("tauri_notify", TauriNotify {
+        event_type: "playingNotify".to_string(),
+        message_type: "success".to_string(),
+        title: None,
+        message: serde_json::to_string(&PlaybackNotifyParam {
+            emby_server_id: &params.emby_server_id,
+            item_id: &params.item_id,
+            item_name: &params.item_name,
+            series_id: &params.series_id,
+            series_name: &params.series_name,
+            event: "start",
+        })?,
     })?;
 
     let app_state = axum_app_state.app.state::<AppState>();
@@ -513,9 +523,6 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
     };
     playback_progress_param.episode = Some(episode);
     let episode = playback_progress_param.episode.as_ref().unwrap();
-    let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
-    let index_number = episode.index_number.map_or("_".to_string(), |n| n.to_string());
-    let episode_name = format!("S{}E{}. {}", parent_index_number, index_number, episode.name.clone());
     let mut pinned = 0;
     if let Some(series_id) = episode.series_id.clone() {
         let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await.unwrap();
@@ -530,7 +537,7 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
                 id: response.id,
                 update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
                 emby_server_name: emby_server.server_name.clone(),
-                item_name: Some(episode_name),
+                item_name: Some(params.item_name.clone()),
                 item_type: Some(episode.type_.clone()),
                 series_id: episode.series_id.clone(),
                 series_name: episode.series_name.clone(),
@@ -546,7 +553,7 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
                 emby_server_id: emby_server.id.clone(),
                 emby_server_name: emby_server.server_name.clone(),
                 item_id: Some(episode.id.clone()),
-                item_name: Some(episode_name),
+                item_name: Some(params.item_name.clone()),
                 item_type: Some(episode.type_.clone()),
                 series_id: episode.series_id.clone(),
                 series_name: episode.series_name.clone(),
@@ -557,21 +564,13 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
     }
 
     // emby开始播放api
-    let res = emby_http_svc::playing(EmbyPlayingParam {
+    let _ = emby_http_svc::playing(EmbyPlayingParam {
         emby_server_id: params.emby_server_id.clone(),
         item_id: params.item_id.clone(),
         media_source_id: media_source.id.clone(),
         play_session_id: playback_info.play_session_id.clone(),
         position_ticks: params.playback_position_ticks,
     }, &app_state).await;
-    if res.is_err() {
-        axum_app_state.app.emit("tauri_notify", TauriNotify {
-            alert_type: "ElMessage".to_string(),
-            message_type: "error".to_string(),
-            title: None,
-            message: format!("调用emby播放进度失败: {}", res.unwrap_err()),
-        }).unwrap()
-    }
 
     // trakt 开始播放
     let series = if let Some(series_id) = episode.series_id.clone() {
@@ -594,14 +593,14 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
             match trakt_http_svc::start(scrobble_trakt_param, &app_state, 0).await {
                 Ok(json) => 
                     axum_app_state.app.emit("tauri_notify", TauriNotify {
-                        alert_type: "TraktStart".to_string(),
+                        event_type: "TraktStart".to_string(),
                         message_type: "success".to_string(),
                         title: None,
                         message: json,
                     }).unwrap(),
                 Err(err) => 
                     axum_app_state.app.emit("tauri_notify", TauriNotify {
-                        alert_type: "ElMessage".to_string(),
+                        event_type: "TraktError".to_string(),
                         message_type: "error".to_string(),
                         title: None,
                         message: format!("调用trakt开始播放失败: {}", err),
@@ -773,23 +772,20 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
         })?;
     } else {
         app_handle.emit("tauri_notify", TauriNotify {
-            alert_type: "ElMessage".to_string(),
+            event_type: "ElMessage".to_string(),
             message_type: "warning".to_string(),
             title: None,
             message: format!("播放时间不足 5 分钟，不更新最后播放时间"),
         }).unwrap()
     }
     
-    let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
-    let index_number = episode.index_number.map_or("_".to_string(), |n| n.to_string());
-    let episode_name = format!("S{}E{}. {}", parent_index_number, index_number, episode.name.clone());
     match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &state.db_pool).await? {
         Some(response) => {
             play_history_mapper::update_by_id(PlayHistory {
                 id: response.id,
                 update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
                 emby_server_name: emby_server.server_name.clone(),
-                item_name: Some(episode_name),
+                item_name: Some(params.item_name.clone()),
                 item_type: Some(episode.type_.clone()),
                 series_id: episode.series_id.clone(),
                 series_name: episode.series_name.clone(),
@@ -820,14 +816,14 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
         match trakt_http_svc::stop(&scrobble_trakt_param, &app_handle.state(), 0).await {
             Ok(json) => 
                 app_handle.emit("tauri_notify", TauriNotify {
-                    alert_type: "TraktStop".to_string(),
+                    event_type: "TraktStop".to_string(),
                     message_type: "success".to_string(),
                     title: None,
                     message: json,
                 }).unwrap(),
             Err(err) => 
                 app_handle.emit("tauri_notify", TauriNotify {
-                    alert_type: "ElMessage".to_string(),
+                    event_type: "TraktError".to_string(),
                     message_type: "error".to_string(),
                     title: None,
                     message: format!("调用trakt停止播放失败: {}", err),
@@ -843,11 +839,18 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
         position_ticks: position_ticks,
     }, &app_handle.state::<AppState>()).await?;
 
-    app_handle.emit("playingNotify", PlaybackNotifyParam {
-        emby_server_id: &params.emby_server_id,
-        item_id: &params.item_id,
-        series_id: &episode.series_id,
-        event: "stop",
+    app_handle.emit("tauri_notify", TauriNotify {
+        event_type: "playingNotify".to_string(),
+        message_type: "success".to_string(),
+        title: None,
+        message: serde_json::to_string(&PlaybackNotifyParam {
+            emby_server_id: &params.emby_server_id,
+            item_id: &params.item_id,
+            item_name: &params.item_name,
+            series_id: &episode.series_id,
+            series_name: &params.series_name,
+            event: "stop",
+        })?,
     })?;
 
     Ok(())
@@ -876,7 +879,9 @@ struct MpvIpcResponse<'a> {
 struct PlaybackNotifyParam<'a> {
     emby_server_id: &'a str,
     item_id: &'a str,
+    item_name: &'a str,
     series_id: &'a Option<String>,
+    series_name: &'a str,
     event: &'a str,
 }
 

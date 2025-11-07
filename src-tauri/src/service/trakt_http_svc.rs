@@ -41,7 +41,7 @@ pub async fn save_access_token(response: TraktTokenResponse, redirect_uri: Strin
     let user_info = Box::pin(get_user_info(state)).await;
     if user_info.is_err() {
         state.app_handle.emit("tauri_notify", TauriNotify {
-            alert_type: "ElMessage".to_string(),
+            event_type: "TraktError".to_string(),
             message_type: "error".to_string(),
             title: None,
             message: format!("获取trakt用户信息错误: {:?}", user_info),
@@ -63,7 +63,7 @@ pub async fn get_cache_access_token(state: &tauri::State<'_, AppState>) -> anyho
     let trakt_expires_in = global_config_mapper::get_cache("trakt_expires_in", state).await;
     if trakt_expires_in.is_none() {
         state.app_handle.emit("tauri_notify", TauriNotify {
-            alert_type: "ElMessage".to_string(),
+            event_type: "TraktError".to_string(),
             message_type: "error".to_string(),
             title: None,
             message: format!("Trakt 未授权，或授权失败"),
@@ -118,7 +118,7 @@ pub async fn token(param: TraktHttpTokenParam, state: &tauri::State<'_, AppState
     let response = response?;
     if response.status().as_u16() == 401 || response.status().as_u16() == 403 {
         app_handle.emit("tauri_notify", TauriNotify {
-            alert_type: "ElMessageBox".to_string(),
+            event_type: "TraktError".to_string(),
             message_type: "warning".to_string(),
             title: None,
             message: "您的 Trakt 授权好像失效了，或许应该重新授权".to_string(),

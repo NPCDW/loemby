@@ -62,7 +62,6 @@ declare module 'vue' {
     IEpFilm: typeof import('~icons/ep/film')['default']
     IEpLink: typeof import('~icons/ep/link')['default']
     IEpLoading: typeof import('~icons/ep/loading')['default']
-    IEpMinus: typeof import('~icons/ep/minus')['default']
     IEpPlus: typeof import('~icons/ep/plus')['default']
     IEpPriceTag: typeof import('~icons/ep/price-tag')['default']
     IEpPromotion: typeof import('~icons/ep/promotion')['default']

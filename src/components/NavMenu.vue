@@ -87,16 +87,17 @@
                 <el-popover
                     :visible="dialogNotifyCenterVisible"
                     :width="400"
+                    transition="el-zoom-in-bottom"
                     placement="top-start">
                     <template #reference>
-                        <el-icon @click="dialogNotifyCenterVisible = !dialogNotifyCenterVisible" style="margin: 0 7px;"><i-ep-BellFilled /></el-icon>
+                        <el-icon @click="() => {dialogNotifyCenterVisible = !dialogNotifyCenterVisible;notifyScrollBottom()}" style="margin: 0 7px;"><i-ep-BellFilled /></el-icon>
                     </template>
                     <div>
                         <div @click="dialogNotifyCenterVisible = false" style="display: flex; justify-content: space-between;">
                             <el-text>消息中心</el-text>
                             <el-icon><i-ep-ArrowDownBold /></el-icon>
                         </div>
-                        <el-scrollbar max-height="500px" :ref="notifyScrollbarRef">
+                        <el-scrollbar max-height="500px" ref="notifyScrollbarRef">
                             <div v-if="!notifyMessages || notifyMessages.length <= 0" style="text-align: center;">
                                 无新通知
                             </div>
@@ -110,7 +111,10 @@
                                     </template>
                                 </el-icon>
                                 <div>
-                                    <el-text>{{ message.username }}</el-text>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <el-text>{{ message.username == "embyServer" ? embyServerMap[message.icon!].server_name : message.username }}</el-text>
+                                        <el-text>{{ message.datetime }}</el-text>
+                                    </div>
                                     <div :style="{'background-color': messageContentBg(message.level)}" class="message-content">
                                         <component v-if="isVNode(message.content)" :is="message.content"></component>
                                         <template v-else>{{ message.content }}</template>
@@ -339,7 +343,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch, watchEffect, isVNode } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch, watchEffect, isVNode, nextTick } from "vue";
 import { useRoute, useRouter } from 'vue-router'
 import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox, ScrollbarInstance } from "element-plus";
@@ -864,11 +868,25 @@ function messageContentBg(level?: string): string {
         default: return "rgb(57, 58, 60)";
     }
 }
-watch(notifyMessages, () => {
-    if (notifyScrollbarRef.value && notifyScrollbarRef.value.wrapRef) {
-        notifyScrollbarRef.value.setScrollTop(notifyScrollbarRef.value.wrapRef.scrollHeight)
+onMounted(() => useEventBus().on('notifyMessageChange', notifyMessageChange))
+onUnmounted(() => useEventBus().remove('notifyMessageChange', notifyMessageChange))
+interface NotifyMessageChangeParam {
+    force_open: boolean
+}
+function notifyMessageChange(param: NotifyMessageChangeParam) {
+    if (param.force_open) {
+        dialogNotifyCenterVisible.value = true;
     }
-})
+    notifyScrollBottom()
+}
+function notifyScrollBottom() {
+    nextTick(() => {
+        if (dialogNotifyCenterVisible.value && notifyScrollbarRef.value && notifyScrollbarRef.value.wrapRef && notifyScrollbarRef.value.wrapRef.scrollHeight) {
+            notifyScrollbarRef.value.setScrollTop(notifyScrollbarRef.value.wrapRef.scrollHeight)
+            notifyScrollbarRef.value.update()
+        }
+    })
+}
 </script>
 
 <style scoped>

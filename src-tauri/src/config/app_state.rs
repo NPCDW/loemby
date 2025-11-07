@@ -21,7 +21,7 @@ pub struct AppState {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TauriNotify {
-    pub alert_type: String,
+    pub event_type: String,
     pub message_type: String,
     pub title: Option<String>,
     pub message: String,

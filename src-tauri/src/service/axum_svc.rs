@@ -133,7 +133,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
                 None => {
                     tracing::error!("stream: {} {} {:?} 手动重定向失败，媒体流响应没有 Location 头", types, &id, request);
                     axum_app_state.app.emit("tauri_notify", TauriNotify {
-                        alert_type: "ElMessage".to_string(),
+                        event_type: "ElMessage".to_string(),
                         message_type: "error".to_string(),
                         title: None,
                         message: format!("手动重定向失败，媒体流响应没有 Location 头"),
@@ -163,7 +163,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         Err(err) => {
             tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, request.user_agent, err);
             axum_app_state.app.emit("tauri_notify", TauriNotify {
-                alert_type: "ElMessage".to_string(),
+                event_type: "ElMessage".to_string(),
                 message_type: "error".to_string(),
                 title: None,
                 message: format!("媒体流响应错误: {}", err),
@@ -187,7 +187,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
                 let text = String::from_utf8_lossy(&bytes);
                 tracing::error!("stream: {} {} {:?} 错误响应内容: {}", types, &id, req_headers, text);
                 axum_app_state.app.emit("tauri_notify", TauriNotify {
-                    alert_type: "ElMessage".to_string(),
+                    event_type: "ElMessage".to_string(),
                     message_type: "error".to_string(),
                     title: None,
                     message: format!("媒体流响应错误: {} {} {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown"), text),
@@ -390,7 +390,9 @@ async fn image(headers: axum::http::HeaderMap, axum_app_state: AxumAppState, par
 pub struct MediaPlaylistParam {
     pub emby_server_id: String,
     pub series_id: Option<String>,
+    pub series_name: String,
     pub item_id: String,
+    pub item_name: String,
     pub playback_position_ticks: u64,
     pub use_direct_link: bool,
     pub select_policy: String,

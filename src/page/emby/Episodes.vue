@@ -172,7 +172,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { useGlobalConfig } from '../../store/db/globalConfig';
 import { useImage } from '../../store/image';
-import { listen } from '@tauri-apps/api/event';
+import { useEventBus } from '../../store/eventBus';
+import { PlaybackNotifyParam } from '../../store/notifyCenter';
 
 const router = useRouter()
 const route = useRoute()
@@ -469,27 +470,17 @@ function play_video(item_id: string, playbackPositionTicks: number, directLink: 
     }).catch(res => ElMessage.error(res)).finally(() => play_loading.value = false)
 }
 
-interface PlaybackNotifyParam {
-    emby_server_id: string;
-    series_id?: string;
-    item_id: string;
-    event: string;
-}
-const unlistenPlayingStopped = ref<() => void>()
-async function listenPlayingStopped() {
-    unlistenPlayingStopped.value = await listen<PlaybackNotifyParam>('playingNotify', (event) => {
-        console.log("tauri playingStopped event", event)
-        if (embyServerId === event.payload.emby_server_id) {
-            if (event.payload.item_id === currentEpisodes.value?.Id && event.payload.event === 'stop') {
-                updateCurrentEpisodes(true)
-            } else if (event.payload.series_id && event.payload.series_id === currentEpisodes.value?.SeriesId && event.payload.item_id !== currentEpisodes.value?.Id && event.payload.event === 'start') {
-                jumpToNextEpisode(event.payload.item_id)
-            }
+async function playingNotify(payload: PlaybackNotifyParam) {
+    if (embyServerId === payload.emby_server_id) {
+        if (payload.item_id === currentEpisodes.value?.Id && payload.event === 'stop') {
+            updateCurrentEpisodes(true)
+        } else if (payload.series_id && payload.series_id === currentEpisodes.value?.SeriesId && payload.item_id !== currentEpisodes.value?.Id && payload.event === 'start') {
+            jumpToNextEpisode(payload.item_id)
         }
-    });
+    }
 }
-onMounted(() => listenPlayingStopped())
-onUnmounted(() => unlistenPlayingStopped.value?.())
+onMounted(() => useEventBus().on('playingNotify', playingNotify))
+onUnmounted(() => useEventBus().remove('playingNotify', playingNotify))
 
 const starLoading = ref<boolean>(false)
 function star() {
