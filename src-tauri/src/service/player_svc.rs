@@ -104,13 +104,14 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
         let index_number = episode.index_number.map_or("_".to_string(), |n| n.to_string());
         let prefix = if episode.series_id.is_some() { format!("S{}E{}. ", parent_index_number, index_number) } else { "".to_string() };
-        let title = format!("{}{} | {} | {}", prefix, episode.name, series_name, emby_server.server_name.clone().unwrap());
+        let episode_name = format!("{}{}", prefix, episode.name);
+        let title = format!("{} | {} | {}", episode_name, series_name, emby_server.server_name.as_ref().unwrap());
         auxm_app_state.playlist.write().await.insert(uuid.clone(), MediaPlaylistParam {
             emby_server_id: body.emby_server_id.clone(),
             series_id: body.series_id.clone(),
             series_name: series_name.clone(),
             item_id: episode.id.clone(),
-            item_name: title.clone(),
+            item_name: episode_name.clone(),
             playback_position_ticks: if episode.id == episode_playlist[0].id { body.playback_position_ticks } else { 0 },
             use_direct_link: body.use_direct_link.clone(),
             select_policy: body.select_policy.clone(),
@@ -593,14 +594,14 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
             match trakt_http_svc::start(scrobble_trakt_param, &app_state, 0).await {
                 Ok(json) => 
                     axum_app_state.app.emit("tauri_notify", TauriNotify {
-                        event_type: "TraktStart".to_string(),
-                        message_type: "success".to_string(),
+                        event_type: "TraktNotify".to_string(),
+                        message_type: "start".to_string(),
                         title: None,
                         message: json,
                     }).unwrap(),
                 Err(err) => 
                     axum_app_state.app.emit("tauri_notify", TauriNotify {
-                        event_type: "TraktError".to_string(),
+                        event_type: "TraktNotify".to_string(),
                         message_type: "error".to_string(),
                         title: None,
                         message: format!("调用trakt开始播放失败: {}", err),
@@ -816,14 +817,14 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
         match trakt_http_svc::stop(&scrobble_trakt_param, &app_handle.state(), 0).await {
             Ok(json) => 
                 app_handle.emit("tauri_notify", TauriNotify {
-                    event_type: "TraktStop".to_string(),
-                    message_type: "success".to_string(),
+                    event_type: "TraktNotify".to_string(),
+                    message_type: "stop".to_string(),
                     title: None,
                     message: json,
                 }).unwrap(),
             Err(err) => 
                 app_handle.emit("tauri_notify", TauriNotify {
-                    event_type: "TraktError".to_string(),
+                    event_type: "TraktNotify".to_string(),
                     message_type: "error".to_string(),
                     title: None,
                     message: format!("调用trakt停止播放失败: {}", err),

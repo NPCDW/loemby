@@ -101,26 +101,35 @@
                             <div v-if="!notifyMessages || notifyMessages.length <= 0" style="text-align: center;">
                                 无新通知
                             </div>
-                            <div v-else v-for="message in notifyMessages" style="display: flex; margin: 10px 7px 0 3px;">
-                                <el-icon size="32" style="width: 32px; height: 32px; margin: 0 5px 0 0;">
-                                    <svg-icon v-if="message.username == 'trakt'" name="trakt" />
-                                    <svg-icon v-else-if="message.username == 'loemby'" name="app-icon" />
-                                    <template v-else>
-                                        <img v-if="message.icon && embyServerMap[message.icon] && embyServerMap[message.icon].icon_url" v-lazy="embyIconLocalUrl[embyServerMap[message.icon].id!]" style="max-width: 32px; max-height: 32px;">
-                                        <svg-icon v-else name="emby" />
-                                    </template>
-                                </el-icon>
-                                <div>
-                                    <div style="display: flex; justify-content: space-between;">
-                                        <el-text>{{ message.username == "embyServer" ? embyServerMap[message.icon!].server_name : message.username }}</el-text>
-                                        <el-text>{{ message.datetime }}</el-text>
+                            <template v-else>
+                                <transition-group name="el-zoom-in-left">
+                                    <div v-for="message in notifyMessages" :key="message.id" style="display: flex; margin: 10px 7px 0 3px;">
+                                        <el-icon size="32" style="width: 32px; height: 32px; margin: 0 5px 0 0;">
+                                            <svg-icon v-if="message.username == 'trakt'" name="trakt" />
+                                            <svg-icon v-else-if="message.username == 'loemby'" name="app-icon" />
+                                            <template v-else-if="message.username == 'embyServer'">
+                                                <img v-if="message.embyServerId && embyServerMap[message.embyServerId] && embyServerMap[message.embyServerId].icon_url" v-lazy="embyIconLocalUrl[embyServerMap[message.embyServerId].id!]" style="max-width: 32px; max-height: 32px;">
+                                                <svg-icon v-else name="emby" />
+                                            </template>
+                                        </el-icon>
+                                        <div>
+                                            <div style="display: flex; justify-content: space-between;">
+                                                <el-text>
+                                                    <template v-if="message.username == 'embyServer' && message.embyServerId && embyServerMap[message.embyServerId]">
+                                                        {{ embyServerMap[message.embyServerId].server_name }}
+                                                    </template>
+                                                    <template v-else>{{ message.username }}</template>
+                                                </el-text>
+                                                <el-text>{{ message.datetime }}</el-text>
+                                            </div>
+                                            <div :style="{'background-color': messageContentBg(message.level)}" class="message-content">
+                                                <component v-if="isVNode(message.content)" :is="message.content"></component>
+                                                <template v-else>{{ message.content }}</template>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div :style="{'background-color': messageContentBg(message.level)}" class="message-content">
-                                        <component v-if="isVNode(message.content)" :is="message.content"></component>
-                                        <template v-else>{{ message.content }}</template>
-                                    </div>
-                                </div>
-                            </div>
+                                </transition-group>
+                            </template>
                         </el-scrollbar>
                     </div>
                 </el-popover>
