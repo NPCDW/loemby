@@ -98,7 +98,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     let auxm_app_state = state.auxm_app_state.read().await.clone().unwrap();
 
     let mut mpv_playlist = "#EXTM3U".to_string();
-    for (i, episode) in episode_playlist.iter().enumerate() {
+    for (_i, episode) in episode_playlist.iter().enumerate() {
         let uuid = uuid::Uuid::new_v4().to_string();
         let series_name = episode.series_name.clone().unwrap_or("🎬电影".to_string());
         let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
@@ -119,8 +119,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             audio_select: body.audio_select,
             subtitle_select: body.subtitle_select,
             mpv_ipc: pipe_name.clone(),
-            playlist_index: i + 1,
-            playlist_count: episode_playlist.len(),
+            media_title: title.clone(),
         });
         let media_source_select = if body.select_policy == "manual" { body.version_select } else { 0 };
         mpv_playlist = format!("{}\n#EXTINF:-1,{}\nhttp://127.0.0.1:{}/play_media/{}/{}", mpv_playlist, title, &auxm_app_state.port, &uuid, media_source_select);
@@ -488,6 +487,9 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
     let set_muti_version_command = format!(r#"{{ "command": ["script-message-to", "uosc", "set-muti-version", "{}"] }}{}"#, muti_version, "\n");
     sender.write_all(set_muti_version_command.as_bytes()).await?;
     tracing::debug!("MPV IPC Command set-muti-version: {}", set_muti_version_command);
+    let set_force_media_title_command = format!(r#"{{ "command": ["set_property", "force-media-title", "{}"] }}{}"#, params.media_title, "\n");
+    sender.write_all(set_force_media_title_command.as_bytes()).await?;
+    tracing::debug!("MPV IPC Command force-media-title: {}", set_force_media_title_command);
 
     // 缓存大小
     let mut cache_max_bytes = 300 * 1024 * 1024;
@@ -688,7 +690,7 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
         if let Some("end-file") = json.event {
             tracing::debug!("MPV IPC 播放结束");
             send_task.abort();
-            if (json.reason == Some("eof") || json.reason == Some("stop")) && params.playlist_index != params.playlist_count {
+            if json.reason == Some("eof") || json.reason == Some("stop") {
                 save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             } else {
                 save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
