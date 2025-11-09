@@ -74,7 +74,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             season_id: episode.season_id.unwrap(),
             start_item_id: Some(body.item_id.clone()),
             start_index: 0,
-            limit: 10,
+            limit: 30,
             extend_fields: Some(false),
         }, &state).await {
             Err(e) => return Err(e.to_string()),
