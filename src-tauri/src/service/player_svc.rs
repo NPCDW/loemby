@@ -5,8 +5,9 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio_stream::StreamExt;
 
-use crate::{config::app_state::{AppState, TauriNotify}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, trakt_http_svc::{self, ScrobbleParam}}, util::{file_util, media_source_util}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, trakt_http_svc::{self, ScrobbleParam}}, util::{file_util, media_source_util}};
 
 pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let emby_server = match emby_server_mapper::get_cache(&body.emby_server_id, state).await {
@@ -290,7 +291,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
         episode: _,
         media_source,
         playback_info: _,
-        app_handle: _,
+        app_handle,
         axum_app_state,
         scrobble_trakt_param: _,
         start_time: _,
@@ -300,7 +301,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
         media_source_select: _,
         media_source_index: _,
     } = playback_progress_param;
-    let app_state = axum_app_state.app.state::<AppState>();
+    let app_state = app_handle.state::<AppState>();
 
     let (_recver, mut sender) = get_pipe_rw(&params.mpv_ipc).await?;
     if params.playback_position_ticks != 0 {
@@ -350,7 +351,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
                     proxy_url: play_proxy_url.clone(),
                     user_agent: emby_server.user_agent.as_ref().unwrap().clone(),
                 });
-                subtitle_url = format!("http://127.0.0.1:{}/stream/subtitle/{}", &axum_app_state.port, &uuid);
+                subtitle_url = format!("http://127.0.0.1:{}/subtitle/{}", &axum_app_state.port, &uuid);
             }
             let command = format!(r#"{{ "command": ["sub-add", "{}"] }}{}"#, subtitle_url, "\n");
             sender.write_all(command.as_bytes()).await?;
@@ -457,12 +458,71 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
         scrobble_trakt_param: _,
         start_time: _,
         ref emby_server,
-        play_proxy_url: _,
+        ref play_proxy_url,
         ref id,
         media_source_select,
         media_source_index,
     } = playback_progress_param;
-    let app_state = axum_app_state.app.state::<AppState>();
+    let app_state = app_handle.state::<AppState>();
+
+    // 缓存字幕，作用不止于此，播放前和播放后，获取到的媒体元数据信息不一致（主要是字幕的索引位置变化），导致字幕无法正常显示，所以这里缓存字幕
+    for media_stream in &media_source.media_streams {
+        if media_stream.type_ == "Subtitle" && media_stream.is_external == Some(true) {
+            let subtitle_url = emby_http_svc::get_subtitle_stream_url(EmbyGetSubtitleStreamUrlParam {
+                emby_server_id: params.emby_server_id.clone(),
+                item_id: params.item_id.clone(),
+                media_source_id: media_source.id.clone(),
+                media_source_item_id: media_source.item_id.clone(),
+                media_streams_codec: media_stream.codec.clone(),
+                media_streams_index: media_stream.index,
+                media_streams_is_external: true,
+            }, &app_state).await?;
+            let cache_digest = sha256::digest(subtitle_url.clone());
+            let cache_file_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass", cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+            if cache_file_path.exists() {
+                tracing::debug!("cache subtitle file exists: {}", cache_file_path.display());
+                continue;
+            }
+            let cache_file_tmp_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass.tmp", cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+            let (play_proxy_url, app_handle, user_agent) = (play_proxy_url.clone(), app_handle.clone(), emby_server.user_agent.as_ref().unwrap().clone());
+            tokio::spawn(async move {
+                async fn download_subtitle_file(subtitle_url: String, cache_file_path: PathBuf, play_proxy_url: Option<String>, user_agent: String, app_state: tauri::State<'_, AppState>, cache_file_tmp_path: PathBuf) -> anyhow::Result<()> {
+                    let client = http_pool::get_image_http_client(play_proxy_url.clone(), &app_state).await?;
+                    let mut headers = reqwest::header::HeaderMap::new();
+                    headers.insert(reqwest::header::USER_AGENT, reqwest::header::HeaderValue::from_str(&user_agent).unwrap());
+                    let builder = client
+                        .get(subtitle_url.clone())
+                        .headers(headers);
+                    let builder_print = format!("{:?}", &builder);
+                    let res = builder.send().await;
+                    tracing::debug!("cache subtitle request: {:?} response {:?}", builder_print, res);
+                    let response = res?;
+                    if response.status() != 200 {
+                        return Err(anyhow::anyhow!("cache subtitle request failed {} {}", subtitle_url, response.status()));
+                    }
+                    let mut stream = response.bytes_stream();
+                    if !cache_file_tmp_path.parent().unwrap().exists() {
+                        std::fs::create_dir_all(cache_file_tmp_path.parent().unwrap()).unwrap();
+                    }
+                    let mut cache_tmp_file = tokio::fs::File::create(&cache_file_tmp_path).await.unwrap();
+                    while let Some(Ok(chunk)) = stream.next().await {
+                        cache_tmp_file.write_all(&chunk).await.unwrap();
+                    }
+                    cache_tmp_file.flush().await.unwrap();
+                    drop(cache_tmp_file);
+                    let _ = file_util::rename(cache_file_tmp_path, cache_file_path);
+                    Ok(())
+                }
+                let app_state = app_handle.state::<AppState>();
+                match download_subtitle_file(subtitle_url, cache_file_path, play_proxy_url, user_agent, app_state, cache_file_tmp_path).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::error!("cache subtitle file failed: {}", e);
+                    }
+                }
+            });
+        }
+    }
 
     let (recver, mut sender) = get_pipe_rw(&params.mpv_ipc).await?;
     let mut recver = BufReader::new(recver);
@@ -595,14 +655,14 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
         if let Some(scrobble_trakt_param) = &trakt_scrobble_param {
             match trakt_http_svc::start(scrobble_trakt_param, &app_state, 0).await {
                 Ok(json) => 
-                    axum_app_state.app.emit("tauri_notify", TauriNotify {
+                    app_handle.emit("tauri_notify", TauriNotify {
                         event_type: "TraktNotify".to_string(),
                         message_type: "start".to_string(),
                         title: None,
                         message: json,
                     }).unwrap(),
                 Err(err) => 
-                    axum_app_state.app.emit("tauri_notify", TauriNotify {
+                    app_handle.emit("tauri_notify", TauriNotify {
                         event_type: "TraktNotify".to_string(),
                         message_type: "error".to_string(),
                         title: None,

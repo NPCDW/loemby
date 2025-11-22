@@ -3,6 +3,10 @@ use tauri::Manager;
 use crate::{config::app_state::AppState, mapper::global_config_mapper::{self, GlobalConfig}};
 
 pub async fn clean_plan(app_handle: &tauri::AppHandle) -> anyhow::Result<()> {
+    tracing::info!("60秒后开始清理字幕文件");
+    tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+    clean_subtitle(false, app_handle).await?;
+
     tracing::info!("60秒后开始清理日志文件");
     tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
     clean_logs(false, app_handle).await?;
@@ -16,6 +20,30 @@ pub async fn clean_plan(app_handle: &tauri::AppHandle) -> anyhow::Result<()> {
     clean_emby_image(None, false, app_handle).await?;
 
     anyhow::Ok(())
+}
+
+pub async fn clean_subtitle(force_clean: bool, app_handle: &tauri::AppHandle) -> anyhow::Result<()> {
+    let state = app_handle.state::<AppState>();
+    if !force_clean {
+        let clean_logs_config = global_config_mapper::get_cache("lastCleanSubtitleTime", &state).await;
+        if clean_logs_config.is_some() {
+            let last_clean_logs_time = clean_logs_config.unwrap().parse::<i64>().unwrap();
+            if chrono::Local::now().timestamp() - last_clean_logs_time < 24 * 60 * 60 {
+                tracing::info!("字幕清理被强制忽略，最后一次执行时间：{}", chrono::DateTime::from_timestamp_secs(last_clean_logs_time).unwrap().with_timezone(&chrono::Local::now().timezone()).format("%Y-%m-%d %H:%M:%S").to_string());
+                return anyhow::Ok(());
+            }
+        }
+    }
+    let subtitle_stored_days = global_config_mapper::get_cache("subtitleStoredDays", &state).await;
+    let days_to_keep = subtitle_stored_days.unwrap_or("1".to_string()).parse::<u32>().unwrap();
+    clean("cache/subtitle".to_string(), days_to_keep, force_clean, app_handle).await?;
+    global_config_mapper::create_or_update(GlobalConfig {
+        config_key: Some("lastCleanSubtitleTime".to_string()),
+        config_value: Some(chrono::Local::now().timestamp().to_string()),
+        ..Default::default()
+    }, &state).await?;
+    tracing::info!("字幕文件清理完成");
+    Ok(())
 }
 
 pub async fn clean_logs(force_clean: bool, app_handle: &tauri::AppHandle) -> anyhow::Result<()> {

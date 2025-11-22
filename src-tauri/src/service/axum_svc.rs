@@ -24,6 +24,7 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
 
     let router = Router::new()
         .route("/stream/{types}/{id}", get(stream))
+        .route("/subtitle/{id}", get(subtitle))
         .route("/image/icon", get(image_icon))
         .route("/image/emby", get(image_emby))
         .route("/trakt_auth", get(trakt_auth))
@@ -204,6 +205,78 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             ).into_response()
         },
     }
+}
+
+async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path(id): Path<String>) -> axum::response::Response {
+    tracing::debug!("subtitle: {}", id);
+    let axum_app_state = axum_app_state.read().await.clone().unwrap();
+    let request = axum_app_state.request.read().await;
+    let request = match request.get(&id).clone() {
+        Some(request) => request,
+        None => {
+            tracing::error!("没有找到 {} 对应的流媒体", &id);
+            return (
+                axum::http::StatusCode::NOT_FOUND,
+                axum::http::HeaderMap::new(),
+                axum::body::Body::new("没有找到对应的流媒体".to_string())
+            ).into_response();
+        }
+    };
+
+    let cache_digest = sha256::digest(&request.stream_url);
+    let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/subtitle/{}.ass", cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+    if cache_file_path.exists() {
+        tracing::debug!("subtitle: {:?} {} 从缓存读取", cache_file_path, id);
+        let file = match tokio::fs::File::open(&cache_file_path).await {
+            Ok(file) => file,
+            Err(err) => return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                axum::http::HeaderMap::new(),
+                axum::body::Body::new(format!("从缓存读取失败 {}", err))
+            ).into_response(),
+        };
+
+        return (
+            axum::http::StatusCode::OK,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::from_stream(FramedRead::new(file, BytesCodec::new()))
+        ).into_response();
+    }
+
+    let app_state = axum_app_state.app.state::<AppState>().clone();
+    let client = match http_pool::get_image_http_client(request.proxy_url.clone(), &app_state).await {
+        Ok(client) => client,
+        Err(err) => return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("http连接池获取失败 {}", err))
+        ).into_response(),
+    };
+    let mut req_headers = headers.clone();
+    req_headers.remove(axum::http::header::HOST);
+    req_headers.remove(axum::http::header::REFERER);
+    req_headers.remove(axum::http::header::USER_AGENT);
+    req_headers.insert(axum::http::header::USER_AGENT, request.user_agent.clone().parse().unwrap());
+    req_headers.insert(axum::http::header::REFERER, request.stream_url.clone().parse().unwrap());
+    let res = client
+        .get(request.stream_url.clone())
+        .headers(req_headers.clone())
+        .send()
+        .await;
+    tracing::debug!("subtitle: {:?} 媒体流响应 {:?}", id, res);
+    if let Err(err) = res {
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(err.to_string())
+        ).into_response()
+    }
+    let response = res.unwrap();
+    (
+        response.status(),
+        response.headers().clone(),
+        axum::body::Body::from_stream(response.bytes_stream())
+    ).into_response()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -1,13 +1,13 @@
 # loemby
 
-一个毛坯 Emby 客户端。
+一个毛坯 Emby 客户端（兼容 Jellyfin）。
 
 当前仅支持 Windows 平台，理论上兼容 Linux 和 macOS，但尚未经过测试，不保证可用性。
 
 # 使用
 前往 [Release](https://github.com/NPCDW/loemby/releases) 下载对应平台的安装包，安装后即可使用。
 
-该软件内置了一个 mpv 播放器，也可以使用外部播放器，一些 mpv 播放器以及整合包：
+该软件内置了一个 mpv 播放器，也可以使用外部 mpv 播放器，一些 mpv 播放器以及整合包：
 1. [mpv.io](https://mpv.io/installation/)
 2. [MPV_lazy](https://github.com/hooke007/MPV_lazy)
 3. [mpv-config](https://github.com/dyphire/mpv-config)

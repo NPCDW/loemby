@@ -115,9 +115,9 @@
                     </div>
                 </div>
             </el-skeleton>
-            <div v-if="currentEpisodes?.Type !== 'Movie'">
+            <div v-if="currentEpisodes?.Type !== 'Movie' && currentEpisodes?.SeriesId">
                 <h1>接下来</h1>
-                <p v-if="currentEpisodes?.SeriesId">
+                <p>
                     <el-button @click="handleNextUpPageChange(1, true)">本季所有</el-button>
                     <el-button @click="handleNextUpPageChange(1)">本季接下来</el-button>
                     <el-button @click="nextEpisode()">下一个</el-button>
@@ -132,8 +132,7 @@
                         </el-card>
                     </div>
                 </template>
-                <h2 v-if="nextUpList.length == 0 || (nextUpList.length == 1 && nextUpList[0].Id === currentEpisodes?.Id)">已经是最后一集了</h2>
-                <div v-else style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
                     <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServerId="embyServerId" />
                 </div>
             </el-skeleton>
