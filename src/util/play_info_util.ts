@@ -16,11 +16,39 @@ export const maxMediaSources = (mediaSources?: MediaSource[]) => {
 }
 
 export const getResolutionFromMediaSources = (mediaSources?: MediaSource) => {
-    if (!mediaSources || !mediaSources.MediaStreams || mediaSources.MediaStreams.length == 0) {
+    if (!mediaSources) {
         return 'Unknown'
     }
-    const videoMediaStream = mediaSources.MediaStreams.find(item => item.Type == 'Video') || mediaSources.MediaStreams[0]
-    return getResolution(videoMediaStream.Width, videoMediaStream.Height)
+    let mediaStreamsDisplayTitle = ''
+    if (mediaSources.MediaStreams && mediaSources.MediaStreams.length > 0) {
+        const videoMediaStream = mediaSources.MediaStreams.find(item => item.Type == 'Video')
+        if (videoMediaStream) {
+            const resolution = getResolution(videoMediaStream.Width, videoMediaStream.Height)
+            if (resolution != 'Unknown') {
+                return resolution
+            }
+            mediaStreamsDisplayTitle = videoMediaStream.DisplayTitle ? videoMediaStream.DisplayTitle.toLowerCase() : ''
+        }
+    }
+    const mediaSourcesName = mediaStreamsDisplayTitle + ' ' + mediaSources.Name ? mediaSources.Name.toLowerCase() : ''
+    if (mediaSourcesName.includes('8k') || mediaSourcesName.includes('4320p')) {
+        return '8k'
+    } else if (mediaSourcesName.includes('4k') || mediaSourcesName.includes('2160p')) {
+        return '4k'
+    } else if (mediaSourcesName.includes('2k') || mediaSourcesName.includes('1440p')) {
+        return '2k'
+    } else if (mediaSourcesName.includes('1080p')) {
+        return '1080p'
+    } else if (mediaSourcesName.includes('720p')) {
+        return '720p'
+    } else if (mediaSourcesName.includes('480p')) {
+        return '480p'
+    } else if (mediaSourcesName.includes('360p')) {
+        return '360p'
+    } else if (mediaSourcesName.includes('240p')) {
+        return '240p'
+    }
+    return 'Unknown'
 }
 
 /**
@@ -58,28 +86,39 @@ export const getResolution = (width: number, height: number) => {
 
 export const getResolutionLevelFromMediaSources = (mediaSources?: MediaSource) => {
     // 需要返回0，否则排序时相减会导致错误
-    if (!mediaSources || !mediaSources.MediaStreams || mediaSources.MediaStreams.length == 0) {
+    if (!mediaSources) {
         return 0
     }
-    const videoMediaStream = mediaSources.MediaStreams.find(item => item.Type == 'Video') || mediaSources.MediaStreams[0]
-    const level = getResolutionLevel(videoMediaStream.Width, videoMediaStream.Height)
-    if (level == 0) {
-        const mediaSourcesName = mediaSources.Name ? mediaSources.Name.toLowerCase() : ''
-        const mediaStreamsDisplayTitle = videoMediaStream.DisplayTitle ? videoMediaStream.DisplayTitle.toLowerCase() : ''
-        if (mediaSourcesName.includes('2k') || mediaSourcesName.includes('1440p')
-            || mediaStreamsDisplayTitle.includes('2k') || mediaStreamsDisplayTitle.includes('1440p')) {
-            return 6
-        } else if (mediaSourcesName.includes('4k') || mediaSourcesName.includes('2160p')
-            || mediaStreamsDisplayTitle.includes('4k') || mediaStreamsDisplayTitle.includes('2160p')) {
-            return 7
-        } else if (mediaSourcesName.includes('8k') || mediaSourcesName.includes('4320p')
-            || mediaStreamsDisplayTitle.includes('8k') || mediaStreamsDisplayTitle.includes('4320p')) {
-            return 8
-        } else {
-            return 5
+    let mediaStreamsDisplayTitle = ''
+    if (mediaSources.MediaStreams && mediaSources.MediaStreams.length > 0) {
+        const videoMediaStream = mediaSources.MediaStreams.find(item => item.Type == 'Video')
+        if (videoMediaStream) {
+            const level = getResolutionLevel(videoMediaStream.Width, videoMediaStream.Height)
+            if (level != 0) {
+                return level
+            }
+            mediaStreamsDisplayTitle = videoMediaStream.DisplayTitle ? videoMediaStream.DisplayTitle.toLowerCase() : ''
         }
     }
-    return level
+    const mediaSourcesName = mediaStreamsDisplayTitle + ' ' + mediaSources.Name ? mediaSources.Name.toLowerCase() : ''
+    if (mediaSourcesName.includes('8k') || mediaSourcesName.includes('4320p')) {
+        return 8
+    } else if (mediaSourcesName.includes('4k') || mediaSourcesName.includes('2160p')) {
+        return 7
+    } else if (mediaSourcesName.includes('2k') || mediaSourcesName.includes('1440p')) {
+        return 6
+    } else if (mediaSourcesName.includes('1080p')) {
+        return 5
+    } else if (mediaSourcesName.includes('720p')) {
+        return 4
+    } else if (mediaSourcesName.includes('480p')) {
+        return 3
+    } else if (mediaSourcesName.includes('360p')) {
+        return 2
+    } else if (mediaSourcesName.includes('240p')) {
+        return 1
+    }
+    return 0
 }
 
 const getResolutionLevel = (width: number, height: number) => {

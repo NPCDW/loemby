@@ -236,10 +236,7 @@ function getTag(itemId: string, mediaSources?: MediaSource[]) {
         for (let mediaSource of mediaSources) {
             const size = formatBytes(mediaSource.Size) || '0 KB'
             // const bitrate = formatMbps(mediaSource.Bitrate) || '0 Kbps'
-            let resolution = 'Unknown'
-            if (mediaSource.MediaStreams && mediaSource.MediaStreams.length > 0) {
-                resolution = getResolutionFromMediaSources(mediaSource)
-            }
+            let resolution = getResolutionFromMediaSources(mediaSource)
             mediaSourceTag.value[itemId].push(size + " | " + resolution)
         }
     }

@@ -1,27 +1,11 @@
 use crate::service::emby_http_svc::MediaSource;
 use std::net::Ipv4Addr;
 
-#[allow(dead_code)]
-pub fn max_media_sources(media_sources: &[MediaSource]) -> &MediaSource {
-    let mut max_media_source = &media_sources[0];
-    let mut max_size = max_media_source.size;
-
-    for media_source in media_sources {
-        if media_source.size > max_size {
-            max_size = media_source.size;
-            max_media_source = media_source;
-        }
-    }
-
-    max_media_source
-}
-
 pub fn get_display_title_from_media_sources(media_source: &MediaSource) -> String {
     let video_stream = media_source
         .media_streams
         .iter()
-        .find(|stream| stream.type_ == "Video")
-        .or_else(|| media_source.media_streams.first());
+        .find(|stream| stream.type_ == "Video");
 
     match video_stream {
         Some(stream) => format!("{} / {}", media_source.name.clone(), stream.display_title.clone().unwrap_or("".to_string())),
@@ -33,13 +17,36 @@ pub fn get_resolution_from_media_sources(media_source: &MediaSource) -> String {
     let video_stream = media_source
         .media_streams
         .iter()
-        .find(|stream| stream.type_ == "Video")
-        .or_else(|| media_source.media_streams.first());
-
-    match video_stream {
-        Some(stream) => get_resolution(stream.width, stream.height),
-        None => "Unknown".to_string(),
+        .find(|stream| stream.type_ == "Video");
+    
+    let mut media_streams_display_title = "".to_string();
+    if let Some(video_stream) = video_stream {
+        let resolution = get_resolution(video_stream.width, video_stream.height);
+        if resolution != "Unknown" {
+            return resolution;
+        }
+        media_streams_display_title = video_stream.display_title.clone().unwrap_or("".to_string()).to_lowercase();
     }
+
+    let media_sources_name = format!("{} {}", media_streams_display_title, media_source.name.to_lowercase());
+    if media_sources_name.contains("8k") || media_sources_name.contains("4320p") {
+        return "8k".to_string()
+    } else if media_sources_name.contains("4k") || media_sources_name.contains("2160p") {
+        return "4k".to_string()
+    } else if media_sources_name.contains("2k") || media_sources_name.contains("1440p") {
+        return "2k".to_string()
+    } else if media_sources_name.contains("1080p") {
+        return "1080p".to_string()
+    } else if media_sources_name.contains("720p") {
+        return "720p".to_string()
+    } else if media_sources_name.contains("480p") {
+        return "480p".to_string()
+    } else if media_sources_name.contains("360p") {
+        return "360p".to_string()
+    } else if media_sources_name.contains("240p") {
+        return "240p".to_string()
+    }
+    return "Unknown".to_string();
 }
 
 pub fn get_resolution(width: Option<u32>, height: Option<u32>) -> String {
@@ -71,31 +78,36 @@ pub fn get_resolution_level_from_media_sources(media_source: &MediaSource) -> u3
     let video_stream = media_source
         .media_streams
         .iter()
-        .find(|stream| stream.type_ == "Video")
-        .or_else(|| media_source.media_streams.first());
-
-    match video_stream {
-        Some(stream) => {
-            let level = get_resolution_level(stream.width, stream.height);
-            if level == 0 {
-                let name = media_source.name.to_lowercase();
-                let display_title = stream.display_title.clone().unwrap_or("".to_string()).to_lowercase();
-
-                if name.contains("2k") || name.contains("1440p") || display_title.contains("2k") || display_title.contains("1440p") {
-                    6
-                } else if name.contains("4k") || name.contains("2160p") || display_title.contains("4k") || display_title.contains("2160p") {
-                    7
-                } else if name.contains("8k") || name.contains("4320p") || display_title.contains("8k") || display_title.contains("4320p") {
-                    8
-                } else {
-                    5
-                }
-            } else {
-                level
-            }
+        .find(|stream| stream.type_ == "Video");
+    
+    let mut media_streams_display_title = "".to_string();
+    if let Some(video_stream) = video_stream {
+        let level = get_resolution_level(video_stream.width, video_stream.height);
+        if level != 0 {
+            return level;
         }
-        None => 0,
+        media_streams_display_title = video_stream.display_title.clone().unwrap_or("".to_string()).to_lowercase();
     }
+
+    let media_sources_name = format!("{} {}", media_streams_display_title, media_source.name.to_lowercase());
+    if media_sources_name.contains("8k") || media_sources_name.contains("4320p") {
+        return 8
+    } else if media_sources_name.contains("4k") || media_sources_name.contains("2160p") {
+        return 7
+    } else if media_sources_name.contains("2k") || media_sources_name.contains("1440p") {
+        return 6
+    } else if media_sources_name.contains("1080p") {
+        return 5
+    } else if media_sources_name.contains("720p") {
+        return 4
+    } else if media_sources_name.contains("480p") {
+        return 3
+    } else if media_sources_name.contains("360p") {
+        return 2
+    } else if media_sources_name.contains("240p") {
+        return 1
+    }
+    return 0;
 }
 
 fn get_resolution_level(width: Option<u32>, height: Option<u32>) -> u32 {
@@ -159,26 +171,6 @@ pub fn format_mbps(size: u64) -> String {
     }
     
     format!("{:.2} {}", size, units[units.len() - 1])
-}
-
-// 将秒转换为小时-分钟-秒格式
-#[allow(dead_code)]
-pub fn seconds_to_hms(seconds: u64) -> String {
-    let hours = seconds / 3600;
-    let minutes = (seconds % 3600) / 60;
-    let secs = seconds % 60;
-    
-    let mut time_parts = Vec::new();
-    
-    if hours > 0 {
-        time_parts.push(format!("{}h", hours));
-    }
-    if minutes > 0 || hours > 0 {
-        time_parts.push(format!("{}m", minutes));
-    }
-    time_parts.push(format!("{}s", secs));
-    
-    time_parts.join("")
 }
 
 // 检查是否为内部 URL

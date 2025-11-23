@@ -141,7 +141,7 @@
                 v-model:page-size="nextUpPageSize"
                 layout="total, prev, pager, next, jumper"
                 :total="nextUpTotal"
-                @current-change="handleNextUpPageChange"
+                @current-change="handleNextUpPageChange(nextUpCurrentPage, episodesQueryAll)"
                 hide-on-single-page
             />
         </div>
@@ -206,7 +206,9 @@ function updateCurrentEpisodes(silent: boolean = false) {
     }).catch(e => ElMessage.error(e)).finally(() => playbackInfoLoading.value = false)
 }
 
+const episodesQueryAll = ref(false)
 const handleNextUpPageChange = (val: number, query_all: boolean = false) => {
+    episodesQueryAll.value = query_all
     const start_item_id = query_all ? undefined : currentEpisodes.value?.Id
     nextUpCurrentPage.value = val
     nextUpShow.value = true
@@ -299,11 +301,7 @@ function playbackVersionChange(versionId: number, firstTime: boolean = false) {
     }
     mediaSourceSizeTag.value = formatBytes(currentMediaSources.Size)
     mediaSourceBitrateTag.value = formatMbps(currentMediaSources.Bitrate)
-    if (currentMediaSources.MediaStreams && currentMediaSources.MediaStreams.length > 0) {
-        mediaStreamResolutionTag.value = getResolutionFromMediaSources(currentMediaSources)
-    } else {
-        mediaStreamResolutionTag.value = 'Unknown'
-    }
+    mediaStreamResolutionTag.value = getResolutionFromMediaSources(currentMediaSources)
     if (currentMediaSources.IsRemote && currentMediaSources.Path && currentMediaSources.Path.indexOf('://') !== -1 && !isInternalUrl(currentMediaSources.Path)) {
         supportDirectLink.value = true
     }

@@ -540,7 +540,7 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
         muti_version_list.push(MutiVersionCommand {
             path: format!("http://127.0.0.1:{}/play_media/{}/{}", &axum_app_state.port, id, media_source_select),
             title: media_source_util::get_display_title_from_media_sources(media_source),
-            hint: format!("{},{},{}", media_source_util::get_resolution_from_media_sources(media_source), media_source_util::format_bytes(media_source.size.unwrap_or(0)), media_source_util::format_mbps(media_source.bitrate.unwrap_or(0)))
+            hint: format!("{}, {}, {}", media_source_util::get_resolution_from_media_sources(media_source), media_source_util::format_bytes(media_source.size.unwrap_or(0)), media_source_util::format_mbps(media_source.bitrate.unwrap_or(0)))
         });
     }
     let muti_version = serde_json::to_string(&muti_version_list)?.replace(r"\", r"\\").replace(r#"""#, r#"\""#);
