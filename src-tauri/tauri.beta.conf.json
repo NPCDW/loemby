@@ -15,6 +15,7 @@
         "title": "loemby-beta",
         "width": 1200,
         "height": 800,
+        "center": true,
         "backgroundColor": "#121212",
         "userAgent": "loemby/0.30.4"
       }
