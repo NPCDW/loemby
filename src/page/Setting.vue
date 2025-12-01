@@ -323,6 +323,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <span>天</span>
                             </template>
                         </el-input-number>
+                        <el-button type="primary" @click="invokeApi.open_folder('cache')" style="margin-left: 10px;">打开缓存目录</el-button>
                     </el-form-item>
                     <el-form-item label="图标保存天数">
                         <el-input-number v-model="iconStoredDays"
@@ -333,7 +334,6 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             </template>
                         </el-input-number>
                         <el-button type="primary" :loading="cleanIconCacheLoading" @click="cleanIconCache()" style="margin-left: 10px;">🆑清除所有图标缓存</el-button>
-                        <el-button type="primary" @click="invokeApi.open_folder('cache')" style="margin-left: 10px;">打开缓存目录</el-button>
                     </el-form-item>
                 </el-form>
                 <el-table :data="embyServers" style="width: 100%">

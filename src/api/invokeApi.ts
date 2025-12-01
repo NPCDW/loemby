@@ -51,7 +51,7 @@ async function clean_icon_cache(): Promise<void> {
 }
 
 async function open_folder(path_type: string): Promise<void> {
-    return invoke('clean_emby_image_cache', {body: {path_type}});
+    return invoke('open_folder', {body: {path_type}});
 }
 
 export default {
