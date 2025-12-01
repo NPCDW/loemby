@@ -89,6 +89,13 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     } else {
         episode_playlist.push(episode);
     }
+    let mut playlist_start = 0;
+    for (i, episode) in episode_playlist.iter().enumerate() {
+        if episode.id == body.item_id {
+            playlist_start = i;
+            break;
+        }
+    }
 
     #[cfg(windows)]
     let pipe_name = r"\\.\pipe\mpvsocket";
@@ -140,7 +147,8 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         // .arg("--force-seekable=yes")  // 某些视频格式在没缓存到的情况下不支持跳转，需要打开此配置，测试后发现强制跳转到没有缓存的位置后，mpv会从头开始缓存，一直缓存到跳转位置，与打开此设置的初衷相违背
         .arg(&format!("--user-agent={}", emby_server.user_agent.as_ref().unwrap()))
         .arg(&format!("--volume={}", &mpv_volume))
-        .arg(&format!("--playlist={}", mpv_playlist_path.to_str().unwrap()));
+        .arg(&format!("--playlist={}", mpv_playlist_path.to_str().unwrap()))
+        .arg(&format!("--playlist-start={}", playlist_start));
 
     tracing::debug!("调用MPV: {:?}", &command);
     

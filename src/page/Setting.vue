@@ -8,7 +8,8 @@
                         <el-button type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
                     </el-form-item>
                     <el-form-item label="日志等级">
-                        <span>{{ runtimeConfig?.app_config.log_level }}</span>
+                        <span style="margin-right: 10px;">{{ runtimeConfig?.app_config.log_level }}</span>
+                        <el-button type="primary" size="small" @click="invokeApi.open_folder('config')">打开配置目录</el-button>
                     </el-form-item>
                     <el-form-item label="接受不安全证书">
                         <span>{{ runtimeConfig?.app_config.danger_accept_invalid_certs }}</span>
@@ -116,6 +117,7 @@
                                 <span>MPV参数</span>
                                 <el-link @click.stop.prevent="invokeApi.open_url('https://mpv.io/manual/stable/')" style="margin-left: 10px;">官方文档</el-link>
                                 <el-link @click.stop.prevent="invokeApi.open_url('https://hooke007.github.io/official_man/mpv.html')" style="margin-left: 10px;">中文文档</el-link>
+                                <el-link @click.stop.prevent="invokeApi.open_folder('inner_mpv')" style="margin-left: 10px;">打开内置MPV目录</el-link>
                             </div>
                         </template>
                         <el-input
@@ -295,6 +297,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <span>天</span>
                             </template>
                         </el-input-number>
+                        <el-button type="primary" @click="invokeApi.open_folder('log')" style="margin-left: 10px;">打开日志目录</el-button>
                     </el-form-item>
                     <el-form-item label="禁用图片缓存">
                         <el-switch 
@@ -329,7 +332,8 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <span>天</span>
                             </template>
                         </el-input-number>
-                        <el-button type="primary" :loading="cleanIconCacheLoading" @click="cleanIconCache()" style="margin: 0 10px;">🆑清除所有图标缓存</el-button>
+                        <el-button type="primary" :loading="cleanIconCacheLoading" @click="cleanIconCache()" style="margin-left: 10px;">🆑清除所有图标缓存</el-button>
+                        <el-button type="primary" @click="invokeApi.open_folder('cache')" style="margin-left: 10px;">打开缓存目录</el-button>
                     </el-form-item>
                 </el-form>
                 <el-table :data="embyServers" style="width: 100%">

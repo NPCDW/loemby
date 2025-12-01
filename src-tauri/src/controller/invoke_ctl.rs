@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::app_state::AppState;
 use crate::config::runtime_config;
 use crate::service::{cache_svc, player_svc, trakt_http_svc, updater_svc};
+use tauri::Manager;
 
 #[tauri::command]
 pub async fn get_sys_info() -> Result<String, String> {
@@ -87,6 +88,30 @@ pub async fn clean_icon_cache(app_handle: tauri::AppHandle) -> Result<(), String
     let res = cache_svc::clean_icon(true, &app_handle).await;
     if let Err(err) = res {
         return Err(format!("清理失败: {} ", err.to_string()));
+    }
+    Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OpenFolderParam {
+    pub path_type: String,
+}
+
+#[tauri::command]
+pub async fn open_folder(app_handle: tauri::AppHandle, body: OpenFolderParam) -> Result<(), String> {
+    let path = match body.path_type.as_str() {
+        "cache" => app_handle.path().resolve("cache", tauri::path::BaseDirectory::AppLocalData),
+        "log" => app_handle.path().resolve("logs", tauri::path::BaseDirectory::AppLocalData),
+        "inner_mpv" => app_handle.path().resolve("resources/mpv", tauri::path::BaseDirectory::Resource),
+        "config" => app_handle.path().resolve("config", tauri::path::BaseDirectory::AppConfig),
+        _ => return Err(format!("未知的路径类型: {} ", body.path_type)),
+    };
+    if let Err(err) = path {
+        return Err(format!("获取目录失败: {}", err.to_string()));
+    }
+    let res = open::that(path.unwrap());
+    if let Err(err) = res {
+        return Err(format!("打开目录失败: {}", err.to_string()));
     }
     Ok(())
 }
