@@ -43,7 +43,7 @@ pub async fn go_trakt_auth(state: tauri::State<'_, AppState>) -> Result<(), Stri
 
 #[tauri::command]
 pub async fn open_url(url: String) -> Result<(), String> {
-    let res = webbrowser::open(&url);
+    let res = open::that(&url);
     if let Err(err) = res {
         return Err(format!("打开浏览器失败: {} ", err.to_string()));
     }

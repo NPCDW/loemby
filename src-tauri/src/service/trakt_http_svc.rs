@@ -251,7 +251,7 @@ pub async fn go_trakt_auth(state: &tauri::State<'_, AppState>) -> anyhow::Result
     let state = uuid::Uuid::new_v4().to_string();
     let url = format!("{}/oauth/authorize?response_type=code&client_id={}&redirect_uri={}&state={}", TRAKT_WEBSITE_BASE_URL, TRAKT_CLIENT_ID, redirect_uri, state);
     auxm_app_state.trakt_auth_state.write().await.push(state);
-    let res = webbrowser::open(&url);
+    let res = open::that(&url);
     if let Err(err) = res {
         return Err(anyhow::anyhow!("打开浏览器失败: {} 您可尝试手动复制链接到浏览器中打开 {}", err.to_string(), &url));
     }
