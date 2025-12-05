@@ -1,7 +1,7 @@
 $:
   vscode:
     - docker:
-        image: docker.cnb.cool/my-codespace/template/tauri2-vnc-template:latest
+        image: docker.cnb.cool/my-codespace/template/tauri2-vnc-template
       runner:
         cpus: 16
       services:
