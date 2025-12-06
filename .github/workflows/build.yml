@@ -17,12 +17,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        build: [linux, macos, windows]
         include:
-          - platform: 'windows-latest'
-            args: ''
-          - platform: 'ubuntu-latest'
-            args: ''
-    runs-on: ${{ matrix.platform }}
+          - build: linux
+            os: ubuntu-latest
+          - build: macos
+            os: macos-latest
+          - build: windows
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
     - name: Install Nodejs
@@ -47,7 +50,7 @@ jobs:
           7z x mpv-x86_64-*.7z && rm -rf mpv-x86_64-*.7z
           mv ./* ../src-tauri/resources/mpv
         fi
-        mkdir -p src-tauri/resources/mpv/portable_config src-tauri/resources/mpv/portable_config/script-opts src-tauri/resources/mpv/portable_config/scripts
+        mkdir -p ../src-tauri/resources/mpv/portable_config ../src-tauri/resources/mpv/portable_config/script-opts ../src-tauri/resources/mpv/portable_config/scripts
         git clone --depth 1 https://github.com/NPCDW/uosc.git
         mv uosc/src/fonts ../src-tauri/resources/mpv/portable_config/
         mv uosc/src/uosc ../src-tauri/resources/mpv/portable_config/scripts/
