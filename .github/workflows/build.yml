@@ -17,16 +17,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build: [linux, macos, windows]
         include:
           - build: linux
             platform: ubuntu-latest
             args: ''
           - build: macos-aarch64
-            platform: 'macos-latest' # for Arm based macs (M1 and above).
+            platform: macos-latest # for Arm based macs (M1 and above).
             args: '--target aarch64-apple-darwin'
           - build: macos-x86
-            platform: 'macos-latest' # for Intel based macs.
+            platform: macos-latest # for Intel based macs.
             args: '--target x86_64-apple-darwin'
           - build: windows
             platform: windows-latest
