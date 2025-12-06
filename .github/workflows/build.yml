@@ -68,7 +68,7 @@ jobs:
         mv uosc/src/uosc ../src-tauri/resources/mpv/portable_config/scripts/
         mv uosc/src/uosc.conf ../src-tauri/resources/mpv/portable_config/script-opts/
     - name: Build release
-      uses: tauri-apps/tauri-action@v1
+      uses: tauri-apps/tauri-action@v0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -76,5 +76,5 @@ jobs:
       with:
         updaterJsonPreferNsis: true
         tagName: ${{ github.ref_name }}
-        releaseAssetNamePattern: "[name]-[version]-[platform]-[arch][ext]"
+        assetNamePattern: "[name]-[version]-[platform]-[arch][ext]"
         args: ${{ matrix.args }}
