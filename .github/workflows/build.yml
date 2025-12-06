@@ -32,9 +32,9 @@ jobs:
             args: ''
     runs-on: ${{ matrix.platform }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install Nodejs
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version-file: '.nvmrc'
     - name: Install Rust
@@ -68,7 +68,7 @@ jobs:
         mv uosc/src/uosc ../src-tauri/resources/mpv/portable_config/scripts/
         mv uosc/src/uosc.conf ../src-tauri/resources/mpv/portable_config/script-opts/
     - name: Build release
-      uses: tauri-apps/tauri-action@v0
+      uses: tauri-apps/tauri-action@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
