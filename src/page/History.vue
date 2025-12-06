@@ -1,5 +1,30 @@
 <template>
-    <el-scrollbar style="padding: 10px;">
+    <el-scrollbar style="padding: 10px;" ref="scrollbarRef">
+        <el-form :inline="true">
+            <el-form-item>
+                <el-select
+                    v-model="query.emby_server_id"
+                    @change="getPlayHistory"
+                    style="width: 260px;">
+                    <el-option key="all" label="全部" value="all"/>
+                    <el-option v-for="embyServer in embyServers" :key="embyServer.id" :label="embyServer.server_name" :value="embyServer.id"/>
+                </el-select>
+            </el-form-item>
+            <el-form-item>
+                <el-input v-model="query.series_name" @keyup.enter="getPlayHistory" style="width: 260px;">
+                    <template #prefix>
+                        <span>剧</span>
+                    </template>
+                </el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-input v-model="query.item_name" @keyup.enter="getPlayHistory" style="width: 260px;">
+                    <template #prefix>
+                        <span>集</span>
+                    </template>
+                </el-input>
+            </el-form-item>
+        </el-form>
         <el-table :data="list" :row-style="highlightRowFunction">
             <el-table-column prop="emby_server_name" label="服务器" show-overflow-tooltip />
             <el-table-column prop="series_name" label="剧" show-overflow-tooltip>
@@ -24,8 +49,8 @@
         </el-table>
         <el-pagination
             style="margin: 10px 0 0 0;"
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
+            v-model:current-page="query.page_number"
+            v-model:page-size="query.page_size"
             layout="total, prev, pager, next, jumper"
             :total="total"
             @current-change="handlePageChange"
@@ -37,9 +62,10 @@
 <script lang="ts" setup>
 import { useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
-import { ElMessage } from 'element-plus';
-import { PlayHistory, usePlayHistory } from '../store/db/playHistory';
+import { ElMessage, ScrollbarInstance } from 'element-plus';
+import { PagePlayHistoryParam, PlayHistory, usePlayHistory } from '../store/db/playHistory';
 import { secondsToHMS } from '../util/str_util'
+import { EmbyServer, useEmbyServer } from '../store/db/embyServer';
 
 const router = useRouter()
 function gotoEpisodes(embyServerId: string, episodesId: string) {
@@ -48,19 +74,29 @@ function gotoEpisodes(embyServerId: string, episodesId: string) {
 function gotoSeries(embyServerId: string, seriesId: string) {
     router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
 }
+const scrollbarRef = ref<ScrollbarInstance>()
+
+const embyServers = ref<EmbyServer[]>([])
+function listAllEmbyServer() {
+    useEmbyServer().listAllEmbyServer().then(list => {
+        embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
+    }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
+}
+listAllEmbyServer()
 
 const list = ref<PlayHistory[]>([])
-const currentPage = ref<number>(1)
-const pageSize = ref<number>(30)
 const total = ref<number>(0)
-async function getPlayHistory(pageNumber: number = 1, pageSize: number = 30) {
-    return usePlayHistory().pagePlayHistory(pageNumber, pageSize).then(async response => {
+const query = ref<PagePlayHistoryParam>({page_number: 1, page_size: 30})
+async function getPlayHistory() {
+    return usePlayHistory().pagePlayHistory(query.value).then(async response => {
         list.value = response[1]
         total.value = response[0]
+        scrollbarRef.value!.setScrollTop(0)
     }).catch(e => ElMessage.error('获取播放历史失败' + e))
 }
 function handlePageChange(pageNumber: number) {
-    getPlayHistory(pageNumber)
+    query.value.page_number = pageNumber
+    getPlayHistory()
 }
 onMounted(() => getPlayHistory())
 

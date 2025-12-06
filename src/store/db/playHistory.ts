@@ -2,8 +2,8 @@ import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
 
 export const usePlayHistory = defineStore('playHistory', () => {
-    async function pagePlayHistory(page_number: number, page_size: number): Promise<[number, PlayHistory[]]> {
-        return invoke('page_play_history', {body: {page_number, page_size}});
+    async function pagePlayHistory(body: PagePlayHistoryParam): Promise<[number, PlayHistory[]]> {
+        return invoke('page_play_history', {body});
     }
 
     async function getPlayHistory(emby_server_id: string, item_id: string): Promise<PlayHistory> {
@@ -39,4 +39,12 @@ export interface PlayHistory {
     series_name?: string,
     played_duration?: number,
     pinned?: number,
+}
+
+export interface PagePlayHistoryParam {
+    page_number: number,
+    page_size: number,
+    emby_server_id?: string,
+    series_name?: string,
+    item_name?: string,
 }

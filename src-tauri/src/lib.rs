@@ -77,6 +77,10 @@ pub fn run() {
             
             let app_handle = app.app_handle().clone();
             tauri::async_runtime::spawn(async move {
+                let res = cache_svc::init(&app_handle).await;
+                if res.is_err() {
+                    tracing::error!("缓存初始化失败: {:#?}", res);
+                }
                 let res = cache_svc::clean_plan(&app_handle).await;
                 if res.is_err() {
                     tracing::error!("清理缓存计划失败: {:#?}", res);

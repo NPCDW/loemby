@@ -10,6 +10,16 @@ $:
       imports: https://cnb.cool/my-codespace/envs/-/blob/main/loemby-updater.yml
       # 开发环境启动后会执行的任务
       stages:
+        #启动VNC服务
+        - name: start vncserver
+          script: vncserver -SecurityTypes none,tlsvnc && websockify -D --web=/usr/share/novnc/ 10001 localhost:5901 && xdg-open http://localhost:10001/vnc.html
+        #关闭自动锁屏
+        - name: disable screen lock
+          script: kwriteconfig5 --file kscreenlockerrc --group Daemon --key Autolock false
+        #修改novnc默认配置
+        - name: change novnc config
+          script: sed -i -e "s/UI.initSetting('resize', 'off');/UI.initSetting('resize', 'remote');/" -e "s/UI.initSetting('quality', 6);/UI.initSetting('quality', 9);/" -e "s/UI.initSetting('compression', 2);/UI.initSetting('compression', 0);/" /usr/share/novnc/app/ui.js
+        #安装依赖
         - name: install dep
           script: pnpm i
       # 开发环境销毁前会执行该任务

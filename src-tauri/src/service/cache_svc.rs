@@ -1,6 +1,12 @@
 use tauri::Manager;
 
-use crate::{config::app_state::AppState, mapper::global_config_mapper::{self, GlobalConfig}};
+use crate::{config::app_state::AppState, mapper::global_config_mapper::{self, GlobalConfig}, util::file_util};
+
+pub async fn init(app_handle: &tauri::AppHandle) -> anyhow::Result<()> {
+    let cache_dir = app_handle.path().resolve("cache", tauri::path::BaseDirectory::AppLocalData)?;
+    file_util::mkdir(cache_dir)?;
+    Ok(())
+}
 
 pub async fn clean_plan(app_handle: &tauri::AppHandle) -> anyhow::Result<()> {
     tracing::info!("60秒后开始清理字幕文件");

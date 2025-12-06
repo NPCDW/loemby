@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Execute, Pool, QueryBuilder, Sqlite};
 
+use crate::controller::play_history_ctl::PagePlayHistoryParam;
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
 pub struct PlayHistory {
     pub id: Option<String>,
@@ -18,8 +20,34 @@ pub struct PlayHistory {
     pub pinned: Option<u32>,
 }
 
-pub async fn page(page_number: u32, page_size: u32, pool: &Pool<Sqlite>) -> anyhow::Result<(u32, Vec<PlayHistory>)> {
+pub async fn page(param: PagePlayHistoryParam, pool: &Pool<Sqlite>) -> anyhow::Result<(u32, Vec<PlayHistory>)> {
+    let mut conditions = Vec::new();
+    let mut values = Vec::new();
+    if let Some(emby_server_id) = param.emby_server_id {
+        conditions.push("emby_server_id = ");
+        values.push(emby_server_id);
+    }
+    if let Some(series_name) = param.series_name {
+        conditions.push("series_name LIKE ");
+        values.push(series_name);
+    }
+    if let Some(item_name) = param.item_name {
+        conditions.push("item_name LIKE ");
+        values.push(item_name);
+    }
+
     let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select count(*) as total from play_history");
+    if !conditions.is_empty() {
+        let mut separated = query_builder.push(" WHERE ").separated(" and ");
+        for (i, key) in conditions.iter().enumerate() {
+            separated.push(key);
+            if key.contains("series_name") || key.contains("item_name") {
+                separated.push_bind_unseparated(format!("%{}%", values[i].clone()));
+            } else {
+                separated.push_bind_unseparated(values[i].clone());
+            }
+        }
+    }
     let query = query_builder.build_query_as::<(i64,)>();
     let sql = query.sql();
     let res = query.fetch_one(pool).await;
@@ -29,10 +57,22 @@ pub async fn page(page_number: u32, page_size: u32, pool: &Pool<Sqlite>) -> anyh
         return anyhow::Ok((0, vec![]));
     }
 
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history order by pinned desc, update_time desc limit ");
-    query_builder.push_bind(page_size);
+    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from play_history");
+    if !conditions.is_empty() {
+        let mut separated = query_builder.push(" WHERE ").separated(" and ");
+        for (i, key) in conditions.iter().enumerate() {
+            separated.push(key);
+            if key.contains("series_name") || key.contains("item_name") {
+                separated.push_bind_unseparated(format!("%{}%", values[i].clone()));
+            } else {
+                separated.push_bind_unseparated(values[i].clone());
+            }
+        }
+    }
+    query_builder.push(" order by pinned desc, update_time desc limit ");
+    query_builder.push_bind(param.page_size);
     query_builder.push(" offset ");
-    query_builder.push_bind((page_number - 1) * page_size);
+    query_builder.push_bind((param.page_number - 1) * param.page_size);
     let query = query_builder.build_query_as::<PlayHistory>();
     let sql = query.sql();
     let res = query.fetch_all(pool).await;
