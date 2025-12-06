@@ -20,7 +20,7 @@ jobs:
         build: [linux, macos, windows]
         include:
           - build: linux
-            os: ubuntu-latest
+            platform: ubuntu-latest
             args: ''
           - build: macos-aarch64
             platform: 'macos-latest' # for Arm based macs (M1 and above).
@@ -29,9 +29,9 @@ jobs:
             platform: 'macos-latest' # for Intel based macs.
             args: '--target x86_64-apple-darwin'
           - build: windows
-            os: windows-latest
+            platform: windows-latest
             args: ''
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v4
     - name: Install Nodejs
