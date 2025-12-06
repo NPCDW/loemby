@@ -20,6 +20,8 @@ jobs:
         include:
           - platform: 'windows-latest'
             args: ''
+          - platform: 'ubuntu-latest'
+            args: ''
     runs-on: ${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v4
@@ -37,14 +39,16 @@ jobs:
     - name: Add Mpv
       shell: bash
       run: |
-        mkdir -p src-tauri/resources/mpv/portable_config src-tauri/resources/mpv/portable_config/script-opts src-tauri/resources/mpv/portable_config/scripts 
         mkdir mpv-build && cd mpv-build
-        ASSET_URL=$(curl -s https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest | grep -o '"browser_download_url": *"[^"]*mpv-x86_64-20[^"]*\.7z"' | head -1 | cut -d'"' -f4)
-        echo "Downloading MPV from: $ASSET_URL"
-        curl -L -O "$ASSET_URL"
-        7z x mpv-x86_64-*.7z && rm -rf mpv-x86_64-*.7z
-        mv ./* ../src-tauri/resources/mpv
-        git clone https://github.com/NPCDW/uosc.git
+        if [ "${{ matrix.build }}" = "windows" ]; then
+          ASSET_URL=$(curl -s https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest | grep -o '"browser_download_url": *"[^"]*mpv-x86_64-20[^"]*\.7z"' | head -1 | cut -d'"' -f4)
+          echo "Downloading MPV from: $ASSET_URL"
+          curl -L -O "$ASSET_URL"
+          7z x mpv-x86_64-*.7z && rm -rf mpv-x86_64-*.7z
+          mv ./* ../src-tauri/resources/mpv
+        fi
+        mkdir -p src-tauri/resources/mpv/portable_config src-tauri/resources/mpv/portable_config/script-opts src-tauri/resources/mpv/portable_config/scripts
+        git clone --depth 1 https://github.com/NPCDW/uosc.git
         mv uosc/src/fonts ../src-tauri/resources/mpv/portable_config/
         mv uosc/src/uosc ../src-tauri/resources/mpv/portable_config/scripts/
         mv uosc/src/uosc.conf ../src-tauri/resources/mpv/portable_config/script-opts/

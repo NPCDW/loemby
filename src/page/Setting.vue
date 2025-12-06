@@ -135,12 +135,12 @@ demuxer-max-back-bytes=512MiB" />
                             @change="configValueChange('external_mpv_switch', external_mpv_switch + '', getExternalMpvSwitch, '使用外部MPV播放器开关')"
                             active-value="on" inactive-value="off" />
                     </el-form-item>
-                    <el-form-item label="MPV文件路径和启动目录">
+                    <el-form-item label="MPV文件路径和配置目录">
                         <el-input
                             v-model="mpv_path"
                             @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径和启动目录')"
                             :disabled="external_mpv_switch != 'on'"
-                            :rows="4" type="textarea" placeholder="每行一个mpv路径和目录，以英文分号;隔开，不写路径默认为mpv父级目录，示例: 
+                            :rows="4" type="textarea" placeholder="每行一个mpv路径和配置目录，以英文分号;隔开，不写配置目录默认为mpv同级的portable_config目录或~/.config/mpv目录，示例: 
 C:\App\mpv_config-2024.12.04\mpv.exe
 /usr/bin/mpv;/usr/local/mpv/portable_config" />
                     </el-form-item>

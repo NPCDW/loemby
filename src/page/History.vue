@@ -5,8 +5,9 @@
                 <el-select
                     v-model="query.emby_server_id"
                     @change="getPlayHistory"
+                    clearable
+                    placeholder="筛选服务器"
                     style="width: 260px;">
-                    <el-option key="all" label="全部" value="all"/>
                     <el-option v-for="embyServer in embyServers" :key="embyServer.id" :label="embyServer.server_name" :value="embyServer.id"/>
                 </el-select>
             </el-form-item>
@@ -88,6 +89,15 @@ const list = ref<PlayHistory[]>([])
 const total = ref<number>(0)
 const query = ref<PagePlayHistoryParam>({page_number: 1, page_size: 30})
 async function getPlayHistory() {
+    if (query.value.emby_server_id === '') {
+        query.value.emby_server_id = undefined
+    }
+    if (query.value.series_name === '') {
+        query.value.series_name = undefined
+    }
+    if (query.value.item_name === '') {
+        query.value.item_name = undefined
+    }
     return usePlayHistory().pagePlayHistory(query.value).then(async response => {
         list.value = response[1]
         total.value = response[0]

@@ -1,4 +1,4 @@
-use std::{cmp::{max, min}, path::{Path, PathBuf}};
+use std::{cmp::{max, min}, path::PathBuf};
 
 use rust_decimal::prelude::*;
 
@@ -15,41 +15,49 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         None => return Err("emby_server not found".to_string()),
     };
     let external_mpv_switch = global_config_mapper::get_cache("external_mpv_switch", state).await.unwrap_or("off".to_string());
-    let (mpv_path, mpv_startup_dir) = if external_mpv_switch == "on" {
+    let (mpv_path, mpv_config_dir, mpv_startup_dir) = if external_mpv_switch == "on" {
         match global_config_mapper::get_cache("mpv_path", state).await {
             None => return Err("未配置 mpv 路径".to_string()),
             Some(mpv_path) => {
                 let mpv_path = mpv_path.trim().replace("\r", "");
                 let mpv_path_vec = mpv_path.split("\n").collect::<Vec<&str>>();
                 let mut final_mpv_path = None;
-                let mut final_mpv_start_dir = None;
+                let mut final_mpv_config_dir = None;
                 for path in mpv_path_vec {
                     let path = path.split(";").collect::<Vec<&str>>();
                     if path.len() == 1 && PathBuf::from(path[0]).is_file() {
                         final_mpv_path = Some(PathBuf::from(path[0]));
-                        final_mpv_start_dir = Path::new(path[0]).parent();
+                        final_mpv_config_dir = Some(PathBuf::from(path[0]).parent().unwrap().join("portable_config"));
                         break;
                     } else if path.len() == 2 && PathBuf::from(path[0]).is_file() && PathBuf::from(path[1]).is_dir() {
                         final_mpv_path = Some(PathBuf::from(path[0]));
-                        final_mpv_start_dir = Some(Path::new(path[1]));
+                        final_mpv_config_dir = Some(PathBuf::from(path[1]));
                         break;
                     }
                 }
-                if final_mpv_path.is_none() || final_mpv_start_dir.is_none() {
-                    return Err(format!("所有的外部 mpv 路径或 mpv 启动目录都不存在"));
+                if final_mpv_path.is_none() {
+                    return Err(format!("所有的外部 mpv 路径都不存在"));
                 }
-                (final_mpv_path.unwrap(), final_mpv_start_dir.unwrap().to_path_buf())
+                (final_mpv_path.unwrap(), final_mpv_config_dir.clone().unwrap(), final_mpv_config_dir.unwrap().parent().unwrap().to_path_buf())
             },
         }
     } else {
+        #[cfg(windows)]
         match app_handle.path().resolve("resources/mpv/mpv.exe", tauri::path::BaseDirectory::Resource,) {
             Err(err) => return Err(format!("内置 mpv 路径获取失败: {}", err.to_string())),
-            Ok(mpv_path) => (mpv_path.clone(), mpv_path.parent().unwrap().to_path_buf()),
+            Ok(mpv_path) => (mpv_path.clone(), mpv_path.parent().unwrap().join("portable_config"), mpv_path.parent().unwrap().to_path_buf()),
+        }
+        #[cfg(unix)]
+        match app_handle.path().resolve("resources/mpv/portable_config", tauri::path::BaseDirectory::Resource,) {
+            Err(err) => return Err(format!("内置 mpv 配置目录获取失败: {}", err.to_string())),
+            Ok(mpv_config_path) => match PathBuf::from("/usr/bin/mpv").is_file() {
+                true => (PathBuf::from("/usr/bin/mpv"), mpv_config_path.clone(), mpv_config_path.parent().unwrap().to_path_buf()),
+                false => return Err(format!("mpv 未安装，请先安装 mpv ，检测路径 /usr/bin/mpv")),
+            },
         }
     };
     let mpv_args = global_config_mapper::get_cache("mpv_args", state).await.unwrap_or("".to_string());
 
-    let mpv_config_dir = app_handle.path().app_config_dir().unwrap().join("mpv_config");
     if !mpv_config_dir.exists() {
         let res = file_util::mkdir(&mpv_config_dir);
         if res.is_err() {
@@ -141,6 +149,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     command.current_dir(&mpv_startup_dir)
         .arg(&format!("--include={}", mpv_config_path.to_str().unwrap()))
         .arg(&format!("--input-ipc-server={}", &pipe_name))
+        .arg(&format!("--config-dir={}", mpv_config_dir.to_str().unwrap()))
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
         .arg("--autoload-files=no")  // 不自动加载外部文件
