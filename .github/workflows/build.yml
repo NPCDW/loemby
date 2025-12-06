@@ -21,10 +21,16 @@ jobs:
         include:
           - build: linux
             os: ubuntu-latest
-          - build: macos
-            os: macos-latest
+            args: ''
+          - build: macos-aarch64
+            platform: 'macos-latest' # for Arm based macs (M1 and above).
+            args: '--target aarch64-apple-darwin'
+          - build: macos-x86
+            platform: 'macos-latest' # for Intel based macs.
+            args: '--target x86_64-apple-darwin'
           - build: windows
             os: windows-latest
+            args: ''
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
@@ -36,9 +42,16 @@ jobs:
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         cache: false
+        # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+        targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
     - name: Install web dependencies
       shell: bash
       run: npm install -g pnpm && pnpm i
+    - name: install dependencies (ubuntu only)
+      if: matrix.build == 'linux' # This must match the platform value defined above.
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
     - name: Add Mpv
       shell: bash
       run: |
