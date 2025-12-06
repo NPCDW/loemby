@@ -76,4 +76,5 @@ jobs:
       with:
         updaterJsonPreferNsis: true
         tagName: ${{ github.ref_name }}
+        releaseAssetNamePattern: "[name]-[version]-[platform]-[arch][ext]"
         args: ${{ matrix.args }}
