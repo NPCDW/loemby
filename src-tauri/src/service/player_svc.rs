@@ -145,18 +145,18 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     
     let mpv_volume = global_config_mapper::get_cache("mpv_volume", state).await.unwrap_or("100".to_string());
 
-    let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap());
+    let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap().replace(r"\\?\", ""));
     command.current_dir(&mpv_startup_dir)
-        .arg(&format!("--include={}", mpv_config_path.to_str().unwrap()))
+        .arg(&format!("--include={}", mpv_config_path.as_os_str().to_str().unwrap().replace(r"\\?\", "")))
         .arg(&format!("--input-ipc-server={}", &pipe_name))
-        .arg(&format!("--config-dir={}", mpv_config_dir.to_str().unwrap()))
+        .arg(&format!("--config-dir={}", mpv_config_dir.as_os_str().to_str().unwrap().replace(r"\\?\", "")))
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
         .arg("--autoload-files=no")  // 不自动加载外部文件
         // .arg("--force-seekable=yes")  // 某些视频格式在没缓存到的情况下不支持跳转，需要打开此配置，测试后发现强制跳转到没有缓存的位置后，mpv会从头开始缓存，一直缓存到跳转位置，与打开此设置的初衷相违背
         .arg(&format!("--user-agent={}", emby_server.user_agent.as_ref().unwrap()))
         .arg(&format!("--volume={}", &mpv_volume))
-        .arg(&format!("--playlist={}", mpv_playlist_path.to_str().unwrap()))
+        .arg(&format!("--playlist={}", mpv_playlist_path.as_os_str().to_str().unwrap().replace(r"\\?\", "")))
         .arg(&format!("--playlist-start={}", playlist_start));
 
     tracing::debug!("调用MPV: {:?}", &command);
