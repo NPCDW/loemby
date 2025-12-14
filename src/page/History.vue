@@ -1,31 +1,24 @@
 <template>
     <el-scrollbar style="padding: 10px;" ref="scrollbarRef">
-        <el-form :inline="true">
-            <el-form-item>
-                <el-select
-                    v-model="query.emby_server_id"
-                    @change="getPlayHistory"
-                    clearable
-                    placeholder="筛选服务器"
-                    style="width: 260px;">
-                    <el-option v-for="embyServer in embyServers" :key="embyServer.id" :label="embyServer.server_name" :value="embyServer.id"/>
-                </el-select>
-            </el-form-item>
-            <el-form-item>
-                <el-input v-model="query.series_name" @keyup.enter="getPlayHistory" style="width: 260px;">
-                    <template #prefix>
-                        <span>剧</span>
-                    </template>
-                </el-input>
-            </el-form-item>
-            <el-form-item>
-                <el-input v-model="query.item_name" @keyup.enter="getPlayHistory" style="width: 260px;">
-                    <template #prefix>
-                        <span>集</span>
-                    </template>
-                </el-input>
-            </el-form-item>
-        </el-form>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <el-select
+                v-model="query.emby_server_id"
+                @change="getPlayHistory"
+                clearable
+                placeholder="筛选服务器">
+                <el-option v-for="embyServer in embyServers" :key="embyServer.id" :label="embyServer.server_name" :value="embyServer.id"/>
+            </el-select>
+            <el-input v-model="query.series_name" @keyup.enter="getPlayHistory">
+                <template #prefix>
+                    <span>剧</span>
+                </template>
+            </el-input>
+            <el-input v-model="query.item_name" @keyup.enter="getPlayHistory">
+                <template #prefix>
+                    <span>集</span>
+                </template>
+            </el-input>
+        </div>
         <el-table :data="list" :row-style="highlightRowFunction">
             <el-table-column prop="emby_server_name" label="服务器" show-overflow-tooltip />
             <el-table-column prop="series_name" label="剧" show-overflow-tooltip>
