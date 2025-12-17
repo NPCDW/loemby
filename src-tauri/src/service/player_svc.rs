@@ -42,12 +42,17 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             },
         }
     } else {
-        #[cfg(windows)]
+        #[cfg(target_os = "windows")]
         match app_handle.path().resolve("resources/mpv/mpv.exe", tauri::path::BaseDirectory::Resource,) {
             Err(err) => return Err(format!("内置 mpv 路径获取失败: {}", err.to_string())),
             Ok(mpv_path) => (mpv_path.clone(), mpv_path.parent().unwrap().join("portable_config"), mpv_path.parent().unwrap().to_path_buf()),
         }
-        #[cfg(unix)]
+        #[cfg(target_os = "linux")]
+        match app_handle.path().resolve("resources/mpv/mpv.AppImage", tauri::path::BaseDirectory::Resource,) {
+            Err(err) => return Err(format!("内置 mpv 路径获取失败: {}", err.to_string())),
+            Ok(mpv_path) => (mpv_path.clone(), mpv_path.parent().unwrap().join("portable_config"), mpv_path.parent().unwrap().to_path_buf()),
+        }
+        #[cfg(target_os = "macos")]
         match app_handle.path().resolve("resources/mpv/portable_config", tauri::path::BaseDirectory::Resource,) {
             Err(err) => return Err(format!("内置 mpv 配置目录获取失败: {}", err.to_string())),
             Ok(mpv_config_path) => match PathBuf::from("/usr/bin/mpv").is_file() {
@@ -850,13 +855,6 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
             id: &params.emby_server_id,
             event: "update",
         })?;
-    } else {
-        app_handle.emit("tauri_notify", TauriNotify {
-            event_type: "ElMessage".to_string(),
-            message_type: "warning".to_string(),
-            title: None,
-            message: format!("播放时间不足 5 分钟，不更新最后播放时间"),
-        }).unwrap()
     }
     
     match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &state.db_pool).await? {

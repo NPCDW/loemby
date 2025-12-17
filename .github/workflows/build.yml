@@ -18,18 +18,30 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - build: linux
+          - build: linux-x86
             platform: ubuntu-latest
-            args: ''
-          - build: macos-aarch64
+            rust_target: ''
+            tauri_build_args: ''
+          - build: linux-arm
+            platform: ubuntu-24.04-arm
+            rust_target: ''
+            tauri_build_args: ''
+          - build: macos-arm
             platform: macos-latest # for Arm based macs (M1 and above).
-            args: '--target aarch64-apple-darwin'
+            rust_target: 'aarch64-apple-darwin'
+            tauri_build_args: '--target aarch64-apple-darwin'
           - build: macos-x86
-            platform: macos-latest # for Intel based macs.
-            args: '--target x86_64-apple-darwin'
-          - build: windows
+            platform: macos-latest-large # for Intel based macs.
+            rust_target: 'x86_64-apple-darwin'
+            tauri_build_args: '--target x86_64-apple-darwin'
+          - build: windows-x86
             platform: windows-latest
-            args: ''
+            rust_target: ''
+            tauri_build_args: ''
+          - build: windows-arm
+            platform: windows-11-arm
+            rust_target: ''
+            tauri_build_args: ''
     runs-on: ${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v6
@@ -42,12 +54,12 @@ jobs:
       with:
         cache: false
         # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
-        target: ${{ matrix.build == 'macos-aarch64' && 'aarch64-apple-darwin' || matrix.build == 'macos-x86' && 'x86_64-apple-darwin' || '' }}
+        target: ${{ matrix.rust_target }}
     - name: Install web dependencies
       shell: bash
       run: npm install -g pnpm && pnpm i
     - name: install dependencies (ubuntu only)
-      if: matrix.build == 'linux'
+      if: matrix.build == 'linux-x86' || matrix.build == 'linux-arm64'
       run: |
         sudo apt-get update
         sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -55,11 +67,41 @@ jobs:
       shell: bash
       run: |
         mkdir mpv-build && cd mpv-build
-        if [ "${{ matrix.build }}" = "windows" ]; then
+        if [ "${{ matrix.build }}" = "windows-x86" ]; then
           ASSET_URL=$(curl -s https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest | grep -o '"browser_download_url": *"[^"]*mpv-x86_64-20[^"]*\.7z"' | head -1 | cut -d'"' -f4)
           echo "Downloading MPV from: $ASSET_URL"
           curl -L -O "$ASSET_URL"
           7z x mpv-x86_64-*.7z && rm -rf mpv-x86_64-*.7z
+          mv ./* ../src-tauri/resources/mpv
+        elif [ "${{ matrix.build }}" = "windows-arm" ]; then
+          ASSET_URL=$(curl -s https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest | grep -o '"browser_download_url": *"[^"]*mpv-aarch64-20[^"]*\.7z"' | head -1 | cut -d'"' -f4)
+          echo "Downloading MPV from: $ASSET_URL"
+          curl -L -O "$ASSET_URL"
+          7z x mpv-aarch64-*.7z && rm -rf mpv-aarch64-*.7z
+          mv ./* ../src-tauri/resources/mpv
+        elif [ "${{ matrix.build }}" = "linux-x86" ]; then
+          ASSET_URL=$(curl -s https://api.github.com/repos/pkgforge-dev/mpv-AppImage/releases/latest | grep -o '"browser_download_url": *"[^"]*anylinux-x86_64\.AppImage"' | head -1 | cut -d'"' -f4)
+          echo "Downloading MPV from: $ASSET_URL"
+          curl -L -O "$ASSET_URL"
+          chmod +x mpv-*.AppImage && mv mpv-*.AppImage mpv.AppImage
+          mv ./* ../src-tauri/resources/mpv
+        elif [ "${{ matrix.build }}" = "linux-arm" ]; then
+          ASSET_URL=$(curl -s https://api.github.com/repos/pkgforge-dev/mpv-AppImage/releases/latest | grep -o '"browser_download_url": *"[^"]*anylinux-aarch64\.AppImage"' | head -1 | cut -d'"' -f4)
+          echo "Downloading MPV from: $ASSET_URL"
+          curl -L -O "$ASSET_URL"
+          chmod +x mpv-*.AppImage && mv mpv-*.AppImage mpv.AppImage
+          mv ./* ../src-tauri/resources/mpv
+        elif [ "${{ matrix.build }}" = "macos-arm" ]; then
+          ASSET_URL="https://nightly.link/mpv-player/mpv/workflows/build/master/mpv-macos-15-arm.zip"
+          echo "Downloading MPV from: $ASSET_URL"
+          curl -L -O "$ASSET_URL"
+          unzip mpv-macos-15-arm.zip && tar -zxvf mpv.tar.gz && rm -rf mpv-macos-15-arm.zip mpv.tar.gz
+          mv ./* ../src-tauri/resources/mpv
+        elif [ "${{ matrix.build }}" = "macos-x86" ]; then
+          ASSET_URL="https://nightly.link/mpv-player/mpv/workflows/build/master/mpv-macos-15-intel.zip"
+          echo "Downloading MPV from: $ASSET_URL"
+          curl -L -O "$ASSET_URL"
+          unzip mpv-macos-15-arm.zip && tar -zxvf mpv.tar.gz && rm -rf mpv-macos-15-arm.zip mpv.tar.gz
           mv ./* ../src-tauri/resources/mpv
         fi
         mkdir -p ../src-tauri/resources/mpv/portable_config ../src-tauri/resources/mpv/portable_config/script-opts ../src-tauri/resources/mpv/portable_config/scripts
@@ -77,4 +119,4 @@ jobs:
         updaterJsonPreferNsis: true
         tagName: ${{ github.ref_name }}
         assetNamePattern: "[name]-[version]-[platform]-[arch][ext]"
-        args: ${{ matrix.args }}
+        args: ${{ matrix.tauri_build_args }}
