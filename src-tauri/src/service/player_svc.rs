@@ -1,10 +1,10 @@
-use std::{cmp::{max, min}, path::PathBuf};
+use std::{cmp::{max, min}, path::PathBuf, sync::Arc};
 
 use rust_decimal::prelude::*;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, sync::RwLock};
 use tokio_stream::StreamExt;
 
 use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, trakt_http_svc::{self, ScrobbleParam}}, util::{file_util, media_source_util}};
@@ -253,7 +253,7 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
     };
     let media_source = &playback_info.media_sources[media_source_index];
     // 选中媒体源的视频地址
-    let support_direct_link = media_source.is_remote == Some(true) && media_source.path.is_some() && media_source.path.as_ref().unwrap().contains("://") && !media_source_util::is_internal_url(&media_source.path.as_ref().unwrap());
+    let support_direct_link = media_source.is_remote == Some(true) && media_source.path.is_some() && media_source.path.as_ref().ok_or(anyhow::anyhow!("路径解析错误"))?.contains("://") && !media_source_util::is_internal_url(&media_source.path.as_ref().unwrap());
     let mut video_url = if params.use_direct_link && support_direct_link {
         media_source.path.clone().unwrap()
     } else if media_source.direct_stream_url.is_some() {
@@ -281,7 +281,7 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
     }
 
     // 播放进度
-    let playback_progress_param = PlaybackProgressParam {
+    let playback_progress_param = PlaybackProcessParam {
         params: params.clone(),
         episode: None,
         media_source: media_source.clone(),
@@ -297,7 +297,7 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
         media_source_index,
     };
     tauri::async_runtime::spawn(async move {
-        let res = playback_progress(playback_progress_param).await;
+        let res = playback_process(playback_progress_param).await;
         if res.is_err() {
             tracing::error!("播放进度失败: {:?}", res.unwrap_err());
         }
@@ -306,29 +306,57 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
     Ok(video_url)
 }
 
-async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressParam) -> anyhow::Result<()> {
+async fn play_info_init(playback_progress_param: &PlaybackProcessParam) -> anyhow::Result<()> {
     // 向mpv添加音频字幕
-    let PlaybackProgressParam {
+    let PlaybackProcessParam {
         params,
         episode: _,
         media_source,
-        playback_info: _,
+        playback_info,
         app_handle,
         axum_app_state,
         scrobble_trakt_param: _,
         start_time: _,
         emby_server,
         play_proxy_url,
-        id: _,
-        media_source_select: _,
-        media_source_index: _,
+        id,
+        media_source_select,
+        media_source_index,
     } = playback_progress_param;
     let app_state = app_handle.state::<AppState>();
 
     let (_recver, mut sender) = get_pipe_rw(&params.mpv_ipc).await?;
+    
+    // 发送向 mpv 多版本命令参数
+    #[derive(Debug, Serialize, Deserialize)]
+    struct MutiVersionCommand {
+        path: String,
+        title: String,
+        hint: String,
+    }
+    let mut muti_version_list: Vec<MutiVersionCommand> = Vec::new();
+    for (i, media_source) in playback_info.media_sources.iter().enumerate() {
+        let media_source_select = if media_source_select == &0 && media_source_index == &i { 0 } else { i + 1 };
+        muti_version_list.push(MutiVersionCommand {
+            path: format!("http://127.0.0.1:{}/play_media/{}/{}", &axum_app_state.port, id, media_source_select),
+            title: media_source_util::get_display_title_from_media_sources(media_source),
+            hint: format!("{}, {}, {}", media_source_util::get_resolution_from_media_sources(media_source), media_source_util::format_bytes(media_source.size.unwrap_or(0)), media_source_util::format_mbps(media_source.bitrate.unwrap_or(0)))
+        });
+    }
+    let muti_version = serde_json::to_string(&muti_version_list)?.replace(r"\", r"\\").replace(r#"""#, r#"\""#);
+    let set_muti_version_command = format!(r#"{{ "command": ["script-message-to", "uosc", "set-muti-version", "{}"] }}{}"#, muti_version, "\n");
+    sender.write_all(set_muti_version_command.as_bytes()).await?;
+    sender.flush().await?;
+    tracing::debug!("MPV IPC Command set-muti-version: {}", set_muti_version_command);
+    let set_force_media_title_command = format!(r#"{{ "command": ["set_property", "force-media-title", "{}"] }}{}"#, params.media_title, "\n");
+    sender.write_all(set_force_media_title_command.as_bytes()).await?;
+    sender.flush().await?;
+    tracing::debug!("MPV IPC Command force-media-title: {}", set_force_media_title_command);
+
     if params.playback_position_ticks != 0 {
         let command = format!(r#"{{ "command": ["seek", "{}", "absolute"] }}{}"#, params.playback_position_ticks / 1000_0000, "\n");
         sender.write_all(command.as_bytes()).await?;
+        sender.flush().await?;
         tracing::debug!("MPV IPC Command seek: {}", command);
     }
     for media_stream in &media_source.media_streams {
@@ -355,6 +383,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
             }
             let command = format!(r#"{{ "command": ["audio-add", "{}", "auto"] }}{}"#, audio_url, "\n");
             sender.write_all(command.as_bytes()).await?;
+            sender.flush().await?;
             tracing::debug!("MPV IPC Command audio-add: {}", command);
         } else if media_stream.type_ == "Subtitle" {
             let mut subtitle_url = emby_http_svc::get_subtitle_stream_url(EmbyGetSubtitleStreamUrlParam {
@@ -377,6 +406,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
             }
             let command = format!(r#"{{ "command": ["sub-add", "{}"] }}{}"#, subtitle_url, "\n");
             sender.write_all(command.as_bytes()).await?;
+            sender.flush().await?;
             tracing::debug!("MPV IPC Command sub-add: {}", command);
         }
     }
@@ -427,6 +457,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
     let track_titles = serde_json::to_string(&track_titles)?.replace(r"\", r"\\").replace(r#"""#, r#"\""#);
     let set_track_titles_command = format!(r#"{{ "command": ["script-message-to", "uosc", "set-track-title", "{}"] }}{}"#, track_titles, "\n");
     sender.write_all(set_track_titles_command.as_bytes()).await?;
+    sender.flush().await?;
     tracing::debug!("MPV IPC Command set_track_titles: {}", set_track_titles_command);
 
     if params.select_policy == "manual" {
@@ -451,6 +482,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
     };
     let command = format!(r#"{{ "command": ["set_property", "vid", "{}"] }}{}"#, property, "\n");
     sender.write_all(command.as_bytes()).await?;
+    sender.flush().await?;
     let property = match aid {
         -1 => "no".to_string(),
         0 => "auto".to_string(),
@@ -458,6 +490,7 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
     };
     let command = format!(r#"{{ "command": ["set_property", "aid", "{}"] }}{}"#, property, "\n");
     sender.write_all(command.as_bytes()).await?;
+    sender.flush().await?;
     let property = match sid {
         -1 => "no".to_string(),
         0 => "auto".to_string(),
@@ -465,25 +498,37 @@ async fn mpv_add_external_and_select(playback_progress_param: &PlaybackProgressP
     };
     let command = format!(r#"{{ "command": ["set_property", "sid", "{}"] }}{}"#, property, "\n");
     sender.write_all(command.as_bytes()).await?;
+    sender.flush().await?;
+
+    tracing::debug!("init mpv play info finished");
+    
+    // emby开始播放api
+    let _ = emby_http_svc::playing(EmbyPlayingParam {
+        emby_server_id: params.emby_server_id.clone(),
+        item_id: params.item_id.clone(),
+        media_source_id: media_source.id.clone(),
+        play_session_id: playback_info.play_session_id.clone(),
+        position_ticks: params.playback_position_ticks,
+    }, &app_state).await;
 
     Ok(())
 }
 
-async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -> anyhow::Result<()> {
-    let PlaybackProgressParam {
+async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> anyhow::Result<()> {
+    let PlaybackProcessParam {
         ref params,
         episode: _,
         ref media_source,
-        ref playback_info,
+        playback_info: _,
         ref app_handle,
-        ref axum_app_state,
+        axum_app_state: _,
         scrobble_trakt_param: _,
         start_time: _,
         ref emby_server,
         ref play_proxy_url,
-        ref id,
-        media_source_select,
-        media_source_index,
+        id: _,
+        media_source_select: _,
+        media_source_index: _,
     } = playback_progress_param;
     let app_state = app_handle.state::<AppState>();
 
@@ -500,18 +545,18 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
                 media_streams_is_external: true,
             }, &app_state).await?;
             let cache_digest = sha256::digest(subtitle_url.clone());
-            let cache_file_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass", cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+            let cache_file_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass", cache_digest), tauri::path::BaseDirectory::AppLocalData)?;
             if cache_file_path.exists() {
                 tracing::debug!("cache subtitle file exists: {}", cache_file_path.display());
                 continue;
             }
-            let cache_file_tmp_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass.tmp", cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+            let cache_file_tmp_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass.tmp", cache_digest), tauri::path::BaseDirectory::AppLocalData)?;
             let (play_proxy_url, app_handle, user_agent) = (play_proxy_url.clone(), app_handle.clone(), emby_server.user_agent.as_ref().unwrap().clone());
             tokio::spawn(async move {
                 async fn download_subtitle_file(subtitle_url: String, cache_file_path: PathBuf, play_proxy_url: Option<String>, user_agent: String, app_state: tauri::State<'_, AppState>, cache_file_tmp_path: PathBuf) -> anyhow::Result<()> {
                     let client = http_pool::get_image_http_client(play_proxy_url.clone(), &app_state).await?;
                     let mut headers = reqwest::header::HeaderMap::new();
-                    headers.insert(reqwest::header::USER_AGENT, reqwest::header::HeaderValue::from_str(&user_agent).unwrap());
+                    headers.insert(reqwest::header::USER_AGENT, reqwest::header::HeaderValue::from_str(&user_agent)?);
                     let builder = client
                         .get(subtitle_url.clone())
                         .headers(headers);
@@ -524,13 +569,13 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
                     }
                     let mut stream = response.bytes_stream();
                     if !cache_file_tmp_path.parent().unwrap().exists() {
-                        std::fs::create_dir_all(cache_file_tmp_path.parent().unwrap()).unwrap();
+                        std::fs::create_dir_all(cache_file_tmp_path.parent().unwrap())?;
                     }
-                    let mut cache_tmp_file = tokio::fs::File::create(&cache_file_tmp_path).await.unwrap();
+                    let mut cache_tmp_file = tokio::fs::File::create(&cache_file_tmp_path).await?;
                     while let Some(Ok(chunk)) = stream.next().await {
-                        cache_tmp_file.write_all(&chunk).await.unwrap();
+                        cache_tmp_file.write_all(&chunk).await?;
                     }
-                    cache_tmp_file.flush().await.unwrap();
+                    cache_tmp_file.flush().await?;
                     drop(cache_tmp_file);
                     let _ = file_util::rename(cache_file_tmp_path, cache_file_path);
                     Ok(())
@@ -548,30 +593,6 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
 
     let (recver, mut sender) = get_pipe_rw(&params.mpv_ipc).await?;
     let mut recver = BufReader::new(recver);
-
-    // 发送向 mpv 多版本命令参数
-    #[derive(Debug, Serialize, Deserialize)]
-    struct MutiVersionCommand {
-        path: String,
-        title: String,
-        hint: String,
-    }
-    let mut muti_version_list: Vec<MutiVersionCommand> = Vec::new();
-    for (i, media_source) in playback_info.media_sources.iter().enumerate() {
-        let media_source_select = if media_source_select == 0 && media_source_index == i { 0 } else { i + 1 };
-        muti_version_list.push(MutiVersionCommand {
-            path: format!("http://127.0.0.1:{}/play_media/{}/{}", &axum_app_state.port, id, media_source_select),
-            title: media_source_util::get_display_title_from_media_sources(media_source),
-            hint: format!("{}, {}, {}", media_source_util::get_resolution_from_media_sources(media_source), media_source_util::format_bytes(media_source.size.unwrap_or(0)), media_source_util::format_mbps(media_source.bitrate.unwrap_or(0)))
-        });
-    }
-    let muti_version = serde_json::to_string(&muti_version_list)?.replace(r"\", r"\\").replace(r#"""#, r#"\""#);
-    let set_muti_version_command = format!(r#"{{ "command": ["script-message-to", "uosc", "set-muti-version", "{}"] }}{}"#, muti_version, "\n");
-    sender.write_all(set_muti_version_command.as_bytes()).await?;
-    tracing::debug!("MPV IPC Command set-muti-version: {}", set_muti_version_command);
-    let set_force_media_title_command = format!(r#"{{ "command": ["set_property", "force-media-title", "{}"] }}{}"#, params.media_title, "\n");
-    sender.write_all(set_force_media_title_command.as_bytes()).await?;
-    tracing::debug!("MPV IPC Command force-media-title: {}", set_force_media_title_command);
 
     // 缓存大小
     let mut cache_max_bytes = 300 * 1024 * 1024;
@@ -595,8 +616,10 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
     }
     let command = format!(r#"{{ "command": ["set_property", "demuxer-max-bytes", "{}"] }}{}"#, cache_max_bytes, "\n");
     sender.write_all(command.as_bytes()).await?;
+    sender.flush().await?;
     let command = format!(r#"{{ "command": ["set_property", "demuxer-max-back-bytes", "{}"] }}{}"#, cache_back_max_bytes, "\n");
     sender.write_all(command.as_bytes()).await?;
+    sender.flush().await?;
 
     // 本地播放历史记录
     let episode = match emby_http_svc::items(EmbyItemsParam {
@@ -604,16 +627,16 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
         item_id: params.item_id.clone(),
     }, &app_state, true).await {
         Err(e) => return Err(anyhow::anyhow!("获取剧集信息失败: {}", e.to_string())),
-        Ok(episode) => serde_json::from_str::<EpisodeItem>(&episode).unwrap(),
+        Ok(episode) => serde_json::from_str::<EpisodeItem>(&episode)?,
     };
     playback_progress_param.episode = Some(episode);
     let episode = playback_progress_param.episode.as_ref().unwrap();
     let mut pinned = 0;
     if let Some(series_id) = episode.series_id.clone() {
-        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await.unwrap();
+        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await?;
         if pinned_update.rows_affected() > 0 { pinned = 1 }
     }
-    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &app_state.db_pool).await.unwrap() {
+    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &app_state.db_pool).await? {
         Some(response) => {
             if episode.series_id.is_none() {
                 pinned = response.pinned.unwrap();
@@ -628,7 +651,7 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
                 series_name: episode.series_name.clone(),
                 pinned: Some(pinned),
                 ..Default::default()
-            }, &app_state.db_pool).await.unwrap();
+            }, &app_state.db_pool).await?;
         },
         None => {
             play_history_mapper::create(PlayHistory {
@@ -644,18 +667,9 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
                 series_name: episode.series_name.clone(),
                 played_duration: Some(0),
                 pinned: Some(pinned),
-            }, &app_state.db_pool).await.unwrap();
+            }, &app_state.db_pool).await?;
         },
     }
-
-    // emby开始播放api
-    let _ = emby_http_svc::playing(EmbyPlayingParam {
-        emby_server_id: params.emby_server_id.clone(),
-        item_id: params.item_id.clone(),
-        media_source_id: media_source.id.clone(),
-        play_session_id: playback_info.play_session_id.clone(),
-        position_ticks: params.playback_position_ticks,
-    }, &app_state).await;
 
     // trakt 开始播放
     let series = if let Some(series_id) = episode.series_id.clone() {
@@ -682,26 +696,19 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
                         message_type: "start".to_string(),
                         title: None,
                         message: json,
-                    }).unwrap(),
+                    })?,
                 Err(err) => 
                     app_handle.emit("tauri_notify", TauriNotify {
                         event_type: "TraktNotify".to_string(),
                         message_type: "error".to_string(),
                         title: None,
                         message: format!("调用trakt开始播放失败: {}", err),
-                    }).unwrap()
+                    })?
             }
         }
         trakt_scrobble_param
     } else { None };
     playback_progress_param.scrobble_trakt_param = scrobble_trakt_param;
-
-    // 观测播放进度，返回太频繁，改为每2秒获取一次，用户跳转时立即获取一次
-    // let observe_property_progress_command = r#"{ "command": ["observe_property", 10023, "playback-time"]}"#.to_string() + "\n";
-    // let write = sender.write_all(observe_property_progress_command.as_bytes()).await;
-    // if write.is_err() {
-    //     tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
-    // }
 
     // 观测音量
     let observe_property_volume_command = r#"{ "command": ["observe_property", 10001, "volume"]}"#.to_string() + "\n";
@@ -709,8 +716,20 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
     if write.is_err() {
         tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
     }
+    sender.flush().await?;
+
+    let play_info_init_finished = Arc::new(RwLock::new(false));
+
+    // 观测播放进度，返回太频繁，改为每2秒获取一次，用户跳转时立即获取一次
+    // let observe_property_progress_command = r#"{ "command": ["observe_property", 10023, "playback-time"]}"#.to_string() + "\n";
+    // let write = sender.write_all(observe_property_progress_command.as_bytes()).await;
+    // let _ = sender.flush().await;
+    // if write.is_err() {
+    //     tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
+    // }
 
     let run_time_ticks = media_source.run_time_ticks;
+    let play_info_init_finished_clone = play_info_init_finished.clone();
     let send_task = tokio::spawn(async move {
         let command = if run_time_ticks.is_none() || run_time_ticks == Some(0) {
             r#"{ "command": ["get_property", "percent-pos"], "request_id": 10022 }"#.to_string() + "\n"
@@ -718,10 +737,13 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
             r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n"
         };
         loop {
-            let write = sender.write_all(command.as_bytes()).await;
-            if write.is_err() {
-                tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
-                break;
+            if play_info_init_finished_clone.read().await.clone() {
+                let write = sender.write_all(command.as_bytes()).await;
+                if write.is_err() {
+                    tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
+                    break;
+                }
+                let _ = sender.flush().await;
             }
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
@@ -729,7 +751,6 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
 
     let mut last_save_time = chrono::Local::now();
     let mut last_record_position = Decimal::from_u64(params.playback_position_ticks / 1000_0000).unwrap();
-    let mut start_recording = false;
     loop {
         let mut buffer = String::new();
         let read = recver.read_line(&mut buffer).await;
@@ -739,7 +760,7 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
             save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
-        tracing::debug!("MPV IPC Server answered: {}", buffer.trim());
+        tracing::debug!("MPV IPC Received: {}", buffer.trim());
         if buffer.trim().is_empty() {
             send_task.abort();
             save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
@@ -753,12 +774,13 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
             save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
-        let json = json.unwrap();
+        let json = json?;
         if let Some(10001) = json.id {
             if let Some(volume) = json.data {
                 tracing::debug!("MPV IPC 音量观测变更 {}", volume);
+                let volume = volume.as_f64().ok_or(anyhow::anyhow!("音量不是数字"))?;
                 let mpv_volume = global_config_mapper::get_cache("mpv_volume", &app_handle.state()).await.unwrap_or("100".to_string());
-                if mpv_volume.parse::<usize>().unwrap_or(100) != volume as usize {
+                if mpv_volume.parse::<f64>().unwrap_or(100.0) != volume {
                     let res = global_config_mapper::create_or_update(GlobalConfig {
                         config_key: Some("mpv_volume".to_string()),
                         config_value: Some((volume as usize).to_string()),
@@ -768,6 +790,14 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
                     }
                 }
             }
+            continue;
+        }
+        if !play_info_init_finished.read().await.clone() {
+            if Some("file-loaded") == json.event {
+                play_info_init(&playback_progress_param).await?;
+                *play_info_init_finished.write().await = true;
+            }
+            continue;
         }
         if let Some("end-file") = json.event {
             tracing::debug!("MPV IPC 播放结束");
@@ -782,39 +812,36 @@ async fn playback_progress(mut playback_progress_param: PlaybackProgressParam) -
         if let Some("seek") = json.event {
             continue;
         }
-        if let Some("file-loaded") = json.event {
-            start_recording = true;
-            mpv_add_external_and_select(&playback_progress_param).await?;
-        }
-        if !start_recording {
-            continue;
-        }
         if let Some(10022) = json.request_id {
-            if let Some(progress_percent) = json.data {
+            if let Some(progress_percent) = &json.data {
                 tracing::debug!("MPV IPC 播放进度百分比 {}", progress_percent);
+                let progress_percent = progress_percent.as_f64().ok_or(anyhow::anyhow!("播放进度百分比不是数字"))?;
                 last_record_position = Decimal::from_f64(progress_percent).unwrap().round();
                 if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
                     last_save_time = chrono::Local::now();
                     save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
                 }
             }
+            continue;
         }
         if let Some(10023) = json.request_id {
-            if let Some(progress) = json.data {
+            if let Some(progress) = &json.data {
                 tracing::debug!("MPV IPC 播放进度 {}", progress);
+                let progress = progress.as_f64().ok_or(anyhow::anyhow!("播放进度不是数字"))?;
                 last_record_position = Decimal::from_f64(progress).unwrap().round();
                 if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
                     last_save_time = chrono::Local::now();
                     save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
                 }
             }
+            continue;
         }
     }
     anyhow::Ok(())
 }
 
-async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam, last_record_position: Decimal, playback_status: PlayingProgressEnum) -> anyhow::Result<()> {
-    let PlaybackProgressParam {
+async fn save_playback_progress(playback_progress_param: &PlaybackProcessParam, last_record_position: Decimal, playback_status: PlayingProgressEnum) -> anyhow::Result<()> {
+    let PlaybackProcessParam {
         params,
         episode,
         media_source,
@@ -898,14 +925,14 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProgressParam,
                     message_type: "stop".to_string(),
                     title: None,
                     message: json,
-                }).unwrap(),
+                })?,
             Err(err) => 
                 app_handle.emit("tauri_notify", TauriNotify {
                     event_type: "TraktNotify".to_string(),
                     message_type: "error".to_string(),
                     title: None,
                     message: format!("调用trakt停止播放失败: {}", err),
-                }).unwrap()
+                })?
         }
     }
 
@@ -944,7 +971,7 @@ enum PlayingProgressEnum {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 struct MpvIpcResponse<'a> {
     event: Option<&'a str>,    // 事件 end-file | audio-reconfig | video-reconfig | playback-restart | client-message | seek | file-loaded
-    data: Option<f64>,    // 获取播放进度时，返回秒
+    data: Option<serde_json::Value>,    // 获取播放进度时，返回秒
     request_id: Option<u32>,    // 请求ID，可以自定义传入，响应时会返回该ID
     id: Option<u32>,    // 观测ID，可以自定义传入，属性发生变化时会返回该ID
     reason: Option<&'a str>,    // quit | eof | error
@@ -976,7 +1003,7 @@ struct TrackTitleParam {
     sub: Vec<String>,
 }
 
-struct PlaybackProgressParam {
+struct PlaybackProcessParam {
     params: MediaPlaylistParam,
     episode: Option<EpisodeItem>,
     media_source: MediaSource,

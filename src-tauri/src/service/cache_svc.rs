@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use tauri::Manager;
 
 use crate::{config::app_state::AppState, mapper::global_config_mapper::{self, GlobalConfig}, util::file_util};
@@ -130,13 +132,16 @@ pub async fn clean_emby_image(emby_server_id: Option<String>, force_clean: bool,
 
 pub async fn clean(dir: String, days_to_keep: u32, force_clean: bool, app_handle: &tauri::AppHandle) -> anyhow::Result<()> {
     let cutoff_time = std::time::SystemTime::now().checked_sub(std::time::Duration::from_secs(days_to_keep as u64 * 24 * 60 * 60)).unwrap();
-    clean_r(dir, cutoff_time, force_clean, app_handle).await?;
+    let absolute_dir = app_handle.path().resolve(&dir, tauri::path::BaseDirectory::AppLocalData)?;
+    if !absolute_dir.exists() {
+        return anyhow::Ok(());
+    }
+    clean_r(&absolute_dir, cutoff_time, force_clean, app_handle).await?;
     anyhow::Ok(())
 }
 
-async fn clean_r(dir: String, cutoff_time: std::time::SystemTime, force_clean: bool, app_handle: &tauri::AppHandle) -> anyhow::Result<()> {
-    let absolute_dir = app_handle.path().resolve(&dir, tauri::path::BaseDirectory::AppLocalData)?;
-    let files = std::fs::read_dir(&absolute_dir)?
+async fn clean_r(dir: &PathBuf, cutoff_time: std::time::SystemTime, force_clean: bool, app_handle: &tauri::AppHandle) -> anyhow::Result<()> {
+    let files = std::fs::read_dir(dir)?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, std::io::Error>>()?;
     for file in &files {
@@ -144,7 +149,7 @@ async fn clean_r(dir: String, cutoff_time: std::time::SystemTime, force_clean: b
         let metadata = file.metadata()?;
 
         if metadata.is_dir() {
-            Box::pin(clean_r(format!("{}/{}", &dir, file.file_name().unwrap().to_str().unwrap()), cutoff_time, force_clean, app_handle)).await?;
+            Box::pin(clean_r(file, cutoff_time, force_clean, app_handle)).await?;
             continue
         }
 
@@ -162,10 +167,10 @@ async fn clean_r(dir: String, cutoff_time: std::time::SystemTime, force_clean: b
             }
         }
     }
-    let mut files = tokio::fs::read_dir(&absolute_dir).await?;
+    let mut files = tokio::fs::read_dir(dir).await?;
     if files.next_entry().await?.is_none() {
-        tokio::fs::remove_dir(&absolute_dir).await?;
-        tracing::debug!("Deleted empty directory: {}", absolute_dir.display());
+        tokio::fs::remove_dir(dir).await?;
+        tracing::debug!("Deleted empty directory: {}", dir.display());
     }
     anyhow::Ok(())
 }
