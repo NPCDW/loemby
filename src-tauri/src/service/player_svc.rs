@@ -280,8 +280,8 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
         video_url = format!("http://127.0.0.1:{}/stream/video/{}", &axum_app_state.port, &uuid);
     }
 
-    // 播放进度
-    let playback_progress_param = PlaybackProcessParam {
+    // 播放进程
+    let playback_process_param = PlaybackProcessParam {
         params: params.clone(),
         episode: None,
         media_source: media_source.clone(),
@@ -298,16 +298,16 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
         sender: None,
     };
     tauri::async_runtime::spawn(async move {
-        let res = playback_process(playback_progress_param).await;
+        let res = playback_process(playback_process_param).await;
         if res.is_err() {
-            tracing::error!("播放进度失败: {:?}", res.unwrap_err());
+            tracing::error!("播放进程失败: {:?}", res.unwrap_err());
         }
     });
 
     Ok(video_url)
 }
 
-async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> anyhow::Result<()> {
+async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> anyhow::Result<()> {
     let PlaybackProcessParam {
         ref params,
         episode: _,
@@ -323,7 +323,7 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
         media_source_select: _,
         media_source_index: _,
         sender: _,
-    } = playback_progress_param;
+    } = playback_process_param;
     let app_state = app_handle.state::<AppState>();
 
     // 缓存字幕，作用不止于此，播放前和播放后，获取到的媒体元数据信息不一致（主要是字幕的索引位置变化），导致字幕无法正常显示，所以这里缓存字幕
@@ -423,8 +423,8 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
         Err(e) => return Err(anyhow::anyhow!("获取剧集信息失败: {}", e.to_string())),
         Ok(episode) => serde_json::from_str::<EpisodeItem>(&episode)?,
     };
-    playback_progress_param.episode = Some(episode);
-    let episode = playback_progress_param.episode.as_ref().unwrap();
+    playback_process_param.episode = Some(episode);
+    let episode = playback_process_param.episode.as_ref().unwrap();
     let mut pinned = 0;
     if let Some(series_id) = episode.series_id.clone() {
         let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await?;
@@ -502,7 +502,7 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
         }
         trakt_scrobble_param
     } else { None };
-    playback_progress_param.scrobble_trakt_param = scrobble_trakt_param;
+    playback_process_param.scrobble_trakt_param = scrobble_trakt_param;
 
     // 观测音量
     let observe_property_volume_command = r#"{ "command": ["observe_property", 10001, "volume"]}"#.to_string() + "\n";
@@ -512,7 +512,7 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
     }
     sender.flush().await?;
 
-    playback_progress_param.sender = Some(Arc::new(RwLock::new(sender)));
+    playback_process_param.sender = Some(Arc::new(RwLock::new(sender)));
     
     let mut play_info_init_finished = false;
     let mut send_task: Option<tokio::task::JoinHandle<()>> = None;
@@ -524,13 +524,13 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
         if read.is_err() {
             tracing::error!("MPV IPC Failed to read pipe {:?}", read);
             if let Some(send_task) = send_task { send_task.abort(); }
-            save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
         tracing::debug!("MPV IPC Received: {}", buffer.trim());
         if buffer.trim().is_empty() {
             if let Some(send_task) = send_task { send_task.abort(); }
-            save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             tracing::error!("mpv-ipc 响应为空，连接已断开");
             break;
         }
@@ -538,7 +538,7 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
         if json.is_err() {
             tracing::error!("解析 mpv-ipc 响应失败 {:?}", json);
             if let Some(send_task) = send_task { send_task.abort(); }
-            save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
         let json = json?;
@@ -561,7 +561,7 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
         }
         if !play_info_init_finished {
             if Some("file-loaded") == json.event {
-                send_task = Some(play_info_init(&playback_progress_param).await?);
+                send_task = Some(play_info_init(&playback_process_param).await?);
                 play_info_init_finished = true;
             }
             continue;
@@ -570,9 +570,9 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
             tracing::debug!("MPV IPC 播放结束");
             if let Some(send_task) = send_task { send_task.abort(); }
             if json.reason == Some("eof") || json.reason == Some("stop") {
-                save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             } else {
-                save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             }
             break;
         }
@@ -583,7 +583,7 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
                 last_record_position = Decimal::from_f64(progress_percent).unwrap().round();
                 if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
                     last_save_time = chrono::Local::now();
-                    save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
                 }
             }
             continue;
@@ -595,7 +595,7 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
                 last_record_position = Decimal::from_f64(progress).unwrap().round();
                 if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
                     last_save_time = chrono::Local::now();
-                    save_playback_progress(&playback_progress_param, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
                 }
             }
             continue;
@@ -604,7 +604,7 @@ async fn playback_process(mut playback_progress_param: PlaybackProcessParam) -> 
     anyhow::Ok(())
 }
 
-async fn play_info_init(playback_progress_param: &PlaybackProcessParam) -> anyhow::Result<tokio::task::JoinHandle<()>> {
+async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow::Result<tokio::task::JoinHandle<()>> {
     // 向mpv添加音频字幕
     let PlaybackProcessParam {
         params,
@@ -621,11 +621,11 @@ async fn play_info_init(playback_progress_param: &PlaybackProcessParam) -> anyho
         media_source_select,
         media_source_index,
         sender,
-    } = playback_progress_param;
+    } = playback_process_param;
     let app_state = app_handle.state::<AppState>();
     let sender = sender.clone().unwrap();
     
-    // 发送向 mpv 多版本命令参数
+    // 发送多版本命令参数
     #[derive(Debug, Serialize, Deserialize)]
     struct MutiVersionCommand {
         path: String,
@@ -646,17 +646,22 @@ async fn play_info_init(playback_progress_param: &PlaybackProcessParam) -> anyho
     sender.write().await.write_all(set_muti_version_command.as_bytes()).await?;
     sender.write().await.flush().await?;
     tracing::debug!("MPV IPC Command set-muti-version: {}", set_muti_version_command);
+    
+    // 发送媒体标题
     let set_force_media_title_command = format!(r#"{{ "command": ["set_property", "force-media-title", "{}"] }}{}"#, params.media_title, "\n");
     sender.write().await.write_all(set_force_media_title_command.as_bytes()).await?;
     sender.write().await.flush().await?;
     tracing::debug!("MPV IPC Command force-media-title: {}", set_force_media_title_command);
 
+    // 定位播放位置
     if params.playback_position_ticks != 0 {
         let command = format!(r#"{{ "command": ["seek", "{}", "absolute"] }}{}"#, params.playback_position_ticks / 1000_0000, "\n");
         sender.write().await.write_all(command.as_bytes()).await?;
         sender.write().await.flush().await?;
         tracing::debug!("MPV IPC Command seek: {}", command);
     }
+    
+    // 添加外部音频和外部字幕
     for media_stream in &media_source.media_streams {
         if media_stream.is_external != Some(true) {
             continue;
@@ -838,7 +843,7 @@ async fn play_info_init(playback_progress_param: &PlaybackProcessParam) -> anyho
     Ok(send_task)
 }
 
-async fn save_playback_progress(playback_progress_param: &PlaybackProcessParam, last_record_position: Decimal, playback_status: PlayingProgressEnum) -> anyhow::Result<()> {
+async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, last_record_position: Decimal, playback_status: PlayingProgressEnum) -> anyhow::Result<()> {
     let PlaybackProcessParam {
         params,
         episode,
@@ -854,7 +859,7 @@ async fn save_playback_progress(playback_progress_param: &PlaybackProcessParam, 
         media_source_select: _,
         media_source_index: _,
         sender: _,
-    } = playback_progress_param;
+    } = playback_process_param;
     let episode = episode.as_ref().unwrap();
 
     let position_ticks = (last_record_position * Decimal::from_i64(1000_0000).unwrap()).to_u64().unwrap();
