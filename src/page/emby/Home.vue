@@ -291,9 +291,10 @@ handlePaneChange()
 }
 
 .episode-cover img {
+    border-radius: 10px;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    /* object-fit: cover; */
 }
 
 .episode-info {
