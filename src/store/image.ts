@@ -60,10 +60,30 @@ export const useImage = defineStore('image', () => {
         }
     }
 
+    async function loadParentCover(embyServerId: string, item: EpisodeItem) {
+        const imageKey = embyServerId + ':parent-cover:' + item.Id
+        if (images.value[imageKey]) {
+            return images.value[imageKey];
+        }
+        if (item.SeriesPrimaryImageTag) {
+            let parentCoverKey = embyServerId + ':cover:' + item.SeriesId;
+            if (images.value[parentCoverKey]) {
+                return images.value[parentCoverKey];
+            }
+            loadImage(imageKey, embyServerId, item.SeriesId, 'Primary')
+        } else if (item.ParentThumbItemId) {
+            let parentCoverKey = embyServerId + ':cover:' + item.SeasonId;
+            if (images.value[parentCoverKey]) {
+                return images.value[parentCoverKey];
+            }
+            loadImage(imageKey, embyServerId, item.ParentThumbItemId, 'Thumb')
+        }
+    }
+
     async function loadIcon(icon_url: string) {
         let port = useRuntimeConfig().runtimeConfig!.axum_port;
         return `http://127.0.0.1:${port}/image/icon?image_url=${encodeURIComponent(icon_url)}`;
     }
 
-    return { images, loadImage, loadIcon, loadLogo, loadCover }
+    return { images, loadImage, loadIcon, loadLogo, loadCover, loadParentCover }
 })

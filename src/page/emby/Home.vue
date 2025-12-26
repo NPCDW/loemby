@@ -13,40 +13,68 @@
             <el-scrollbar style="height: calc(100vh - 137px);">
                 <el-skeleton :loading="episodesLoading" animated>
                     <template #template>
-                        <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                            <el-card class="box-item" v-for="i in 5" :key="i">
-                                <el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" />
-                                <p><el-skeleton-item variant="text" style="width: 80%" /></p>
-                                <p><el-skeleton-item variant="text" style="width: 90%" /></p>
-                                <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                                <p><el-skeleton-item variant="button" style="width: 30%" /></p>
+                        <div class="episode-grid">
+                            <el-card class="episode-card" v-for="i in 6" :key="i">
+                                <div class="episode-cover">
+                                    <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
+                                </div>
+                                <div class="episode-info">
+                                    <div class="episode-content">
+                                        <div class="episode-title">
+                                            <h1><el-skeleton-item variant="text" style="width: 50%" /></h1>
+                                        </div>
+                                        <div class="episode-number">
+                                            <p><el-skeleton-item variant="text" style="width: 80%" /></p>
+                                        </div>
+                                    </div>
+                                </div>
                             </el-card>
                         </div>
                     </template>
-                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <el-card style="width: 300px; margin: 5px;" v-for="episodeItem in episodesList" :key="episodeItem.Id">
-                            <template v-if="episodeItem.Type == 'Episode'">
-                                <el-link :underline="false" @click="gotoSeries(episodeItem.SeriesId)"><h2>{{ episodeItem.SeriesName }}</h2></el-link>
-                                <p><el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)">{{ 'S' + (episodeItem.ParentIndexNumber || '-') + 'E' + (episodeItem.IndexNumber || '-') + '. ' + episodeItem.Name }}</el-link></p>
-                            </template>
-                            <template v-else>
-                                <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)"><h2>{{ episodeItem.Name }}</h2></el-link>
-                            </template>
-                            <p><el-progress :percentage="episodeItem.UserData?.Played ? 100 : episodeItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" /></p>
-                            <p>
-                                {{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}
-                            </p>
-                            <p>
-                                <el-button type="primary" @click="gotoEpisodes(episodeItem.Id)">Go</el-button>
-                                <template v-if="deletedContinuePlayList.indexOf(episodeItem.Id) == -1">
-                                    <el-button plain type="danger" :loading="deleteContinuePlayLoading[episodeItem.Id]" @click="deleteContinuePlay(episodeItem.Id, true)"><i-ep-Delete /></el-button></template>
-                                <template v-else>
-                                    <el-button type="danger" :loading="deleteContinuePlayLoading[episodeItem.Id]" @click="deleteContinuePlay(episodeItem.Id, false)">撤销</el-button>
+                    <div class="episode-grid">
+                        <div class="episode-card" v-for="episodeItem in episodesList" :key="episodeItem.Id">
+                            <div class="episode-cover">
+                                <template v-if="episodeItem.Type == 'Episode'">
+                                    <img v-lazy="useImage().images[embyServerId + ':parent-cover:' + episodeItem.Id]" />
                                 </template>
-                            </p>
-                        </el-card>
+                                <template v-else>
+                                    <img v-lazy="useImage().images[embyServerId + ':cover:' + episodeItem.Id]" />
+                                </template>
+                            </div>
+                            <div class="episode-info">
+                                <div class="background-pattern">
+                                    <img v-lazy="useImage().images[embyServerId + ':cover:' + episodeItem.Id]" style="width: 100%;height: 100%;object-fit: cover" />
+                                </div>
+                                <div class="episode-content">
+                                    <div>
+                                        <template v-if="episodeItem.Type == 'Episode'">
+                                            <el-link :underline="false" @click="gotoSeries(episodeItem.SeriesId)" style="display: block;">
+                                                <div class="episode-title">{{ episodeItem.SeriesName }}</div>
+                                            </el-link>
+                                            <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)" style="display: block;">
+                                                <div class="episode-number">{{ 'S' + (episodeItem.ParentIndexNumber || '-') + 'E' + (episodeItem.IndexNumber || '-') + '. ' + episodeItem.Name }}</div>
+                                            </el-link>
+                                        </template>
+                                        <template v-else>
+                                            <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)" style="display: block;">
+                                                <div class="episode-title">{{ episodeItem.Name }}</div>
+                                            </el-link>
+                                        </template>
+                                    </div>
+                                    <div class="episode-duration">
+                                        <el-progress style="width: 80%;" :percentage="episodeItem.UserData?.Played ? 100 : episodeItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
+                                        <el-button type="primary" @click="gotoEpisodes(episodeItem.Id)">Go</el-button>
+                                        <template v-if="deletedContinuePlayList.indexOf(episodeItem.Id) == -1">
+                                            <el-button plain type="danger" :loading="deleteContinuePlayLoading[episodeItem.Id]" @click="deleteContinuePlay(episodeItem.Id, true)"><i-ep-Delete /></el-button></template>
+                                        <template v-else>
+                                            <el-button type="danger" :loading="deleteContinuePlayLoading[episodeItem.Id]" @click="deleteContinuePlay(episodeItem.Id, false)">撤销</el-button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display: flex;justify-content: center;">
+                    <div style="display: flex;justify-content: center; margin-top: 10px;">
                         <el-empty v-if="episodesList && episodesList.length == 0" :image-size="200" description="" />
                     </div>
                 </el-skeleton>
@@ -64,13 +92,21 @@
             <el-scrollbar style="height: calc(100vh - 137px);">
                 <el-skeleton :loading="favoriteLoading" animated>
                     <template #template>
-                        <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                            <el-card class="box-item" v-for="i in 5" :key="i">
-                                <el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" />
-                                <p><el-skeleton-item variant="text" style="width: 80%" /></p>
-                                <p><el-skeleton-item variant="text" style="width: 90%" /></p>
-                                <p><el-skeleton-item variant="text" style="width: 30%" /></p>
-                                <p><el-skeleton-item variant="button" style="width: 30%" /></p>
+                        <div class="episode-grid">
+                            <el-card class="episode-card" v-for="i in 6" :key="i">
+                                <div class="episode-cover">
+                                    <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
+                                </div>
+                                <div class="episode-info">
+                                    <div class="episode-content">
+                                        <div class="episode-title">
+                                            <h1><el-skeleton-item variant="text" style="width: 50%" /></h1>
+                                        </div>
+                                        <div class="episode-number">
+                                            <p><el-skeleton-item variant="text" style="width: 80%" /></p>
+                                        </div>
+                                    </div>
+                                </div>
                             </el-card>
                         </div>
                     </template>
@@ -113,6 +149,7 @@ import { useRoute, useRouter } from 'vue-router'
 import embyApi, { EmbyPageList, EpisodeItem, SearchItem, MediaLibraryCount } from '../../api/embyApi';
 import { ElMessage } from 'element-plus';
 import ItemCard from '../../components/ItemCard.vue';
+import { useImage } from '../../store/image';
 
 const router = useRouter()
 const route = useRoute()
@@ -143,6 +180,12 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
         let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
         episodesList.value = json.Items
         episodesTotal.value = json.TotalRecordCount
+        for (let item of episodesList.value) {
+            useImage().loadCover(embyServerId, item)
+            if (item.Type == 'Episode') {
+                useImage().loadParentCover(embyServerId, item)
+            }
+        }
     }).catch(e => ElMessage.error(e)).finally(() => episodesLoading.value = false)
 }
 
@@ -223,41 +266,94 @@ handlePaneChange()
 </script>
 
 <style scoped>
-.box-container {
-  display: flex;
-  height: 500px;
-}
-
-.box-sidebar {
-  width: 30%;
-  border-right: 1px solid #18222C;
-  padding-right: 20px;
-  overflow-y: auto;
-}
-
-.box-item {
-    width: 300px; margin: 5px;
-}
-
-.box-item:hover {
-  background-color: #18222C;
-}
-
-.box-item.active {
-  color: #409EFF;
-}
-
-.box-content {
-  width: 70%;
-  padding-left: 20px;
-}
-
-h2 {
-  margin-top: 0;
-}
-
 .el-scrollbar {
   height: 100%;
 }
 
+.episode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 25px;
+}
+
+.episode-card {
+    display: flex;
+    height: 180px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+}
+
+.episode-cover {
+    flex: 0 0 120px;
+    height: 100%;
+    overflow: hidden;
+}
+
+.episode-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.episode-info {
+    flex: 1;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.background-pattern {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.45;
+    background-size: cover;
+    background-position: center;
+    /* 添加从左到右的透明度渐变 */
+    mask-image: linear-gradient(to left, 
+        rgba(0,0,0,0.8) 0%, 
+        rgba(0,0,0,0.5) 30%, 
+        rgba(0,0,0,0.2) 70%, 
+        rgba(0,0,0,0) 100%);
+    -webkit-mask-image: linear-gradient(to left, 
+        rgba(0,0,0,0.8) 0%, 
+        rgba(0,0,0,0.5) 30%, 
+        rgba(0,0,0,0.2) 70%, 
+        rgba(0,0,0,0) 100%);
+}
+
+.episode-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.episode-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    line-height: 1.3;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.episode-number {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 15px;
+    font-weight: 400;
+}
+
+.episode-duration {
+    display: flex;
+    align-items: center;
+    margin-top: auto;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+}
 </style>

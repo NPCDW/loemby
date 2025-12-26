@@ -137,7 +137,7 @@ pub async fn get_continue_play_list(param: EmbyGetContinuePlayListParam, state: 
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Users/{}/Items/Resume?MediaTypes=Video&Recursive=true&Fields=AlternateMediaSources,MediaSources&StartIndex={}&Limit={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.start_index, param.limit))
+        .get(format!("{}/emby/Users/{}/Items/Resume?MediaTypes=Video&Recursive=true&StartIndex={}&Limit={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.start_index, param.limit))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;

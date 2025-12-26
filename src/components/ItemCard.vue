@@ -1,19 +1,19 @@
 <template>
     <el-card style="width: 300px; margin: 5px;">
         <div v-if="showSeriesName">
-            <el-link v-if="item.Type == 'Episode' || item.Type == 'Season'" :underline="false" @click="gotoSeries((item as EpisodeItem).SeriesId)">
+            <el-link v-if="item.Type == 'Episode' || item.Type == 'Season'" :underline="false" @click="gotoSeries((item as EpisodeItem).SeriesId)" style="display: block;">
                 <h2>{{ (item as EpisodeItem).SeriesName }}</h2>
             </el-link>
         </div>
         <div>
-            <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)">{{ item.Name }}</el-link>
-            <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)">
+            <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)" style="display: block;">{{ item.Name }}</el-link>
+            <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)" style="display: block;">
                 {{ 'S' + ((item as EpisodeItem).ParentIndexNumber || '-') + 'E' + ((item as EpisodeItem).IndexNumber || '-') + '. ' + item.Name }}
             </el-link>
-            <el-link v-else-if="item.Type == 'Season'" :underline="false" @click="showSeason(item as SeasonItem)">
+            <el-link v-else-if="item.Type == 'Season'" :underline="false" @click="showSeason(item as SeasonItem)" style="display: block;">
                 {{ 'S' + ((item as SeasonItem).IndexNumber || '-') + '. ' + item.Name }}
             </el-link>
-            <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)">{{ item.Name }}</el-link>
+            <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)" style="display: block;">{{ item.Name }}</el-link>
         </div>
         <div style="margin: 10px 0;">
             <span v-if="item.Type == 'Series'">

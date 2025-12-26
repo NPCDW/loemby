@@ -296,6 +296,7 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
         media_source_select,
         media_source_index,
         sender: None,
+        start_play: false,
     };
     tauri::async_runtime::spawn(async move {
         let res = playback_process(playback_process_param).await;
@@ -323,6 +324,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         media_source_select: _,
         media_source_index: _,
         sender: _,
+        start_play: _,
     } = playback_process_param;
     let app_state = app_handle.state::<AppState>();
 
@@ -415,95 +417,6 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
     sender.write_all(command.as_bytes()).await?;
     sender.flush().await?;
 
-    // 本地播放历史记录
-    let episode = match emby_http_svc::items(EmbyItemsParam {
-        emby_server_id: params.emby_server_id.clone(),
-        item_id: params.item_id.clone(),
-    }, &app_state, true).await {
-        Err(e) => return Err(anyhow::anyhow!("获取剧集信息失败: {}", e.to_string())),
-        Ok(episode) => serde_json::from_str::<EpisodeItem>(&episode)?,
-    };
-    playback_process_param.episode = Some(episode);
-    let episode = playback_process_param.episode.as_ref().unwrap();
-    let mut pinned = 0;
-    if let Some(series_id) = episode.series_id.clone() {
-        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await?;
-        if pinned_update.rows_affected() > 0 { pinned = 1 }
-    }
-    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &app_state.db_pool).await? {
-        Some(response) => {
-            if episode.series_id.is_none() {
-                pinned = response.pinned.unwrap();
-            }
-            play_history_mapper::update_by_id(PlayHistory {
-                id: response.id,
-                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                emby_server_name: emby_server.server_name.clone(),
-                item_name: Some(params.item_name.clone()),
-                item_type: Some(episode.type_.clone()),
-                series_id: episode.series_id.clone(),
-                series_name: episode.series_name.clone(),
-                pinned: Some(pinned),
-                ..Default::default()
-            }, &app_state.db_pool).await?;
-        },
-        None => {
-            play_history_mapper::create(PlayHistory {
-                id: Some(uuid::Uuid::new_v4().to_string()),
-                create_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                emby_server_id: emby_server.id.clone(),
-                emby_server_name: emby_server.server_name.clone(),
-                item_id: Some(episode.id.clone()),
-                item_name: Some(params.item_name.clone()),
-                item_type: Some(episode.type_.clone()),
-                series_id: episode.series_id.clone(),
-                series_name: episode.series_name.clone(),
-                played_duration: Some(0),
-                pinned: Some(pinned),
-            }, &app_state.db_pool).await?;
-        },
-    }
-
-    // trakt 开始播放
-    let series = if let Some(series_id) = episode.series_id.clone() {
-        match emby_http_svc::items(EmbyItemsParam {
-            emby_server_id: params.emby_server_id.clone(),
-            item_id: series_id,
-        }, &app_state, true).await {
-            Err(e) => return Err(anyhow::anyhow!("获取系列信息失败: {}", e.to_string())),
-            Ok(series) => serde_json::from_str::<SeriesItem>(&series).ok(),
-        }
-    } else { None };
-    let trakt_sync_switch = global_config_mapper::get_cache("trakt_sync_switch", &app_state).await;
-    let trakt_username = global_config_mapper::get_cache("trakt_username", &app_state).await;
-    let scrobble_trakt_param = if trakt_sync_switch != Some("off".to_string()) && trakt_username.is_some() {
-        let progress = if let Some(run_time_ticks) = media_source.run_time_ticks {
-            (params.playback_position_ticks as f64 / (run_time_ticks as f64 / 100.0)).round() / 100.0
-        } else { 0.0 };
-        let trakt_scrobble_param = trakt_http_svc::get_scrobble_trakt_param(&episode, &series, progress);
-        if let Some(scrobble_trakt_param) = &trakt_scrobble_param {
-            match trakt_http_svc::start(scrobble_trakt_param, &app_state, 0).await {
-                Ok(json) => 
-                    app_handle.emit("tauri_notify", TauriNotify {
-                        event_type: "TraktNotify".to_string(),
-                        message_type: "start".to_string(),
-                        title: None,
-                        message: json,
-                    })?,
-                Err(err) => 
-                    app_handle.emit("tauri_notify", TauriNotify {
-                        event_type: "TraktNotify".to_string(),
-                        message_type: "error".to_string(),
-                        title: None,
-                        message: format!("调用trakt开始播放失败: {}", err),
-                    })?
-            }
-        }
-        trakt_scrobble_param
-    } else { None };
-    playback_process_param.scrobble_trakt_param = scrobble_trakt_param;
-
     // 观测音量
     let observe_property_volume_command = r#"{ "command": ["observe_property", 10001, "volume"]}"#.to_string() + "\n";
     let write = sender.write_all(observe_property_volume_command.as_bytes()).await;
@@ -561,7 +474,11 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         }
         if !play_info_init_finished {
             if Some("file-loaded") == json.event {
-                send_task = Some(play_info_init(&playback_process_param).await?);
+                playback_process_param.start_play = true;
+                let (send_task_res, episode, scrobble_param) = play_info_init(&playback_process_param).await?;
+                send_task = Some(send_task_res);
+                playback_process_param.episode = Some(episode);
+                playback_process_param.scrobble_trakt_param = scrobble_param;
                 play_info_init_finished = true;
             }
             continue;
@@ -604,7 +521,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
     anyhow::Ok(())
 }
 
-async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow::Result<tokio::task::JoinHandle<()>> {
+async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow::Result<(tokio::task::JoinHandle<()>, EpisodeItem, Option<ScrobbleParam>)> {
     // 向mpv添加音频字幕
     let PlaybackProcessParam {
         params,
@@ -621,6 +538,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         media_source_select,
         media_source_index,
         sender,
+        start_play: _,
     } = playback_process_param;
     let app_state = app_handle.state::<AppState>();
     let sender = sender.clone().unwrap();
@@ -803,6 +721,69 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     sender.write().await.write_all(command.as_bytes()).await?;
     sender.write().await.flush().await?;
 
+    tracing::debug!("init mpv play info finished");
+    
+    // 本地播放历史记录
+    let episode = match emby_http_svc::items(EmbyItemsParam {
+        emby_server_id: params.emby_server_id.clone(),
+        item_id: params.item_id.clone(),
+    }, &app_state, true).await {
+        Err(e) => return Err(anyhow::anyhow!("获取剧集信息失败: {}", e.to_string())),
+        Ok(episode) => serde_json::from_str::<EpisodeItem>(&episode)?,
+    };
+    let mut pinned = 0;
+    if let Some(series_id) = episode.series_id.clone() {
+        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await?;
+        if pinned_update.rows_affected() > 0 { pinned = 1 }
+    }
+    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &app_state.db_pool).await? {
+        Some(response) => {
+            if episode.series_id.is_none() {
+                pinned = response.pinned.unwrap();
+            }
+            play_history_mapper::update_by_id(PlayHistory {
+                id: response.id,
+                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                emby_server_name: emby_server.server_name.clone(),
+                item_name: Some(params.item_name.clone()),
+                item_type: Some(episode.type_.clone()),
+                series_id: episode.series_id.clone(),
+                series_name: episode.series_name.clone(),
+                pinned: Some(pinned),
+                ..Default::default()
+            }, &app_state.db_pool).await?;
+        },
+        None => {
+            play_history_mapper::create(PlayHistory {
+                id: Some(uuid::Uuid::new_v4().to_string()),
+                create_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                emby_server_id: emby_server.id.clone(),
+                emby_server_name: emby_server.server_name.clone(),
+                item_id: Some(episode.id.clone()),
+                item_name: Some(params.item_name.clone()),
+                item_type: Some(episode.type_.clone()),
+                series_id: episode.series_id.clone(),
+                series_name: episode.series_name.clone(),
+                played_duration: Some(0),
+                pinned: Some(pinned),
+            }, &app_state.db_pool).await?;
+        },
+    }
+
+    // emby开始播放api
+    let _ = emby_http_svc::playing(EmbyPlayingParam {
+        emby_server_id: params.emby_server_id.clone(),
+        item_id: params.item_id.clone(),
+        media_source_id: media_source.id.clone(),
+        play_session_id: playback_info.play_session_id.clone(),
+        position_ticks: params.playback_position_ticks,
+    }, &app_state).await;
+
+    let command = format!(r#"{{ "command": ["print-text", "Emby播放初始化完成"] }}{}"#, "\n");
+    sender.write().await.write_all(command.as_bytes()).await?;
+    sender.write().await.flush().await?;
+
     // 观测播放进度，返回太频繁，改为每2秒获取一次，用户跳转时立即获取一次
     // let observe_property_progress_command = r#"{ "command": ["observe_property", 10023, "playback-time"]}"#.to_string() + "\n";
     // let write = sender.write_all(observe_property_progress_command.as_bytes()).await;
@@ -829,18 +810,45 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         }
     });
 
-    tracing::debug!("init mpv play info finished");
-    
-    // emby开始播放api
-    let _ = emby_http_svc::playing(EmbyPlayingParam {
-        emby_server_id: params.emby_server_id.clone(),
-        item_id: params.item_id.clone(),
-        media_source_id: media_source.id.clone(),
-        play_session_id: playback_info.play_session_id.clone(),
-        position_ticks: params.playback_position_ticks,
-    }, &app_state).await;
+    // trakt 开始播放
+    let series = if let Some(series_id) = episode.series_id.clone() {
+        match emby_http_svc::items(EmbyItemsParam {
+            emby_server_id: params.emby_server_id.clone(),
+            item_id: series_id,
+        }, &app_state, true).await {
+            Err(e) => return Err(anyhow::anyhow!("获取系列信息失败: {}", e.to_string())),
+            Ok(series) => serde_json::from_str::<SeriesItem>(&series).ok(),
+        }
+    } else { None };
+    let trakt_sync_switch = global_config_mapper::get_cache("trakt_sync_switch", &app_state).await;
+    let trakt_username = global_config_mapper::get_cache("trakt_username", &app_state).await;
+    let scrobble_trakt_param = if trakt_sync_switch != Some("off".to_string()) && trakt_username.is_some() {
+        let progress = if let Some(run_time_ticks) = media_source.run_time_ticks {
+            (params.playback_position_ticks as f64 / (run_time_ticks as f64 / 100.0)).round() / 100.0
+        } else { 0.0 };
+        let trakt_scrobble_param = trakt_http_svc::get_scrobble_trakt_param(&episode, &series, progress);
+        if let Some(scrobble_trakt_param) = &trakt_scrobble_param {
+            match trakt_http_svc::start(scrobble_trakt_param, &app_state, 0).await {
+                Ok(json) => 
+                    app_handle.emit("tauri_notify", TauriNotify {
+                        event_type: "TraktNotify".to_string(),
+                        message_type: "start".to_string(),
+                        title: None,
+                        message: json,
+                    })?,
+                Err(err) => 
+                    app_handle.emit("tauri_notify", TauriNotify {
+                        event_type: "TraktNotify".to_string(),
+                        message_type: "error".to_string(),
+                        title: None,
+                        message: format!("调用trakt开始播放失败: {}", err),
+                    })?
+            }
+        }
+        trakt_scrobble_param
+    } else { None };
 
-    Ok(send_task)
+    Ok((send_task, episode, scrobble_trakt_param))
 }
 
 async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, last_record_position: Decimal, playback_status: PlayingProgressEnum) -> anyhow::Result<()> {
@@ -859,8 +867,13 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         media_source_select: _,
         media_source_index: _,
         sender: _,
+        start_play,
     } = playback_process_param;
     let episode = episode.as_ref().unwrap();
+
+    if !start_play {
+        return Ok(());
+    }
 
     let position_ticks = (last_record_position * Decimal::from_i64(1000_0000).unwrap()).to_u64().unwrap();
     let state = app_handle.state::<AppState>();
@@ -1025,6 +1038,7 @@ struct PlaybackProcessParam {
     sender: Option<Arc<RwLock<interprocess::os::windows::named_pipe::tokio::SendPipeStream<interprocess::os::windows::named_pipe::pipe_mode::Bytes>>>>,
     #[cfg(unix)]
     sender: Option<Arc<RwLock<interprocess::local_socket::tokio::SendHalf>>>,
+    start_play: bool,
 }
 
 #[cfg(not(windows))]

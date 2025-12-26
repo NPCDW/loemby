@@ -14,7 +14,7 @@
                             <div>
                                 <h1 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h1>
                                 <template v-else>
-                                    <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
+                                    <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)" style="display: block;"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
                                     <div>{{ 'S' + (currentEpisodes.ParentIndexNumber || '-') + 'E' + (currentEpisodes.IndexNumber || '-') + '. ' + currentEpisodes.Name }}</div>
                                 </template>
                                 <div style="display: flex;align-items: center;margin: 15px 0;">

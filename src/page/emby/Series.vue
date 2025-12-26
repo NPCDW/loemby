@@ -126,7 +126,7 @@
                 </template>
                 <div v-for="episodeItem in dialogEpisodesList" class="box-item">
                     <p>
-                        <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)">
+                        <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)" style="display: block;">
                             {{ episodeItem.IndexNumber + '. ' + episodeItem.Name }}
                         </el-link>
                     </p>
