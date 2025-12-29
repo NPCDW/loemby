@@ -180,20 +180,6 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
     let playlist = axum_app_state.playlist.read().await.clone();
     let params = playlist.get(id).ok_or(anyhow::anyhow!("媒体ID不存在"))?;
 
-    axum_app_state.app.emit("tauri_notify", TauriNotify {
-        event_type: "playingNotify".to_string(),
-        message_type: "success".to_string(),
-        title: None,
-        message: serde_json::to_string(&PlaybackNotifyParam {
-            emby_server_id: &params.emby_server_id,
-            item_id: &params.item_id,
-            item_name: &params.item_name,
-            series_id: &params.series_id,
-            series_name: &params.series_name,
-            event: "start",
-        })?,
-    })?;
-
     let app_state = axum_app_state.app.state::<AppState>();
     let emby_server = match emby_server_mapper::get_cache(&params.emby_server_id, &app_state).await {
         Some(emby_server) => emby_server,
@@ -475,7 +461,13 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         if !play_info_init_finished {
             if Some("file-loaded") == json.event {
                 playback_process_param.start_play = true;
-                let (send_task_res, episode, scrobble_param) = play_info_init(&playback_process_param).await?;
+                let res = play_info_init(&playback_process_param).await;
+                if let Err(e) = res {
+                    tracing::error!("初始化播放信息失败: {:?}", e);
+                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                    return Err(e);
+                }
+                let (send_task_res, episode, scrobble_param) = res?;
                 send_task = Some(send_task_res);
                 playback_process_param.episode = Some(episode);
                 playback_process_param.scrobble_trakt_param = scrobble_param;
@@ -522,7 +514,6 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
 }
 
 async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow::Result<(tokio::task::JoinHandle<()>, EpisodeItem, Option<ScrobbleParam>)> {
-    // 向mpv添加音频字幕
     let PlaybackProcessParam {
         params,
         episode: _,
@@ -543,6 +534,69 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     let app_state = app_handle.state::<AppState>();
     let sender = sender.clone().unwrap();
     
+    // 本地播放历史记录
+    let episode = match emby_http_svc::items(EmbyItemsParam {
+        emby_server_id: params.emby_server_id.clone(),
+        item_id: params.item_id.clone(),
+    }, &app_state, true).await {
+        Err(e) => return Err(anyhow::anyhow!("获取剧集信息失败: {}", e.to_string())),
+        Ok(episode) => serde_json::from_str::<EpisodeItem>(&episode)?,
+    };
+    let mut pinned = 0;
+    if let Some(series_id) = episode.series_id.clone() {
+        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await?;
+        if pinned_update.rows_affected() > 0 { pinned = 1 }
+    }
+    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &app_state.db_pool).await? {
+        Some(response) => {
+            if episode.series_id.is_none() {
+                pinned = response.pinned.unwrap();
+            }
+            play_history_mapper::update_by_id(PlayHistory {
+                id: response.id,
+                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                emby_server_name: emby_server.server_name.clone(),
+                item_name: Some(params.item_name.clone()),
+                item_type: Some(episode.type_.clone()),
+                series_id: episode.series_id.clone(),
+                series_name: episode.series_name.clone(),
+                pinned: Some(pinned),
+                ..Default::default()
+            }, &app_state.db_pool).await?;
+        },
+        None => {
+            play_history_mapper::create(PlayHistory {
+                id: Some(uuid::Uuid::new_v4().to_string()),
+                create_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                emby_server_id: emby_server.id.clone(),
+                emby_server_name: emby_server.server_name.clone(),
+                item_id: Some(episode.id.clone()),
+                item_name: Some(params.item_name.clone()),
+                item_type: Some(episode.type_.clone()),
+                series_id: episode.series_id.clone(),
+                series_name: episode.series_name.clone(),
+                played_duration: Some(0),
+                pinned: Some(pinned),
+            }, &app_state.db_pool).await?;
+        },
+    }
+
+    // 发送给前端播放通知
+    axum_app_state.app.emit("tauri_notify", TauriNotify {
+        event_type: "playingNotify".to_string(),
+        message_type: "success".to_string(),
+        title: None,
+        message: serde_json::to_string(&PlaybackNotifyParam {
+            emby_server_id: &params.emby_server_id,
+            item_id: &params.item_id,
+            item_name: &params.item_name,
+            series_id: &params.series_id,
+            series_name: &params.series_name,
+            event: "start",
+        })?,
+    })?;
+
     // 发送多版本命令参数
     #[derive(Debug, Serialize, Deserialize)]
     struct MutiVersionCommand {
@@ -723,62 +777,17 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
 
     tracing::debug!("init mpv play info finished");
     
-    // 本地播放历史记录
-    let episode = match emby_http_svc::items(EmbyItemsParam {
-        emby_server_id: params.emby_server_id.clone(),
-        item_id: params.item_id.clone(),
-    }, &app_state, true).await {
-        Err(e) => return Err(anyhow::anyhow!("获取剧集信息失败: {}", e.to_string())),
-        Ok(episode) => serde_json::from_str::<EpisodeItem>(&episode)?,
-    };
-    let mut pinned = 0;
-    if let Some(series_id) = episode.series_id.clone() {
-        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await?;
-        if pinned_update.rows_affected() > 0 { pinned = 1 }
-    }
-    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &app_state.db_pool).await? {
-        Some(response) => {
-            if episode.series_id.is_none() {
-                pinned = response.pinned.unwrap();
-            }
-            play_history_mapper::update_by_id(PlayHistory {
-                id: response.id,
-                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                emby_server_name: emby_server.server_name.clone(),
-                item_name: Some(params.item_name.clone()),
-                item_type: Some(episode.type_.clone()),
-                series_id: episode.series_id.clone(),
-                series_name: episode.series_name.clone(),
-                pinned: Some(pinned),
-                ..Default::default()
-            }, &app_state.db_pool).await?;
-        },
-        None => {
-            play_history_mapper::create(PlayHistory {
-                id: Some(uuid::Uuid::new_v4().to_string()),
-                create_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                emby_server_id: emby_server.id.clone(),
-                emby_server_name: emby_server.server_name.clone(),
-                item_id: Some(episode.id.clone()),
-                item_name: Some(params.item_name.clone()),
-                item_type: Some(episode.type_.clone()),
-                series_id: episode.series_id.clone(),
-                series_name: episode.series_name.clone(),
-                played_duration: Some(0),
-                pinned: Some(pinned),
-            }, &app_state.db_pool).await?;
-        },
-    }
-
     // emby开始播放api
-    let _ = emby_http_svc::playing(EmbyPlayingParam {
+    let res = emby_http_svc::playing(EmbyPlayingParam {
         emby_server_id: params.emby_server_id.clone(),
         item_id: params.item_id.clone(),
         media_source_id: media_source.id.clone(),
         play_session_id: playback_info.play_session_id.clone(),
         position_ticks: params.playback_position_ticks,
     }, &app_state).await;
+    if let Err(e) = res {
+        tracing::error!("调用Emby开始播放失败: {}", e.to_string());
+    }
 
     let command = format!(r#"{{ "command": ["print-text", "Emby播放初始化完成"] }}{}"#, "\n");
     sender.write().await.write_all(command.as_bytes()).await?;
@@ -953,13 +962,16 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         }
     }
 
-    emby_http_svc::playing_stopped(EmbyPlayingStoppedParam {
+    let res = emby_http_svc::playing_stopped(EmbyPlayingStoppedParam {
         emby_server_id: params.emby_server_id.clone(),
         item_id: params.item_id.clone(),
         media_source_id: media_source.id.clone(),
         play_session_id: playback_info.play_session_id.clone(),
         position_ticks: position_ticks,
-    }, &app_handle.state::<AppState>()).await?;
+    }, &app_handle.state::<AppState>()).await;
+    if res.is_err() {
+        tracing::error!("调用Emby停止播放失败: {:?}", res.err());
+    }
 
     app_handle.emit("tauri_notify", TauriNotify {
         event_type: "playingNotify".to_string(),
