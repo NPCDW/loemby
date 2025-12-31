@@ -736,19 +736,19 @@ function getYamTrackSyncUrl() {
 const yamtrack_proxy_id = ref<string>('followBrowse');
 function getYamTrackProxy() {
     useGlobalConfig().getGlobalConfigValue("yamtrack_proxy_id").then(value => {
-        yamtrack_proxy_id.value = value ? value : "no";
+        yamtrack_proxy_id.value = value ? value : "followBrowse";
     }).catch(e => ElMessage.error('获取YamTrack代理失败' + e))
 }
 const trakt_proxy_id = ref<string>('followBrowse');
 function getTraktProxy() {
     useGlobalConfig().getGlobalConfigValue("trakt_proxy_id").then(value => {
-        trakt_proxy_id.value = value ? value : "no";
+        trakt_proxy_id.value = value ? value : "followBrowse";
     }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
 }
 const app_proxy_id = ref<string>('followBrowse');
 function getAppProxy() {
     useGlobalConfig().getGlobalConfigValue("app_proxy_id").then(value => {
-        app_proxy_id.value = value ? value : "no";
+        app_proxy_id.value = value ? value : "followBrowse";
     }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
 }
 const global_browse_proxy_id = ref<string>('no');
@@ -869,7 +869,7 @@ function getMpvCacheBackMaxBytes() {
     }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
-const logStoredDays = ref<number>(0);
+const logStoredDays = ref<number>(30);
 function getLogStoredDays() {
     useGlobalConfig().getGlobalConfigValue("logStoredDays").then(value => {
         logStoredDays.value = value ? Number(value) : 30;
@@ -890,14 +890,14 @@ function getDisabledImage() {
     }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
-const coverImageStoredDays = ref<number>(0);
+const coverImageStoredDays = ref<number>(30);
 function getCoverImageStoredDays() {
     useGlobalConfig().getGlobalConfigValue("coverImageStoredDays").then(value => {
         coverImageStoredDays.value = value ? Number(value) : 30;
     }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
-const iconStoredDays = ref<number>(0);
+const iconStoredDays = ref<number>(365);
 function getIconStoredDays() {
     useGlobalConfig().getGlobalConfigValue("iconStoredDays").then(value => {
         iconStoredDays.value = value ? Number(value) : 365;

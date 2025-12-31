@@ -27,7 +27,8 @@ fn get_proxy_url(proxy: ProxyServer) -> String {
 
 pub async fn get_browse_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
     if proxy_id.is_none() {
-        return None;
+        let proxy_id = global_config_mapper::get_cache("global_browse_proxy_id", state).await;
+        return Box::pin(get_browse_proxy_url(proxy_id, state)).await;
     }
     let proxy_id = proxy_id.unwrap();
     if proxy_id == "no" {
@@ -42,7 +43,8 @@ pub async fn get_browse_proxy_url(proxy_id: Option<String>, state: &tauri::State
 
 pub async fn get_play_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
     if proxy_id.is_none() {
-        return None;
+        let proxy_id = global_config_mapper::get_cache("global_play_proxy_id", state).await;
+        return Box::pin(get_play_proxy_url(proxy_id, state)).await;
     }
     let proxy_id = proxy_id.unwrap();
     if proxy_id == "no" {
@@ -57,7 +59,8 @@ pub async fn get_play_proxy_url(proxy_id: Option<String>, state: &tauri::State<'
 
 pub async fn get_app_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
     if proxy_id.is_none() {
-        return None;
+        let proxy_id = global_config_mapper::get_cache("global_browse_proxy_id", state).await;
+        return Box::pin(get_browse_proxy_url(proxy_id, state)).await;
     }
     let proxy_id = proxy_id.unwrap();
     if proxy_id == "no" {
