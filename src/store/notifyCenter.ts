@@ -65,6 +65,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                         level: "danger",
                         content: event.payload.message,
                     })
+                    return
                 }
                 const json: TraktScrobbleResponse = JSON.parse(event.payload.message);
                 let message: VNode[] = []
@@ -85,6 +86,29 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                     datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
                     content: h('div', null, message),
                 })
+            } else if (event.payload.event_type === 'YamTrackNotify') {
+                if (event.payload.message_type == 'error') {
+                    push({
+                        id: generateGuid(),
+                        username: "YamTrack",
+                        datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                        level: "danger",
+                        content: event.payload.message,
+                    })
+                    return
+                }
+                const json: PlaybackNotifyParam = JSON.parse(event.payload.message);
+                let message: VNode[] = []
+                if (json.event === 'stop') {
+                    message.push(h('div', null, '停止播放'));
+                } else {
+                    message.push(h('div', null, '开始播放'));
+                }
+                if (json.series_id) {
+                    message.push(h('div', null, `${json.series_name}`))
+                }
+                message.push(h('div', null, `${json.item_name}`))
+                push({id: generateGuid(), username: "YamTrack", datetime: dayjs().locale('zh-cn').format("HH:mm:ss"), "embyServerId": json.emby_server_id, "content": h('div', null, message)})
             } else if (event.payload.event_type === 'playingNotify') {
                 const json: PlaybackNotifyParam = JSON.parse(event.payload.message);
                 let message: VNode[] = []

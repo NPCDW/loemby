@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, sync::RwLock};
 use tokio_stream::StreamExt;
 
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, trakt_http_svc::{self, ScrobbleParam}}, util::{file_util, media_source_util}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
 
 pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let emby_server = match emby_server_mapper::get_cache(&body.emby_server_id, state).await {
@@ -149,6 +149,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     file_util::write_file(&mpv_playlist_path, &mpv_playlist);
     
     let mpv_volume = global_config_mapper::get_cache("mpv_volume", state).await.unwrap_or("100".to_string());
+    let prefetch_playlist = global_config_mapper::get_cache("prefetch_playlist", state).await.unwrap_or("no".to_string());
 
     let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap().replace(r"\\?\", ""));
     command.current_dir(&mpv_startup_dir)
@@ -161,6 +162,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         // .arg("--force-seekable=yes")  // 某些视频格式在没缓存到的情况下不支持跳转，需要打开此配置，测试后发现强制跳转到没有缓存的位置后，mpv会从头开始缓存，一直缓存到跳转位置，与打开此设置的初衷相违背
         .arg(&format!("--user-agent={}", emby_server.user_agent.as_ref().unwrap()))
         .arg(&format!("--volume={}", &mpv_volume))
+        .arg(&format!("--prefetch-playlist={}", &prefetch_playlist))
         .arg(&format!("--playlist={}", mpv_playlist_path.as_os_str().to_str().unwrap().replace(r"\\?\", "")))
         .arg(&format!("--playlist-start={}", playlist_start));
 
@@ -275,6 +277,8 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
         app_handle: axum_app_state.app.clone(),
         axum_app_state: axum_app_state.clone(),
         scrobble_trakt_param: None,
+        scrobble_yamtrack_param: None,
+        file_duration: 0.0,
         start_time: chrono::Local::now().timestamp(),
         emby_server: emby_server,
         play_proxy_url,
@@ -303,7 +307,9 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         ref app_handle,
         axum_app_state: _,
         scrobble_trakt_param: _,
+        scrobble_yamtrack_param: _,
         start_time: _,
+        file_duration: _,
         ref emby_server,
         ref play_proxy_url,
         id: _,
@@ -467,10 +473,11 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
                     save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
                     return Err(e);
                 }
-                let (send_task_res, episode, scrobble_param) = res?;
+                let (send_task_res, episode, scrobble_trakt_param, scrobble_yamtrack_param) = res?;
                 send_task = Some(send_task_res);
                 playback_process_param.episode = Some(episode);
-                playback_process_param.scrobble_trakt_param = scrobble_param;
+                playback_process_param.scrobble_trakt_param = scrobble_trakt_param;
+                playback_process_param.scrobble_yamtrack_param = scrobble_yamtrack_param;
                 play_info_init_finished = true;
             }
             continue;
@@ -486,14 +493,10 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
             break;
         }
         if let Some(10022) = json.request_id {
-            if let Some(progress_percent) = &json.data {
-                tracing::debug!("MPV IPC 播放进度百分比 {}", progress_percent);
-                let progress_percent = progress_percent.as_f64().ok_or(anyhow::anyhow!("播放进度百分比不是数字"))?;
-                last_record_position = Decimal::from_f64(progress_percent).unwrap().round();
-                if chrono::Local::now() - last_save_time >= chrono::Duration::seconds(30) {
-                    last_save_time = chrono::Local::now();
-                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Playing).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
-                }
+            if let Some(file_duration) = &json.data {
+                tracing::debug!("MPV IPC 播放总时长 {}", file_duration);
+                let file_duration = file_duration.as_f64().ok_or(anyhow::anyhow!("播放进度百分比不是数字"))?;
+                playback_process_param.file_duration = file_duration;
             }
             continue;
         }
@@ -513,7 +516,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
     anyhow::Ok(())
 }
 
-async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow::Result<(tokio::task::JoinHandle<()>, EpisodeItem, Option<ScrobbleParam>)> {
+async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow::Result<(tokio::task::JoinHandle<()>, EpisodeItem, Option<TraktScrobbleParam>, Option<YamTrackParam>)> {
     let PlaybackProcessParam {
         params,
         episode: _,
@@ -522,6 +525,8 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         app_handle,
         axum_app_state,
         scrobble_trakt_param: _,
+        scrobble_yamtrack_param: _,
+        file_duration: _,
         start_time: _,
         emby_server,
         play_proxy_url,
@@ -758,6 +763,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     let command = format!(r#"{{ "command": ["set_property", "vid", "{}"] }}{}"#, property, "\n");
     sender.write().await.write_all(command.as_bytes()).await?;
     sender.write().await.flush().await?;
+    tracing::debug!("MPV IPC Command vid: {}", command);
     let property = match aid {
         -1 => "no".to_string(),
         0 => "auto".to_string(),
@@ -766,6 +772,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     let command = format!(r#"{{ "command": ["set_property", "aid", "{}"] }}{}"#, property, "\n");
     sender.write().await.write_all(command.as_bytes()).await?;
     sender.write().await.flush().await?;
+    tracing::debug!("MPV IPC Command aid: {}", command);
     let property = match sid {
         -1 => "no".to_string(),
         0 => "auto".to_string(),
@@ -774,6 +781,13 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     let command = format!(r#"{{ "command": ["set_property", "sid", "{}"] }}{}"#, property, "\n");
     sender.write().await.write_all(command.as_bytes()).await?;
     sender.write().await.flush().await?;
+    tracing::debug!("MPV IPC Command sid: {}", command);
+
+    // 发送获取时长
+    let get_duration_command = format!(r#"{{ "command": ["get_property", "duration"], "request_id": 10022 }}{}"#, "\n");
+    sender.write().await.write_all(get_duration_command.as_bytes()).await?;
+    sender.write().await.flush().await?;
+    tracing::debug!("MPV IPC Command duration: {}", get_duration_command);
 
     tracing::debug!("init mpv play info finished");
     
@@ -801,21 +815,16 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     //     tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
     // }
 
-    let run_time_ticks = media_source.run_time_ticks;
     let send_task = tokio::spawn(async move {
-        let command = if run_time_ticks.is_none() || run_time_ticks == Some(0) {
-            r#"{ "command": ["get_property", "percent-pos"], "request_id": 10022 }"#.to_string() + "\n"
-        } else {
-            r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n"
-        };
+        let command = r#"{ "command": ["get_property", "playback-time"], "request_id": 10023 }"#.to_string() + "\n";
         loop {
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
             let write = sender.write().await.write_all(command.as_bytes()).await;
             if write.is_err() {
                 tracing::debug!("MPV IPC Failed to write to pipe {:?}", write);
                 break;
             }
             let _ = sender.write().await.flush().await;
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
     });
 
@@ -832,10 +841,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     let trakt_sync_switch = global_config_mapper::get_cache("trakt_sync_switch", &app_state).await;
     let trakt_username = global_config_mapper::get_cache("trakt_username", &app_state).await;
     let scrobble_trakt_param = if trakt_sync_switch != Some("off".to_string()) && trakt_username.is_some() {
-        let progress = if let Some(run_time_ticks) = media_source.run_time_ticks {
-            (params.playback_position_ticks as f64 / (run_time_ticks as f64 / 100.0)).round() / 100.0
-        } else { 0.0 };
-        let trakt_scrobble_param = trakt_http_svc::get_scrobble_trakt_param(&episode, &series, progress);
+        let trakt_scrobble_param = trakt_http_svc::get_scrobble_trakt_param(&episode, &series, 0.0);
         if let Some(scrobble_trakt_param) = &trakt_scrobble_param {
             match trakt_http_svc::start(scrobble_trakt_param, &app_state, 0).await {
                 Ok(json) => 
@@ -857,7 +863,40 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         trakt_scrobble_param
     } else { None };
 
-    Ok((send_task, episode, scrobble_trakt_param))
+    // YamTrack 开始播放
+    let yamtrack_sync_switch = global_config_mapper::get_cache("yamtrack_sync_switch", &app_state).await;
+    let yamtrack_sync_url = global_config_mapper::get_cache("yamtrack_sync_url", &app_state).await;
+    let scrobble_yamtrack_param = if yamtrack_sync_switch != Some("off".to_string()) && yamtrack_sync_url.is_some() {
+        let yamtrack_scrobble_param = yamtrack_http_svc::get_scrobble_yamtrack_param(&episode, true, false);
+        if let Some(scrobble_yamtrack_param) = &yamtrack_scrobble_param {
+            match yamtrack_http_svc::track(scrobble_yamtrack_param, &app_state).await {
+                Ok(_) => 
+                    app_handle.emit("tauri_notify", TauriNotify {
+                        event_type: "YamTrackNotify".to_string(),
+                        message_type: "start".to_string(),
+                        title: None,
+                        message: serde_json::to_string(&PlaybackNotifyParam {
+                            emby_server_id: &params.emby_server_id,
+                            item_id: &params.item_id,
+                            item_name: &params.item_name,
+                            series_id: &params.series_id,
+                            series_name: &params.series_name,
+                            event: "start",
+                        })?,
+                    })?,
+                Err(err) => 
+                    app_handle.emit("tauri_notify", TauriNotify {
+                        event_type: "YamTrackNotify".to_string(),
+                        message_type: "error".to_string(),
+                        title: None,
+                        message: format!("调用YamTrack开始播放失败: {}", err),
+                    })?
+            }
+        }
+        yamtrack_scrobble_param
+    } else { None };
+
+    Ok((send_task, episode, scrobble_trakt_param, scrobble_yamtrack_param))
 }
 
 async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, last_record_position: Decimal, playback_status: PlayingProgressEnum) -> anyhow::Result<()> {
@@ -869,6 +908,8 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         app_handle,
         axum_app_state: _,
         scrobble_trakt_param,
+        scrobble_yamtrack_param,
+        file_duration,
         start_time,
         emby_server,
         play_proxy_url: _,
@@ -936,11 +977,8 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         window.set_focus().expect("Can't Bring Window to Focus");
     }
     
-    let progress_percent = if let Some(run_time_ticks) = media_source.run_time_ticks {
-        (last_record_position * Decimal::from_i64(1000_0000).unwrap() / Decimal::from_u64(run_time_ticks).unwrap() * Decimal::from_u64(100).unwrap()).trunc_with_scale(2)
-    } else {
-        last_record_position
-    };
+    let progress_percent = (last_record_position / Decimal::from_f64(file_duration.to_owned()).unwrap() * Decimal::from_u64(100).unwrap()).trunc_with_scale(2);
+    // trakt 播放停止
     if let Some(mut scrobble_trakt_param) = scrobble_trakt_param.clone() {
         let progress_percent = if progress_percent < Decimal::from_i64(1).unwrap() { Decimal::from_i64(1).unwrap() } else { progress_percent };
         scrobble_trakt_param.progress = progress_percent.to_f64().unwrap();
@@ -961,7 +999,35 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
                 })?
         }
     }
+    // YamTrack 播放停止
+    if let Some(mut scrobble_yamtrack_param) = scrobble_yamtrack_param.clone() {
+        scrobble_yamtrack_param.playback_info.played_to_completion = progress_percent > Decimal::from_i64(80).unwrap();
+        match yamtrack_http_svc::track(&scrobble_yamtrack_param, &app_handle.state()).await {
+            Ok(_) => 
+                app_handle.emit("tauri_notify", TauriNotify {
+                    event_type: "YamTrackNotify".to_string(),
+                    message_type: "stop".to_string(),
+                    title: None,
+                    message: serde_json::to_string(&PlaybackNotifyParam {
+                        emby_server_id: &params.emby_server_id,
+                        item_id: &params.item_id,
+                        item_name: &params.item_name,
+                        series_id: &episode.series_id,
+                        series_name: &params.series_name,
+                        event: "stop",
+                    })?,
+                })?,
+            Err(err) => 
+                app_handle.emit("tauri_notify", TauriNotify {
+                    event_type: "YamTrackNotify".to_string(),
+                    message_type: "error".to_string(),
+                    title: None,
+                    message: format!("调用YamTrack停止播放失败: {}", err),
+                })?
+        }
+    }
 
+    // Emby 播放停止
     let res = emby_http_svc::playing_stopped(EmbyPlayingStoppedParam {
         emby_server_id: params.emby_server_id.clone(),
         item_id: params.item_id.clone(),
@@ -973,6 +1039,7 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         tracing::error!("调用Emby停止播放失败: {:?}", res.err());
     }
 
+    // 通知前端播放停止
     app_handle.emit("tauri_notify", TauriNotify {
         event_type: "playingNotify".to_string(),
         message_type: "success".to_string(),
@@ -1039,7 +1106,9 @@ struct PlaybackProcessParam {
     playback_info: PlaybackInfo,
     app_handle: AppHandle,
     axum_app_state: AxumAppState,
-    scrobble_trakt_param: Option<ScrobbleParam>,
+    scrobble_trakt_param: Option<TraktScrobbleParam>,
+    scrobble_yamtrack_param: Option<YamTrackParam>,
+    file_duration: f64,
     start_time: i64,
     emby_server: EmbyServer,
     play_proxy_url: Option<String>,

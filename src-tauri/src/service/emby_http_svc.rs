@@ -852,6 +852,8 @@ pub struct EpisodeItem {
     pub index_number: Option<u32>,
     #[serde(rename = "ParentIndexNumber")]
     pub parent_index_number: Option<u32>,
+    #[serde(rename = "ProductionYear")]
+    pub production_year: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

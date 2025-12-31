@@ -170,7 +170,7 @@ pub async fn get_user_info(state: &tauri::State<'_, AppState>) -> anyhow::Result
     Ok(serde_json::from_str::<TraktUserInfoResponse>(&text)?)
 }
 
-pub async fn start(body: &ScrobbleParam, state: &tauri::State<'_, AppState>, retry: u32) -> anyhow::Result<String> {
+pub async fn start(body: &TraktScrobbleParam, state: &tauri::State<'_, AppState>, retry: u32) -> anyhow::Result<String> {
     let access_token = get_cache_access_token(state).await?;
     let trakt_proxy_id = global_config_mapper::get_cache("trakt_proxy_id", state).await;
     let proxy_url = proxy_server_mapper::get_app_proxy_url(trakt_proxy_id, state).await;
@@ -207,7 +207,7 @@ pub async fn start(body: &ScrobbleParam, state: &tauri::State<'_, AppState>, ret
     Ok(text)
 }
 
-pub async fn stop(body: &ScrobbleParam, state: &tauri::State<'_, AppState>, retry: u32) -> anyhow::Result<String> {
+pub async fn stop(body: &TraktScrobbleParam, state: &tauri::State<'_, AppState>, retry: u32) -> anyhow::Result<String> {
     let access_token = get_cache_access_token(state).await?;
     let trakt_proxy_id = global_config_mapper::get_cache("trakt_proxy_id", state).await;
     let proxy_url = proxy_server_mapper::get_app_proxy_url(trakt_proxy_id, state).await;
@@ -259,11 +259,11 @@ pub async fn go_trakt_auth(state: &tauri::State<'_, AppState>) -> anyhow::Result
     Ok(())
 }
 
-pub fn get_scrobble_trakt_param(episode: &EpisodeItem, series: &Option<SeriesItem>, progress: f64) -> Option<ScrobbleParam> {
+pub fn get_scrobble_trakt_param(episode: &EpisodeItem, series: &Option<SeriesItem>, progress: f64) -> Option<TraktScrobbleParam> {
     if episode.type_ == "Movie" {
         let ids = get_scrobble_trakt_ids_param(&episode.provider_ids, &episode.external_urls);
         if has_valid_ids(&ids) {
-            return Some(ScrobbleParam {
+            return Some(TraktScrobbleParam {
                 movie: Some(ScrobbleIdsParam {ids}),
                 progress: progress,
                 ..Default::default()
@@ -272,7 +272,7 @@ pub fn get_scrobble_trakt_param(episode: &EpisodeItem, series: &Option<SeriesIte
     } else if episode.type_ == "Episode" {
         let ids = get_scrobble_trakt_ids_param(&episode.provider_ids, &episode.external_urls);
         if has_valid_ids(&ids) {
-            return Some(ScrobbleParam {
+            return Some(TraktScrobbleParam {
                 episode: Some(ScrobbleEpisodeParam {ids: Some(ids), ..Default::default()}),
                 progress: progress,
                 ..Default::default()
@@ -284,7 +284,7 @@ pub fn get_scrobble_trakt_param(episode: &EpisodeItem, series: &Option<SeriesIte
         ) {
             let series_ids = get_scrobble_trakt_ids_param(&series.provider_ids, &series.external_urls);
             if has_valid_ids(&series_ids) {
-                return Some(ScrobbleParam {
+                return Some(TraktScrobbleParam {
                     show: Some(ScrobbleIdsParam {ids: series_ids}),
                     episode: Some(ScrobbleEpisodeParam {
                         season: Some(parent_index_number),
@@ -305,7 +305,7 @@ fn has_valid_ids(ids: &TraktIds) -> bool {
 }
 
 // 从 MediaItem 获取 Trakt IDs
-fn get_scrobble_trakt_ids_param(provider_ids: &Option<HashMap<String, String>>, external_urls: &Option<Vec<ExternalUrl>>) -> TraktIds {
+pub fn get_scrobble_trakt_ids_param(provider_ids: &Option<HashMap<String, String>>, external_urls: &Option<Vec<ExternalUrl>>) -> TraktIds {
     let mut ids = TraktIds::default();
     
     // 从 ProviderIds 提取
@@ -375,13 +375,13 @@ fn get_scrobble_trakt_ids_param(provider_ids: &Option<HashMap<String, String>>, 
 
 // 定义 Trakt ID 类型
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-struct TraktIds {
+pub struct TraktIds {
     #[serde(skip_serializing_if = "Option::is_none")]
-    imdb: Option<String>,
+    pub imdb: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tmdb: Option<String>,
+    pub tmdb: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tvdb: Option<String>,
+    pub tvdb: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     trakt: Option<String>,
 }
@@ -403,7 +403,7 @@ struct ScrobbleIdsParam {
 
 // 定义 Scrobble 参数
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct  ScrobbleParam {
+pub struct  TraktScrobbleParam {
     pub progress: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     movie: Option<ScrobbleIdsParam>,

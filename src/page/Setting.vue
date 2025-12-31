@@ -33,6 +33,12 @@
                             <el-option key="high-bitrate" label="高码率优先" value="high-bitrate"/>
                         </el-select>
                     </el-form-item>
+                    <el-form-item label="预加载下一集（当设定的缓存范围到达本集末尾时，提前获取下一集内容）">
+                        <el-switch
+                            v-model="prefetch_playlist"
+                            @change="configValueChange('prefetch_playlist', prefetch_playlist + '', getPrefetchPlaylist, '预加载下一集')"
+                            active-value="yes" inactive-value="no" />
+                    </el-form-item>
                     <el-form-item label="播放参数IsPlayback">
                         <el-switch
                             v-model="play_param_IsPlayback"
@@ -148,39 +154,70 @@ C:\App\mpv_config-2024.12.04\mpv.exe
             </el-scrollbar>
         </el-tab-pane>
         
-        <el-tab-pane label="Trakt" name="Trakt">
+        <el-tab-pane label="追踪" name="Track">
             <el-scrollbar style="height: calc(100vh - 120px);">
-                <el-form label-position="top">
-                    <el-form-item label="Trakt （剧集或电影播放完成时可以在网页端看到记录，未播放完成的可以通过接口查询记录）">
-                        <div v-if="trakt_username">
-                            <el-text>{{ trakt_username }}</el-text>
+                <el-card>
+                    <el-form label-position="top">
+                        <el-form-item label="Trakt （播放进度 >80% 才能在网页端看到记录）">
                             <el-switch
                                 v-model="trakt_sync_switch"
                                 @change="configValueChange('trakt_sync_switch', trakt_sync_switch + '', getTraktSyncSwitch, 'Trakt同步开关')"
                                 active-value="on" inactive-value="off" inline-prompt style="margin-left: 10px; --el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
-                            <el-button type="danger" @click="delAuthTrakt()" size="small" style="margin: 0 10px;">删除授权</el-button>
-                        </div>
-                        <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
-                    </el-form-item>
-                    <el-form-item label="Trakt代理">
-                        <el-select
-                            v-model="trakt_proxy_id"
-                            @change="configValueChange('trakt_proxy_id', trakt_proxy_id + '', getTraktProxy, 'Trakt代理')"
-                            style="width: 220px;">
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
-                            <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
-                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                </el-form>
+                        </el-form-item>
+                        <el-form-item label="Trakt 授权">
+                            <div v-if="trakt_username">
+                                <el-text>{{ trakt_username }}</el-text>
+                                <el-button type="danger" @click="delAuthTrakt()" size="small" style="margin: 0 10px;">删除授权</el-button>
+                            </div>
+                            <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
+                        </el-form-item>
+                        <el-form-item label="Trakt代理">
+                            <el-select
+                                v-model="trakt_proxy_id"
+                                @change="configValueChange('trakt_proxy_id', trakt_proxy_id + '', getTraktProxy, 'Trakt代理')"
+                                style="width: 220px;">
+                                <el-option key="no" label="不使用代理" value="no"/>
+                                <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
+                                <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
+                                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            </el-select>
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+                <el-card style="margin-top: 10px;">
+                    <el-form label-position="top">
+                        <el-form-item label="YamTrack">
+                            <el-switch
+                                v-model="yamtrack_sync_switch"
+                                @change="configValueChange('yamtrack_sync_switch', yamtrack_sync_switch + '', getYamTrackSyncSwitch, 'YamTrack同步开关')"
+                                active-value="on" inactive-value="off" inline-prompt style="margin-left: 10px; --el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
+                        </el-form-item>
+                        <el-form-item label="YamTrack 同步地址 (Emby Integrations)">
+                            <el-input
+                                v-model="yamtrack_sync_url"
+                                @change="configValueChange('yamtrack_sync_url', yamtrack_sync_url, getYamTrackSyncUrl, 'YamTrack同步地址')"
+                                placeholder="请输入YamTrack同步地址，示例： https://yamtrack.example.com/webhook/emby/NzDIG-XSNeLD7rYdLRz24dRyJK2v70jd" />
+                        </el-form-item>
+                        <el-form-item label="YamTrack代理">
+                            <el-select
+                                v-model="yamtrack_proxy_id"
+                                @change="configValueChange('yamtrack_proxy_id', yamtrack_proxy_id + '', getYamTrackProxy, 'YamTrack代理')"
+                                style="width: 220px;">
+                                <el-option key="no" label="不使用代理" value="no"/>
+                                <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
+                                <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
+                                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            </el-select>
+                        </el-form-item>
+                    </el-form>
+                </el-card>
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="代理服务器" name="ProxyServer">
             <el-scrollbar style="height: calc(100vh - 120px);">
                 <h1>代理服务器</h1>
                 <p>推荐使用 http 代理，reqwest 库的 socks5 代理在某些服可能有问题</p>
-                <el-table :data="proxyServer" style="width: 100%">
+                <el-table :data="proxyServers" style="width: 100%">
                     <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
                     <el-table-column prop="proxy_type" label="Type" width="80" />
                     <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
@@ -213,7 +250,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <span>{{ label }}</span>
                             </template>
                             <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
                     <el-form-item label="全局媒体流播放">
@@ -226,7 +263,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <span>{{ label }}</span>
                             </template>
                             <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
                 </el-form>
@@ -238,7 +275,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)">
                                 <el-option key="no" label="不使用代理" value="no"/>
                                 <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
-                                <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                             </el-select>
                         </template>
                     </el-table-column>
@@ -247,7 +284,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)">
                                 <el-option key="no" label="不使用代理" value="no"/>
                                 <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
-                                <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                             </el-select>
                         </template>
                     </el-table-column>
@@ -266,7 +303,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             <el-option key="no" label="不使用代理" value="no"/>
                             <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
                             <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
-                            <el-option v-for="proxyServer in proxyServer" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                         </el-select>
                     </el-form-item>
                 </el-form>
@@ -429,10 +466,10 @@ import { EmbyIconLibrary, useEmbyIconLibrary } from '../store/db/embyIconLibrary
 
 const runtimeConfig = useRuntimeConfig().runtimeConfig;
 
-const proxyServer = ref<ProxyServer[]>([]);
+const proxyServers = ref<ProxyServer[]>([]);
 function listAllProxyServer() {
     useProxyServer().listAllProxyServer().then(list => {
-        proxyServer.value = list;
+        proxyServers.value = list;
     })
 }
 listAllProxyServer()
@@ -448,7 +485,7 @@ function addProxy() {
 }
 function editProxy(index: number) {
     dialogProxyServerVisible.value = true;
-    dialogProxyServer.value = _.clone(proxyServer.value[index]);
+    dialogProxyServer.value = _.clone(proxyServers.value[index]);
 }
 function saveProxyServer() {
     let savePromise;
@@ -467,7 +504,7 @@ function saveProxyServer() {
 }
 function delProxy(index: number) {
     ElMessageBox.confirm(
-    `确认删除代理服务器「${proxyServer.value[index].name}」吗`,
+    `确认删除代理服务器「${proxyServers.value[index].name}」吗`,
     'Warning',
     {
       confirmButtonText: 'OK',
@@ -475,7 +512,7 @@ function delProxy(index: number) {
       type: 'warning',
     }
   ).then(async () => {
-        useProxyServer().delProxyServer(proxyServer.value[index].id!).then(() => {
+        useProxyServer().delProxyServer(proxyServers.value[index].id!).then(() => {
             useEventBus().emit('ProxyServerChanged', {})
             ElMessage.success('删除成功');
         }).catch(e => ElMessage.error('删除失败' + e))
@@ -535,9 +572,9 @@ function checkProxy(id: string) {
     checkProxyLoading.value[id] = true;
     appApi.getProxyLocation(id).then(async response => {
         let json = JSON.parse(response);
-        for (let index = 0; index < proxyServer.value.length; index++) {
-            if (proxyServer.value[index].id === id) {
-                proxyServer.value[index].location = json["ip"] + " " + json["country"]["code"];
+        for (let index = 0; index < proxyServers.value.length; index++) {
+            if (proxyServers.value[index].id === id) {
+                proxyServers.value[index].location = json["ip"] + " " + json["country"]["code"];
             }
         }
     }).catch(e => ElMessage.error('检测代理失败，可能是代理配置错误，请检查代理配置' + e)).finally(() => checkProxyLoading.value[id] = false);
@@ -683,6 +720,25 @@ async function listenTraktAuth() {
 onMounted(() => listenTraktAuth())
 onUnmounted(() => unlistenTraktAuth.value?.())
 
+const yamtrack_sync_switch = ref("on")
+function getYamTrackSyncSwitch() {
+    return useGlobalConfig().getGlobalConfigValue("yamtrack_sync_switch").then(value => {
+        yamtrack_sync_switch.value = value ? value : "on";
+    }).catch(e => ElMessage.error('获取YamTrack同步开关失败' + e))
+}
+const yamtrack_sync_url = ref("")
+function getYamTrackSyncUrl() {
+    return useGlobalConfig().getGlobalConfigValue("yamtrack_sync_url").then(value => {
+        yamtrack_sync_url.value = value ? value : "";
+    }).catch(e => ElMessage.error('获取YamTrack同步地址失败' + e))
+}
+
+const yamtrack_proxy_id = ref<string>('followBrowse');
+function getYamTrackProxy() {
+    useGlobalConfig().getGlobalConfigValue("yamtrack_proxy_id").then(value => {
+        yamtrack_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取YamTrack代理失败' + e))
+}
 const trakt_proxy_id = ref<string>('followBrowse');
 function getTraktProxy() {
     useGlobalConfig().getGlobalConfigValue("trakt_proxy_id").then(value => {
@@ -734,6 +790,13 @@ function getPlayVersionAutoSelectPolicy() {
     useGlobalConfig().getGlobalConfigValue("play_version_auto_select_policy").then(value => {
         play_version_auto_select_policy.value = value ? value : "high-resolution";
     }).catch(e => ElMessage.error('获取播放版本自动选择策略失败' + e))
+}
+
+const prefetch_playlist = ref<string>('no');
+function getPrefetchPlaylist() {
+    useGlobalConfig().getGlobalConfigValue("prefetch_playlist").then(value => {
+        prefetch_playlist.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取播放参数IsPlayback开关失败' + e))
 }
 
 const play_param_IsPlayback = ref<string>('true');
@@ -890,6 +953,8 @@ function handlePaneChange() {
     } else if (activePane.value == 'MPV') {
         getPlayVersionAutoSelectPolicy()
         getExternalMpvSwitch()
+        getPrefetchPlaylist()
+        getPlayParamIsPlayback()
         getMpvPath()
         getMpvArgs()
         getMpvCacheSeconds()
@@ -898,10 +963,13 @@ function handlePaneChange() {
         getMpvCacheBackSeconds()
         getMpvCacheBackMinBytes()
         getMpvCacheBackMaxBytes()
-    } else if (activePane.value == 'Trakt') {
+    } else if (activePane.value == 'Track') {
         getTraktInfo()
         getTraktSyncSwitch()
         getTraktProxy()
+        getYamTrackSyncUrl()
+        getYamTrackSyncSwitch()
+        getYamTrackProxy()
     } else if (activePane.value == 'ProxyServer') {
     } else if (activePane.value == 'EmbyLineProxy') {
         listAllEmbyLine()
