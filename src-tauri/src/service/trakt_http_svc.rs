@@ -387,9 +387,9 @@ pub struct TraktIds {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-struct ScrobbleEpisodeParam {
+pub struct ScrobbleEpisodeParam {
     #[serde(skip_serializing_if = "Option::is_none")]
-    ids: Option<TraktIds>,
+    pub ids: Option<TraktIds>,
     #[serde(skip_serializing_if = "Option::is_none")]
     season: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -397,8 +397,8 @@ struct ScrobbleEpisodeParam {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct ScrobbleIdsParam {
-    ids: TraktIds,
+pub struct ScrobbleIdsParam {
+    pub ids: TraktIds,
 }
 
 // 定义 Scrobble 参数
@@ -406,9 +406,9 @@ struct ScrobbleIdsParam {
 pub struct  TraktScrobbleParam {
     pub progress: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    movie: Option<ScrobbleIdsParam>,
+    pub movie: Option<ScrobbleIdsParam>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    episode: Option<ScrobbleEpisodeParam>,
+    pub episode: Option<ScrobbleEpisodeParam>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    show: Option<ScrobbleIdsParam>,
+    pub show: Option<ScrobbleIdsParam>,
 }

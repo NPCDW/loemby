@@ -97,18 +97,21 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                     })
                     return
                 }
-                const json: PlaybackNotifyParam = JSON.parse(event.payload.message);
+                const json: YamTrackResponse = JSON.parse(event.payload.message);
                 let message: VNode[] = []
-                if (json.event === 'stop') {
-                    message.push(h('div', null, '停止播放'));
+                let status;
+                if (event.payload.message_type == 'start') {
+                    status = "▶️"
                 } else {
-                    message.push(h('div', null, '开始播放'));
+                    status = '⏹️'
                 }
-                if (json.series_id) {
-                    message.push(h('div', null, `${json.series_name}`))
+                if (json.movie) {
+                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${status} ${json.movie?.title} (${json.movie?.date.substring(0, 4)})`)))
+                } else if (json.episode) {
+                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.show?.title} (${json.show?.date.substring(0, 4)})`)))
+                    message.push(h('div', null, `${status} S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`))
                 }
-                message.push(h('div', null, `${json.item_name}`))
-                push({id: generateGuid(), username: "YamTrack", datetime: dayjs().locale('zh-cn').format("HH:mm:ss"), "embyServerId": json.emby_server_id, "content": h('div', null, message)})
+                push({id: generateGuid(), username: "YamTrack", datetime: dayjs().locale('zh-cn').format("HH:mm:ss"), "content": h('div', null, message)})
             } else if (event.payload.event_type === 'playingNotify') {
                 const json: PlaybackNotifyParam = JSON.parse(event.payload.message);
                 let message: VNode[] = []
@@ -184,5 +187,24 @@ interface TraktScrobbleResponse {
         ids: {
             slug: string,
         },
+    }
+}
+
+interface YamTrackResponse {
+    source: string,
+    source_url: string,
+    media_type: string,
+    show?: {
+        title: string,
+        date: string,
+    },
+    episode?: {
+        title: string,
+        season: number,
+        number: number,
+    },
+    movie?: {
+        title: string,
+        date: string,
     }
 }

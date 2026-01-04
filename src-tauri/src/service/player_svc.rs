@@ -867,22 +867,15 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     let yamtrack_sync_switch = global_config_mapper::get_cache("yamtrack_sync_switch", &app_state).await;
     let yamtrack_sync_url = global_config_mapper::get_cache("yamtrack_sync_url", &app_state).await;
     let scrobble_yamtrack_param = if yamtrack_sync_switch != Some("off".to_string()) && yamtrack_sync_url.is_some() {
-        let yamtrack_scrobble_param = yamtrack_http_svc::get_scrobble_yamtrack_param(&episode, true, false);
+        let yamtrack_scrobble_param = yamtrack_http_svc::get_scrobble_yamtrack_param(&episode, &series, true, false);
         if let Some(scrobble_yamtrack_param) = &yamtrack_scrobble_param {
             match yamtrack_http_svc::track(scrobble_yamtrack_param, &app_state).await {
-                Ok(_) => 
+                Ok(json) => 
                     app_handle.emit("tauri_notify", TauriNotify {
                         event_type: "YamTrackNotify".to_string(),
                         message_type: "start".to_string(),
                         title: None,
-                        message: serde_json::to_string(&PlaybackNotifyParam {
-                            emby_server_id: &params.emby_server_id,
-                            item_id: &params.item_id,
-                            item_name: &params.item_name,
-                            series_id: &params.series_id,
-                            series_name: &params.series_name,
-                            event: "start",
-                        })?,
+                        message: json,
                     })?,
                 Err(err) => 
                     app_handle.emit("tauri_notify", TauriNotify {
@@ -1001,21 +994,14 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
     }
     // YamTrack 播放停止
     if let Some(mut scrobble_yamtrack_param) = scrobble_yamtrack_param.clone() {
-        scrobble_yamtrack_param.playback_info.played_to_completion = progress_percent > Decimal::from_i64(80).unwrap();
+        scrobble_yamtrack_param.played = progress_percent > Decimal::from_i64(80).unwrap();
         match yamtrack_http_svc::track(&scrobble_yamtrack_param, &app_handle.state()).await {
-            Ok(_) => 
+            Ok(json) => 
                 app_handle.emit("tauri_notify", TauriNotify {
                     event_type: "YamTrackNotify".to_string(),
                     message_type: "stop".to_string(),
                     title: None,
-                    message: serde_json::to_string(&PlaybackNotifyParam {
-                        emby_server_id: &params.emby_server_id,
-                        item_id: &params.item_id,
-                        item_name: &params.item_name,
-                        series_id: &episode.series_id,
-                        series_name: &params.series_name,
-                        event: "stop",
-                    })?,
+                    message: json,
                 })?,
             Err(err) => 
                 app_handle.emit("tauri_notify", TauriNotify {
