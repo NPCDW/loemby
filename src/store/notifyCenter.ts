@@ -98,27 +98,36 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                     return
                 }
                 const json: YamTrackResponse = JSON.parse(event.payload.message);
+                if (!json.media_type) {
+                    push({
+                        id: generateGuid(),
+                        username: "YamTrack",
+                        datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                        level: "danger",
+                        content: '404未找到媒体',
+                    })
+                    return
+                }
                 let message: VNode[] = []
-                let status;
                 if (event.payload.message_type == 'start') {
-                    status = "▶️"
+                    message.push(h('div', null, '开始播放'));
                 } else {
-                    status = '⏹️'
+                    message.push(h('div', null, '停止播放'));
                 }
                 if (json.movie) {
-                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${status} ${json.movie?.title} (${json.movie?.date.substring(0, 4)})`)))
+                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.movie?.title} (${json.movie?.date.substring(0, 4)})`)))
                 } else if (json.episode) {
                     message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.show?.title} (${json.show?.date.substring(0, 4)})`)))
-                    message.push(h('div', null, `${status} S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`))
+                    message.push(h('div', null, `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`))
                 }
                 push({id: generateGuid(), username: "YamTrack", datetime: dayjs().locale('zh-cn').format("HH:mm:ss"), "content": h('div', null, message)})
             } else if (event.payload.event_type === 'playingNotify') {
                 const json: PlaybackNotifyParam = JSON.parse(event.payload.message);
                 let message: VNode[] = []
-                if (json.event === 'stop') {
-                    message.push(h('div', null, '停止播放'));
-                } else {
+                if (json.event === 'start') {
                     message.push(h('div', null, '开始播放'));
+                } else {
+                    message.push(h('div', null, '停止播放'));
                 }
                 if (json.series_id) {
                     message.push(h('div', null, h(ElLink, {underline: false, onClick: () => gotoSeries(json.emby_server_id, json.series_id!)}, () => `${json.series_name}`)))

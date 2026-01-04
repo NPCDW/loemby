@@ -16,13 +16,11 @@ pub async fn track(param: &YamTrackParam, state: &tauri::State<'_, AppState>) ->
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&format!("loemby/{}", env!("CARGO_PKG_VERSION"))).unwrap());
 
     let body_str = serde_json::to_string(param)?;
-    let form = reqwest::multipart::Form::new()
-        .text("data", body_str.clone());
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
         .post(yamtrack_sync_url.unwrap())
         .headers(headers)
-        .multipart(form);
+        .body(body_str.clone());
     let builder_print = format!("{:?} {}", &builder, body_str);
     let response = builder.send().await;
     tracing::debug!("yamtrack 同步 request {} response {:?}", builder_print, &response);
