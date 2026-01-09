@@ -5,11 +5,11 @@
                 <el-form label-position="top">
                     <el-form-item label="应用更新">
                         <span style="margin-right: 10px;">当前版本: {{ runtimeConfig?.version }}</span>
-                        <el-button type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
+                        <el-button plain type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
                     </el-form-item>
                     <el-form-item label="日志等级">
                         <span style="margin-right: 10px;">{{ runtimeConfig?.app_config.log_level }}</span>
-                        <el-button type="primary" size="small" @click="invokeApi.open_folder('config')">打开配置目录</el-button>
+                        <el-button plain type="primary" size="small" @click="invokeApi.open_folder('config')">打开配置目录</el-button>
                     </el-form-item>
                     <el-form-item label="接受不安全证书">
                         <span>{{ runtimeConfig?.app_config.danger_accept_invalid_certs }}</span>
@@ -121,9 +121,9 @@
                         <template #label>
                             <div style="display: flex; align-items: center;" @click.stop="">
                                 <span>MPV参数</span>
-                                <el-link @click.stop.prevent="invokeApi.open_url('https://mpv.io/manual/stable/')" style="margin-left: 10px;">官方文档</el-link>
-                                <el-link @click.stop.prevent="invokeApi.open_url('https://hooke007.github.io/official_man/mpv.html')" style="margin-left: 10px;">中文文档</el-link>
-                                <el-link @click.stop.prevent="invokeApi.open_folder('inner_mpv')" style="margin-left: 10px;">打开内置MPV目录</el-link>
+                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_url('https://mpv.io/manual/stable/')" style="margin-left: 10px;">官方文档</el-button>
+                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_url('https://hooke007.github.io/official_man/mpv.html')" style="margin-left: 10px;">中文文档</el-button>
+                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_folder('inner_mpv')" style="margin-left: 10px;">打开内置MPV目录</el-button>
                             </div>
                         </template>
                         <el-input
@@ -167,9 +167,9 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                         <el-form-item label="Trakt 授权">
                             <div v-if="trakt_username">
                                 <el-text>{{ trakt_username }}</el-text>
-                                <el-button type="danger" @click="delAuthTrakt()" size="small" style="margin: 0 10px;">删除授权</el-button>
+                                <el-button plain type="danger" @click="delAuthTrakt()" size="small" style="margin: 0 10px;">删除授权</el-button>
                             </div>
-                            <el-button type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
+                            <el-button plain type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
                         </el-form-item>
                         <el-form-item label="Trakt代理">
                             <el-select
@@ -223,9 +223,9 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                     <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
                     <el-table-column prop="username" label="Username" width="140" />
                     <el-table-column prop="location" label="Location" show-overflow-tooltip />
-                    <el-table-column fixed="right" label="Operations" width="210">
+                    <el-table-column fixed="right" label="Operations" width="210" align="center">
                         <template #header>
-                            <el-button type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
+                            <el-button plain type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
                         </template>
                         <template #default="scope">
                             <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkProxy(scope.row.id)">检测</el-button>
@@ -310,9 +310,9 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                 <el-table :data="embyIconLibrary" style="width: 100%">
                     <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
                     <el-table-column prop="url" label="Url" show-overflow-tooltip />
-                    <el-table-column fixed="right" label="Operations" width="210">
+                    <el-table-column fixed="right" label="Operations" width="210" align="center">
                         <template #header>
-                            <el-button type="primary" size="small" @click.prevent="addEmbyIconLibrary()">添加图标库</el-button>
+                            <el-button plain type="primary" size="small" @click.prevent="addEmbyIconLibrary()">添加图标库</el-button>
                         </template>
                         <template #default="scope">
                             <el-button plain type="primary" size="small" @click.prevent="editEmbyIconLibrary(scope.$index)">编辑</el-button>
@@ -323,7 +323,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="缓存与日志" name="CacheAndLog">
-            <el-scrollbar style="height: calc(100vh - 120px);">
+            <el-scrollbar style="height: calc(100vh - 120px);width: 100%">
                 <el-form label-position="top">
                     <el-form-item label="日志保存天数">
                         <el-input-number
@@ -334,7 +334,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <span>天</span>
                             </template>
                         </el-input-number>
-                        <el-button type="primary" @click="invokeApi.open_folder('log')" style="margin-left: 10px;">打开日志目录</el-button>
+                        <el-button plain type="primary" @click="invokeApi.open_folder('log')" style="margin-left: 10px;">打开日志目录</el-button>
                     </el-form-item>
                     <el-form-item label="禁用图片缓存">
                         <el-switch 
@@ -360,7 +360,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <span>天</span>
                             </template>
                         </el-input-number>
-                        <el-button type="primary" @click="invokeApi.open_folder('cache')" style="margin-left: 10px;">打开缓存目录</el-button>
+                        <el-button plain type="primary" @click="invokeApi.open_folder('cache')" style="margin-left: 10px;">打开缓存目录</el-button>
                     </el-form-item>
                     <el-form-item label="图标保存天数">
                         <el-input-number v-model="iconStoredDays"
@@ -370,15 +370,15 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <span>天</span>
                             </template>
                         </el-input-number>
-                        <el-button type="primary" :loading="cleanIconCacheLoading" @click="cleanIconCache()" style="margin-left: 10px;">🆑清除所有图标缓存</el-button>
+                        <el-button plain type="primary" :loading="cleanIconCacheLoading" @click="cleanIconCache()" style="margin-left: 10px;">清除所有图标缓存</el-button>
                     </el-form-item>
                 </el-form>
-                <el-table :data="embyServers" style="width: 100%">
+                <el-table :data="embyServers" style="width: calc(100% - 10px)">
                     <el-table-column prop="server_name" label="服务名" />
                     <el-table-column prop="username" label="用户名" />
-                    <el-table-column fixed="right" label="Operations" width="180">
+                    <el-table-column fixed="right" label="Operations" width="180" align="center">
                         <template #header>
-                            <el-button type="primary" :loading="cleanAllEmbyCacheLoading" size="small" @click.prevent="cleanAllEmbyCache()">清除所有缓存</el-button>
+                            <el-button plain type="primary" :loading="cleanAllEmbyCacheLoading" size="small" @click.prevent="cleanAllEmbyCache()">清除所有缓存</el-button>
                         </template>
                         <template #default="scope">
                             <el-button plain type="primary" :loading="cleanEmbyCacheLoading" size="small" @click.prevent="cleanEmbyCache(scope.row)">清除缓存</el-button>

@@ -88,17 +88,18 @@ pub fn run() {
             });
 
             #[cfg(desktop)]
-            app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap_or_else(|err| {
-                tracing::error!("Updater plugin error: {}", err)
-            });
-            
-            let app_handle = app.app_handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let res = updater_svc::update(app_handle).await;
-                if res.is_err() {
-                    tracing::error!("自动升级失败: {:#?}", res);
-                }
-            });
+            {
+                app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap_or_else(|err| {
+                    tracing::error!("Updater plugin error: {}", err)
+                });
+                let app_handle = app.app_handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let res = updater_svc::update(app_handle).await;
+                    if res.is_err() {
+                        tracing::error!("自动升级失败: {:#?}", res);
+                    }
+                });
+            }
 
             Ok(())
         })
