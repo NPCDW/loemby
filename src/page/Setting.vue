@@ -574,7 +574,7 @@ function checkProxy(id: string) {
         let json = JSON.parse(response);
         for (let index = 0; index < proxyServers.value.length; index++) {
             if (proxyServers.value[index].id === id) {
-                proxyServers.value[index].location = json["ip"] + " " + json["country"]["code"];
+                proxyServers.value[index].location = json["ip"] + " " + json["country_code"];
             }
         }
     }).catch(e => ElMessage.error('检测代理失败，可能是代理配置错误，请检查代理配置' + e)).finally(() => checkProxyLoading.value[id] = false);

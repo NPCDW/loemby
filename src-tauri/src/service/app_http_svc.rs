@@ -11,7 +11,7 @@ pub async fn get_proxy_location(param: AppHttpGetProxyLocationParam, state: &tau
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get("https://api.my-ip.io/v2/ip.json")
+        .get("https://api.ip.sb/geoip")
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
