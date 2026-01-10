@@ -271,13 +271,7 @@ pub fn get_scrobble_trakt_param(episode: &EpisodeItem, series: &Option<SeriesIte
         }
     } else if episode.type_ == "Episode" {
         let ids = get_scrobble_trakt_ids_param(&episode.provider_ids, &episode.external_urls);
-        if has_valid_ids(&ids) {
-            return Some(TraktScrobbleParam {
-                episode: Some(ScrobbleEpisodeParam {ids: Some(ids), ..Default::default()}),
-                progress: progress,
-                ..Default::default()
-            });
-        } else if let (Some(series), Some(index_number), Some(parent_index_number)) = (
+        if let (Some(series), Some(index_number), Some(parent_index_number)) = (
             series,
             episode.index_number,
             episode.parent_index_number,
@@ -289,11 +283,19 @@ pub fn get_scrobble_trakt_param(episode: &EpisodeItem, series: &Option<SeriesIte
                     episode: Some(ScrobbleEpisodeParam {
                         season: Some(parent_index_number),
                         number: Some(index_number),
-                        ..Default::default()}),
+                        ids: if has_valid_ids(&ids) { Some(ids) } else { None },
+                    }),
                     progress: progress,
                     ..Default::default()
                 });
             }
+        }
+        if has_valid_ids(&ids) {
+            return Some(TraktScrobbleParam {
+                episode: Some(ScrobbleEpisodeParam {ids: Some(ids), ..Default::default()}),
+                progress: progress,
+                ..Default::default()
+            });
         }
     }
     None
