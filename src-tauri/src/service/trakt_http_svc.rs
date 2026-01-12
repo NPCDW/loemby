@@ -303,7 +303,7 @@ pub fn get_scrobble_trakt_param(episode: &EpisodeItem, series: &Option<SeriesIte
 
 // 检查是否有有效的 ID
 fn has_valid_ids(ids: &TraktIds) -> bool {
-    ids.imdb.is_some() || ids.tmdb.is_some() || ids.tvdb.is_some() || ids.trakt.is_some()
+    ids.imdb.is_some() || ids.tmdb.is_some() || ids.tvdb.is_some()
 }
 
 // 从 MediaItem 获取 Trakt IDs
@@ -317,7 +317,6 @@ pub fn get_scrobble_trakt_ids_param(provider_ids: &Option<HashMap<String, String
                 "imdb" => ids.imdb = Some(value.clone()),
                 "tmdb" => ids.tmdb = Some(value.clone()),
                 "tvdb" => ids.tvdb = Some(value.clone()),
-                "trakt" => ids.trakt = Some(value.clone()),
                 _ => {}
             }
         }
@@ -363,7 +362,6 @@ pub fn get_scrobble_trakt_ids_param(provider_ids: &Option<HashMap<String, String
                             "imdb" if ids.imdb.is_none() => ids.imdb = Some(id_value.to_string()),
                             "tmdb" if ids.tmdb.is_none() => ids.tmdb = Some(id_value.to_string()),
                             "tvdb" if ids.tvdb.is_none() => ids.tvdb = Some(id_value.to_string()),
-                            "trakt" if ids.trakt.is_none() => ids.trakt = Some(id_value.to_string()),
                             _ => {}
                         }
                     }
@@ -384,8 +382,6 @@ pub struct TraktIds {
     pub tmdb: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tvdb: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    trakt: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

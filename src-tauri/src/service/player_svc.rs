@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, sync::RwLock};
 use tokio_stream::StreamExt;
 
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
 
 pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let emby_server = match emby_server_mapper::get_cache(&body.emby_server_id, state).await {
@@ -277,6 +277,7 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
         app_handle: axum_app_state.app.clone(),
         axum_app_state: axum_app_state.clone(),
         scrobble_trakt_param: None,
+        scrobble_simkl_param: None,
         scrobble_yamtrack_param: None,
         file_duration: 0.0,
         start_time: chrono::Local::now().timestamp(),
@@ -307,6 +308,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         ref app_handle,
         axum_app_state: _,
         scrobble_trakt_param: _,
+        scrobble_simkl_param: _,
         scrobble_yamtrack_param: _,
         start_time: _,
         file_duration: _,
@@ -473,10 +475,11 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
                     save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
                     return Err(e);
                 }
-                let (send_task_res, episode, scrobble_trakt_param, scrobble_yamtrack_param) = res?;
+                let (send_task_res, episode, scrobble_trakt_param, scrobble_simkl_param, scrobble_yamtrack_param) = res?;
                 send_task = Some(send_task_res);
                 playback_process_param.episode = Some(episode);
                 playback_process_param.scrobble_trakt_param = scrobble_trakt_param;
+                playback_process_param.scrobble_simkl_param = scrobble_simkl_param;
                 playback_process_param.scrobble_yamtrack_param = scrobble_yamtrack_param;
                 play_info_init_finished = true;
             }
@@ -516,7 +519,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
     anyhow::Ok(())
 }
 
-async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow::Result<(tokio::task::JoinHandle<()>, EpisodeItem, Option<TraktScrobbleParam>, Option<YamTrackParam>)> {
+async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow::Result<(tokio::task::JoinHandle<()>, EpisodeItem, Option<TraktScrobbleParam>, Option<TraktScrobbleParam>, Option<YamTrackParam>)> {
     let PlaybackProcessParam {
         params,
         episode: _,
@@ -525,6 +528,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         app_handle,
         axum_app_state,
         scrobble_trakt_param: _,
+        scrobble_simkl_param: _,
         scrobble_yamtrack_param: _,
         file_duration: _,
         start_time: _,
@@ -863,6 +867,41 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         trakt_scrobble_param
     } else { None };
 
+    // simkl 开始播放
+    let series = if let Some(series_id) = episode.series_id.clone() {
+        match emby_http_svc::items(EmbyItemsParam {
+            emby_server_id: params.emby_server_id.clone(),
+            item_id: series_id,
+        }, &app_state, true).await {
+            Err(e) => return Err(anyhow::anyhow!("获取系列信息失败: {}", e.to_string())),
+            Ok(series) => serde_json::from_str::<SeriesItem>(&series).ok(),
+        }
+    } else { None };
+    let simkl_sync_switch = global_config_mapper::get_cache("simkl_sync_switch", &app_state).await;
+    let simkl_username = global_config_mapper::get_cache("simkl_username", &app_state).await;
+    let scrobble_simkl_param = if simkl_sync_switch != Some("off".to_string()) && simkl_username.is_some() {
+        let simkl_scrobble_param = trakt_http_svc::get_scrobble_trakt_param(&episode, &series, 0.0);
+        if let Some(scrobble_simkl_param) = &simkl_scrobble_param {
+            match simkl_http_svc::start(scrobble_simkl_param, &app_state, 0).await {
+                Ok(json) => 
+                    app_handle.emit("tauri_notify", TauriNotify {
+                        event_type: "SimklNotify".to_string(),
+                        message_type: "start".to_string(),
+                        title: None,
+                        message: json,
+                    })?,
+                Err(err) => 
+                    app_handle.emit("tauri_notify", TauriNotify {
+                        event_type: "SimklNotify".to_string(),
+                        message_type: "error".to_string(),
+                        title: None,
+                        message: format!("调用simkl开始播放失败: {}", err),
+                    })?
+            }
+        }
+        simkl_scrobble_param
+    } else { None };
+
     // YamTrack 开始播放
     let yamtrack_sync_switch = global_config_mapper::get_cache("yamtrack_sync_switch", &app_state).await;
     let yamtrack_sync_url = global_config_mapper::get_cache("yamtrack_sync_url", &app_state).await;
@@ -889,7 +928,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         yamtrack_scrobble_param
     } else { None };
 
-    Ok((send_task, episode, scrobble_trakt_param, scrobble_yamtrack_param))
+    Ok((send_task, episode, scrobble_trakt_param, scrobble_simkl_param, scrobble_yamtrack_param))
 }
 
 async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, last_record_position: Decimal, playback_status: PlayingProgressEnum) -> anyhow::Result<()> {
@@ -901,6 +940,7 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         app_handle,
         axum_app_state: _,
         scrobble_trakt_param,
+        scrobble_simkl_param,
         scrobble_yamtrack_param,
         file_duration,
         start_time,
@@ -989,6 +1029,27 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
                     message_type: "error".to_string(),
                     title: None,
                     message: format!("调用trakt停止播放失败: {}", err),
+                })?
+        }
+    }
+    // simkl 播放停止
+    if let Some(mut scrobble_simkl_param) = scrobble_simkl_param.clone() {
+        let progress_percent = if progress_percent < Decimal::from_i64(1).unwrap() { Decimal::from_i64(1).unwrap() } else { progress_percent };
+        scrobble_simkl_param.progress = progress_percent.to_f64().unwrap();
+        match simkl_http_svc::stop(&scrobble_simkl_param, &app_handle.state(), 0).await {
+            Ok(json) => 
+                app_handle.emit("tauri_notify", TauriNotify {
+                    event_type: "SimklNotify".to_string(),
+                    message_type: "stop".to_string(),
+                    title: None,
+                    message: json,
+                })?,
+            Err(err) => 
+                app_handle.emit("tauri_notify", TauriNotify {
+                    event_type: "SimklNotify".to_string(),
+                    message_type: "error".to_string(),
+                    title: None,
+                    message: format!("调用simkl停止播放失败: {}", err),
                 })?
         }
     }
@@ -1093,6 +1154,7 @@ struct PlaybackProcessParam {
     app_handle: AppHandle,
     axum_app_state: AxumAppState,
     scrobble_trakt_param: Option<TraktScrobbleParam>,
+    scrobble_simkl_param: Option<TraktScrobbleParam>,
     scrobble_yamtrack_param: Option<YamTrackParam>,
     file_duration: f64,
     start_time: i64,

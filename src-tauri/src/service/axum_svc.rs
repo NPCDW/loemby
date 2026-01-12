@@ -6,7 +6,7 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::{emby_http_svc, player_svc, trakt_http_svc::{self, TraktHttpTokenParam}}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::{emby_http_svc, player_svc, simkl_http_svc::{self, SimklHttpTokenParam}, trakt_http_svc::{self, TraktHttpTokenParam}}};
 
 pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -20,6 +20,7 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
         playlist: Arc::new(RwLock::new(HashMap::new())),
         request: Arc::new(RwLock::new(HashMap::new())),
         trakt_auth_state: Arc::new(RwLock::new(vec![])),
+        simkl_auth_state: Arc::new(RwLock::new(vec![])),
     });
 
     let router = Router::new()
@@ -28,6 +29,7 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
         .route("/image/icon", get(image_icon))
         .route("/image/emby", get(image_emby))
         .route("/trakt_auth", get(trakt_auth))
+        .route("/simkl_auth", get(simkl_auth))
         .route("/play_media/{id}/{media_source_select}", get(play_media))
         .with_state(axum_app_state);
 
@@ -85,6 +87,48 @@ async fn trakt_auth(headers: axum::http::HeaderMap, State(axum_app_state): State
     if let Err(err) = res {
         tracing::error!("trakt_auth: 向前台发送事件失败 {}", err);
         return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>trakt_auth: 向前台发送事件失败 {}</body></html>", err)).into_response();
+    }
+    let window = app_handle.webview_windows();
+    let window = window.values().next().expect("Sorry, no window found");
+    window.unminimize().expect("Sorry, no window unminimize");
+    window.show().expect("Sorry, no window show");
+    window.set_focus().expect("Can't Bring Window to Focus");
+    axum::response::Html("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>授权成功，您可以关闭网页，并返回应用了</body></html>").into_response()
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SimklAuthParam {
+    pub code: String,
+    pub state: String,
+}
+
+async fn simkl_auth(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(params): Query<SimklAuthParam>) -> axum::response::Response {
+    tracing::debug!("simkl_auth: {:?} {:?}", params, headers);
+    let axum_app_state = axum_app_state.read().await.clone().unwrap();
+    if !axum_app_state.simkl_auth_state.read().await.contains(&params.state) {
+        tracing::error!("simkl_auth: {} 无效的 state", &params.state);
+        return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>simkl_auth: {} 无效的 state</body></html>", &params.state)).into_response();
+    }
+    let app_handle = axum_app_state.app;
+    let redirect_uri = format!("http://127.0.0.1:{}/simkl_auth", axum_app_state.port);
+    let res = simkl_http_svc::token(SimklHttpTokenParam {
+        redirect_uri: redirect_uri.clone(),
+        code: params.code,
+    }, &app_handle.state(), &app_handle).await;
+    if let Err(err) = res {
+        tracing::error!("simkl_auth: 根据code获取token失败 {}", err);
+        return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>simkl_auth: 根据code获取token失败 {}</body></html>", err)).into_response();
+    }
+    let res = simkl_http_svc::save_access_token(res.unwrap(), redirect_uri, &app_handle.state()).await;
+    if let Err(err) = res {
+        tracing::error!("simkl_auth: 保存token失败 {}", err);
+        return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>simkl_auth: 保存token失败 {}</body></html>", err)).into_response();
+    }
+
+    let res = app_handle.emit("simkl_auth", ());
+    if let Err(err) = res {
+        tracing::error!("simkl_auth: 向前台发送事件失败 {}", err);
+        return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>simkl_auth: 向前台发送事件失败 {}</body></html>", err)).into_response();
     }
     let window = app_handle.webview_windows();
     let window = window.values().next().expect("Sorry, no window found");
@@ -490,4 +534,5 @@ pub struct AxumAppState {
     pub playlist: Arc::<RwLock<HashMap<String, MediaPlaylistParam>>>,
     pub request: Arc::<RwLock<HashMap<String, AxumAppStateRequest>>>,
     pub trakt_auth_state: Arc::<RwLock<Vec<String>>>,
+    pub simkl_auth_state: Arc::<RwLock<Vec<String>>>,
 }

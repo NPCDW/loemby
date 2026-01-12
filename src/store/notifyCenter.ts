@@ -86,6 +86,45 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                     datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
                     content: h('div', null, message),
                 })
+            } else if (event.payload.event_type === 'SimklNotify') {
+                if (event.payload.message_type == 'error') {
+                    push({
+                        id: generateGuid(),
+                        username: "simkl",
+                        datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                        level: "danger",
+                        content: event.payload.message,
+                    })
+                    return
+                }
+                const json: SimklScrobbleResponse = JSON.parse(event.payload.message);
+                let message: VNode[] = []
+                if (event.payload.message_type == 'start') {
+                    message.push(h('div', null, "开始播放"))
+                } else {
+                    message.push(h('div', null, '停止播放，同步播放进度' + json.progress + '%'))
+                }
+                if (json.anime) {
+                    if (json.anime.anime_type === 'movie') {
+                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/movies/${json.anime?.ids.simkl}/${json.anime?.ids.slug}`)}, () => `${json.anime?.title} (${json.anime?.year})`)))
+                    } else if (json.anime.anime_type === 'tv') {
+                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.anime?.ids.simkl}/${json.anime?.ids.slug}`)}, () => `${json.anime?.title} (${json.anime?.year})`)))
+                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.anime?.ids.simkl}/${json.anime?.ids.slug}/season-${json.episode?.season}/episode-${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
+                    }
+                } else {
+                    if (json.movie) {
+                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/movies/${json.movie?.ids.simkl}/${json.movie?.ids.slug}`)}, () => `${json.movie?.title} (${json.movie?.year})`)))
+                    } else if (json.episode) {
+                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.show?.ids.simkl}/${json.show?.ids.slug}`)}, () => `${json.show?.title} (${json.show?.year})`)))
+                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.show?.ids.simkl}/${json.show?.ids.slug}/season-${json.episode?.season}/episode-${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
+                    }
+                }
+                push({
+                    id: generateGuid(),
+                    username: "simkl",
+                    datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                    content: h('div', null, message),
+                })
             } else if (event.payload.event_type === 'YamTrackNotify') {
                 if (event.payload.message_type == 'error') {
                     push({
@@ -196,6 +235,40 @@ interface TraktScrobbleResponse {
         ids: {
             slug: string,
         },
+    }
+}
+
+interface SimklScrobbleResponse {
+    progress: number,
+    movie?: {
+        title: string,
+        year: number,
+        ids: {
+            simkl: number,
+            slug: string,
+        },
+    },
+    episode?: {
+        title: string,
+        season: number,
+        number: number,
+    },
+    show?: {
+        title: string,
+        year: number,
+        ids: {
+            simkl: number,
+            slug: string,
+        },
+    }
+    anime?: {
+        title: string,
+        year: number,
+        anime_type: "movie" | "tv",
+        ids: {
+            simkl: number,
+            slug: string,
+        }
     }
 }
 

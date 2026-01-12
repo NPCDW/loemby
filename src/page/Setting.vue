@@ -186,6 +186,34 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                 </el-card>
                 <el-card style="margin-top: 10px;">
                     <el-form label-position="top">
+                        <el-form-item label="Simkl">
+                            <el-switch
+                                v-model="simkl_sync_switch"
+                                @change="configValueChange('simkl_sync_switch', simkl_sync_switch + '', getSimklSyncSwitch, 'Simkl同步开关')"
+                                active-value="on" inactive-value="off" inline-prompt style="margin-left: 10px; --el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
+                        </el-form-item>
+                        <el-form-item label="Simkl 授权">
+                            <div v-if="simkl_username">
+                                <el-text>{{ simkl_username }}</el-text>
+                                <el-button plain type="danger" @click="delAuthSimkl()" size="small" style="margin: 0 10px;">删除授权</el-button>
+                            </div>
+                            <el-button plain type="primary" :loading="simklAuthLoading" @click="goAuthSimkl()" size="small">{{ simklAuthStatus }}</el-button>
+                        </el-form-item>
+                        <el-form-item label="Simkl代理">
+                            <el-select
+                                v-model="simkl_proxy_id"
+                                @change="configValueChange('simkl_proxy_id', simkl_proxy_id + '', getSimklProxy, 'Simkl代理')"
+                                style="width: 220px;">
+                                <el-option key="no" label="不使用代理" value="no"/>
+                                <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
+                                <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
+                                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            </el-select>
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+                <el-card style="margin-top: 10px;">
+                    <el-form label-position="top">
                         <el-form-item label="YamTrack">
                             <el-switch
                                 v-model="yamtrack_sync_switch"
@@ -682,7 +710,7 @@ function getTraktInfo() {
 }
 function delAuthTrakt() {
   ElMessageBox.confirm(
-    `确认删除 Trakt 授权吗？同时建议前往 Trakt 官网吊销应用授权，这将删除该应用获取的所有授权，官网地址: https://trakt.tv/oauth/authorized_applications`,
+    `确认删除 Trakt 授权吗？`,
     'Warning',
     {
       confirmButtonText: 'OK',
@@ -703,6 +731,7 @@ function delAuthTrakt() {
 function goAuthTrakt() {
     traktAuthLoading.value = true
     traktAuthStatus.value = '等待授权回调'
+    listenTraktAuth()
     invokeApi.go_trakt_auth().then(() => {
         ElMessage.success('打开浏览器成功，您也可以手动复制地址，去其他浏览器授权');
     }).catch(e => ElMessage.error('授权Trakt失败' + e))
@@ -717,8 +746,64 @@ async function listenTraktAuth() {
         })
     });
 }
-onMounted(() => listenTraktAuth())
 onUnmounted(() => unlistenTraktAuth.value?.())
+
+
+const simkl_sync_switch = ref("on")
+function getSimklSyncSwitch() {
+    return useGlobalConfig().getGlobalConfigValue("simkl_sync_switch").then(value => {
+        simkl_sync_switch.value = value ? value : "on";
+    }).catch(e => ElMessage.error('获取Simkl同步开关失败' + e))
+}
+
+const simklAuthLoading = ref(false)
+const simkl_username = ref<string>('');
+const simklAuthStatus = ref('去授权')
+function getSimklInfo() {
+    return useGlobalConfig().getGlobalConfigValue("simkl_username").then(value => {
+        simkl_username.value = value;
+        if (!simklAuthLoading.value) {
+            simklAuthStatus.value = simkl_username.value ? '换个账户？授权失效？' : '去授权'
+        }
+    }).catch(e => ElMessage.error('获取Simkl信息失败' + e))
+}
+function delAuthSimkl() {
+  ElMessageBox.confirm(
+    `确认删除 Simkl 授权吗？`,
+    'Warning',
+    {
+      confirmButtonText: 'OK',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    }
+  ).then(async () => {
+        useGlobalConfig().delGlobalConfig("simkl_username").then(() => {
+            useGlobalConfig().delGlobalConfig("simkl_access_token")
+            useGlobalConfig().delGlobalConfig("simkl_redirect_uri")
+            getSimklInfo()
+            ElMessageBox.alert('删除成功，同时建议前往 Simkl 官网吊销应用授权，这将删除该应用获取的所有授权，官网地址: https://simkl.com/settings/connected-apps/')
+        })
+    })
+}
+function goAuthSimkl() {
+    simklAuthLoading.value = true
+    simklAuthStatus.value = '等待授权回调'
+    listenSimklAuth()
+    invokeApi.go_simkl_auth().then(() => {
+        ElMessage.success('打开浏览器成功，您也可以手动复制地址，去其他浏览器授权');
+    }).catch(e => ElMessage.error('授权Simkl失败' + e))
+}
+const unlistenSimklAuth = ref<() => void>()
+async function listenSimklAuth() {
+    unlistenSimklAuth.value = await listen<string>('simkl_auth', () => {
+        console.log(`simkl_auth event`);
+        simklAuthStatus.value = '授权成功'
+        useGlobalConfig().refreshCache("simkl_username").then(() => {
+            getSimklInfo().then(() => simklAuthLoading.value = false)
+        })
+    });
+}
+onUnmounted(() => unlistenSimklAuth.value?.())
 
 const yamtrack_sync_switch = ref("on")
 function getYamTrackSyncSwitch() {
@@ -745,11 +830,17 @@ function getTraktProxy() {
         trakt_proxy_id.value = value ? value : "followBrowse";
     }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
 }
+const simkl_proxy_id = ref<string>('followBrowse');
+function getSimklProxy() {
+    useGlobalConfig().getGlobalConfigValue("simkl_proxy_id").then(value => {
+        simkl_proxy_id.value = value ? value : "followBrowse";
+    }).catch(e => ElMessage.error('获取Simkl代理失败' + e))
+}
 const app_proxy_id = ref<string>('followBrowse');
 function getAppProxy() {
     useGlobalConfig().getGlobalConfigValue("app_proxy_id").then(value => {
         app_proxy_id.value = value ? value : "followBrowse";
-    }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
+    }).catch(e => ElMessage.error('获取App代理失败' + e))
 }
 const global_browse_proxy_id = ref<string>('no');
 const global_browse_proxy_name = ref<string>('不使用代理');

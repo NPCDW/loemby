@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::config::app_state::AppState;
 use crate::config::runtime_config;
-use crate::service::{cache_svc, player_svc, trakt_http_svc, updater_svc};
+use crate::service::{cache_svc, player_svc, simkl_http_svc, trakt_http_svc, updater_svc};
 use tauri::Manager;
 
 #[tauri::command]
@@ -35,6 +35,15 @@ pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>,
 #[tauri::command]
 pub async fn go_trakt_auth(state: tauri::State<'_, AppState>) -> Result<(), String> {
     let res = trakt_http_svc::go_trakt_auth(&state).await;
+    if let Err(err) = res {
+        return Err(format!("{}", err.to_string()));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn go_simkl_auth(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let res = simkl_http_svc::go_simkl_auth(&state).await;
     if let Err(err) = res {
         return Err(format!("{}", err.to_string()));
     }

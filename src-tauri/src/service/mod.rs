@@ -6,3 +6,4 @@ pub mod emby_http_svc;
 pub mod app_http_svc;
 pub mod trakt_http_svc;
 pub mod yamtrack_http_svc;
+pub mod simkl_http_svc;

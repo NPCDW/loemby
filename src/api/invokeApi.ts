@@ -26,6 +26,10 @@ async function go_trakt_auth(): Promise<void> {
     return invoke('go_trakt_auth');
 }
 
+async function go_simkl_auth(): Promise<void> {
+    return invoke('go_simkl_auth');
+}
+
 async function open_url(url: string): Promise<string> {
     return invoke('open_url', {url: url});
 }
@@ -55,5 +59,5 @@ async function open_folder(path_type: string): Promise<void> {
 }
 
 export default {
-    getSysInfo, play_video, go_trakt_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder
+    getSysInfo, play_video, go_trakt_auth, go_simkl_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder
 }

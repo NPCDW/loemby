@@ -106,6 +106,7 @@
                                     <div v-for="message in notifyMessages" :key="message.id" style="display: flex; margin: 10px 7px 0 3px;">
                                         <el-icon size="32" style="width: 32px; height: 32px; margin: 0 5px 0 0;">
                                             <svg-icon v-if="message.username == 'trakt'" name="trakt" />
+                                            <svg-icon v-if="message.username == 'simkl'" name="simkl" />
                                             <img style="width: 32px; height: 32px;" v-else-if="message.username == 'YamTrack'" src="../icons/yamtrack.png" />
                                             <template v-else-if="message.username == 'embyServer'">
                                                 <img v-if="message.embyServerId && embyServerMap[message.embyServerId] && embyServerMap[message.embyServerId].icon_url" v-lazy="embyIconLocalUrl[embyServerMap[message.embyServerId].id!]" style="max-width: 32px; max-height: 32px;">

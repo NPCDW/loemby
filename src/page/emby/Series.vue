@@ -31,7 +31,16 @@
                     <p>
                         <span>外部链接：</span>
                         <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
-                            <el-button round @click="invokeApi.open_url(externalUrl.Url)"><i-ep-Link /> {{ externalUrl.Name }}</el-button>
+                            <el-button round @click="invokeApi.open_url(externalUrl.Url)">
+                                <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" style="width: 24px; height: 24px;" />
+                                <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" style="width: 24px; height: 24px;" />
+                                <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" style="width: 24px; height: 24px;" />
+                                <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" style="width: 24px; height: 24px;" />
+                                <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" style="width: 24px; height: 24px;" />
+                                <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" style="width: 24px; height: 24px;" />
+                                <i-ep-Link v-else />
+                                <span style="margin-left: 5px;">{{ externalUrl.Name }}</span>
+                            </el-button>
                         </el-tooltip>
                     </p>
                     <el-button plain :disabled="playedLoading[currentSeries.Id]" @click="played(currentSeries)">
