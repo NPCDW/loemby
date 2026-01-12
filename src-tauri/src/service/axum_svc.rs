@@ -119,7 +119,7 @@ async fn simkl_auth(headers: axum::http::HeaderMap, State(axum_app_state): State
         tracing::error!("simkl_auth: 根据code获取token失败 {}", err);
         return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>simkl_auth: 根据code获取token失败 {}</body></html>", err)).into_response();
     }
-    let res = simkl_http_svc::save_access_token(res.unwrap(), redirect_uri, &app_handle.state()).await;
+    let res = simkl_http_svc::save_access_token(res.unwrap(), &app_handle.state()).await;
     if let Err(err) = res {
         tracing::error!("simkl_auth: 保存token失败 {}", err);
         return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>simkl_auth: 保存token失败 {}</body></html>", err)).into_response();

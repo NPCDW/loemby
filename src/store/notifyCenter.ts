@@ -24,6 +24,14 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
     // }
 
     function push(message: NotifyMessage) {
+        for (let i = notifyMessages.value.length - 1; i >= 0; i--) {
+            if (notifyMessages.value[i].id === message.id) {
+                message.datetime = notifyMessages.value[i].datetime + " - " + message.datetime
+                notifyMessages.value[i] = message
+                useEventBus().emit('notifyMessageChange', {force_open: true})
+                return
+            }
+        }
         notifyMessages.value.push(message)
         useEventBus().emit('notifyMessageChange', {force_open: true})
     //     sessionStorage.setItem("notify_messages", JSON.stringify(notifyMessages.value))
@@ -81,7 +89,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                     message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://trakt.tv/shows/${json.show?.ids.slug}/seasons/${json.episode?.season}/episodes/${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
                 }
                 push({
-                    id: generateGuid(),
+                    id: "trakt-" + json.movie?.ids.slug + "-" + json.show?.ids.slug + "-" + json.episode?.season + "-" + json.episode?.number,
                     username: "trakt",
                     datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
                     content: h('div', null, message),
@@ -120,7 +128,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                     }
                 }
                 push({
-                    id: generateGuid(),
+                    id: "trakt-" + json.movie?.ids.slug + "-" + json.movie?.ids.simkl + "-" + json.show?.ids.slug + "-" + json.show?.ids.simkl + "-" + json.anime?.ids.slug + "-" + json.anime?.ids.simkl + "-" + json.episode?.season + "-" + json.episode?.number,
                     username: "simkl",
                     datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
                     content: h('div', null, message),
@@ -159,7 +167,12 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                     message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.show?.title} (${json.show?.date.substring(0, 4)})`)))
                     message.push(h('div', null, `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`))
                 }
-                push({id: generateGuid(), username: "YamTrack", datetime: dayjs().locale('zh-cn').format("HH:mm:ss"), "content": h('div', null, message)})
+                push({
+                    id: "YamTrack-" + json.source_url + "-" + json.episode?.season + "-" + json.episode?.number ,
+                    username: "YamTrack",
+                    datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                    "content": h('div', null, message)
+                })
             } else if (event.payload.event_type === 'playingNotify') {
                 const json: PlaybackNotifyParam = JSON.parse(event.payload.message);
                 let message: VNode[] = []
@@ -172,7 +185,13 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                     message.push(h('div', null, h(ElLink, {underline: false, onClick: () => gotoSeries(json.emby_server_id, json.series_id!)}, () => `${json.series_name}`)))
                 }
                 message.push(h('div', null, h(ElLink, {underline: false, onClick: () => gotoEpisodes(json.emby_server_id, json.item_id)}, () => `${json.item_name}`)))
-                push({id: generateGuid(), username: "embyServer", datetime: dayjs().locale('zh-cn').format("HH:mm:ss"), "embyServerId": json.emby_server_id, "content": h('div', null, message)})
+                push({
+                    id: "emby-" + json.emby_server_id + "-" + json.item_id,
+                    username: "embyServer",
+                    datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                    "embyServerId": json.emby_server_id,
+                    "content": h('div', null, message)
+                })
                 useEventBus().emit('playingNotify', json)
             }
         });

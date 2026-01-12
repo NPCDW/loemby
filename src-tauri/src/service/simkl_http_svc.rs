@@ -18,14 +18,10 @@ pub struct SimklTokenResponse {
     pub access_token: String,
 }
 
-pub async fn save_access_token(response: SimklTokenResponse, redirect_uri: String, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
+pub async fn save_access_token(response: SimklTokenResponse, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
     global_config_mapper::create_or_update(GlobalConfig {
         config_key: Some("simkl_access_token".to_string()),
         config_value: Some(response.access_token.clone()),
-        ..Default::default()}, state).await?;
-    global_config_mapper::create_or_update(GlobalConfig {
-        config_key: Some("simkl_redirect_uri".to_string()),
-        config_value: Some(redirect_uri),
         ..Default::default()}, state).await?;
     let user_info = Box::pin(get_user_info(state)).await;
     if user_info.is_err() {

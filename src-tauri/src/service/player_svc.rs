@@ -431,13 +431,13 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         if read.is_err() {
             tracing::error!("MPV IPC Failed to read pipe {:?}", read);
             if let Some(send_task) = send_task { send_task.abort(); }
-            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
         tracing::debug!("MPV IPC Received: {}", buffer.trim());
         if buffer.trim().is_empty() {
             if let Some(send_task) = send_task { send_task.abort(); }
-            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             tracing::error!("mpv-ipc 响应为空，连接已断开");
             break;
         }
@@ -445,7 +445,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         if json.is_err() {
             tracing::error!("解析 mpv-ipc 响应失败 {:?}", json);
             if let Some(send_task) = send_task { send_task.abort(); }
-            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
         let json = json?;
@@ -472,7 +472,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
                 let res = play_info_init(&playback_process_param).await;
                 if let Err(e) = res {
                     tracing::error!("初始化播放信息失败: {:?}", e);
-                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
                     return Err(e);
                 }
                 let (send_task_res, episode, scrobble_trakt_param, scrobble_simkl_param, scrobble_yamtrack_param) = res?;
@@ -488,7 +488,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         if let Some("end-file") = json.event {
             tracing::debug!("MPV IPC 播放结束");
             if let Some(send_task) = send_task { send_task.abort(); }
-            if json.reason == Some("eof") || json.reason == Some("stop") {
+            if json.reason == Some("stop") {
                 save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             } else {
                 save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
