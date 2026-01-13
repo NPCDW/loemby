@@ -86,9 +86,9 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             emby_server_id: body.emby_server_id.clone(),
             series_id: series_id,
             season_id: episode.season_id.unwrap(),
-            start_item_id: Some(body.item_id.clone()),
-            start_index: 0,
-            limit: 30,
+            start_item_id: None,
+            start_index: None,
+            limit: None,
             extend_fields: Some(false),
         }, &state).await {
             Err(e) => return Err(e.to_string()),

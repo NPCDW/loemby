@@ -385,10 +385,13 @@ pub async fn episodes(param: EmbyEpisodesParam, state: &tauri::State<'_, AppStat
     headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
-    let fields = if let Some(false) = param.extend_fields { "" } else { "AlternateMediaSources,MediaSources" };
+    let fields = if let Some(false) = param.extend_fields { "".to_string() } else { "&Fields=AlternateMediaSources,MediaSources".to_string() };
+    let start_index = if let Some(start_index) = param.start_index { format!("&StartIndex={}", start_index) } else { "".to_string() };
+    let limit = if let Some(limit) = param.limit { format!("&Limit={}", limit) } else { "".to_string() };
+    let start_item_id = if let Some(start_item_id) = param.start_item_id { format!("&StartItemId={}", start_item_id) } else { "".to_string() };
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(format!("{}/emby/Shows/{}/Episodes?StartIndex={}&Limit={}&SeasonId={}&StartItemId={}&Fields={}&UserId={}", emby_server.base_url.clone().unwrap(), param.series_id, param.start_index, param.limit, param.season_id, param.start_item_id.unwrap_or("".to_string()), fields, emby_server.user_id.clone().unwrap()))
+        .get(format!("{}/emby/Shows/{}/Episodes?SeasonId={}&UserId={}{}{}{}{}", emby_server.base_url.clone().unwrap(), param.series_id, param.season_id, emby_server.user_id.clone().unwrap(), start_index, limit, start_item_id, fields))
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
