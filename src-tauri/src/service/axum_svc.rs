@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, str::FromStr, sync::Arc};
 
 use axum::{extract::{Path, Query, State}, response::IntoResponse, routing::get, Router};
 use serde::{Deserialize, Serialize};
@@ -155,12 +155,22 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     };
 
     let app_state = axum_app_state.app.state::<AppState>().clone();
-    let client = http_pool::get_stream_http_client(request.proxy_url.clone(), &app_state).await.unwrap();
+    let emby_server = match emby_server_mapper::get_cache(&request.emby_server_id, &app_state).await {
+        Some(emby_server) => emby_server,
+        None => return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new("emby_server 不存在".to_string())
+        ).into_response(),
+    };
+    let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, &app_state).await;
+    let client = http_pool::get_stream_http_client(proxy_url, &app_state).await.unwrap();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
-    req_headers.insert(axum::http::header::USER_AGENT, request.user_agent.clone().parse().unwrap());
+    req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.clone().unwrap().parse().unwrap());
+    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     let mut res = client
         .get(request.stream_url.clone())
         .headers(req_headers.clone())
@@ -206,7 +216,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     }
     match res {
         Err(err) => {
-            tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, request.user_agent, err);
+            tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, emby_server.user_agent, err);
             axum_app_state.app.emit("tauri_notify", TauriNotify {
                 event_type: "ElMessage".to_string(),
                 message_type: "error".to_string(),
@@ -288,7 +298,16 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
     }
 
     let app_state = axum_app_state.app.state::<AppState>().clone();
-    let client = match http_pool::get_image_http_client(request.proxy_url.clone(), &app_state).await {
+    let emby_server = match emby_server_mapper::get_cache(&request.emby_server_id, &app_state).await {
+        Some(emby_server) => emby_server,
+        None => return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new("emby_server 不存在".to_string())
+        ).into_response(),
+    };
+    let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, &app_state).await;
+    let client = match http_pool::get_image_http_client(proxy_url, &app_state).await {
         Ok(client) => client,
         Err(err) => return (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
@@ -300,8 +319,9 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
-    req_headers.insert(axum::http::header::USER_AGENT, request.user_agent.clone().parse().unwrap());
+    req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.clone().unwrap().parse().unwrap());
     req_headers.insert(axum::http::header::REFERER, request.stream_url.clone().parse().unwrap());
+    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     let res = client
         .get(request.stream_url.clone())
         .headers(req_headers.clone())
@@ -521,10 +541,9 @@ pub struct MediaPlaylistParam {
 }
 
 #[derive(Clone, Debug)]
-pub struct AxumAppStateRequest {
+pub struct AxumAppStateEmbyStreamRequest {
     pub stream_url: String,
-    pub proxy_url: Option<String>,
-    pub user_agent: String,
+    pub emby_server_id: String,
 }
 
 #[derive(Clone)]
@@ -532,7 +551,7 @@ pub struct AxumAppState {
     pub app: tauri::AppHandle,
     pub port: u16,
     pub playlist: Arc::<RwLock<HashMap<String, MediaPlaylistParam>>>,
-    pub request: Arc::<RwLock<HashMap<String, AxumAppStateRequest>>>,
+    pub request: Arc::<RwLock<HashMap<String, AxumAppStateEmbyStreamRequest>>>,
     pub trakt_auth_state: Arc::<RwLock<Vec<String>>>,
     pub simkl_auth_state: Arc::<RwLock<Vec<String>>>,
 }

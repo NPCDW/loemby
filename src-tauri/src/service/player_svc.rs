@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, sync::RwLock};
 use tokio_stream::StreamExt;
 
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateEmbyStreamRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
 
 pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let emby_server = match emby_server_mapper::get_cache(&body.emby_server_id, state).await {
@@ -260,10 +260,9 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
     };
     if play_proxy_url.is_some() {
         let uuid = uuid::Uuid::new_v4().to_string();
-        axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
+        axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
             stream_url: video_url,
-            proxy_url: play_proxy_url.clone(),
-            user_agent: emby_server.user_agent.as_ref().unwrap().clone(),
+            emby_server_id: emby_server.id.clone().unwrap(),
         });
         video_url = format!("http://127.0.0.1:{}/stream/video/{}", &axum_app_state.port, &uuid);
     }
@@ -658,10 +657,9 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
             }, &app_state).await?;
             if play_proxy_url.is_some() {
                 let uuid = uuid::Uuid::new_v4().to_string();
-                axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
+                axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
                     stream_url: audio_url,
-                    proxy_url: play_proxy_url.clone(),
-                    user_agent: emby_server.user_agent.as_ref().unwrap().clone(),
+                    emby_server_id: emby_server.id.clone().unwrap(),
                 });
                 audio_url = format!("http://127.0.0.1:{}/stream/audio/{}", &axum_app_state.port, &uuid);
             }
@@ -681,10 +679,9 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
             }, &app_state).await?;
             if play_proxy_url.is_some() {
                 let uuid = uuid::Uuid::new_v4().to_string();
-                axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateRequest {
+                axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
                     stream_url: subtitle_url,
-                    proxy_url: play_proxy_url.clone(),
-                    user_agent: emby_server.user_agent.as_ref().unwrap().clone(),
+                    emby_server_id: emby_server.id.clone().unwrap(),
                 });
                 subtitle_url = format!("http://127.0.0.1:{}/subtitle/{}", &axum_app_state.port, &uuid);
             }
