@@ -12,37 +12,16 @@ import { useRouter } from 'vue-router';
 
 export const useNotifyCenter = defineStore('notifyCenter', () => {
     const notifyMessages = ref<NotifyMessage[]>([])
-    // let request = window.indexedDB.open("notify_messages");
-    // let db;
-    // request.onsuccess = function (event) {
-    //     db = request.result;
-    //     console.log('indexedDB 数据库打开成功');
-    // };
-    // request.onupgradeneeded = function (event) {
-    //     db = event.target?.result;
-    //     console.log('indexedDB 数据库新建成功');
-    // }
-
+    
     function push(message: NotifyMessage) {
         for (let i = notifyMessages.value.length - 1; i >= 0; i--) {
             if (notifyMessages.value[i].id === message.id) {
-                message.datetime = notifyMessages.value[i].datetime + " - " + message.datetime
                 notifyMessages.value[i] = message
-                useEventBus().emit('notifyMessageChange', {force_open: true})
                 return
             }
         }
         notifyMessages.value.push(message)
         useEventBus().emit('notifyMessageChange', {force_open: true})
-    //     sessionStorage.setItem("notify_messages", JSON.stringify(notifyMessages.value))
-    // console.log("emit notifyMessageChange")
-    }
-    
-    function refresh() {
-        const notify_messages = sessionStorage.getItem("notify_messages")
-        if (notify_messages) {
-            notifyMessages.value = JSON.parse(notify_messages);
-        }
     }
     
     async function listen_tauri_notify() {
@@ -205,7 +184,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
         router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
     }
 
-    return { listen_tauri_notify, push, refresh, notifyMessages }
+    return { listen_tauri_notify, push, notifyMessages }
 })
 
 export type TauriNotify = {
