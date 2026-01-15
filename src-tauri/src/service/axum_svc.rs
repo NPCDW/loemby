@@ -163,14 +163,14 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             axum::body::Body::new("emby_server 不存在".to_string())
         ).into_response(),
     };
-    let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, &app_state).await;
+    let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id, &app_state).await;
     let client = http_pool::get_stream_http_client(proxy_url, &app_state).await.unwrap();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
-    req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.clone().unwrap().parse().unwrap());
-    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
+    req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
+    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
     let mut res = client
         .get(request.stream_url.clone())
         .headers(req_headers.clone())
@@ -306,7 +306,7 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
             axum::body::Body::new("emby_server 不存在".to_string())
         ).into_response(),
     };
-    let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, &app_state).await;
+    let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id, &app_state).await;
     let client = match http_pool::get_image_http_client(proxy_url, &app_state).await {
         Ok(client) => client,
         Err(err) => return (
@@ -319,7 +319,7 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
-    req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.clone().unwrap().parse().unwrap());
+    req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
     req_headers.insert(axum::http::header::REFERER, request.stream_url.clone().parse().unwrap());
     req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     let res = client
