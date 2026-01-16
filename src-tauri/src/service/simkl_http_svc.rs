@@ -176,7 +176,7 @@ pub async fn stop(body: &TraktScrobbleParam, state: &tauri::State<'_, AppState>,
     let body_str = serde_json::to_string(body)?;
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .post(format!("{}/scrobble/stop", SIMKL_API_BASE_URL))
+        .post(format!("{}/scrobble/{}", SIMKL_API_BASE_URL, if body.progress < 80.0 { "pause" } else { "stop" }))
         .headers(headers)
         .body(body_str.clone());
     let builder_print = format!("{:?} {}", &builder, body_str);
