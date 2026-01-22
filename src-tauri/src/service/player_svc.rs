@@ -133,7 +133,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             series_name: series_name.clone(),
             item_id: episode.id.clone(),
             item_name: episode_name.clone(),
-            playback_position_ticks: if episode.id == episode_playlist[0].id { body.playback_position_ticks } else { 0 },
+            playback_position_ticks: if episode.id == body.item_id { body.playback_position_ticks } else { 0 },
             use_direct_link: body.use_direct_link.clone(),
             select_policy: body.select_policy.clone(),
             video_select: body.video_select,
@@ -480,6 +480,8 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
                 playback_process_param.scrobble_trakt_param = scrobble_trakt_param;
                 playback_process_param.scrobble_simkl_param = scrobble_simkl_param;
                 playback_process_param.scrobble_yamtrack_param = scrobble_yamtrack_param;
+                // 在APP点击继续播放后，下次通过上一集下一集等方式播放，播放位置会被重置为0
+                playback_process_param.params.playback_position_ticks = 0;
                 play_info_init_finished = true;
             }
             continue;
