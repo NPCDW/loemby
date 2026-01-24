@@ -359,8 +359,19 @@ function playbackVersionChange(versionId: number, firstTime: boolean = false) {
             if (mediaStream.IsExternal) {
                 score += 2
             }
-            if (mediaStream.DisplayLanguage && mediaStream.DisplayLanguage.indexOf('Chinese Simplified') !== -1) {
-                score += 3
+            if (mediaStream.DisplayLanguage) {
+                if (mediaStream.DisplayLanguage.indexOf('Chinese') !== -1) {
+                    score += 3;
+                    if (mediaStream.DisplayLanguage.indexOf('Simplified') !== -1) {
+                        score += 1;
+                    }
+                }
+                if (mediaStream.DisplayLanguage.indexOf("中") !== -1) {
+                    score += 3;
+                    if (mediaStream.DisplayLanguage.indexOf("简") !== -1) {
+                        score += 1;
+                    }
+                }
             }
             if (score > subtitleScore) {
                 subtitleScore = score

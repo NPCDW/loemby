@@ -727,8 +727,17 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
                 score += 2;
             }
             if let Some(lang) = &media_stream.display_language {
-                if lang.contains("Chinese Simplified") {
+                if lang.contains("Chinese") {
                     score += 3;
+                    if lang.contains("Simplified") {
+                        score += 1;
+                    }
+                }
+                if lang.contains("中") {
+                    score += 3;
+                    if lang.contains("简") {
+                        score += 1;
+                    }
                 }
             }
             if score > subtitle_max_score {
