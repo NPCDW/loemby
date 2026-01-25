@@ -489,7 +489,8 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         if let Some("end-file") = json.event {
             tracing::debug!("MPV IPC 播放结束");
             if let Some(send_task) = send_task { send_task.abort(); }
-            if json.reason == Some("stop") {
+            // 播放到末尾或点上一集下一集
+            if json.reason == Some("eof") || json.reason == Some("stop") {
                 save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             } else {
                 save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
