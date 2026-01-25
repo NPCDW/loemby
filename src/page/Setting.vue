@@ -124,6 +124,7 @@
                                 <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_url('https://mpv.io/manual/stable/')" style="margin-left: 10px;">官方文档</el-button>
                                 <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_url('https://hooke007.github.io/official_man/mpv.html')" style="margin-left: 10px;">中文文档</el-button>
                                 <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_folder('inner_mpv')" style="margin-left: 10px;">打开内置MPV目录</el-button>
+                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_file('keymap')" style="margin-left: 10px;">快捷键示意图</el-button>
                             </div>
                         </template>
                         <el-input

@@ -58,6 +58,10 @@ async function open_folder(path_type: string): Promise<void> {
     return invoke('open_folder', {body: {path_type}});
 }
 
+async function open_file(path_type: string): Promise<void> {
+    return invoke('open_file', {body: {path_type}});
+}
+
 export default {
-    getSysInfo, play_video, go_trakt_auth, go_simkl_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder
+    getSysInfo, play_video, go_trakt_auth, go_simkl_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file
 }

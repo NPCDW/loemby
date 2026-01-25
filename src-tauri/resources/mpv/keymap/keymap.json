@@ -1,0 +1,478 @@
+[
+    {
+        "id": 1765697453840,
+        "keys": [
+            "Escape"
+        ],
+        "displayKeys": [
+            "Esc"
+        ],
+        "modifiers": [],
+        "description": "退出全屏",
+        "editing": false
+    },
+    {
+        "id": 1765697532825,
+        "keys": [
+            "ControlLeft",
+            "Digit1"
+        ],
+        "displayKeys": [
+            "Ctrl",
+            "!\n1"
+        ],
+        "modifiers": [
+            "Ctrl"
+        ],
+        "description": "Anime4K Mode A",
+        "editing": false
+    },
+    {
+        "id": 1765697542874,
+        "keys": [
+            "ControlLeft",
+            "Digit3"
+        ],
+        "displayKeys": [
+            "Ctrl",
+            "#\n3"
+        ],
+        "modifiers": [
+            "Ctrl"
+        ],
+        "description": "Anime4K Mode C",
+        "editing": false
+    },
+    {
+        "id": 1765697554463,
+        "keys": [
+            "ControlLeft",
+            "Digit2"
+        ],
+        "displayKeys": [
+            "Ctrl",
+            "@\n2"
+        ],
+        "modifiers": [
+            "Ctrl"
+        ],
+        "description": "Anime4K Mode B",
+        "editing": false
+    },
+    {
+        "id": 1765697576689,
+        "keys": [
+            "ControlLeft",
+            "Digit4"
+        ],
+        "displayKeys": [
+            "Ctrl",
+            "$\n4"
+        ],
+        "modifiers": [
+            "Ctrl"
+        ],
+        "description": "Anime4K A+A",
+        "editing": false,
+        "tempDescription": "Anime4K A+A"
+    },
+    {
+        "id": 1765697605039,
+        "keys": [
+            "ControlLeft",
+            "Digit5"
+        ],
+        "displayKeys": [
+            "Ctrl",
+            "%\n5"
+        ],
+        "modifiers": [
+            "Ctrl"
+        ],
+        "description": "Anime4K B+B",
+        "editing": false
+    },
+    {
+        "id": 1765697615954,
+        "keys": [
+            "ControlLeft",
+            "Digit6"
+        ],
+        "displayKeys": [
+            "Ctrl",
+            "^\n6"
+        ],
+        "modifiers": [
+            "Ctrl"
+        ],
+        "description": "Anime4K C+A",
+        "editing": false
+    },
+    {
+        "id": 1765697645988,
+        "keys": [
+            "ControlLeft",
+            "Digit0"
+        ],
+        "displayKeys": [
+            "Ctrl",
+            ")\n0"
+        ],
+        "modifiers": [
+            "Ctrl"
+        ],
+        "description": "Anime4K 清空",
+        "editing": false
+    },
+    {
+        "id": 1765697667353,
+        "keys": [
+            "KeyQ"
+        ],
+        "displayKeys": [
+            "Q"
+        ],
+        "modifiers": [],
+        "description": "退出",
+        "editing": false
+    },
+    {
+        "id": 1765697698260,
+        "keys": [
+            "KeyR"
+        ],
+        "displayKeys": [
+            "R"
+        ],
+        "modifiers": [],
+        "description": "上移字幕",
+        "editing": false
+    },
+    {
+        "id": 1765697707560,
+        "keys": [
+            "KeyT"
+        ],
+        "displayKeys": [
+            "T"
+        ],
+        "modifiers": [],
+        "description": "下移字幕",
+        "editing": false
+    },
+    {
+        "id": 1765697722223,
+        "keys": [
+            "KeyI"
+        ],
+        "displayKeys": [
+            "I"
+        ],
+        "modifiers": [],
+        "description": "统计信息",
+        "editing": false
+    },
+    {
+        "id": 1765697737913,
+        "keys": [
+            "KeyP"
+        ],
+        "displayKeys": [
+            "P"
+        ],
+        "modifiers": [],
+        "description": "置顶",
+        "editing": false
+    },
+    {
+        "id": 1765697749706,
+        "keys": [
+            "KeyF"
+        ],
+        "displayKeys": [
+            "F"
+        ],
+        "modifiers": [],
+        "description": "全屏",
+        "editing": false
+    },
+    {
+        "id": 1765697763710,
+        "keys": [
+            "Enter"
+        ],
+        "displayKeys": [
+            "Enter"
+        ],
+        "modifiers": [],
+        "description": "全屏",
+        "editing": false
+    },
+    {
+        "id": 1765697800851,
+        "keys": [
+            "KeyZ"
+        ],
+        "displayKeys": [
+            "Z"
+        ],
+        "modifiers": [],
+        "description": "字幕延迟--",
+        "editing": false,
+        "tempDescription": "字幕延迟--"
+    },
+    {
+        "id": 1765697812779,
+        "keys": [
+            "KeyX"
+        ],
+        "displayKeys": [
+            "X"
+        ],
+        "modifiers": [],
+        "description": "字幕延迟++",
+        "editing": false,
+        "tempDescription": "字幕延迟++"
+    },
+    {
+        "id": 1765697820664,
+        "keys": [
+            "KeyB"
+        ],
+        "displayKeys": [
+            "B"
+        ],
+        "modifiers": [],
+        "description": "最小化",
+        "editing": false
+    },
+    {
+        "id": 1765697829319,
+        "keys": [
+            "KeyM"
+        ],
+        "displayKeys": [
+            "M"
+        ],
+        "modifiers": [],
+        "description": "静音",
+        "editing": false
+    },
+    {
+        "id": 1765697852858,
+        "keys": [
+            "Space"
+        ],
+        "displayKeys": [
+            ""
+        ],
+        "modifiers": [],
+        "description": "暂停/播放",
+        "editing": false
+    },
+    {
+        "id": 1765697877240,
+        "keys": [
+            "PageUp"
+        ],
+        "displayKeys": [
+            "PgUp"
+        ],
+        "modifiers": [],
+        "description": "下一章节",
+        "editing": false
+    },
+    {
+        "id": 1765697887316,
+        "keys": [
+            "PageDown"
+        ],
+        "displayKeys": [
+            "PgDn"
+        ],
+        "modifiers": [],
+        "description": "上一章节",
+        "editing": false
+    },
+    {
+        "id": 1765697902849,
+        "keys": [
+            "ArrowUp"
+        ],
+        "displayKeys": [
+            "↑"
+        ],
+        "modifiers": [],
+        "description": "音量+10",
+        "editing": false
+    },
+    {
+        "id": 1765697914653,
+        "keys": [
+            "ArrowDown"
+        ],
+        "displayKeys": [
+            "↓"
+        ],
+        "modifiers": [],
+        "description": "音量-10",
+        "editing": false
+    },
+    {
+        "id": 1765697926041,
+        "keys": [
+            "ArrowLeft"
+        ],
+        "displayKeys": [
+            "←"
+        ],
+        "modifiers": [],
+        "description": "后退5秒",
+        "editing": false
+    },
+    {
+        "id": 1765697933740,
+        "keys": [
+            "ArrowRight"
+        ],
+        "displayKeys": [
+            "→"
+        ],
+        "modifiers": [],
+        "description": "前进5秒",
+        "editing": false
+    },
+    {
+        "id": 1765697947641,
+        "keys": [
+            "ControlLeft",
+            "ArrowLeft"
+        ],
+        "displayKeys": [
+            "Ctrl",
+            "←"
+        ],
+        "modifiers": [
+            "Ctrl"
+        ],
+        "description": "上一集",
+        "editing": false
+    },
+    {
+        "id": 1765697954249,
+        "keys": [
+            "ControlLeft",
+            "ArrowRight"
+        ],
+        "displayKeys": [
+            "Ctrl",
+            "→"
+        ],
+        "modifiers": [
+            "Ctrl"
+        ],
+        "description": "下一集",
+        "editing": false
+    },
+    {
+        "id": 1765697971393,
+        "keys": [
+            "ShiftLeft",
+            "ArrowLeft"
+        ],
+        "displayKeys": [
+            "Shift",
+            "←"
+        ],
+        "modifiers": [
+            "Shift"
+        ],
+        "description": "后退30秒",
+        "editing": false
+    },
+    {
+        "id": 1765697980414,
+        "keys": [
+            "ShiftLeft",
+            "ArrowRight"
+        ],
+        "displayKeys": [
+            "Shift",
+            "→"
+        ],
+        "modifiers": [
+            "Shift"
+        ],
+        "description": "前进30秒",
+        "editing": false
+    },
+    {
+        "id": 1765716707015,
+        "keys": [
+            "BracketLeft"
+        ],
+        "displayKeys": [
+            "{\n["
+        ],
+        "modifiers": [],
+        "description": "速度 /1.1",
+        "editing": false
+    },
+    {
+        "id": 1765716721539,
+        "keys": [
+            "BracketRight"
+        ],
+        "displayKeys": [
+            "}\n]"
+        ],
+        "modifiers": [],
+        "description": "速度 *1.1",
+        "editing": false
+    },
+    {
+        "id": 1765716745747,
+        "keys": [
+            "ShiftLeft",
+            "BracketLeft"
+        ],
+        "displayKeys": [
+            "Shift",
+            "{\n["
+        ],
+        "modifiers": [
+            "Shift"
+        ],
+        "description": "速度 /2",
+        "editing": false
+    },
+    {
+        "id": 1765716764044,
+        "keys": [
+            "ShiftLeft",
+            "BracketRight"
+        ],
+        "displayKeys": [
+            "Shift",
+            "}\n]"
+        ],
+        "modifiers": [
+            "Shift"
+        ],
+        "description": "速度 *2",
+        "editing": false
+    },
+    {
+        "id": 1769339026671,
+        "keys": [
+            "Backspace"
+        ],
+        "displayKeys": [
+            "Backspace"
+        ],
+        "modifiers": [],
+        "description": "播放速度=1",
+        "editing": false,
+        "tempDescription": "播放速度=1"
+    }
+]

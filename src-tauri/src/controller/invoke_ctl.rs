@@ -124,3 +124,24 @@ pub async fn open_folder(app_handle: tauri::AppHandle, body: OpenFolderParam) ->
     }
     Ok(())
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OpenFileParam {
+    pub path_type: String,
+}
+
+#[tauri::command]
+pub async fn open_file(app_handle: tauri::AppHandle, body: OpenFileParam) -> Result<(), String> {
+    let path = match body.path_type.as_str() {
+        "keymap" => app_handle.path().resolve("resources/mpv/keymap/keymap.png", tauri::path::BaseDirectory::Resource,),
+        _ => return Err(format!("未知的文件类型: {} ", body.path_type)),
+    };
+    if let Err(err) = path {
+        return Err(format!("获取文件失败: {}", err.to_string()));
+    }
+    let res = open::that(path.unwrap());
+    if let Err(err) = res {
+        return Err(format!("打开文件失败: {}", err.to_string()));
+    }
+    Ok(())
+}
