@@ -666,7 +666,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
                 });
                 audio_url = format!("http://127.0.0.1:{}/stream/audio/{}", &axum_app_state.port, &uuid);
             }
-            let command = format!(r#"{{ "command": ["audio-add", "{}", "auto"] }}{}"#, audio_url, "\n");
+            let command = format!(r#"{{ "command": ["audio-add", "{}", "auto", "{}"] }}{}"#, audio_url, media_stream.display_title.clone().unwrap_or("".to_string()), "\n");
             sender.write().await.write_all(command.as_bytes()).await?;
             sender.write().await.flush().await?;
             tracing::debug!("MPV IPC Command audio-add: {}", command);
@@ -688,7 +688,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
                 });
                 subtitle_url = format!("http://127.0.0.1:{}/subtitle/{}", &axum_app_state.port, &uuid);
             }
-            let command = format!(r#"{{ "command": ["sub-add", "{}"] }}{}"#, subtitle_url, "\n");
+            let command = format!(r#"{{ "command": ["sub-add", "{}", "select", "{}"] }}{}"#, subtitle_url, media_stream.display_title.clone().unwrap_or("".to_string()), "\n");
             sender.write().await.write_all(command.as_bytes()).await?;
             sender.write().await.flush().await?;
             tracing::debug!("MPV IPC Command sub-add: {}", command);
@@ -712,13 +712,17 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
                 vid = video_index;
             }
         } else if media_stream.type_ == "Audio" {
-            track_titles.audio.push(media_stream.display_title.clone().unwrap_or("".to_string()));
+            if media_stream.is_external != Some(true) {
+                track_titles.audio.push(media_stream.display_title.clone().unwrap_or("".to_string()));
+            }
             audio_index += 1;
             if media_stream.is_default == Some(true) && aid == 0 {
                 aid = audio_index;
             }
         } else if media_stream.type_ == "Subtitle" {
-            track_titles.sub.push(media_stream.display_title.clone().unwrap_or("".to_string()));
+            if media_stream.is_external != Some(true) {
+                track_titles.sub.push(media_stream.display_title.clone().unwrap_or("".to_string()));
+            }
             subtitle_index += 1;
             let mut score = 0;
             if media_stream.is_default == Some(true) {
