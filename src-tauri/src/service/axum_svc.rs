@@ -533,6 +533,7 @@ pub struct MediaPlaylistParam {
     pub playback_position_ticks: u64,
     pub use_direct_link: bool,
     pub select_policy: String,
+    pub version_select: usize,
     pub video_select: i32,
     pub audio_select: i32,
     pub subtitle_select: i32,

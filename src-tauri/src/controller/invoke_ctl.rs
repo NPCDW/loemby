@@ -24,7 +24,7 @@ pub struct PlayVideoParam {
     pub video_select: i32,
     pub audio_select: i32,
     pub subtitle_select: i32,
-    pub version_select: i32,
+    pub version_select: usize,
 }
 
 #[tauri::command]

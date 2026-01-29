@@ -136,6 +136,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             playback_position_ticks: if episode.id == body.item_id { body.playback_position_ticks } else { 0 },
             use_direct_link: body.use_direct_link.clone(),
             select_policy: body.select_policy.clone(),
+            version_select: body.version_select,
             video_select: body.video_select,
             audio_select: body.audio_select,
             subtitle_select: body.subtitle_select,
@@ -209,8 +210,8 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
             0
         }
     } else {
-        if params.select_policy == "manual" && playback_info.media_sources.len() >= media_source_select {
-            media_source_select - 1
+        if params.select_policy == "manual" && playback_info.media_sources.len() >= params.version_select {
+            params.version_select - 1
         } else {
             #[derive(Debug, Clone)]
             struct VersionSelect {
