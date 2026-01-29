@@ -142,8 +142,8 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             mpv_ipc: pipe_name.clone(),
             media_title: title.clone(),
         });
-        let media_source_select = if body.select_policy == "manual" { body.version_select } else { 0 };
-        mpv_playlist = format!("{}\n#EXTINF:-1,{}\nhttp://127.0.0.1:{}/play_media/{}/{}", mpv_playlist, title, &auxm_app_state.port, &uuid, media_source_select);
+        // 播放媒体 0 代表从播放列表连续播放自动选择的播放版本，或手动点击了播放列表默认的播放版本
+        mpv_playlist = format!("{}\n#EXTINF:-1,{}\nhttp://127.0.0.1:{}/play_media/{}/0", mpv_playlist, title, &auxm_app_state.port, &uuid);
     }
     let mpv_playlist_path = mpv_config_dir.join("mpv_playlist.m3u8");
     file_util::write_file(&mpv_playlist_path, &mpv_playlist);
@@ -209,35 +209,39 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
             0
         }
     } else {
-        #[derive(Debug, Clone)]
-        struct VersionSelect {
-            version_id: u32,
-            size: u64,
-            resolution_level: u32,
+        if params.select_policy == "manual" && playback_info.media_sources.len() >= media_source_select {
+            media_source_select - 1
+        } else {
+            #[derive(Debug, Clone)]
+            struct VersionSelect {
+                version_id: u32,
+                size: u64,
+                resolution_level: u32,
+            }
+            let mut version_select_list: Vec<VersionSelect> = Vec::new();
+            for (i, media_source) in playback_info.media_sources.iter().enumerate() {
+                version_select_list.push(VersionSelect {
+                    version_id: (i + 1) as u32,
+                    size: media_source.size.unwrap_or(0),
+                    resolution_level: media_source_util::get_resolution_level_from_media_sources(media_source),
+                });
+            }
+            let select_policy = global_config_mapper::get_cache("play_version_auto_select_policy", &app_state).await.unwrap_or("high-resolution".to_string());
+            if select_policy == "high-bitrate" {
+                version_select_list.sort_by(|a, b| b.size.cmp(&a.size));
+            } else if select_policy == "high-resolution" {
+                version_select_list.sort_by(|a, b| {
+                    if a.resolution_level != b.resolution_level {
+                        b.resolution_level.cmp(&a.resolution_level)
+                    } else if a.size != b.size {
+                        b.size.cmp(&a.size)
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                });
+            }
+            version_select_list[0].version_id as usize - 1
         }
-        let mut version_select_list: Vec<VersionSelect> = Vec::new();
-        for (i, media_source) in playback_info.media_sources.iter().enumerate() {
-            version_select_list.push(VersionSelect {
-                version_id: (i + 1) as u32,
-                size: media_source.size.unwrap_or(0),
-                resolution_level: media_source_util::get_resolution_level_from_media_sources(media_source),
-            });
-        }
-        let select_policy = global_config_mapper::get_cache("play_version_auto_select_policy", &app_state).await.unwrap_or("high-resolution".to_string());
-        if select_policy == "high-bitrate" {
-            version_select_list.sort_by(|a, b| b.size.cmp(&a.size));
-        } else if select_policy == "high-resolution" {
-            version_select_list.sort_by(|a, b| {
-                if a.resolution_level != b.resolution_level {
-                    b.resolution_level.cmp(&a.resolution_level)
-                } else if a.size != b.size {
-                    b.size.cmp(&a.size)
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            });
-        }
-        version_select_list[0].version_id as usize - 1
     };
     let media_source = &playback_info.media_sources[media_source_index];
     // 选中媒体源的视频地址
