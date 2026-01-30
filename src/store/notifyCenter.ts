@@ -13,6 +13,45 @@ import { useRouter } from 'vue-router';
 export const useNotifyCenter = defineStore('notifyCenter', () => {
     const notifyMessages = ref<NotifyMessage[]>([])
     
+    // 从 sessionStorage 中读取保存的原始消息
+    const loadRawMessagesFromStorage = (): TauriNotify[] => {
+        try {
+            const stored = sessionStorage.getItem('rawNotifyMessages');
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (e) {
+            console.error('Failed to load raw messages from storage:', e);
+        }
+        return [];
+    };
+
+    // 保存原始消息到 sessionStorage
+    const saveRawMessagesToStorage = (payload: TauriNotify) => {
+        try {
+            // 保存原始消息
+            rawMessages.value.push(payload);
+            // 限制消息数量并保存到 sessionStorage
+            if (rawMessages.value.length > 50) {
+                rawMessages.value = rawMessages.value.slice(-50);
+            }
+            sessionStorage.setItem('rawNotifyMessages', JSON.stringify(rawMessages.value));
+        } catch (e) {
+            console.error('Failed to save raw messages to storage:', e);
+        }
+    };
+
+    // 初始化时加载并处理保存的原始消息
+    const initMessages = () => {
+        const rawMessages = loadRawMessagesFromStorage();
+        rawMessages.forEach(payload => {
+            processTauriNotify(payload);
+        });
+    };
+
+    // 存储原始消息的数组
+    const rawMessages = ref<TauriNotify[]>(loadRawMessagesFromStorage());
+    
     function push(message: NotifyMessage) {
         for (let i = notifyMessages.value.length - 1; i >= 0; i--) {
             if (notifyMessages.value[i].id === message.id) {
@@ -25,155 +64,165 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
     }
     
     async function listen_tauri_notify() {
+        initMessages()
         listen<TauriNotify>('tauri_notify', (event) => {
             console.log("tauri tauri_notify event", event)
-            if (event.payload.event_type === 'ElMessage') {
-                ElMessage({
-                    type: event.payload.message_type as "success" | "info" | "warning" | "error",
-                    message: event.payload.message
-                });
-            } else if (event.payload.event_type === 'ElNotification') {
-                ElNotification({
-                    type: event.payload.message_type as "success" | "info" | "warning" | "error",
-                    title: event.payload.title,
-                    message: event.payload.message
-                });
-            } else if (event.payload.event_type === 'ElMessageBox') {
-                ElMessageBox({
-                    title: event.payload.title,
-                    message: event.payload.message
-                });
-            } else if (event.payload.event_type === 'TraktNotify') {
-                if (event.payload.message_type == 'error') {
-                    push({
-                        id: generateGuid(),
-                        username: "trakt",
-                        datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
-                        level: "danger",
-                        content: event.payload.message,
-                    })
-                    return
-                }
-                const json: TraktScrobbleResponse = JSON.parse(event.payload.message);
-                let message: VNode[] = []
-                if (event.payload.message_type == 'start') {
-                    message.push(h('div', null, "开始播放"))
-                } else {
-                    message.push(h('div', null, '停止播放，同步播放进度' + json.progress + '%'))
-                }
-                if (json.movie) {
-                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://trakt.tv/movies/${json.movie?.ids.slug}`)}, () => `${json.movie?.title} (${json.movie?.year})`)))
-                } else if (json.episode) {
-                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://trakt.tv/shows/${json.show?.ids.slug}`)}, () => `${json.show?.title} (${json.show?.year})`)))
-                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://trakt.tv/shows/${json.show?.ids.slug}/seasons/${json.episode?.season}/episodes/${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
-                }
+            const payload = event.payload;
+            // 处理消息
+            processTauriNotify(payload);
+            // 保存原始消息
+            saveRawMessagesToStorage(payload);
+        });
+    }
+    
+    // 处理 Tauri 通知消息
+    function processTauriNotify(payload: TauriNotify) {
+        if (payload.event_type === 'ElMessage') {
+            ElMessage({
+                type: payload.message_type as "success" | "info" | "warning" | "error",
+                message: payload.message
+            });
+        } else if (payload.event_type === 'ElNotification') {
+            ElNotification({
+                type: payload.message_type as "success" | "info" | "warning" | "error",
+                title: payload.title,
+                message: payload.message
+            });
+        } else if (payload.event_type === 'ElMessageBox') {
+            ElMessageBox({
+                title: payload.title,
+                message: payload.message
+            });
+        } else if (payload.event_type === 'TraktNotify') {
+            if (payload.message_type == 'error') {
                 push({
-                    id: "trakt-" + json.movie?.ids.slug + "-" + json.show?.ids.slug + "-" + json.episode?.season + "-" + json.episode?.number,
+                    id: generateGuid(),
                     username: "trakt",
                     datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
-                    content: h('div', null, message),
+                    level: "danger",
+                    content: payload.message,
                 })
-            } else if (event.payload.event_type === 'SimklNotify') {
-                if (event.payload.message_type == 'error') {
-                    push({
-                        id: generateGuid(),
-                        username: "simkl",
-                        datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
-                        level: "danger",
-                        content: event.payload.message,
-                    })
-                    return
-                }
-                const json: SimklScrobbleResponse = JSON.parse(event.payload.message);
-                let message: VNode[] = []
-                if (event.payload.message_type == 'start') {
-                    message.push(h('div', null, "开始播放"))
-                } else {
-                    message.push(h('div', null, '停止播放，同步播放进度' + json.progress + '%'))
-                }
-                if (json.anime) {
-                    if (json.anime.anime_type === 'movie') {
-                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/movies/${json.anime?.ids.simkl}/${json.anime?.ids.slug}`)}, () => `${json.anime?.title} (${json.anime?.year})`)))
-                    } else if (json.anime.anime_type === 'tv') {
-                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.anime?.ids.simkl}/${json.anime?.ids.slug}`)}, () => `${json.anime?.title} (${json.anime?.year})`)))
-                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.anime?.ids.simkl}/${json.anime?.ids.slug}/season-${json.episode?.season}/episode-${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
-                    }
-                } else {
-                    if (json.movie) {
-                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/movies/${json.movie?.ids.simkl}/${json.movie?.ids.slug}`)}, () => `${json.movie?.title} (${json.movie?.year})`)))
-                    } else if (json.episode) {
-                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.show?.ids.simkl}/${json.show?.ids.slug}`)}, () => `${json.show?.title} (${json.show?.year})`)))
-                        message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.show?.ids.simkl}/${json.show?.ids.slug}/season-${json.episode?.season}/episode-${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
-                    }
-                }
+                return
+            }
+            const json: TraktScrobbleResponse = JSON.parse(payload.message);
+            let message: VNode[] = []
+            if (payload.message_type == 'start') {
+                message.push(h('div', null, "开始播放"))
+            } else {
+                message.push(h('div', null, '停止播放，同步播放进度' + json.progress + '%'))
+            }
+            if (json.movie) {
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://trakt.tv/movies/${json.movie?.ids.slug}`)}, () => `${json.movie?.title} (${json.movie?.year})`)))
+            } else if (json.episode) {
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://trakt.tv/shows/${json.show?.ids.slug}`)}, () => `${json.show?.title} (${json.show?.year})`)))
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://trakt.tv/shows/${json.show?.ids.slug}/seasons/${json.episode?.season}/episodes/${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
+            }
+            push({
+                id: "trakt-" + json.movie?.ids.slug + "-" + json.show?.ids.slug + "-" + json.episode?.season + "-" + json.episode?.number,
+                username: "trakt",
+                datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                content: h('div', null, message),
+            })
+        } else if (payload.event_type === 'SimklNotify') {
+            if (payload.message_type == 'error') {
                 push({
-                    id: "trakt-" + json.movie?.ids.slug + "-" + json.movie?.ids.simkl + "-" + json.show?.ids.slug + "-" + json.show?.ids.simkl + "-" + json.anime?.ids.slug + "-" + json.anime?.ids.simkl + "-" + json.episode?.season + "-" + json.episode?.number,
+                    id: generateGuid(),
                     username: "simkl",
                     datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
-                    content: h('div', null, message),
+                    level: "danger",
+                    content: payload.message,
                 })
-            } else if (event.payload.event_type === 'YamTrackNotify') {
-                if (event.payload.message_type == 'error') {
-                    push({
-                        id: generateGuid(),
-                        username: "YamTrack",
-                        datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
-                        level: "danger",
-                        content: event.payload.message,
-                    })
-                    return
+                return
+            }
+            const json: SimklScrobbleResponse = JSON.parse(payload.message);
+            let message: VNode[] = []
+            if (payload.message_type == 'start') {
+                message.push(h('div', null, "开始播放"))
+            } else {
+                message.push(h('div', null, '停止播放，同步播放进度' + json.progress + '%'))
+            }
+            if (json.anime) {
+                if (json.anime.anime_type === 'movie') {
+                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/movies/${json.anime?.ids.simkl}/${json.anime?.ids.slug}`)}, () => `${json.anime?.title} (${json.anime?.year})`)))
+                } else if (json.anime.anime_type === 'tv') {
+                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.anime?.ids.simkl}/${json.anime?.ids.slug}`)}, () => `${json.anime?.title} (${json.anime?.year})`)))
+                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.anime?.ids.simkl}/${json.anime?.ids.slug}/season-${json.episode?.season}/episode-${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
                 }
-                const json: YamTrackResponse = JSON.parse(event.payload.message);
-                if (!json.media_type) {
-                    push({
-                        id: generateGuid(),
-                        username: "YamTrack",
-                        datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
-                        level: "danger",
-                        content: '404未找到媒体',
-                    })
-                    return
-                }
-                let message: VNode[] = []
-                if (event.payload.message_type == 'start') {
-                    message.push(h('div', null, '开始播放'));
-                } else {
-                    message.push(h('div', null, '停止播放'));
-                }
+            } else {
                 if (json.movie) {
-                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.movie?.title} (${json.movie?.date.substring(0, 4)})`)))
+                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/movies/${json.movie?.ids.simkl}/${json.movie?.ids.slug}`)}, () => `${json.movie?.title} (${json.movie?.year})`)))
                 } else if (json.episode) {
-                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.show?.title} (${json.show?.date.substring(0, 4)})`)))
-                    message.push(h('div', null, `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`))
+                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.show?.ids.simkl}/${json.show?.ids.slug}`)}, () => `${json.show?.title} (${json.show?.year})`)))
+                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`https://simkl.com/tv/${json.show?.ids.simkl}/${json.show?.ids.slug}/season-${json.episode?.season}/episode-${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
                 }
+            }
+            push({
+                id: "trakt-" + json.movie?.ids.slug + "-" + json.movie?.ids.simkl + "-" + json.show?.ids.slug + "-" + json.show?.ids.simkl + "-" + json.anime?.ids.slug + "-" + json.anime?.ids.simkl + "-" + json.episode?.season + "-" + json.episode?.number,
+                username: "simkl",
+                datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                content: h('div', null, message),
+            })
+        } else if (payload.event_type === 'YamTrackNotify') {
+            if (payload.message_type == 'error') {
                 push({
-                    id: "YamTrack-" + json.source_url + "-" + json.episode?.season + "-" + json.episode?.number ,
+                    id: generateGuid(),
                     username: "YamTrack",
                     datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
-                    "content": h('div', null, message)
+                    level: "danger",
+                    content: payload.message,
                 })
-            } else if (event.payload.event_type === 'playingNotify') {
-                const json: PlaybackNotifyParam = JSON.parse(event.payload.message);
-                let message: VNode[] = []
-                if (json.event === 'start') {
-                    message.push(h('div', null, '开始播放'));
-                } else {
-                    message.push(h('div', null, '停止播放'));
-                }
-                if (json.series_id) {
-                    message.push(h('div', null, h(ElLink, {underline: false, onClick: () => gotoSeries(json.emby_server_id, json.series_id!)}, () => `${json.series_name}`)))
-                }
-                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => gotoEpisodes(json.emby_server_id, json.item_id)}, () => `${json.item_name}`)))
-                push({
-                    id: "emby-" + json.emby_server_id + "-" + json.item_id,
-                    username: "embyServer",
-                    datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
-                    "embyServerId": json.emby_server_id,
-                    "content": h('div', null, message)
-                })
-                useEventBus().emit('playingNotify', json)
+                return
             }
-        });
+            const json: YamTrackResponse = JSON.parse(payload.message);
+            if (!json.media_type) {
+                push({
+                    id: generateGuid(),
+                    username: "YamTrack",
+                    datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                    level: "danger",
+                    content: '404未找到媒体',
+                })
+                return
+            }
+            let message: VNode[] = []
+            if (payload.message_type == 'start') {
+                message.push(h('div', null, '开始播放'));
+            } else {
+                message.push(h('div', null, '停止播放'));
+            }
+            if (json.movie) {
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.movie?.title} (${json.movie?.date.substring(0, 4)})`)))
+            } else if (json.episode) {
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.show?.title} (${json.show?.date.substring(0, 4)})`)))
+                message.push(h('div', null, `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`))
+            }
+            push({
+                id: "YamTrack-" + json.source_url + "-" + json.episode?.season + "-" + json.episode?.number ,
+                username: "YamTrack",
+                datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                "content": h('div', null, message)
+            })
+        } else if (payload.event_type === 'playingNotify') {
+            const json: PlaybackNotifyParam = JSON.parse(payload.message);
+            let message: VNode[] = []
+            if (json.event === 'start') {
+                message.push(h('div', null, '开始播放'));
+            } else {
+                message.push(h('div', null, '停止播放'));
+            }
+            if (json.series_id) {
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => gotoSeries(json.emby_server_id, json.series_id!)}, () => `${json.series_name}`)))
+            }
+            message.push(h('div', null, h(ElLink, {underline: false, onClick: () => gotoEpisodes(json.emby_server_id, json.item_id)}, () => `${json.item_name}`)))
+            push({
+                id: "emby-" + json.emby_server_id + "-" + json.item_id,
+                username: "embyServer",
+                datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                "embyServerId": json.emby_server_id,
+                "content": h('div', null, message)
+            })
+            useEventBus().emit('playingNotify', json)
+        }
     }
     
     const router = useRouter()
