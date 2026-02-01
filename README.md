@@ -2,16 +2,25 @@
 
 一个简陋的 Emby 客户端（兼容 Jellyfin）。
 
-当前仅支持 Windows 平台，理论上兼容 Linux 和 macOS，但尚未经过测试，不保证可用性。
+当前支持 Windows 和 Linux 平台，理论上兼容 macOS，但尚未经过测试，不保证可用性。
 
 # 使用
 前往 [Release](https://github.com/NPCDW/loemby/releases) 下载对应平台的安装包，安装后即可使用。
 
 该软件内置了一个 mpv 播放器，也可以使用外部 mpv 播放器，一些 mpv 播放器以及整合包：
 1. [mpv.io](https://mpv.io/installation/)
-2. [MPV_lazy](https://github.com/hooke007/MPV_lazy)
+2. [mpv_PlayKit(MPV_lazy)](https://github.com/hooke007/mpv_PlayKit)
 3. [mpv-config](https://github.com/dyphire/mpv-config)
 4. [mpv.net-DW](https://github.com/diana7127/mpv.net-DW)
+
+# 高级功能
+支持 sqlite 与 postgres 数据库，默认使用 sqlite 数据库，可以通过设置配置文件使用 postgres 数据库，配置示例：
+```json
+{
+    "database_type": "postgres",
+    "database_url": "postgres://username:password@127.0.0.1:5432/database_name"
+}
+```
 
 ## 开发
 
