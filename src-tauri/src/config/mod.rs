@@ -4,3 +4,4 @@ pub mod log;
 pub mod http_pool;
 pub mod runtime_config;
 pub mod db;
+pub mod db_pool;

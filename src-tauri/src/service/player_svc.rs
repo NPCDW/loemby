@@ -570,7 +570,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
             }
             play_history_mapper::update_by_id(PlayHistory {
                 id: response.id,
-                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                update_time: Some(chrono::Local::now().naive_local()),
                 emby_server_name: emby_server.server_name.clone(),
                 item_name: Some(params.item_name.clone()),
                 item_type: Some(episode.type_.clone()),
@@ -583,8 +583,8 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         None => {
             play_history_mapper::create(PlayHistory {
                 id: Some(uuid::Uuid::new_v4().to_string()),
-                create_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
-                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                create_time: Some(chrono::Local::now().naive_local()),
+                update_time: Some(chrono::Local::now().naive_local()),
                 emby_server_id: emby_server.id.clone(),
                 emby_server_name: emby_server.server_name.clone(),
                 item_id: Some(episode.id.clone()),
@@ -993,7 +993,7 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
     if played_duration > 300 {
         emby_server_mapper::update_by_id(EmbyServer {
             id: Some(params.emby_server_id.clone()),
-            last_playback_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+            last_playback_time: Some(chrono::Local::now().naive_local()),
             ..Default::default()
         }, &state).await?;
         app_handle.emit("EmbyServerChange", EmbyServerChangeParam {
@@ -1006,13 +1006,13 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         Some(response) => {
             play_history_mapper::update_by_id(PlayHistory {
                 id: response.id,
-                update_time: Some(chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()),
+                update_time: Some(chrono::Local::now().naive_local()),
                 emby_server_name: emby_server.server_name.clone(),
                 item_name: Some(params.item_name.clone()),
                 item_type: Some(episode.type_.clone()),
                 series_id: episode.series_id.clone(),
                 series_name: episode.series_name.clone(),
-                played_duration: Some(played_duration + response.played_duration.unwrap()),
+                played_duration: Some((played_duration as i32) + response.played_duration.unwrap()),
                 ..Default::default()
             }, &state.db_pool).await?;
         },

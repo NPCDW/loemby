@@ -43,8 +43,8 @@ pub async fn update_emby_server(body: EmbyServer, state: tauri::State<'_, AppSta
 #[derive(Serialize, Deserialize)]
 pub struct UpdateEmbyServerOrderParam {
     pub removed_id: String,
-    pub removed_index: u32,
-    pub added_index: u32,
+    pub removed_index: i32,
+    pub added_index: i32,
 }
 
 #[tauri::command]

@@ -1,12 +1,15 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{Execute, Pool, QueryBuilder, Sqlite};
 
-use crate::{config::app_state::AppState, mapper::global_config_mapper};
+use crate::{
+    config::{app_state::AppState, db_pool::DbPool},
+    db_execute, db_fetch_all, db_fetch_optional,
+    mapper::global_config_mapper,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
 pub struct ProxyServer {
     pub id: Option<String>,
-    pub create_time: Option<String>,
+    pub create_time: Option<chrono::NaiveDateTime>,
     pub name: Option<String>,
     pub proxy_type: Option<String>,
     pub addr: Option<String>,
@@ -22,10 +25,18 @@ fn get_proxy_url(proxy: ProxyServer) -> String {
     } else {
         format!("{}:{}@", username, password)
     };
-    format!("{}://{}{}", proxy.proxy_type.unwrap(), auth, proxy.addr.unwrap())
+    format!(
+        "{}://{}{}",
+        proxy.proxy_type.unwrap(),
+        auth,
+        proxy.addr.unwrap()
+    )
 }
 
-pub async fn get_browse_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
+pub async fn get_browse_proxy_url(
+    proxy_id: Option<String>,
+    state: &tauri::State<'_, AppState>,
+) -> Option<String> {
     if proxy_id.is_none() {
         let proxy_id = global_config_mapper::get_cache("global_browse_proxy_id", state).await;
         if proxy_id.is_none() {
@@ -44,7 +55,10 @@ pub async fn get_browse_proxy_url(proxy_id: Option<String>, state: &tauri::State
     return get_cache(proxy_id, state).await;
 }
 
-pub async fn get_play_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
+pub async fn get_play_proxy_url(
+    proxy_id: Option<String>,
+    state: &tauri::State<'_, AppState>,
+) -> Option<String> {
     if proxy_id.is_none() {
         let proxy_id = global_config_mapper::get_cache("global_play_proxy_id", state).await;
         if proxy_id.is_none() {
@@ -63,7 +77,10 @@ pub async fn get_play_proxy_url(proxy_id: Option<String>, state: &tauri::State<'
     return get_cache(proxy_id, state).await;
 }
 
-pub async fn get_app_proxy_url(proxy_id: Option<String>, state: &tauri::State<'_, AppState>) -> Option<String> {
+pub async fn get_app_proxy_url(
+    proxy_id: Option<String>,
+    state: &tauri::State<'_, AppState>,
+) -> Option<String> {
     if proxy_id.is_none() {
         let proxy_id = global_config_mapper::get_cache("global_browse_proxy_id", state).await;
         return Box::pin(get_browse_proxy_url(proxy_id, state)).await;
@@ -102,10 +119,10 @@ pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyh
         Some(proxy_server) => {
             let proxy_url = get_proxy_url(proxy_server);
             cache_map_write.insert(id.to_string(), proxy_url);
-        },
+        }
         None => {
             cache_map_write.remove(id);
-        },
+        }
     };
     anyhow::Ok(())
 }
@@ -115,117 +132,150 @@ pub async fn get_cache(id: String, state: &tauri::State<'_, AppState>) -> Option
     cache_map.get(&id).cloned()
 }
 
-pub async fn get_by_id(id: String, pool: &Pool<Sqlite>) -> anyhow::Result<Option<ProxyServer>> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from proxy_server where id = ");
-    query_builder.push_bind(id);
-    let query = query_builder.build_query_as::<ProxyServer>();
-    let sql = query.sql();
-    let res = query.fetch_optional(pool).await;
-    tracing::debug!("sqlx: 查询代理服务器: {} {:?}", sql, res);
-    anyhow::Ok(res?)
+pub async fn get_by_id(id: String, pool: &DbPool) -> anyhow::Result<Option<ProxyServer>> {
+    let res = db_fetch_optional!(
+        pool,
+        |qb| {
+            qb.push("select * from proxy_server where id = ");
+            qb.push_bind(id);
+        },
+        ProxyServer
+    )?;
+    tracing::debug!("sqlx: 查询代理服务器: {:?}", res);
+    anyhow::Ok(res)
 }
 
-pub async fn list_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<ProxyServer>> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("select * from proxy_server");
-    let query = query_builder.build_query_as::<ProxyServer>();
-    let sql = query.sql();
-    let res = query.fetch_all(pool).await;
-    tracing::debug!("sqlx: 查询所有代理服务器: {} {:?}", sql, res);
-    anyhow::Ok(res?)
+pub async fn list_all(pool: &DbPool) -> anyhow::Result<Vec<ProxyServer>> {
+    let res = db_fetch_all!(
+        pool,
+        |qb| {
+            qb.push("select * from proxy_server");
+        },
+        ProxyServer
+    )?;
+    tracing::debug!("sqlx: 查询所有代理服务器: {:?}", res);
+    anyhow::Ok(res)
 }
 
-pub async fn create(entity: ProxyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
+pub async fn create(
+    entity: ProxyServer,
+    state: &tauri::State<'_, AppState>,
+) -> anyhow::Result<crate::config::db_pool::DbQueryResult> {
     let id = if entity.id.is_some() {
         entity.id.clone().unwrap()
     } else {
         uuid::Uuid::new_v4().to_string()
     };
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("insert into proxy_server(");
-    let mut separated = query_builder.separated(", ");
-    separated.push("id");
-    if entity.name.is_some() {
-        separated.push("name");
-    }
-    if entity.proxy_type.is_some() {
-        separated.push("proxy_type");
-    }
-    if entity.addr.is_some() {
-        separated.push("addr");
-    }
-    if entity.username.is_some() {
-        separated.push("username");
-    }
-    if entity.password.is_some() {
-        separated.push("password");
-    }
-    query_builder.push(")  values(");
-    let mut separated = query_builder.separated(", ");
-    separated.push_bind(id.clone());
-    if entity.name.is_some() {
-        separated.push_bind(entity.name.unwrap());
-    }
-    if entity.proxy_type.is_some() {
-        separated.push_bind(entity.proxy_type.unwrap());
-    }
-    if entity.addr.is_some() {
-        separated.push_bind(entity.addr.unwrap());
-    }
-    if entity.username.is_some() {
-        separated.push_bind(entity.username.unwrap());
-    }
-    if entity.password.is_some() {
-        separated.push_bind(entity.password.unwrap());
-    }
-    query_builder.push(")");
 
-    let query = query_builder.build();
-    let sql = query.sql();
-    let res = query.execute(&state.db_pool).await;
-    tracing::debug!("sqlx: 添加代理服务器: {} {:?}", sql, res);
+    let name = entity.name.clone();
+    let proxy_type = entity.proxy_type.clone();
+    let addr = entity.addr.clone();
+    let username = entity.username.clone();
+    let password = entity.password.clone();
+
+    let res = db_execute!(&state.db_pool, |qb| {
+        qb.push("insert into proxy_server(");
+        let mut separated = qb.separated(", ");
+        separated.push("id");
+        if entity.name.is_some() {
+            separated.push("name");
+        }
+        if entity.proxy_type.is_some() {
+            separated.push("proxy_type");
+        }
+        if entity.addr.is_some() {
+            separated.push("addr");
+        }
+        if entity.username.is_some() {
+            separated.push("username");
+        }
+        if entity.password.is_some() {
+            separated.push("password");
+        }
+        qb.push(")  values(");
+        let mut separated = qb.separated(", ");
+        separated.push_bind(id.clone());
+        if name.is_some() {
+            separated.push_bind(name.unwrap());
+        }
+        if proxy_type.is_some() {
+            separated.push_bind(proxy_type.unwrap());
+        }
+        if addr.is_some() {
+            separated.push_bind(addr.unwrap());
+        }
+        if username.is_some() {
+            separated.push_bind(username.unwrap());
+        }
+        if password.is_some() {
+            separated.push_bind(password.unwrap());
+        }
+        qb.push(")");
+    });
+
+    tracing::debug!("sqlx: 添加代理服务器: {:?}", res);
     if res.is_ok() {
         refresh_cache(&id, state).await?;
     }
     anyhow::Ok(res?)
 }
 
-pub async fn update_by_id(entity: ProxyServer, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
+pub async fn update_by_id(
+    entity: ProxyServer,
+    state: &tauri::State<'_, AppState>,
+) -> anyhow::Result<crate::config::db_pool::DbQueryResult> {
     let id = entity.id.clone().unwrap();
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new("update proxy_server set ");
-    let mut separated = query_builder.separated(", ");
-    if entity.name.is_some() {
-        separated.push("name = ").push_bind_unseparated(entity.name.unwrap());
-    }
-    if entity.proxy_type.is_some() {
-        separated.push("proxy_type = ").push_bind_unseparated(entity.proxy_type.unwrap());
-    }
-    if entity.addr.is_some() {
-        separated.push("addr = ").push_bind_unseparated(entity.addr.unwrap());
-    }
-    if entity.username.is_some() {
-        separated.push("username = ").push_bind_unseparated(entity.username.unwrap());
-    }
-    if entity.password.is_some() {
-        separated.push("password = ").push_bind_unseparated(entity.password.unwrap());
-    }
-    query_builder.push(" where id = ").push_bind(entity.id.unwrap());
+    let name = entity.name.clone();
+    let proxy_type = entity.proxy_type.clone();
+    let addr = entity.addr.clone();
+    let username = entity.username.clone();
+    let password = entity.password.clone();
+    let entity_id = entity.id.clone();
 
-    let query = query_builder.build();
-    let sql = query.sql();
-    let res = query.execute(&state.db_pool).await;
-    tracing::debug!("sqlx: 更新代理服务器: {} {:?}", sql, res);
+    let res = db_execute!(&state.db_pool, |qb| {
+        qb.push("update proxy_server set ");
+        let mut separated = qb.separated(", ");
+        if name.is_some() {
+            separated.push("name = ");
+            separated.push_bind_unseparated(name.unwrap());
+        }
+        if proxy_type.is_some() {
+            separated.push("proxy_type = ");
+            separated.push_bind_unseparated(proxy_type.unwrap());
+        }
+        if addr.is_some() {
+            separated.push("addr = ");
+            separated.push_bind_unseparated(addr.unwrap());
+        }
+        if username.is_some() {
+            separated.push("username = ");
+            separated.push_bind_unseparated(username.unwrap());
+        }
+        if password.is_some() {
+            separated.push("password = ");
+            separated.push_bind_unseparated(password.unwrap());
+        }
+        qb.push(" where id = ");
+        qb.push_bind(entity_id.unwrap());
+    });
+
+    tracing::debug!("sqlx: 更新代理服务器: {:?}", res);
     if res.is_ok() {
         refresh_cache(&id, state).await?;
     }
     anyhow::Ok(res?)
 }
 
-pub async fn delete_by_id(id: String, state: &tauri::State<'_, AppState>) -> anyhow::Result<sqlx::sqlite::SqliteQueryResult> {
-    let mut query_builder = QueryBuilder::new("delete from proxy_server where id = ");
-    query_builder.push_bind(&id);
-    let query = query_builder.build();
-    let sql = query.sql();
-    let res = query.execute(&state.db_pool).await;
-    tracing::debug!("sqlx: 删除代理服务器: {} {:?}", sql, res);
+pub async fn delete_by_id(
+    id: String,
+    state: &tauri::State<'_, AppState>,
+) -> anyhow::Result<crate::config::db_pool::DbQueryResult> {
+    let res = db_execute!(&state.db_pool, |qb| {
+        qb.push("delete from proxy_server where id = ");
+        qb.push_bind(&id);
+    });
+
+    tracing::debug!("sqlx: 删除代理服务器: {:?}", res);
     if res.is_ok() {
         refresh_cache(&id, state).await?;
     }

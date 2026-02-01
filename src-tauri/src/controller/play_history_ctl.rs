@@ -21,8 +21,8 @@ pub async fn get_play_history(body: GetPlayHistoryParam, state: tauri::State<'_,
 
 #[derive(Serialize, Deserialize)]
 pub struct PagePlayHistoryParam {
-    pub page_number: u32,
-    pub page_size: u32,
+    pub page_number: i32,
+    pub page_size: i32,
     pub emby_server_id: Option<String>,
     pub series_name: Option<String>,
     pub item_name: Option<String>,

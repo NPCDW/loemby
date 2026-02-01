@@ -46,7 +46,7 @@ pub fn run() {
 
             config::log::init(app, &config.log_level);
 
-            let db_pool = tauri::async_runtime::block_on(config::db::init(app))?;
+            let db_pool = tauri::async_runtime::block_on(config::db::init(app, &config))?;
             
             let axum_app_state = Arc::new(RwLock::new(None));
             let axum_app_state_clone = axum_app_state.clone();
