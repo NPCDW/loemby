@@ -11,8 +11,8 @@
                         <span style="margin-right: 10px;">{{ runtimeConfig?.app_config.log_level }}</span>
                         <el-button plain type="primary" size="small" @click="invokeApi.open_folder('config')">打开配置目录</el-button>
                     </el-form-item>
-                    <el-form-item label="接受不安全证书">
-                        <span>{{ runtimeConfig?.app_config.danger_accept_invalid_certs }}</span>
+                    <el-form-item label="数据库类型">
+                        <span>{{ runtimeConfig?.app_config.database_type }}</span>
                     </el-form-item>
                     <el-form-item label="Web端口">
                         <span>{{ runtimeConfig?.axum_port }}</span>
@@ -163,7 +163,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             <el-switch
                                 v-model="trakt_sync_switch"
                                 @change="configValueChange('trakt_sync_switch', trakt_sync_switch + '', getTraktSyncSwitch, 'Trakt同步开关')"
-                                active-value="on" inactive-value="off" inline-prompt style="margin-left: 10px; --el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
+                                active-value="on" inactive-value="off" inline-prompt active-text="同步已开启" inactive-text="同步已关闭" />
                         </el-form-item>
                         <el-form-item label="Trakt 授权">
                             <div v-if="trakt_username">
@@ -191,7 +191,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             <el-switch
                                 v-model="simkl_sync_switch"
                                 @change="configValueChange('simkl_sync_switch', simkl_sync_switch + '', getSimklSyncSwitch, 'Simkl同步开关')"
-                                active-value="on" inactive-value="off" inline-prompt style="margin-left: 10px; --el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
+                                active-value="on" inactive-value="off" inline-prompt active-text="同步已开启" inactive-text="同步已关闭" />
                         </el-form-item>
                         <el-form-item label="Simkl 授权">
                             <div v-if="simkl_username">
@@ -219,7 +219,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             <el-switch
                                 v-model="yamtrack_sync_switch"
                                 @change="configValueChange('yamtrack_sync_switch', yamtrack_sync_switch + '', getYamTrackSyncSwitch, 'YamTrack同步开关')"
-                                active-value="on" inactive-value="off" inline-prompt style="margin-left: 10px; --el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" active-text="同步已开启" inactive-text="同步已关闭" />
+                                active-value="on" inactive-value="off" inline-prompt active-text="同步已开启" inactive-text="同步已关闭" />
                         </el-form-item>
                         <el-form-item label="YamTrack 同步地址 (Emby Integrations)">
                             <el-input
@@ -414,6 +414,20 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                         </template>
                     </el-table-column>
                 </el-table>
+            </el-scrollbar>
+        </el-tab-pane>
+        <el-tab-pane label="其他" name="Other">
+            <el-scrollbar style="height: calc(100vh - 120px);width: 100%">
+                <el-form label-position="top">
+                    <el-form-item label="忽略SSL证书错误">
+                        <el-switch
+                            v-model="danger_accept_invalid_certs"
+                            @change="configValueChange('danger_accept_invalid_certs', danger_accept_invalid_certs + '', getDangerAcceptInvalidCerts, '忽略SSL证书错误')"
+                            active-value="true" inactive-value="false"
+                            style="--el-switch-on-color: #F56C6C; --el-switch-off-color: #67C23A"
+                            active-text="忽略（危险的）" inactive-text="不忽略（安全）" />
+                    </el-form-item>
+                </el-form>
             </el-scrollbar>
         </el-tab-pane>
     </el-tabs>
@@ -996,6 +1010,13 @@ function getIconStoredDays() {
     }).catch(e => ElMessage.error('获取配置失败' + e))
 }
 
+const danger_accept_invalid_certs = ref<string>('false');
+function getDangerAcceptInvalidCerts() {
+    useGlobalConfig().getGlobalConfigValue("danger_accept_invalid_certs").then(value => {
+        danger_accept_invalid_certs.value = value ? value : "false";
+    }).catch(e => ElMessage.error('获取配置失败' + e))
+}
+
 function configValueChange(key: string, value: string, callback: () => void, keyName: string = key) {
     return useGlobalConfig().getGlobalConfig(key).then(config => {
         let savePromise;
@@ -1077,6 +1098,8 @@ function handlePaneChange() {
         getDisabledImage()
         getCoverImageStoredDays()
         getIconStoredDays()
+    } else if (activePane.value == 'Other') {
+        getDangerAcceptInvalidCerts()
     }
 }
 handlePaneChange()

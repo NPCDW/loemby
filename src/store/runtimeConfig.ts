@@ -16,7 +16,8 @@ export interface RuntimeConfig {
     version: string,
     app_config: {
         log_level: string,
-        danger_accept_invalid_certs: boolean,
+        database_type: string,
+        database_url: string,
     },
     axum_port: number,
 }

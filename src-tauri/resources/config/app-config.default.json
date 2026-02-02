@@ -1,6 +1,5 @@
 {
     "log_level": "info",
-    "danger_accept_invalid_certs": false,
     "database_type": "sqlite",
     "database_url": ""
 }

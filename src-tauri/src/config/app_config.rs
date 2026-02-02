@@ -9,8 +9,6 @@ use tauri::Manager;
 pub struct Config {
     #[serde_inline_default("info".to_string())]
     pub log_level: String,
-    #[serde_inline_default(false)]
-    pub danger_accept_invalid_certs: bool,
     #[serde_inline_default("sqlite".to_string())]
     pub database_type: String,
     pub database_url: Option<String>,
