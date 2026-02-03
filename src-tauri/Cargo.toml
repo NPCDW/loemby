@@ -1,6 +1,6 @@
 [package]
 name = "loemby"
-version = "0.35.0"
+version = "0.36.0"
 description = "Emby Client"
 authors = ["NPCDW"]
 edition = "2024"
@@ -15,15 +15,15 @@ name = "loemby_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.5.3", features = [] }
+tauri-build = { version = "2.5.4", features = [] }
 regex = "1.12.2"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-updater = "2.9.0"
 
 [dependencies]
-tauri = { version = "2.9.5", features = [] }
-tauri-plugin = "2.5.2"
+tauri = { version = "2.10.1", features = [] }
+tauri-plugin = "2.5.3"
 
 tokio = { version = "1.49.0", features = ["full"] }
 tokio-util = "0.7.18"
