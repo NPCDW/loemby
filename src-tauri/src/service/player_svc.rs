@@ -152,6 +152,13 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     let mpv_volume = global_config_mapper::get_cache("mpv_volume", state).await.unwrap_or("100".to_string());
     let prefetch_playlist = global_config_mapper::get_cache("prefetch_playlist", state).await.unwrap_or("no".to_string());
 
+    let mut script_opts = vec![];
+    script_opts.push(format!("cache_speed-enabled={}", global_config_mapper::get_cache("cache_speed_enabled", state).await.unwrap_or("true".to_string())));
+    let cache_speed_ass_style = global_config_mapper::get_cache("cache_speed_ass_style", state).await.unwrap_or("".to_string());
+    if cache_speed_ass_style != "" {
+        script_opts.push(format!("cache_speed-ass_style={}", cache_speed_ass_style));
+    }
+
     let mut command = tokio::process::Command::new(&mpv_path.as_os_str().to_str().unwrap().replace(r"\\?\", ""));
     command.current_dir(&mpv_startup_dir)
         .arg(&format!("--include={}", mpv_config_path.as_os_str().to_str().unwrap().replace(r"\\?\", "")))
@@ -163,6 +170,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         // .arg("--force-seekable=yes")  // 某些视频格式在没缓存到的情况下不支持跳转，需要打开此配置，测试后发现强制跳转到没有缓存的位置后，mpv会从头开始缓存，一直缓存到跳转位置，与打开此设置的初衷相违背
         .arg(&format!("--user-agent={}", emby_server.user_agent.as_ref().unwrap()))
         .arg(&format!("--volume={}", &mpv_volume))
+        .arg(&format!("--script-opts={}", script_opts.join(",")))
         .arg(&format!("--prefetch-playlist={}", &prefetch_playlist))
         .arg(&format!("--playlist={}", mpv_playlist_path.as_os_str().to_str().unwrap().replace(r"\\?\", "")))
         .arg(&format!("--playlist-start={}", playlist_start));

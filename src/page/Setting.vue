@@ -45,6 +45,16 @@
                             @change="configValueChange('play_param_IsPlayback', play_param_IsPlayback + '', getPlayParamIsPlayback, '播放参数IsPlayback开关')"
                             active-value="true" inactive-value="false" />
                     </el-form-item>
+                    <el-form-item label="网速显示">
+                        <el-switch
+                            v-model="cache_speed_enabled"
+                            @change="configValueChange('cache_speed_enabled', cache_speed_enabled + '', getCacheSpeedEnabled, '网速显示启用')"
+                            active-value="yes" inactive-value="no" />
+                        <el-input
+                            v-model="cache_speed_ass_style"
+                            @change="configValueChange('cache_speed_ass_style', cache_speed_ass_style + '', getCacheSpeedAssStyle, '网速显示ASS样式')"
+                            style="margin-left: 20px; width: 300px;" placeholder="ASS样式：示例：{\an9\3c&HA066FD&}" />
+                    </el-form-item>
                     <el-form-item label="MPV缓存（按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小）" style="display: flex; flex-direction: column;">
                         <div style="flex: auto;">
                             <el-input-number
@@ -419,7 +429,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
         <el-tab-pane label="其他" name="Other">
             <el-scrollbar style="height: calc(100vh - 120px);width: 100%">
                 <el-form label-position="top">
-                    <el-form-item label="忽略SSL证书错误">
+                    <el-form-item label="忽略SSL证书错误（重启应用生效）">
                         <el-switch
                             v-model="danger_accept_invalid_certs"
                             @change="configValueChange('danger_accept_invalid_certs', danger_accept_invalid_certs + '', getDangerAcceptInvalidCerts, '忽略SSL证书错误')"
@@ -912,6 +922,20 @@ function getPlayParamIsPlayback() {
     }).catch(e => ElMessage.error('获取播放参数IsPlayback开关失败' + e))
 }
 
+const cache_speed_enabled = ref<string>('yes');
+function getCacheSpeedEnabled() {
+    useGlobalConfig().getGlobalConfigValue("cache_speed_enabled").then(value => {
+        cache_speed_enabled.value = value ? value : "yes";
+    }).catch(e => ElMessage.error('获取配置失败' + e))
+}
+
+const cache_speed_ass_style = ref<string>('');
+function getCacheSpeedAssStyle() {
+    useGlobalConfig().getGlobalConfigValue("cache_speed_ass_style").then(value => {
+        cache_speed_ass_style.value = value ? value : "";
+    }).catch(e => ElMessage.error('获取配置失败' + e))
+}
+
 const external_mpv_switch = ref<string>('off');
 function getExternalMpvSwitch() {
     useGlobalConfig().getGlobalConfigValue("external_mpv_switch").then(value => {
@@ -1068,6 +1092,8 @@ function handlePaneChange() {
         getExternalMpvSwitch()
         getPrefetchPlaylist()
         getPlayParamIsPlayback()
+        getCacheSpeedEnabled()
+        getCacheSpeedAssStyle()
         getMpvPath()
         getMpvArgs()
         getMpvCacheSeconds()
