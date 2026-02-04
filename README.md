@@ -24,8 +24,11 @@
 
 ## 开发
 
+安装最新版本 `rust` 以及 [此版本](./.nvmrc) 的 `nodejs` 
+
 安装依赖
 ```bash
+npm install -g pnpm
 pnpm i
 ```
 
@@ -37,7 +40,7 @@ pnpm run tauri dev --config src-tauri/tauri.dev.conf.json
 pnpm run tauri dev --config src-tauri/tauri.beta.conf.json
 # 测试生产
 pnpm run tauri dev
-# 生产
+# 生产打包
 pnpm run tauri build
 ```
 
