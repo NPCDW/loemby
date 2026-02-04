@@ -6,11 +6,11 @@ use tauri::Manager;
 
 #[tauri::command]
 pub async fn get_sys_info() -> Result<String, String> {
-    let hostname = sys_info::hostname();
+    let hostname = hostname::get();
     if hostname.is_err() {
         return Err(hostname.unwrap_err().to_string());
     }
-    Ok(hostname.unwrap())
+    Ok(hostname.unwrap().to_string_lossy().into_owned())
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
