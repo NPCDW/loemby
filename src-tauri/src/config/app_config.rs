@@ -11,7 +11,8 @@ pub struct Config {
     pub log_level: String,
     #[serde_inline_default("sqlite".to_string())]
     pub database_type: String,
-    pub database_url: Option<String>,
+    #[serde_inline_default("".to_string())]
+    pub database_url: String,
 }
 
 const APP_CONFIG_PATH: &'static str = "config/app-config.json";
