@@ -119,7 +119,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     let auxm_app_state = state.auxm_app_state.read().await.clone().unwrap();
 
     let mut mpv_playlist = "#EXTM3U".to_string();
-    for (_i, episode) in episode_playlist.iter().enumerate() {
+    for (i, episode) in episode_playlist.iter().enumerate() {
         let uuid = uuid::Uuid::new_v4().to_string();
         let series_name = episode.series_name.clone().unwrap_or("🎬电影".to_string());
         let parent_index_number = episode.parent_index_number.map_or("_".to_string(), |n| n.to_string());
@@ -128,6 +128,8 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         let episode_name = format!("{}{}", prefix, episode.name);
         let title = format!("{} | {} | {}", episode_name, series_name, emby_server.server_name.as_ref().unwrap());
         auxm_app_state.playlist.write().await.insert(uuid.clone(), MediaPlaylistParam {
+            playlist_index: i + 1,
+            playlist_total: episode_playlist.len(),
             emby_server_id: body.emby_server_id.clone(),
             series_id: body.series_id.clone(),
             series_name: series_name.clone(),
@@ -502,8 +504,8 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         if let Some("end-file") = json.event {
             tracing::debug!("MPV IPC 播放结束");
             if let Some(send_task) = send_task { send_task.abort(); }
-            // 播放到末尾或点上一集下一集
-            if json.reason == Some("eof") || json.reason == Some("stop") {
+            // 播放到末尾并且不是最后一集 或 点上一集下一集
+            if (json.reason == Some("eof") && playback_process_param.params.playlist_index != playback_process_param.params.playlist_total) || json.reason == Some("stop") {
                 save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Stop).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             } else {
                 save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));

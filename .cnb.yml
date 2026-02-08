@@ -10,7 +10,10 @@ $:
       imports: https://cnb.cool/my-codespace/envs/-/blob/main/loemby-updater.yml
       # 开发环境启动后会执行的任务
       stages:
-        #安装依赖
+        # 配置codebuddy
+        - name: codebuddy
+          script: /root/.cnb/codebuddy/use.sh
+        # 安装依赖
         - name: install dep
           script: pnpm i
       # 开发环境销毁前会执行该任务
