@@ -560,6 +560,10 @@ function delEmbyServer(tmp: EmbyServer) {
                 useEventBus().emit('EmbyLineChanged', {})
                 ElMessage.error('删除Emby线路失败' + e)
             })
+            // 如果当前页面 URL 包含被删除的服务器 ID，重定向到根路径
+            if (route.path.includes(tmp.id!)) {
+                router.push('/')
+            }
         }).catch(e => {
             ElMessage.error('删除Emby服务器失败' + e)
         })
