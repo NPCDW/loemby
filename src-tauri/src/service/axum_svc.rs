@@ -525,6 +525,8 @@ async fn image(headers: axum::http::HeaderMap, axum_app_state: AxumAppState, par
 
 #[derive(Clone, Debug)]
 pub struct MediaPlaylistParam {
+    pub playlist_index: usize,
+    pub playlist_total: usize,
     pub emby_server_id: String,
     pub series_id: Option<String>,
     pub series_name: String,

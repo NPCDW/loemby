@@ -13,6 +13,9 @@ $:
         # 配置codebuddy
         - name: codebuddy
           script: /root/.cnb/codebuddy/use.sh
+        # 配置database
+        - name: database
+          script: /root/.cnb/loemby/use-db.sh
         # 安装依赖
         - name: install dep
           script: pnpm i
