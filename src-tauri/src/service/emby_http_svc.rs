@@ -4,7 +4,7 @@ use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::{app_state::AppState, http_pool},
+    config::{app_state::AppState, http_pool, http_traffic_middleware::TrafficScope},
     controller::emby_http_ctl::{EmbyAuthenticateByNameParam, EmbyCountParam, EmbyEpisodesParam, EmbyGetContinuePlayListParam, EmbyGetFavoriteListParam, EmbyGetMediaLibraryChildLatestParam, EmbyGetMediaLibraryChildParam, EmbyGetMediaLibraryListParam, EmbyGetServerInfoParam, EmbyHideFromResumeParam, EmbyItemsParam, EmbyLogoutParam, EmbyNextUpParam, EmbyPlaybackInfoParam, EmbyPlayedParam, EmbySearchParam, EmbySeasonsParam, EmbyStarParam, EmbyUnplayedParam, EmbyUnstarParam},
     mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}
 };
@@ -55,7 +55,8 @@ pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &ta
     let builder = client
         .post(format!("{}/emby/Users/AuthenticateByName", emby_server.base_url.clone().unwrap()))
         .headers(headers)
-        .body(body.clone());
+        .body(body.clone())
+        .with_extension((TrafficScope { emby_server_id: emby_server.id.clone(), proxy_id: emby_server.play_proxy_id.clone() }, state.traffic_stat.clone()));
     let builder_print = format!("{:?} {}", &builder, body);
     let response = builder.send().await;
     tracing::debug!("登录emby服务器 request {} response {:?}", builder_print, &response);
@@ -138,7 +139,8 @@ pub async fn get_continue_play_list(param: EmbyGetContinuePlayListParam, state: 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
         .get(format!("{}/emby/Users/{}/Items/Resume?MediaTypes=Video&Recursive=true&StartIndex={}&Limit={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.start_index, param.limit))
-        .headers(headers);
+        .headers(headers)
+        .with_extension((TrafficScope { emby_server_id: emby_server.id.clone(), proxy_id: emby_server.play_proxy_id.clone() }, state.traffic_stat.clone()));
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
     tracing::debug!("首页继续播放列表 request {} response {:?}", builder_print, &response);
@@ -165,7 +167,8 @@ pub async fn get_favorite_list(param: EmbyGetFavoriteListParam, state: &tauri::S
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
         .get(format!("{}/emby/Users/{}/Items?Filters=IsFavorite&Recursive=true&IncludeItemTypes=Episode,Series,Movie,Season&Fields=AlternateMediaSources,MediaSources,ProductionYear,EndDate,Overview&StartIndex={}&Limit={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.start_index, param.limit))
-        .headers(headers);
+        .headers(headers)
+        .with_extension((TrafficScope { emby_server_id: emby_server.id.clone(), proxy_id: emby_server.play_proxy_id.clone() }, state.traffic_stat.clone()));
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
     tracing::debug!("收藏列表 request {} response {:?}", builder_print, &response);
@@ -219,7 +222,8 @@ pub async fn get_media_library_list(param: EmbyGetMediaLibraryListParam, state: 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
         .get(format!("{}/emby/Users/{}/Views", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))
-        .headers(headers);
+        .headers(headers)
+        .with_extension((TrafficScope { emby_server_id: emby_server.id.clone(), proxy_id: emby_server.play_proxy_id.clone() }, state.traffic_stat.clone()));
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
     tracing::debug!("首页媒体库列表 request {} response {:?}", builder_print, &response);
@@ -246,7 +250,8 @@ pub async fn get_media_library_child_latest(param: EmbyGetMediaLibraryChildLates
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
         .get(format!("{}/emby/Users/{}/Items/Latest?Limit={}&ParentId={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.limit, param.parent_id))
-        .headers(headers);
+        .headers(headers)
+        .with_extension((TrafficScope { emby_server_id: emby_server.id.clone(), proxy_id: emby_server.play_proxy_id.clone() }, state.traffic_stat.clone()));
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
     tracing::debug!("首页媒体库子项目最新几条 request {} response {:?}", builder_print, &response);
@@ -273,7 +278,8 @@ pub async fn get_media_library_child(param: EmbyGetMediaLibraryChildParam, state
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
         .get(format!("{}/emby/Users/{}/Items?Recursive=true&IncludeItemTypes=Series,Movie&ParentId={}&StartIndex={}&Limit={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.parent_id, param.start_index, param.limit))
-        .headers(headers);
+        .headers(headers)
+        .with_extension((TrafficScope { emby_server_id: emby_server.id.clone(), proxy_id: emby_server.play_proxy_id.clone() }, state.traffic_stat.clone()));
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
     tracing::debug!("首页媒体库子项目 request {} response {:?}", builder_print, &response);
@@ -300,7 +306,8 @@ pub async fn count(param: EmbyCountParam, state: &tauri::State<'_, AppState>) ->
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
         .get(format!("{}/emby/Items/Counts?UserId={}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))
-        .headers(headers);
+        .headers(headers)
+        .with_extension((TrafficScope { emby_server_id: emby_server.id.clone(), proxy_id: emby_server.play_proxy_id.clone() }, state.traffic_stat.clone()));
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
     tracing::debug!("剧集数量统计 request {} response {:?}", builder_print, &response);

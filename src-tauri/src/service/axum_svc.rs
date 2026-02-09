@@ -6,7 +6,7 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::{emby_http_svc, player_svc, simkl_http_svc::{self, SimklHttpTokenParam}, trakt_http_svc::{self, TraktHttpTokenParam}}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool, http_traffic_middleware::TrafficScope}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::{emby_http_svc, player_svc, simkl_http_svc::{self, SimklHttpTokenParam}, trakt_http_svc::{self, TraktHttpTokenParam}}};
 
 pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -163,7 +163,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             axum::body::Body::new("emby_server 不存在".to_string())
         ).into_response(),
     };
-    let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id, &app_state).await;
+    let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id.clone(), &app_state).await;
     let client = http_pool::get_stream_http_client(proxy_url, &app_state).await.unwrap();
     let mut req_headers = headers.clone();
     req_headers.remove(axum::http::header::HOST);
@@ -174,6 +174,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     let mut res = client
         .get(request.stream_url.clone())
         .headers(req_headers.clone())
+        .with_extension((TrafficScope { emby_server_id: emby_server.id.clone(), proxy_id: emby_server.play_proxy_id.clone() }, app_state.traffic_stat.clone()))
         .send()
         .await;
     tracing::debug!("stream: {} {} {:?} {:?} 媒体流响应 {:?}", types, &id, request, req_headers, res);
@@ -207,6 +208,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
                     res = client
                         .get(location)
                         .headers(req_headers.clone())
+                        .with_extension((TrafficScope { emby_server_id: emby_server.id.clone(), proxy_id: emby_server.play_proxy_id.clone() }, app_state.traffic_stat.clone()))
                         .send()
                         .await;
                     tracing::debug!("stream: {} {} {:?} {:?} 手动重定向后媒体流响应 {:?}", types, &id, request, req_headers, res);
@@ -525,6 +527,8 @@ async fn image(headers: axum::http::HeaderMap, axum_app_state: AxumAppState, par
 
 #[derive(Clone, Debug)]
 pub struct MediaPlaylistParam {
+    pub playlist_index: usize,
+    pub playlist_total: usize,
     pub emby_server_id: String,
     pub series_id: Option<String>,
     pub series_name: String,

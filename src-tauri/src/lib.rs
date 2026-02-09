@@ -69,6 +69,7 @@ pub fn run() {
                 proxy_server_cache: Arc::new(RwLock::new(HashMap::new())),
                 emby_http_cache: Arc::new(RwLock::new(HashMap::new())),
                 db_pool,
+                traffic_stat: Arc::new(RwLock::new(HashMap::new())),
             });
 
             tauri::async_runtime::block_on(mapper::emby_server_mapper::load_cache(&app.state()))?;
@@ -84,6 +85,18 @@ pub fn run() {
                 let res = cache_svc::clean_plan(&app_handle).await;
                 if res.is_err() {
                     tracing::error!("清理缓存计划失败: {:#?}", res);
+                }
+            });
+
+            let app_handle = app.app_handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let app_state = app_handle.state::<AppState>().clone();
+                loop {
+                    let traffic_stat = app_state.traffic_stat.read().await.clone();
+                    for (key, value) in &traffic_stat {
+                        tracing::info!("流量统计: {:?} {:?}", key, value);
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                 }
             });
 
