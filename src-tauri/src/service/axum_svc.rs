@@ -177,7 +177,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         .send()
         .await;
     tracing::debug!("stream: {} {} {:?} {:?} 媒体流响应 {:?}", types, &id, request, req_headers, res);
-    // 手动重定向，reqwest 默认会自动重定向，但某些情况下会失败，所以这里手动重定向，猜测可能是 https 重定向到 http 会失败
+    // 手动重定向
     for _ in 1..10 {
         if let Ok(response) = &res {
             if !response.status().is_redirection() {

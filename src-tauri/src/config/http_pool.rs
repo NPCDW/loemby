@@ -63,7 +63,9 @@ pub async fn get_image_http_client(proxy_url: Option<String>, state: &tauri::Sta
 pub async fn get_stream_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
     let danger_accept_invalid_certs = global_config_mapper::get_cache("danger_accept_invalid_certs", state).await;
     let mut client = reqwest::Client::builder()
-        .danger_accept_invalid_certs(Some("true".to_string()) == danger_accept_invalid_certs);
+        .danger_accept_invalid_certs(Some("true".to_string()) == danger_accept_invalid_certs)
+        // 禁用自动重定向，因为重定向到的网址可能有不规范的编码，或者重定向后 reqwest 默认只会携带 ua 和 auth ,不会携带 x-emby-token 导致无法访问
+        .redirect(reqwest::redirect::Policy::none());
     if let Some(proxy_url) = proxy_url {
         let proxy = reqwest::Proxy::all(&proxy_url);
         if proxy.is_err() {

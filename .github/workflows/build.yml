@@ -38,10 +38,10 @@ jobs:
             platform: windows-latest
             rust_target: ''
             tauri_build_args: ''
-          # - build: windows-arm
-          #   platform: windows-11-arm
-          #   rust_target: ''
-          #   tauri_build_args: ''
+          - build: windows-arm
+            platform: windows-11-arm
+            rust_target: ''
+            tauri_build_args: ''
     runs-on: ${{ matrix.platform }}
     steps:
     - uses: actions/checkout@v6
