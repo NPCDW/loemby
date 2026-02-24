@@ -1,6 +1,6 @@
 CREATE TABLE "emby_server" (
     "id" VARCHAR(36) NOT NULL PRIMARY KEY,
-    "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "create_time" TIMESTAMPTZ NOT NULL,
     "base_url" VARCHAR(255) NOT NULL,
     "username" VARCHAR(255),
     "password" VARCHAR(255),
@@ -16,7 +16,7 @@ CREATE TABLE "emby_server" (
     "order_by" INTEGER NOT NULL,
     "browse_proxy_id" VARCHAR(255) NOT NULL,
     "play_proxy_id" VARCHAR(255) NOT NULL,
-    "last_playback_time" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "last_playback_time" TIMESTAMPTZ,
     "keep_alive_days" INTEGER NOT NULL DEFAULT 0,
     "disabled" INTEGER NOT NULL DEFAULT 0,
     "icon_url" VARCHAR(255),
@@ -26,15 +26,15 @@ CREATE INDEX emby_server_order on emby_server (order_by);
 
 CREATE TABLE "global_config" (
     "id" VARCHAR(36) NOT NULL PRIMARY KEY,
-    "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "create_time" TIMESTAMPTZ NOT NULL,
     "config_key" VARCHAR(255) NOT NULL,
-    "config_value" VARCHAR(255) NOT NULL
+    "config_value" text NOT NULL
 );
 CREATE UNIQUE INDEX global_config_key on global_config (config_key);
 
 CREATE TABLE "proxy_server" (
     "id" VARCHAR(36) NOT NULL PRIMARY KEY,
-    "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "create_time" TIMESTAMPTZ NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "proxy_type" VARCHAR(255) NOT NULL,
     "addr" VARCHAR(255) NOT NULL,
@@ -44,7 +44,7 @@ CREATE TABLE "proxy_server" (
 
 CREATE TABLE "emby_line" (
     "id" VARCHAR(36) NOT NULL PRIMARY KEY,
-    "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "create_time" TIMESTAMPTZ NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "emby_server_id" VARCHAR(36) NOT NULL,
     "emby_server_name" VARCHAR(255) NOT NULL,
@@ -56,15 +56,15 @@ CREATE INDEX emby_line_emby_server_id ON emby_line (emby_server_id);
 
 CREATE TABLE "emby_icon_library" (
     "id" VARCHAR(36) NOT NULL PRIMARY KEY,
-    "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "create_time" TIMESTAMPTZ NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "url" VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE "play_history" (
     "id" VARCHAR(36) NOT NULL PRIMARY KEY,
-    "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "update_time" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "create_time" TIMESTAMPTZ NOT NULL,
+    "update_time" TIMESTAMPTZ,
     "emby_server_id" VARCHAR(36) NOT NULL,
     "emby_server_name" VARCHAR(255) NOT NULL,
     "item_type" VARCHAR(255) NOT NULL,

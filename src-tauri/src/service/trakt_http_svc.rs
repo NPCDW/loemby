@@ -71,7 +71,7 @@ pub async fn get_cache_access_token(state: &tauri::State<'_, AppState>) -> anyho
         return Err(anyhow::anyhow!("Trakt 未授权，或授权失败"));
     }
     let trakt_expires_in = trakt_expires_in.unwrap().parse::<i64>().unwrap();
-    let current_time = chrono::Local::now().timestamp();
+    let current_time = chrono::Local::now().to_utc().timestamp();
     if current_time < (trakt_expires_in - 6 * 60 * 60) {
         return Ok(global_config_mapper::get_cache("trakt_access_token", state).await.unwrap());
     } else {

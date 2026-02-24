@@ -8,7 +8,7 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
 pub struct GlobalConfig {
     pub id: Option<String>,
-    pub create_time: Option<chrono::NaiveDateTime>,
+    pub create_time: Option<chrono::DateTime<chrono::FixedOffset>>,
     pub config_key: Option<String>,
     pub config_value: Option<String>,
 }
@@ -99,6 +99,7 @@ pub async fn create(
         qb.push("insert into global_config(");
         let mut separated = qb.separated(", ");
         separated.push("id");
+        separated.push("create_time");
         if entity.config_key.is_some() {
             separated.push("config_key");
         }
@@ -108,6 +109,7 @@ pub async fn create(
         qb.push(")  values(");
         let mut separated = qb.separated(", ");
         separated.push_bind(id);
+        separated.push_bind(chrono::Local::now().fixed_offset());
         if config_key.is_some() {
             separated.push_bind(config_key.clone().unwrap());
         }

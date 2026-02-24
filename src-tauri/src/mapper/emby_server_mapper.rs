@@ -8,7 +8,7 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
 pub struct EmbyServer {
     pub id: Option<String>,
-    pub create_time: Option<chrono::NaiveDateTime>,
+    pub create_time: Option<chrono::DateTime<chrono::FixedOffset>>,
 
     pub base_url: Option<String>,
     pub username: Option<String>,
@@ -32,7 +32,7 @@ pub struct EmbyServer {
     pub play_proxy_id: Option<String>,
     pub line_id: Option<String>,
 
-    pub last_playback_time: Option<chrono::NaiveDateTime>,
+    pub last_playback_time: Option<chrono::DateTime<chrono::FixedOffset>>,
     pub keep_alive_days: Option<i32>,
 
     pub disabled: Option<i32>,
@@ -127,6 +127,7 @@ pub async fn create(
         qb.push("insert into emby_server(");
         let mut separated = qb.separated(", ");
         separated.push("id");
+        separated.push("create_time");
         if entity.base_url.is_some() {
             separated.push("base_url");
         }
@@ -190,6 +191,7 @@ pub async fn create(
         qb.push(")  values(");
         let mut separated = qb.separated(", ");
         separated.push_bind(id.clone());
+        separated.push_bind(chrono::Local::now().fixed_offset());
         if base_url.is_some() {
             separated.push_bind(base_url.unwrap());
         }

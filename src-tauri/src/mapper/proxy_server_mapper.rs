@@ -9,7 +9,7 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
 pub struct ProxyServer {
     pub id: Option<String>,
-    pub create_time: Option<chrono::NaiveDateTime>,
+    pub create_time: Option<chrono::DateTime<chrono::FixedOffset>>,
     pub name: Option<String>,
     pub proxy_type: Option<String>,
     pub addr: Option<String>,
@@ -177,6 +177,7 @@ pub async fn create(
         qb.push("insert into proxy_server(");
         let mut separated = qb.separated(", ");
         separated.push("id");
+        separated.push("create_time");
         if entity.name.is_some() {
             separated.push("name");
         }
@@ -195,6 +196,7 @@ pub async fn create(
         qb.push(")  values(");
         let mut separated = qb.separated(", ");
         separated.push_bind(id.clone());
+        separated.push_bind(chrono::Local::now().fixed_offset());
         if name.is_some() {
             separated.push_bind(name.unwrap());
         }

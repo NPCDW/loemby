@@ -5,7 +5,7 @@ use crate::{config::db_pool::DbPool, db_execute, db_fetch_all, db_fetch_optional
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
 pub struct EmbyIconLibrary {
     pub id: Option<String>,
-    pub create_time: Option<chrono::NaiveDateTime>,
+    pub create_time: Option<chrono::DateTime<chrono::FixedOffset>>,
     pub name: Option<String>,
     pub url: Option<String>,
 }
@@ -52,6 +52,7 @@ pub async fn create(
         qb.push("insert into emby_icon_library(");
         let mut separated = qb.separated(", ");
         separated.push("id");
+        separated.push("create_time");
         if entity.name.is_some() {
             separated.push("name");
         }
@@ -61,6 +62,7 @@ pub async fn create(
         qb.push(")  values(");
         let mut separated = qb.separated(", ");
         separated.push_bind(id);
+        separated.push_bind(chrono::Local::now().fixed_offset());
         if name.is_some() {
             separated.push_bind(name.unwrap());
         }

@@ -8,8 +8,8 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
 pub struct PlayHistory {
     pub id: Option<String>,
-    pub create_time: Option<chrono::NaiveDateTime>,
-    pub update_time: Option<chrono::NaiveDateTime>,
+    pub create_time: Option<chrono::DateTime<chrono::FixedOffset>>,
+    pub update_time: Option<chrono::DateTime<chrono::FixedOffset>>,
 
     pub emby_server_id: Option<String>,
     pub emby_server_name: Option<String>,
@@ -138,6 +138,8 @@ pub async fn create(
         qb.push("insert into play_history(");
         let mut separated = qb.separated(", ");
         separated.push("id");
+        separated.push("create_time");
+        separated.push("update_time");
         if entity.emby_server_id.is_some() {
             separated.push("emby_server_id");
         }
@@ -168,6 +170,8 @@ pub async fn create(
         qb.push(")  values(");
         let mut separated = qb.separated(", ");
         separated.push_bind(id);
+        separated.push_bind(chrono::Local::now().fixed_offset());
+        separated.push_bind(chrono::Local::now().fixed_offset());
         if emby_server_id.is_some() {
             separated.push_bind(emby_server_id.unwrap());
         }
@@ -221,7 +225,7 @@ pub async fn update_by_id(
         qb.push("update play_history set ");
         let mut separated = qb.separated(", ");
         separated.push("update_time = ");
-        separated.push_bind_unseparated(chrono::Local::now().naive_local());
+        separated.push_bind_unseparated(chrono::Local::now().fixed_offset());
         if emby_server_id.is_some() {
             separated.push("emby_server_id = ");
             separated.push_bind_unseparated(emby_server_id.unwrap());
