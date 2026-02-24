@@ -171,94 +171,103 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
     req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
-    let mut res = client
-        .get(request.stream_url.clone())
-        .headers(req_headers.clone())
-        .send()
-        .await;
-    tracing::debug!("stream: {} {} {:?} {:?} 媒体流响应 {:?}", types, &id, request, req_headers, res);
-    // 手动重定向
-    for _ in 1..10 {
-        if let Ok(response) = &res {
-            if !response.status().is_redirection() {
-                break;
-            }
-            tracing::debug!("stream: {} {} 手动重定向", types, &id);
-            match response.headers().get(axum::http::header::LOCATION) {
-                None => {
-                    tracing::error!("stream: {} {} {:?} 手动重定向失败，媒体流响应没有 Location 头", types, &id, request);
-                    axum_app_state.app.emit("tauri_notify", TauriNotify {
-                        event_type: "ElMessage".to_string(),
-                        message_type: "error".to_string(),
-                        title: None,
-                        message: format!("手动重定向失败，媒体流响应没有 Location 头"),
-                    }).unwrap();
-                    return (
-                        axum::http::StatusCode::SERVICE_UNAVAILABLE,
-                        axum::http::HeaderMap::new(),
-                        axum::body::Body::new("手动重定向失败，媒体流响应没有 Location 头".to_string())
-                    ).into_response();
-                },
-                Some(location) => {
-                    tracing::debug!("stream: {} {} {:?} 手动重定向到 {:?}", types, &id, request, location);
-                    // /cdn?path=/mnt/files/nfs-files/resources\xe7\x94\xb5\xe8\xa7\x86\xe5\x89\xa7/\xe6\xac\xa7\xe7\xbe\x8e\xe5\x89\xa7/\xe6\x98\xaf\xef\xbc\x8c\xe9\xa6\x96\xe7\x9b\xb8 (1986)/Season 1/\xe6\x98\xaf\xef\xbc\x8c\xe9\xa6\x96\xe7\x9b\xb8 - S01E04 - \xe7\xac\xac 4 \xe9\x9b\x86.mp4
-                    // 如果使用 location.to_str() 这个方法会报错，所以可能是因为这个原因所以没有自动重定向
-                    let location = String::from_utf8_lossy(location.as_bytes()).to_string();
-                    res = client
-                        .get(location)
-                        .headers(req_headers.clone())
-                        .send()
-                        .await;
-                    tracing::debug!("stream: {} {} {:?} {:?} 手动重定向后媒体流响应 {:?}", types, &id, request, req_headers, res);
-                },
-            }
-        }
-    }
-    match res {
-        Err(err) => {
-            tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, emby_server.user_agent, err);
+    let mut url = request.stream_url.clone();
+    // 处理错误和手动重定向
+    let mut redirect_count = 0u8;
+    let response = loop {
+        if redirect_count > 10 {
+            tracing::error!("stream: {} {} {:?} 重定向次数过多", types, &id, emby_server.user_agent);
             axum_app_state.app.emit("tauri_notify", TauriNotify {
                 event_type: "ElMessage".to_string(),
                 message_type: "error".to_string(),
                 title: None,
-                message: format!("媒体流响应错误: {}", err),
+                message: format!("媒体流重定向次数过多"),
             }).unwrap();
-            (
+            return (
                 axum::http::StatusCode::SERVICE_UNAVAILABLE,
                 axum::http::HeaderMap::new(),
-                axum::body::Body::new(err.to_string())
-            ).into_response()
-        },
-        Ok(response) => {
-            if !response.status().is_success() {
-                let status = response.status();
-                let headers = response.headers().clone();
-                tracing::error!("stream: {} {} {:?} 媒体流响应 {:?} {:?}", types, &id, req_headers, status, headers);
-                let mut stream = response.bytes_stream();
-                let mut bytes = Vec::new();
-                while let Some(Ok(chunk)) = stream.next().await {
-                    bytes.extend_from_slice(&chunk);
-                }
-                let text = String::from_utf8_lossy(&bytes);
-                tracing::error!("stream: {} {} {:?} 错误响应内容: {}", types, &id, req_headers, text);
+                axum::body::Body::new("重定向次数过多".to_string())
+            ).into_response();
+        }
+        let res = client
+            .get(url)
+            .headers(req_headers.clone())
+            .send()
+            .await;
+        tracing::debug!("stream: {} {} {:?} {:?} 重定向次数 {} 媒体流响应 {:?}", types, &id, request, req_headers, redirect_count, res);
+        match res {
+            Err(err) => {
+                tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, emby_server.user_agent, err);
                 axum_app_state.app.emit("tauri_notify", TauriNotify {
                     event_type: "ElMessage".to_string(),
                     message_type: "error".to_string(),
                     title: None,
-                    message: format!("媒体流响应错误: {} {} {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown"), text),
+                    message: format!("媒体流响应错误: {}", err),
                 }).unwrap();
                 return (
-                    status,
-                    headers,
+                    axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                    axum::http::HeaderMap::new(),
+                    axum::body::Body::new(err.to_string())
                 ).into_response();
-            }
-            (
-                response.status(),
-                response.headers().clone(),
-                axum::body::Body::from_stream(response.bytes_stream())
-            ).into_response()
-        },
+            },
+            Ok(response) => {
+                if !response.status().is_redirection() {
+                    break response;
+                }
+                tracing::debug!("stream: {} {} 手动重定向", types, &id);
+                match response.headers().get(axum::http::header::LOCATION) {
+                    None => {
+                        tracing::error!("stream: {} {} {:?} 手动重定向失败，媒体流响应没有 Location 头", types, &id, request);
+                        axum_app_state.app.emit("tauri_notify", TauriNotify {
+                            event_type: "ElMessage".to_string(),
+                            message_type: "error".to_string(),
+                            title: None,
+                            message: format!("手动重定向失败，媒体流响应没有 Location 头"),
+                        }).unwrap();
+                        return (
+                            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                            axum::http::HeaderMap::new(),
+                            axum::body::Body::new("手动重定向失败，媒体流响应没有 Location 头".to_string())
+                        ).into_response();
+                    },
+                    Some(location) => {
+                        tracing::debug!("stream: {} {} {:?} 手动重定向到 {:?}", types, &id, request, location);
+                        // /cdn?path=/mnt/files/nfs-files/resources\xe7\x94\xb5\xe8\xa7\x86\xe5\x89\xa7/\xe6\xac\xa7\xe7\xbe\x8e\xe5\x89\xa7/\xe6\x98\xaf\xef\xbc\x8c\xe9\xa6\x96\xe7\x9b\xb8 (1986)/Season 1/\xe6\x98\xaf\xef\xbc\x8c\xe9\xa6\x96\xe7\x9b\xb8 - S01E04 - \xe7\xac\xac 4 \xe9\x9b\x86.mp4
+                        // 如果使用 location.to_str() 这个方法会报错，所以可能是因为这个原因所以没有自动重定向
+                        url = String::from_utf8_lossy(location.as_bytes()).to_string();
+                        redirect_count += 1;
+                    },
+                }
+            },
+        }
+    };
+    if !response.status().is_success() {
+        let status = response.status();
+        let headers = response.headers().clone();
+        tracing::error!("stream: {} {} {:?} 媒体流响应 {:?} {:?}", types, &id, req_headers, status, headers);
+        let mut stream = response.bytes_stream();
+        let mut bytes = Vec::new();
+        while let Some(Ok(chunk)) = stream.next().await {
+            bytes.extend_from_slice(&chunk);
+        }
+        let text = String::from_utf8_lossy(&bytes);
+        tracing::error!("stream: {} {} {:?} 错误响应内容: {}", types, &id, req_headers, text);
+        axum_app_state.app.emit("tauri_notify", TauriNotify {
+            event_type: "ElMessage".to_string(),
+            message_type: "error".to_string(),
+            title: None,
+            message: format!("媒体流响应错误: {} {} {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown"), text),
+        }).unwrap();
+        return (
+            status,
+            headers,
+        ).into_response();
     }
+    (
+        response.status(),
+        response.headers().clone(),
+        axum::body::Body::from_stream(response.bytes_stream())
+    ).into_response()
 }
 
 async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path(id): Path<String>) -> axum::response::Response {

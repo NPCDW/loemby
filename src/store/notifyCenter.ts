@@ -45,7 +45,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
     const initMessages = () => {
         const rawMessages = loadRawMessagesFromStorage();
         rawMessages.forEach(payload => {
-            processTauriNotify(payload);
+            processTauriNotify(payload, true);
         });
     };
 
@@ -76,19 +76,19 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
     }
     
     // 处理 Tauri 通知消息
-    function processTauriNotify(payload: TauriNotify) {
-        if (payload.event_type === 'ElMessage') {
+    function processTauriNotify(payload: TauriNotify, isPageRefresh: boolean = false) {
+        if (payload.event_type === 'ElMessage' && !isPageRefresh) {
             ElMessage({
                 type: payload.message_type as "success" | "info" | "warning" | "error",
                 message: payload.message
             });
-        } else if (payload.event_type === 'ElNotification') {
+        } else if (payload.event_type === 'ElNotification' && !isPageRefresh) {
             ElNotification({
                 type: payload.message_type as "success" | "info" | "warning" | "error",
                 title: payload.title,
                 message: payload.message
             });
-        } else if (payload.event_type === 'ElMessageBox') {
+        } else if (payload.event_type === 'ElMessageBox' && !isPageRefresh) {
             ElMessageBox({
                 title: payload.title,
                 message: payload.message
