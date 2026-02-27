@@ -1,6 +1,6 @@
 [package]
 name = "loemby"
-version = "0.37.1"
+version = "0.37.2"
 description = "Emby Client"
 authors = ["NPCDW"]
 edition = "2024"
@@ -28,7 +28,7 @@ tauri-plugin = "2.5.3"
 tokio = { version = "1.49.0", features = ["full"] }
 tokio-util = "0.7.18"
 tokio-stream = "0.1.18"
-interprocess = { version = "2.3.1", features = ["tokio"] }
+interprocess = { version = "2.4.0", features = ["tokio"] }
 axum = "0.8.8"
 sqlx = { version = "0.8.6", features = [ "runtime-tokio", "sqlite", "postgres", "macros", "chrono", "json", "migrate" ] }
 
@@ -40,14 +40,14 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter", "time", "local-time"] }
 tracing-appender = "0.2.4"
 
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 
 time = "0.3.47"
-chrono = { version = "0.4.43", features = ["serde"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 
 sha256 = "1.6.0"
 
-uuid = { version = "1.20.0", features = ["v4"] }
+uuid = { version = "1.21.0", features = ["v4"] }
 
 rust_decimal = "1.40.0"
 
@@ -58,3 +58,6 @@ url = "2.5.8"
 hostname = "0.4.2"
 
 open = "5.3.3"
+
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+hex = "0.4"

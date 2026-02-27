@@ -1,5 +1,6 @@
 {
     "log_level": "info",
     "database_type": "sqlite",
-    "database_url": ""
+    "database_url": "",
+    "dev_private_key": ""
 }

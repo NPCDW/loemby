@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::{app_state::AppState, db_pool::DbPool},
+    config::app_state::AppState,
     db_execute, db_fetch_all, db_fetch_optional,
 };
 
@@ -39,7 +39,7 @@ pub struct EmbyServer {
 }
 
 pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
-    let list = list_all(&state.db_pool).await?;
+    let list = list_all(state).await?;
     let mut cache_map_write = state.emby_server_cache.write().await;
     cache_map_write.clear();
     for server in list {
@@ -49,7 +49,7 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
 }
 
 pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
-    let emby_server = get_by_id(id.to_string(), &state.db_pool).await?;
+    let emby_server = get_by_id(id.to_string(), state).await?;
     let mut cache_map_write = state.emby_server_cache.write().await;
     match emby_server {
         Some(emby_server) => {
@@ -67,9 +67,9 @@ pub async fn get_cache(id: &str, state: &tauri::State<'_, AppState>) -> Option<E
     cache_map.get(id).cloned()
 }
 
-pub async fn get_by_id(id: String, pool: &DbPool) -> anyhow::Result<Option<EmbyServer>> {
-    let res = db_fetch_optional!(
-        pool,
+pub async fn get_by_id(id: String, state: &tauri::State<'_, AppState>) -> anyhow::Result<Option<EmbyServer>> {
+    let mut res = db_fetch_optional!(
+        &state.db_pool,
         |qb| {
             qb.push("select * from emby_server where id = ");
             qb.push_bind(id);
@@ -77,18 +77,29 @@ pub async fn get_by_id(id: String, pool: &DbPool) -> anyhow::Result<Option<EmbyS
         EmbyServer
     )?;
     tracing::debug!("sqlx: 查询emby服务器: {:?}", res);
+    if !crate::config::app_config::is_dev_mode(&state.app_config.dev_private_key) {
+        if let Some(ref mut server) = res {
+            server.user_agent = Some(format!("loemby/{}", env!("CARGO_PKG_VERSION")));
+        }
+    }
     anyhow::Ok(res)
 }
 
-pub async fn list_all(pool: &DbPool) -> anyhow::Result<Vec<EmbyServer>> {
-    let res = db_fetch_all!(
-        pool,
+pub async fn list_all(state: &tauri::State<'_, AppState>) -> anyhow::Result<Vec<EmbyServer>> {
+    let mut res = db_fetch_all!(
+        &state.db_pool,
         |qb| {
             qb.push("select * from emby_server");
         },
         EmbyServer
     )?;
     tracing::debug!("sqlx: 查询所有emby服务器: {:?}", res);
+    if !crate::config::app_config::is_dev_mode(&state.app_config.dev_private_key) {
+        let user_agent = format!("loemby/{}", env!("CARGO_PKG_VERSION"));
+        for server in &mut res {
+            server.user_agent = Some(user_agent.clone());
+        }
+    }
     anyhow::Ok(res)
 }
 
