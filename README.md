@@ -13,15 +13,6 @@
 3. [mpv-config](https://github.com/dyphire/mpv-config)
 4. [mpv.net-DW](https://github.com/diana7127/mpv.net-DW)
 
-# 高级功能
-支持 sqlite 与 postgres 数据库，默认使用 sqlite 数据库，可以通过设置配置文件使用 postgres 数据库，配置示例：
-```json
-{
-    "database_type": "postgres",
-    "database_url": "postgres://username:password@127.0.0.1:5432/database_name"
-}
-```
-
 ## 开发
 
 安装最新版本 `rust` 以及 [此版本](./.nvmrc) 的 `nodejs` 
