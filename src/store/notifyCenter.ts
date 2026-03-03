@@ -68,6 +68,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
         listen<TauriNotify>('tauri_notify', (event) => {
             console.log("tauri tauri_notify event", event)
             const payload = event.payload;
+            payload.datetime = dayjs().locale('zh-cn').format("HH:mm:ss")
             // 处理消息
             processTauriNotify(payload);
             // 保存原始消息
@@ -98,7 +99,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                 push({
                     id: generateGuid(),
                     username: "trakt",
-                    datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                    datetime: payload.datetime!,
                     level: "danger",
                     content: payload.message,
                 })
@@ -120,7 +121,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
             push({
                 id: "trakt-" + json.movie?.ids.slug + "-" + json.show?.ids.slug + "-" + json.episode?.season + "-" + json.episode?.number,
                 username: "trakt",
-                datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                datetime: payload.datetime!,
                 content: h('div', null, message),
             })
         } else if (payload.event_type === 'SimklNotify') {
@@ -128,7 +129,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                 push({
                     id: generateGuid(),
                     username: "simkl",
-                    datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                    datetime: payload.datetime!,
                     level: "danger",
                     content: payload.message,
                 })
@@ -159,7 +160,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
             push({
                 id: "trakt-" + json.movie?.ids.slug + "-" + json.movie?.ids.simkl + "-" + json.show?.ids.slug + "-" + json.show?.ids.simkl + "-" + json.anime?.ids.slug + "-" + json.anime?.ids.simkl + "-" + json.episode?.season + "-" + json.episode?.number,
                 username: "simkl",
-                datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                datetime: payload.datetime!,
                 content: h('div', null, message),
             })
         } else if (payload.event_type === 'YamTrackNotify') {
@@ -167,7 +168,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                 push({
                     id: generateGuid(),
                     username: "YamTrack",
-                    datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                    datetime: payload.datetime!,
                     level: "danger",
                     content: payload.message,
                 })
@@ -178,7 +179,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                 push({
                     id: generateGuid(),
                     username: "YamTrack",
-                    datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                    datetime: payload.datetime!,
                     level: "danger",
                     content: '404未找到媒体',
                 })
@@ -199,7 +200,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
             push({
                 id: "YamTrack-" + json.source_url + "-" + json.episode?.season + "-" + json.episode?.number ,
                 username: "YamTrack",
-                datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                datetime: payload.datetime!,
                 "content": h('div', null, message)
             })
         } else if (payload.event_type === 'playingNotify') {
@@ -217,7 +218,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
             push({
                 id: "emby-" + json.emby_server_id + "-" + json.item_id,
                 username: "embyServer",
-                datetime: dayjs().locale('zh-cn').format("HH:mm:ss"),
+                datetime: payload.datetime!,
                 "embyServerId": json.emby_server_id,
                 "content": h('div', null, message)
             })
@@ -241,6 +242,7 @@ export type TauriNotify = {
     message_type: string;
     title?: string;
     message: string;
+    datetime?: string;
 };
 
 export interface NotifyMessage {
