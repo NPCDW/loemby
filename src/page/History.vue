@@ -35,7 +35,7 @@
             <el-table-column fixed="right" label="Pin" width="50px">
                 <template #default="scope">
                     <el-link :underline="false" @click="pin(scope.row)" style="margin-left: 5px;">
-                        <el-icon color="#E6A23C" :size="16" v-if=" scope.row.pinned"><svg-icon name="pin" color="#E6A23C" /></el-icon>
+                        <el-icon :size="16" v-if=" scope.row.pinned"><svg-icon name="pin" /></el-icon>
                         <el-icon :size="16" v-else><svg-icon name="unpin" /></el-icon>
                     </el-link>
                 </template>
