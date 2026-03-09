@@ -27,19 +27,20 @@
                 <div style="padding: 20px;">
                     <h1>{{ currentSeries.Name }}</h1>
                     <p>{{ currentSeries.ProductionYear }}</p>
-                    <p><el-scrollbar style="height: 180px;">{{ currentSeries.Overview }}</el-scrollbar></p>
+                    <p><el-scrollbar style="height: 170px;">{{ currentSeries.Overview }}</el-scrollbar></p>
                     <p>
-                        <span>外部链接：</span>
                         <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
-                            <el-button round @click="invokeApi.open_url(externalUrl.Url)">
-                                <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" style="width: 24px; height: 24px;" />
-                                <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" style="width: 24px; height: 24px;" />
-                                <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" style="width: 24px; height: 24px;" />
-                                <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" style="width: 24px; height: 24px;" />
-                                <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" style="width: 24px; height: 24px;" />
-                                <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" style="width: 24px; height: 24px;" />
-                                <i-ep-Link v-else />
-                                <span style="margin-left: 5px;">{{ externalUrl.Name }}</span>
+                            <el-button round @click="invokeApi.open_url(externalUrl.Url)" style="height: 92px; width: 92px;">
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                    <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" style="width: 48px; height: 48px;" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" style="width: 48px; height: 48px;" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" style="width: 48px; height: 48px;" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" style="width: 48px; height: 48px;" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" style="width: 48px; height: 48px;" />
+                                    <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" style="width: 48px; height: 48px;" />
+                                    <i-ep-Link v-else />
+                                    <span style="margin-top: 5px;">{{ externalUrl.Name }}</span>
+                                </div>
                             </el-button>
                         </el-tooltip>
                     </p>
