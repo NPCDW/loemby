@@ -301,7 +301,7 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
         media_source_select,
         media_source_index,
         sender: None,
-        start_play: false,
+        play_info_init_finished: false,
     };
     tauri::async_runtime::spawn(async move {
         let res = playback_process(playback_process_param).await;
@@ -332,7 +332,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         media_source_select: _,
         media_source_index: _,
         sender: _,
-        start_play: _,
+        play_info_init_finished: _,
     } = playback_process_param;
     let app_state = app_handle.state::<AppState>();
 
@@ -435,7 +435,6 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
 
     playback_process_param.sender = Some(Arc::new(RwLock::new(sender)));
     
-    let mut play_info_init_finished = false;
     let mut send_task: Option<tokio::task::JoinHandle<()>> = None;
     let mut last_save_time = chrono::Local::now();
     let mut last_record_position = Decimal::from_u64(params.playback_position_ticks / 1000_0000).unwrap();
@@ -480,9 +479,9 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
             }
             continue;
         }
-        if !play_info_init_finished {
+        if !playback_process_param.play_info_init_finished {
             if Some("file-loaded") == json.event {
-                playback_process_param.start_play = true;
+                playback_process_param.start_time = chrono::Local::now().timestamp();
                 let res = play_info_init(&playback_process_param).await;
                 if let Err(e) = res {
                     tracing::error!("初始化播放信息失败: {:?}", e);
@@ -497,7 +496,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
                 playback_process_param.scrobble_yamtrack_param = scrobble_yamtrack_param;
                 // 在APP点击继续播放后，下次通过上一集下一集等方式播放，播放位置会被重置为0
                 playback_process_param.params.playback_position_ticks = 0;
-                play_info_init_finished = true;
+                playback_process_param.play_info_init_finished = true;
             }
             continue;
         }
@@ -555,7 +554,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         media_source_select,
         media_source_index,
         sender,
-        start_play: _,
+        play_info_init_finished: _,
     } = playback_process_param;
     let app_state = app_handle.state::<AppState>();
     let sender = sender.clone().unwrap();
@@ -976,11 +975,11 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         media_source_select: _,
         media_source_index: _,
         sender: _,
-        start_play,
+        play_info_init_finished,
     } = playback_process_param;
     let episode = episode.as_ref().unwrap();
 
-    if !start_play {
+    if !play_info_init_finished {
         return Ok(());
     }
 
@@ -1192,7 +1191,7 @@ struct PlaybackProcessParam {
     sender: Option<Arc<RwLock<interprocess::os::windows::named_pipe::tokio::SendPipeStream<interprocess::os::windows::named_pipe::pipe_mode::Bytes>>>>,
     #[cfg(unix)]
     sender: Option<Arc<RwLock<interprocess::local_socket::tokio::SendHalf>>>,
-    start_play: bool,
+    play_info_init_finished: bool,
 }
 
 #[cfg(not(windows))]

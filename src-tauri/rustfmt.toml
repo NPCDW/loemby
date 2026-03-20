@@ -1,0 +1,7 @@
+edition = "2024"
+fn_params_layout = "Compressed"
+newline_style = "Native"
+tab_spaces = 4
+max_width = 120
+use_small_heuristics = "Max"
+short_array_element_width_threshold = 120
