@@ -15,7 +15,10 @@ pub fn init(app: &tauri::App, log_level: &str) {
         )
         .unwrap(),
     );
-    let level = LevelFilter::from_str(log_level).unwrap_or(LevelFilter::INFO);
+    let filter = tracing_subscriber::filter::Targets::new()
+        .with_target("sqlx", LevelFilter::from_str(log_level).unwrap())
+        .with_target("loemby_lib", LevelFilter::from_str(log_level).unwrap())
+        .with_target("", LevelFilter::INFO);
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
@@ -27,7 +30,7 @@ pub fn init(app: &tauri::App, log_level: &str) {
                 .with_thread_ids(true)
                 .with_thread_names(true)
                 .log_internal_errors(true)
-                .with_filter(level),
+                .with_filter(filter.clone()),
         )
         .with(
             tracing_subscriber::fmt::layer()
@@ -39,7 +42,7 @@ pub fn init(app: &tauri::App, log_level: &str) {
                 .with_thread_ids(true)
                 .with_thread_names(true)
                 .log_internal_errors(true)
-                .with_filter(level),
+                .with_filter(filter),
         )
         .init();
 }

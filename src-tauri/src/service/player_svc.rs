@@ -835,6 +835,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     let command = format!(r#"{{ "command": ["print-text", "Emby播放初始化完成"] }}{}"#, "\n");
     sender.write().await.write_all(command.as_bytes()).await?;
     sender.write().await.flush().await?;
+    tracing::debug!("MPV IPC Command print-text: {}", command);
 
     // 观测播放进度，返回太频繁，改为每2秒获取一次，用户跳转时立即获取一次
     // let observe_property_progress_command = r#"{ "command": ["observe_property", 10023, "playback-time"]}"#.to_string() + "\n";
