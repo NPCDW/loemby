@@ -68,7 +68,7 @@ pub async fn get_cache(id: &str, state: &tauri::State<'_, AppState>) -> Option<E
 }
 
 pub async fn get_by_id(id: String, state: &tauri::State<'_, AppState>) -> anyhow::Result<Option<EmbyServer>> {
-    let mut res = db_fetch_optional!(
+    let res = db_fetch_optional!(
         &state.db_pool,
         |qb| {
             qb.push("select * from emby_server where id = ");
@@ -77,16 +77,11 @@ pub async fn get_by_id(id: String, state: &tauri::State<'_, AppState>) -> anyhow
         EmbyServer
     )?;
     tracing::debug!("sqlx: 查询emby服务器: {:?}", res);
-    if !crate::config::app_config::is_dev_mode(&state.app_config.dev_private_key) {
-        if let Some(ref mut server) = res {
-            server.user_agent = Some(format!("loemby/{}", env!("CARGO_PKG_VERSION")));
-        }
-    }
     anyhow::Ok(res)
 }
 
 pub async fn list_all(state: &tauri::State<'_, AppState>) -> anyhow::Result<Vec<EmbyServer>> {
-    let mut res = db_fetch_all!(
+    let res = db_fetch_all!(
         &state.db_pool,
         |qb| {
             qb.push("select * from emby_server");
@@ -94,12 +89,6 @@ pub async fn list_all(state: &tauri::State<'_, AppState>) -> anyhow::Result<Vec<
         EmbyServer
     )?;
     tracing::debug!("sqlx: 查询所有emby服务器: {:?}", res);
-    if !crate::config::app_config::is_dev_mode(&state.app_config.dev_private_key) {
-        let user_agent = format!("loemby/{}", env!("CARGO_PKG_VERSION"));
-        for server in &mut res {
-            server.user_agent = Some(user_agent.clone());
-        }
-    }
     anyhow::Ok(res)
 }
 
