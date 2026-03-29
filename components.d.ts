@@ -60,6 +60,7 @@ declare module 'vue' {
     IEpClock: typeof import('~icons/ep/clock')['default']
     IEpConnection: typeof import('~icons/ep/connection')['default']
     IEpDelete: typeof import('~icons/ep/delete')['default']
+    IEpDownload: typeof import('~icons/ep/download')['default']
     IEpEdit: typeof import('~icons/ep/edit')['default']
     IEpFilm: typeof import('~icons/ep/film')['default']
     IEpLink: typeof import('~icons/ep/link')['default']

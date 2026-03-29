@@ -101,6 +101,10 @@
                                     <span>收藏</span>
                                 </template>
                             </el-button>
+                            <el-button plain type="primary" :loading="play_loading" @click="play_video(currentEpisodes.Id, 0, true)">
+                                <el-icon :size="20" v-if="!play_loading"><i-ep-Download /></el-icon>
+                                <span>下载</span>
+                            </el-button>
                         </p>
                         <p>
                             <span>外部标签：</span>
@@ -440,7 +444,7 @@ function getPlayVersionAutoSelectPolicy() {
 }
 getPlayVersionAutoSelectPolicy()
 
-function play_video(item_id: string, playbackPositionTicks: number) {
+function play_video(item_id: string, playbackPositionTicks: number, download: boolean = false) {
     play_loading.value = true
     return invokeApi.play_video({
         emby_server_id: embyServerId,
@@ -453,6 +457,7 @@ function play_video(item_id: string, playbackPositionTicks: number) {
         audio_select: audioSelect.value,
         subtitle_select: subtitleSelect.value,
         version_select: versionSelect.value,
+        download: download,
     }).catch(res => ElMessage.error(res)).finally(() => play_loading.value = false)
 }
 

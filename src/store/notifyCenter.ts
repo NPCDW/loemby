@@ -223,6 +223,17 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
                 "content": h('div', null, message)
             })
             useEventBus().emit('playingNotify', json)
+        } else if (payload.event_type === 'DownloadNotify') {
+            const json: DownloadNotifyParam = JSON.parse(payload.message);
+            let message: VNode[] = []
+            message.push(h('div', null, h('b', null, json.title)))
+            message.push(h('div', null, h('span', null, json.url)))
+            push({
+                id: generateGuid(),
+                username: "loemby",
+                datetime: payload.datetime!,
+                content: h('div', null, message),
+            })
         }
     }
     
@@ -262,6 +273,11 @@ export interface PlaybackNotifyParam {
     item_id: string;
     item_name: string
     event: string;
+}
+
+export interface DownloadNotifyParam {
+    title: string;
+    url: string;
 }
 
 interface TraktScrobbleResponse {

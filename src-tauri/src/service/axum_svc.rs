@@ -550,6 +550,7 @@ pub struct MediaPlaylistParam {
     pub subtitle_select: i32,
     pub mpv_ipc: String,
     pub media_title: String,
+    pub download: bool,
 }
 
 #[derive(Clone, Debug)]

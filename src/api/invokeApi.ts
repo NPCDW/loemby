@@ -16,6 +16,7 @@ interface PlayVideoParam {
     audio_select: number,
     subtitle_select: number,
     version_select: number,
+    download?: boolean,
 }
 
 async function play_video(param: PlayVideoParam): Promise<string> {

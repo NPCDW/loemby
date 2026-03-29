@@ -144,6 +144,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
             subtitle_select: body.subtitle_select,
             mpv_ipc: pipe_name.clone(),
             media_title: title.clone(),
+            download: body.download.unwrap_or(false),
         });
         // 播放媒体 0 代表从播放列表连续播放自动选择的播放版本，或手动点击了播放列表默认的播放版本
         mpv_playlist = format!("{}\n#EXTINF:-1,{}\nhttp://127.0.0.1:{}/play_media/{}/0", mpv_playlist, title, &auxm_app_state.port, &uuid);
@@ -280,6 +281,19 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
             emby_server_id: emby_server.id.clone().unwrap(),
         });
         video_url = format!("http://127.0.0.1:{}/stream/video/{}", &axum_app_state.port, &uuid);
+    }
+
+    if params.download {
+        let notify_param = DownloadNotifyParamEvent {
+            title: format!("视频下载 - {}", params.media_title.clone()),
+            url: video_url.clone(),
+        };
+        axum_app_state.app.emit("tauri_notify", TauriNotify {
+            event_type: "DownloadNotify".to_string(),
+            message_type: "success".to_string(),
+            title: None,
+            message: serde_json::to_string(&notify_param).unwrap(),
+        }).map_err(|e| anyhow::anyhow!(e))?;
     }
 
     // 播放进程
@@ -704,6 +718,19 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
             sender.write().await.write_all(command.as_bytes()).await?;
             sender.write().await.flush().await?;
             tracing::debug!("MPV IPC Command sub-add: {}", command);
+            
+            if params.download {
+                let notify_param = DownloadNotifyParamEvent {
+                    title: format!("字幕下载 - {}", media_stream.display_title.clone().unwrap_or("".to_string())),
+                    url: subtitle_url.clone(),
+                };
+                axum_app_state.app.emit("tauri_notify", TauriNotify {
+                    event_type: "DownloadNotify".to_string(),
+                    message_type: "success".to_string(),
+                    title: None,
+                    message: serde_json::to_string(&notify_param).unwrap(),
+                }).map_err(|e| anyhow::anyhow!(e))?;
+            }
         }
     }
     // 手动或自动选择媒体音频和字幕
@@ -870,7 +897,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     } else { None };
     let trakt_sync_switch = global_config_mapper::get_cache("trakt_sync_switch", &app_state).await;
     let trakt_username = global_config_mapper::get_cache("trakt_username", &app_state).await;
-    let scrobble_trakt_param = if trakt_sync_switch != Some("off".to_string()) && trakt_username.is_some() {
+    let scrobble_trakt_param = if !params.download && trakt_sync_switch != Some("off".to_string()) && trakt_username.is_some() {
         let trakt_scrobble_param = trakt_http_svc::get_scrobble_trakt_param(&episode, &series, 0.0);
         if let Some(scrobble_trakt_param) = &trakt_scrobble_param {
             match trakt_http_svc::start(scrobble_trakt_param, &app_state, 0).await {
@@ -905,7 +932,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     } else { None };
     let simkl_sync_switch = global_config_mapper::get_cache("simkl_sync_switch", &app_state).await;
     let simkl_username = global_config_mapper::get_cache("simkl_username", &app_state).await;
-    let scrobble_simkl_param = if simkl_sync_switch != Some("off".to_string()) && simkl_username.is_some() {
+    let scrobble_simkl_param = if !params.download && simkl_sync_switch != Some("off".to_string()) && simkl_username.is_some() {
         let simkl_scrobble_param = trakt_http_svc::get_scrobble_trakt_param(&episode, &series, 0.0);
         if let Some(scrobble_simkl_param) = &simkl_scrobble_param {
             match simkl_http_svc::start(scrobble_simkl_param, &app_state, 0).await {
@@ -931,7 +958,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     // YamTrack 开始播放
     let yamtrack_sync_switch = global_config_mapper::get_cache("yamtrack_sync_switch", &app_state).await;
     let yamtrack_sync_url = global_config_mapper::get_cache("yamtrack_sync_url", &app_state).await;
-    let scrobble_yamtrack_param = if yamtrack_sync_switch != Some("off".to_string()) && yamtrack_sync_url.is_some() {
+    let scrobble_yamtrack_param = if !params.download && yamtrack_sync_switch != Some("off".to_string()) && yamtrack_sync_url.is_some() {
         let yamtrack_scrobble_param = yamtrack_http_svc::get_scrobble_yamtrack_param(&episode, &series, true, false);
         if let Some(scrobble_yamtrack_param) = &yamtrack_scrobble_param {
             match yamtrack_http_svc::track(scrobble_yamtrack_param, &app_state).await {
@@ -1169,6 +1196,12 @@ struct TrackTitleParam {
     video: Vec<String>,
     audio: Vec<String>,
     sub: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DownloadNotifyParamEvent {
+    title: String,
+    url: String,
 }
 
 struct PlaybackProcessParam {
