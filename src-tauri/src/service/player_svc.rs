@@ -153,7 +153,11 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
     file_util::write_file(&mpv_playlist_path, &mpv_playlist);
     
     let mpv_volume = global_config_mapper::get_cache("mpv_volume", state).await.unwrap_or("100".to_string());
-    let prefetch_playlist = global_config_mapper::get_cache("prefetch_playlist", state).await.unwrap_or("no".to_string());
+    let prefetch_playlist = if let Some(true) = body.download {
+        "no".to_string()
+    } else {
+        global_config_mapper::get_cache("prefetch_playlist", state).await.unwrap_or("no".to_string())
+    };
 
     let mut script_opts = vec![];
     script_opts.push(format!("cache_speed-enabled={}", global_config_mapper::get_cache("cache_speed_enabled", state).await.unwrap_or("true".to_string())));
