@@ -1,8 +1,11 @@
 use crate::mapper::global_config_mapper;
 
 use super::app_state::AppState;
+use reqwest_middleware::ClientBuilder;
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 
-pub async fn get_api_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
+pub async fn get_api_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest_middleware::ClientWithMiddleware> {
+
     let proxy_key = proxy_url.clone().unwrap_or("no".to_string());
     let danger_accept_invalid_certs = global_config_mapper::get_cache("danger_accept_invalid_certs", state).await;
     // 必须 clone 否则在 read 未完成时 write 会锁住
@@ -25,13 +28,17 @@ pub async fn get_api_http_client(proxy_url: Option<String>, state: &tauri::State
             client = client.proxy(proxy.unwrap());
         }
         let client = client.build()?;
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+        let client = ClientBuilder::new(client)
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
         state.api_reqwest_pool.write().await.insert(proxy_key, client.clone());
         client
     };
     anyhow::Ok(client)
 }
 
-pub async fn get_image_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
+pub async fn get_image_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest_middleware::ClientWithMiddleware> {
     let proxy_key = proxy_url.clone().unwrap_or("no".to_string());
     let danger_accept_invalid_certs = global_config_mapper::get_cache("danger_accept_invalid_certs", state).await;
     // 必须 clone 否则在 read 未完成时 write 会锁住
@@ -54,13 +61,17 @@ pub async fn get_image_http_client(proxy_url: Option<String>, state: &tauri::Sta
             client = client.proxy(proxy.unwrap());
         }
         let client = client.build()?;
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+        let client = ClientBuilder::new(client)
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
         state.image_reqwest_pool.write().await.insert(proxy_key, client.clone());
         client
     };
     anyhow::Ok(client)
 }
 
-pub async fn get_stream_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest::Client> {
+pub async fn get_stream_http_client(proxy_url: Option<String>, state: &tauri::State<'_, AppState>) -> anyhow::Result<reqwest_middleware::ClientWithMiddleware> {
     let danger_accept_invalid_certs = global_config_mapper::get_cache("danger_accept_invalid_certs", state).await;
     let mut client = reqwest::Client::builder()
         .danger_accept_invalid_certs(Some("true".to_string()) == danger_accept_invalid_certs)
@@ -74,5 +85,9 @@ pub async fn get_stream_http_client(proxy_url: Option<String>, state: &tauri::St
         client = client.proxy(proxy.unwrap());
     }
     let client = client.build()?;
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+    let client = ClientBuilder::new(client)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build();
     anyhow::Ok(client)
 }
