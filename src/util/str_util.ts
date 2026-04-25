@@ -42,8 +42,31 @@ export function secondsToHMS(seconds: number) {
     }
     timeParts.push(secs.toString() + 's'); // 添加秒
 
-    // 用冒号连接时间部分
     return timeParts.join('');
+}
+
+export function secondsToHMS2(seconds: number) {
+    // 计算小时、分钟和秒
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    // 根据条件构建时间字符串
+    let timeParts = [];
+    if (hours > 0) {
+        timeParts.push(hours.toString()); // 添加小时
+    }
+    if (minutes > 9) {
+        timeParts.push(minutes.toString()); // 添加分钟
+    } else {
+        timeParts.push('0' + minutes.toString()); // 添加分钟
+    }
+    if (secs > 9) {
+        timeParts.push(secs.toString()); // 添加秒
+    } else {
+        timeParts.push('0' + secs.toString()); // 添加分钟
+    }
+    return timeParts.join(':');
 }
 
 export function isInternalUrl(urlString: string) {

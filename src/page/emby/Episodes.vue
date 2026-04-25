@@ -107,6 +107,10 @@
                             </el-button>
                         </p>
                         <p>
+                            <span>章节：</span>
+                            <el-tag v-for="chapter in currentEpisodes.Chapters" @click="play_video(currentEpisodes.Id, chapter.StartPositionTicks)" style="margin-right: 10px; cursor: pointer;" disable-transitions>{{ chapter.ChapterIndex + ". " + chapter.MarkerType + " " + secondsToHMS2(chapter.StartPositionTicks / 1000_0000) + " " + chapter.Name }}</el-tag>
+                        </p>
+                        <p>
                             <span>外部标签：</span>
                             <el-tag v-for="(value, key) in currentEpisodes.ProviderIds" style="margin-right: 10px;" disable-transitions>{{ key + ':' + value }}</el-tag>
                         </p>
@@ -165,7 +169,7 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, UserData } from '../../api/embyApi';
-import { formatBytes, formatMbps, secondsToHMS, isInternalUrl } from '../../util/str_util'
+import { formatBytes, formatMbps, secondsToHMS, isInternalUrl, secondsToHMS2 } from '../../util/str_util'
 import { getResolutionFromMediaSources, getResolutionLevelFromMediaSources } from '../../util/play_info_util'
 import ItemCard from '../../components/ItemCard.vue';
 import invokeApi from '../../api/invokeApi';

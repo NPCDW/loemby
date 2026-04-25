@@ -300,6 +300,7 @@ export interface BaseItem {
     ProviderIds: {[key: string]: string},
     ExternalUrls: ExternalUrl[],
     ImageTags: BaseItemImageTags,
+    Chapters: Chapter[],
 }
 
 export interface BaseItemImageTags {
@@ -391,6 +392,13 @@ export interface UserData {
 export interface ExternalUrl {
     Url: string,
     Name: string,
+}
+
+export interface Chapter {
+    StartPositionTicks: number,
+    Name: string,
+    MarkerType: string,
+    ChapterIndex: number,
 }
 
 export interface MediaLibraryItem {
