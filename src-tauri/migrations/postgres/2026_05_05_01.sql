@@ -1,0 +1,1 @@
+ALTER TABLE emby_server ALTER COLUMN auth_token TYPE TEXT;
