@@ -10,7 +10,7 @@ pub fn init(app: &tauri::App, log_level: &str) {
     let file_appender = tracing_appender::rolling::daily(logs_dir, "loemby.log");
     let local_time = OffsetTime::new(
         UtcOffset::from_hms(8, 0, 0).unwrap(),
-        time::format_description::parse(
+        time::format_description::parse_borrowed::<2>(
             "[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]",
         )
         .unwrap(),
