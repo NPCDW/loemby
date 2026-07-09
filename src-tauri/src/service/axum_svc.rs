@@ -359,7 +359,7 @@ pub struct EmbyImageParam {
     pub image_type: String,
 }
 
-async fn image_emby(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<EmbyImageParam>) -> axum::response::Response {
+async fn image_emby(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<EmbyImageParam>) -> axum::response::Response {
     tracing::debug!("image: {:?}", param);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
     let state = axum_app_state.app.state::<AppState>().clone();
@@ -376,7 +376,8 @@ async fn image_emby(headers: axum::http::HeaderMap, State(axum_app_state): State
     let image_url = emby_http_svc::get_image_url(&emby_server.base_url.unwrap(), &param.item_id, &param.image_type);
     let cache_prefix = format!("image/{}/{}", param.emby_server_id, param.image_type);
     
-    image(headers, axum_app_state, ImageParam {
+    image(axum_app_state, ImageParam {
+        token: emby_server.auth_token.clone(),
         proxy_url: proxy_url,
         user_agent: user_agent,
         image_url: image_url,
@@ -389,7 +390,7 @@ pub struct IconImageParam {
     pub image_url: String,
 }
 
-async fn image_icon(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<IconImageParam>) -> axum::response::Response {
+async fn image_icon(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Query(param): Query<IconImageParam>) -> axum::response::Response {
     tracing::debug!("image: {:?}", param);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
     let state = axum_app_state.app.state::<AppState>().clone();
@@ -399,7 +400,8 @@ async fn image_icon(headers: axum::http::HeaderMap, State(axum_app_state): State
     let image_url = param.image_url.clone();
     let cache_prefix = "icon".to_string();
 
-    image(headers, axum_app_state, ImageParam {
+    image(axum_app_state, ImageParam {
+        token: None,
         proxy_url: proxy_url,
         user_agent: user_agent,
         image_url: image_url,
@@ -409,13 +411,14 @@ async fn image_icon(headers: axum::http::HeaderMap, State(axum_app_state): State
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ImageParam {
+    pub token: Option<String>,
     pub proxy_url: Option<String>,
     pub user_agent: String,
     pub image_url: String,
     pub cache_prefix: String,
 }
 
-async fn image(headers: axum::http::HeaderMap, axum_app_state: AxumAppState, param: ImageParam) -> axum::response::Response {
+async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::response::Response {
     tracing::debug!("image: {:?}", param);
     let state = axum_app_state.app.state::<AppState>().clone();
     let disabled_image_cache = global_config_mapper::get_cache("disabled_image_cache", &state).await.unwrap_or("off".to_string()) == "on";
@@ -466,18 +469,21 @@ async fn image(headers: axum::http::HeaderMap, axum_app_state: AxumAppState, par
             axum::body::Body::new(format!("http连接池获取失败 {}", err))
         ).into_response(),
     };
-    let mut req_headers = headers.clone();
+    let mut req_headers = axum::http::HeaderMap::new();
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, param.user_agent.clone().parse().unwrap());
     req_headers.insert(axum::http::header::REFERER, param.image_url.clone().parse().unwrap());
+    if let Some(token) = param.token.as_ref() {
+        req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(token).unwrap());
+    }
     let res = client
         .get(param.image_url.clone())
         .headers(req_headers.clone())
         .send()
         .await;
-    tracing::debug!("image: {:?} 媒体流响应 {:?}", param, res);
+    tracing::debug!("image: {:?} {:?} 媒体流响应 {:?}", param, req_headers, res);
     if let Err(err) = res {
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
