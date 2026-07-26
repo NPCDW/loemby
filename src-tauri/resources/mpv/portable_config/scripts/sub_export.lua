@@ -33,18 +33,40 @@ options.read_options(o)
 
 local is_windows = package.config:sub(1, 1) == "\\" -- detect path separator, windows uses backslashes
 
-local TEMP_DIR = os.getenv("TEMP") or "/tmp"
-local function is_writable(path)
-    local file = io.open(path, "w")
-    if file then
-        file:close()
-        os.remove(path)
-        return true
-    end
-    return false
+-- 获取用户主目录
+local user_home = os.getenv("HOME") or os.getenv("USERPROFILE") or "."
+
+-- 全局变量，用于在 process 函数中引用
+local subtitles_file = nil
+local args = nil
+
+-- 检测 ffmpeg 是否可用
+local function check_ffmpeg()
+    local test_args = is_windows and { 'powershell', '-NoProfile', '-Command', o.ffmpeg_path .. " -version" } 
+                                 or { '/bin/bash', '-c', o.ffmpeg_path .. " -version" }
+    local res = mp.command_native({
+        name = "subprocess",
+        playback_only = false,
+        args = test_args,
+        capture_stdout = true,
+        capture_stderr = true
+    })
+    return res and res.status == 0
 end
 
 local function export_selected_subtitles()
+    -- 检查 ffmpeg 是否存在
+    if not check_ffmpeg() then
+        if o.language == 'chs' then
+            msg.info("错误: 未找到 ffmpeg，请确保已安装并在配置中指定正确的路径")
+            mp.osd_message("错误: 未找到 ffmpeg，请检查配置", 3)
+        else
+            msg.info("Error: ffmpeg not found, please check your configuration")
+            mp.osd_message("Error: ffmpeg not found, check configuration", 3)
+        end
+        return
+    end
+
     local i = 0
     local tracks_count = mp.get_property_number("track-list/count")
     while i < tracks_count do
@@ -56,8 +78,30 @@ local function export_selected_subtitles()
         local track_external = mp.get_property(string.format("track-list/%d/external", i))
         local track_codec = mp.get_property(string.format("track-list/%d/codec", i))
         local path = mp.get_property('path')
+        
+        if not path then
+            return
+        end
+
         local dir, filename = utils.split_path(path)
         local fname = mp.get_property("filename/no-ext")
+        
+        -- 判断是否为网络流（无本地真实视频目录）
+        local is_network_stream = not path:match("^%a:[\\/]") and not path:match("^/") and not path:match("^\\\\")
+        if path:match("^https?://") or path:match("^magnet:") or path:match("^ytdl://") then
+            is_network_stream = true
+        end
+
+        if is_network_stream then
+            -- 如果是网络流，将目录重定向到用户主目录
+            dir = user_home
+            if not fname or fname == "" then
+                fname = mp.get_property("media-title") or ("stream_" .. os.time())
+            end
+            -- 过滤掉文件名中可能非法的字符
+            fname = fname:gsub('[%\\/:%*%?\"<>%|]', '_')
+        end
+
         local index = string.format("0:%d", track_index)
 
         if track_type == "sub" and track_selected == "yes" then
@@ -71,8 +115,6 @@ local function export_selected_subtitles()
                 end
                 return
             end
-
-            local video_file = utils.join_path(dir, filename)
 
             local subtitles_ext = ".srt"
             if string.find(track_codec, "ass") ~= nil then
@@ -91,10 +133,6 @@ local function export_selected_subtitles()
 
             subtitles_file = utils.join_path(dir, fname .. subtitles_ext)
 
-            if not is_writable(subtitles_file) then
-                subtitles_file = utils.join_path(TEMP_DIR, fname .. subtitles_ext)
-            end
-
             if o.language == 'chs' then
                 msg.info("正在导出当前字幕")
                 mp.osd_message("正在导出当前字幕")
@@ -103,10 +141,10 @@ local function export_selected_subtitles()
                 mp.osd_message("Exporting selected subtitles")
             end
 
-            cmd = string.format("%s -y -hide_banner -loglevel error -i '%s' -map '%s' -vn -an -c:s copy '%s'",
-                o.ffmpeg_path, video_file, index, subtitles_file)
-            windows_args = { 'powershell', '-NoProfile', '-Command', cmd }
-            unix_args = { '/bin/bash', '-c', cmd }
+            local cmd = string.format("%s -y -hide_banner -loglevel error -i '%s' -map '%s' -vn -an -c:s copy '%s'",
+                o.ffmpeg_path, path, index, subtitles_file)
+            local windows_args = { 'powershell', '-NoProfile', '-Command', cmd }
+            local unix_args = { '/bin/bash', '-c', cmd }
             args = is_windows and windows_args or unix_args
 
             mp.add_timeout(mp.get_property_number("osd-duration") * 0.001, process)
@@ -121,26 +159,27 @@ end
 function process()
     local screenx, screeny, aspect = mp.get_osd_size()
 
-    mp.set_osd_ass(screenx, screeny, "{\\an9}● ")
+    mp.set_osd_ass(screenx, screeny, "{\\an7}● Exporting selected subtitles")
     local res = mp.command_native({ name = "subprocess", capture_stdout = true, playback_only = false, args = args })
     mp.set_osd_ass(screenx, screeny, "")
+    
     if res.status == 0 then
         if o.language == 'chs' then
-            msg.info("当前字幕已导出")
-            mp.osd_message("当前字幕已导出")
+            msg.info("当前字幕已导出至: " .. subtitles_file)
+            mp.osd_message("字幕已导出: " .. subtitles_file, 4)
         else
-            msg.info("Finished exporting subtitles")
-            mp.osd_message("Finished exporting subtitles")
+            msg.info("Finished exporting subtitles to: " .. subtitles_file)
+            mp.osd_message("Subtitles exported: " .. subtitles_file, 4)
         end
         mp.commandv("sub-add", subtitles_file)
         mp.set_property("sub-visibility", "yes")
     else
         if o.language == 'chs' then
             msg.info("当前字幕导出失败")
-            mp.osd_message("当前字幕导出失败, 查看控制台获取更多信息.")
+            mp.osd_message("当前字幕导出失败, 查看控制台获取更多信息.", 3)
         else
             msg.info("Failed to export subtitles")
-            mp.osd_message("Failed to export subtitles, check console for more info.")
+            mp.osd_message("Failed to export subtitles, check console for more info.", 3)
         end
     end
 end
