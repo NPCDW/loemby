@@ -474,5 +474,29 @@
         "description": "播放速度=1",
         "editing": false,
         "tempDescription": "播放速度=1"
+    },
+    {
+        "id": 1785219807649,
+        "keys": [
+            "Minus"
+        ],
+        "displayKeys": [
+            "_\n-"
+        ],
+        "modifiers": [],
+        "description": "缓存-1GiB",
+        "editing": false
+    },
+    {
+        "id": 1785219819650,
+        "keys": [
+            "Equal"
+        ],
+        "displayKeys": [
+            "+\n="
+        ],
+        "modifiers": [],
+        "description": "缓存+1GiB",
+        "editing": false
     }
 ]
