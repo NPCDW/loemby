@@ -405,6 +405,7 @@ export interface MediaLibraryItem {
     Name: string,
     Id: string,
     Type: string,
+    CollectionType: string,
     ImageTags: BaseItemImageTags,
 }
 

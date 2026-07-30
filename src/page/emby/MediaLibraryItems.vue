@@ -19,7 +19,7 @@
             </template>
             <div style="padding: 20px; display: flex; flex-wrap: wrap;">
                 <div v-for="item in mediaLibraryChildList" :key="item.Id"
-                    @click="() => {item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
+                    @click="() => {item.Type == 'BoxSet' ? gotoCurrent(item.Id) : item.Type == 'Series' ? gotoSeries(item.Id) : gotoEpisodes(item.Id)}"
                     style="display: flex; flex-direction: column; align-items: center; padding: 18px;">
                     <div style="min-width: 115px; min-height: 160px;" class="loe-cover-img">
                         <img v-lazy="useImage().images[embyServerId + ':cover:' + item.Id]" style="max-width: 270px; max-height: 160px; cursor: pointer;" />
@@ -63,6 +63,9 @@ function gotoEpisodes(episodesId: string) {
 }
 function gotoSeries(seriesId: string) {
     router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
+}
+function gotoCurrent(folderId: string) {
+    router.push('/nav/emby/' + embyServerId + '/mediaLibrary/items/' + folderId)
 }
 
 const mediaLibraryChildLoading = ref<boolean>(false)
