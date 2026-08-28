@@ -1,6 +1,6 @@
 [package]
 name = "loemby"
-version = "0.41.0"
+version = "0.41.1"
 description = "Emby Client"
 authors = ["NPCDW"]
 edition = "2024"
@@ -51,7 +51,7 @@ uuid = { version = "1.26.0", features = ["v4"] }
 
 rust_decimal = "1.42.1"
 
-reqwest = { version = "0.13.4", features = ["json", "stream", "socks"] }
+reqwest = { version = "0.13.4", features = ["json", "stream", "socks", "gzip", "brotli", "zstd", "deflate"] }
 reqwest-middleware = "0.5.2"
 reqwest-retry = "0.9.1"
 urlencoding = "2.1.3"

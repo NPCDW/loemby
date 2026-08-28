@@ -303,7 +303,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             res_lines.push(res);
         }
         drop(request_guard);
-        tracing::debug!("stream: {} {} m3u8 文件解析完成，开始返回", types, &id);
+        tracing::debug!("stream: {} {} m3u8 文件链接替换完成", types, &id);
         return (
             status,
             headers,

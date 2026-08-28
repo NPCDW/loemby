@@ -145,7 +145,7 @@ async fn clean_r(dir: &PathBuf, cutoff_time: std::time::SystemTime, force_clean:
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, std::io::Error>>()?;
     for file in &files {
-        tracing::debug!("check cache file: {}", file.display());
+        tracing::trace!("check cache file: {}", file.display());
         let metadata = file.metadata()?;
 
         if metadata.is_dir() {
