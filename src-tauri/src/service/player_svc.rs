@@ -174,6 +174,7 @@ pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>
         .arg("--terminal=no")  // 不显示控制台输出
         .arg("--force-window=immediate")  // 先打开窗口再加载视频
         .arg("--autoload-files=no")  // 不自动加载外部文件
+        .arg("--demuxer-lavf-o=protocol_whitelist=[file,http,https,crypto,data,tcp]")  // 播放 m3u8 时需要的协议
         // .arg("--force-seekable=yes")  // 某些视频格式在没缓存到的情况下不支持跳转，需要打开此配置，测试后发现强制跳转到没有缓存的位置后，mpv会从头开始缓存，一直缓存到跳转位置，与打开此设置的初衷相违背
         .arg(&format!("--user-agent={}", emby_server.user_agent.as_ref().unwrap()))
         .arg(&format!("--volume={}", &mpv_volume))
@@ -1009,11 +1010,10 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         sender: _,
         play_info_init_finished,
     } = playback_process_param;
-    let episode = episode.as_ref().unwrap();
-
     if !play_info_init_finished {
         return Ok(());
     }
+    let episode = episode.as_ref().unwrap();
 
     let position_ticks = (last_record_position * Decimal::from_i64(1000_0000).unwrap()).to_u64().unwrap();
     let state = app_handle.state::<AppState>();

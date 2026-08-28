@@ -19,6 +19,7 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
         port: actual_port,
         playlist: Arc::new(RwLock::new(HashMap::new())),
         request: Arc::new(RwLock::new(HashMap::new())),
+        play_media_redirect_cache: Arc::new(RwLock::new(HashMap::new())),
         trakt_auth_state: Arc::new(RwLock::new(vec![])),
         simkl_auth_state: Arc::new(RwLock::new(vec![])),
     });
@@ -41,6 +42,10 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
 async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((id, media_source_select)): Path<(String, usize)>) -> axum::response::Response {
     tracing::debug!("play_media: {} {}", id, media_source_select);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
+    let cache_key = format!("play_media: {} {}", id, media_source_select);
+    if let Some(res) = axum_app_state.play_media_redirect_cache.read().await.clone().get(&cache_key) {
+        return axum::response::Redirect::permanent(&res).into_response();
+    }
     let res = player_svc::play_media(&axum_app_state, &id, media_source_select).await;
     if let Err(err) = res {
         tracing::error!("play_media: {} {} {:?}", id, media_source_select, err);
@@ -50,7 +55,9 @@ async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>
             axum::body::Body::new(format!("play_media: {} {} {:?}", id, media_source_select, err))
         ).into_response();
     }
-    axum::response::Redirect::permanent(&res.unwrap()).into_response()
+    let res = res.unwrap();
+    axum_app_state.play_media_redirect_cache.write().await.insert(cache_key, res.clone());
+    axum::response::Redirect::permanent(&res).into_response()
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -141,7 +148,7 @@ async fn simkl_auth(headers: axum::http::HeaderMap, State(axum_app_state): State
 async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((types, id)): Path<(String, String)>) -> axum::response::Response {
     tracing::debug!("stream: {} {} {:?}", types, id, headers);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
-    let request = axum_app_state.request.read().await;
+    let request = axum_app_state.request.read().await.clone();
     let request = match request.get(&id).clone() {
         Some(request) => request,
         None => {
@@ -261,6 +268,46 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         return (
             status,
             headers,
+        ).into_response();
+    }
+    if Some(&axum::http::HeaderValue::from_str("application/vnd.apple.mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
+         || Some(&axum::http::HeaderValue::from_str("application/x-mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
+         || Some(&axum::http::HeaderValue::from_str("application/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
+         || Some(&axum::http::HeaderValue::from_str("audio/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE) {
+        let status = response.status();
+        let headers = response.headers().clone();
+        tracing::debug!("stream: {} {} 响应为 m3u8 文件", types, &id);
+        let mut stream = response.bytes_stream();
+        let mut bytes = Vec::new();
+        while let Some(Ok(chunk)) = stream.next().await {
+            bytes.extend_from_slice(&chunk);
+        }
+        let text = String::from_utf8_lossy(&bytes);
+        tracing::debug!("stream: {} {} m3u8 文件下载完成，开始解析链接", types, &id);
+        // 将 m3u8 文件中的链接替换为本地链接
+        let mut res_lines = Vec::new();
+        let re = regex::Regex::new(r#"https?://[^\s<>\"']+"#).unwrap();
+        let mut request_guard = axum_app_state.request.write().await;
+        for line in text.lines() {
+            let mut res = line.to_string();
+            for mat in re.find_iter(line) {
+                let link = mat.as_str();
+                let uuid = uuid::Uuid::new_v4().to_string();
+                request_guard.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
+                    stream_url: link.to_string(),
+                    emby_server_id: emby_server.id.clone().unwrap(),
+                });
+                let local_url = format!("http://127.0.0.1:{}/stream/m3u8/{}", axum_app_state.port, uuid);
+                res = res.replace(link, &local_url);
+            }
+            res_lines.push(res);
+        }
+        drop(request_guard);
+        tracing::debug!("stream: {} {} m3u8 文件解析完成，开始返回", types, &id);
+        return (
+            status,
+            headers,
+            axum::body::Body::new(res_lines.join("\n"))
         ).into_response();
     }
     (
@@ -571,6 +618,7 @@ pub struct AxumAppState {
     pub port: u16,
     pub playlist: Arc::<RwLock<HashMap<String, MediaPlaylistParam>>>,
     pub request: Arc::<RwLock<HashMap<String, AxumAppStateEmbyStreamRequest>>>,
+    pub play_media_redirect_cache: Arc::<RwLock<HashMap<String, String>>>,
     pub trakt_auth_state: Arc::<RwLock<Vec<String>>>,
     pub simkl_auth_state: Arc::<RwLock<Vec<String>>>,
 }
