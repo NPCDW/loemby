@@ -42,7 +42,7 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
 async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((id, media_source_select)): Path<(String, usize)>) -> axum::response::Response {
     tracing::debug!("play_media: {} {}", id, media_source_select);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
-    let cache_key = format!("play_media: {} {}", id, media_source_select);
+    let cache_key = format!("{}-{}", id, media_source_select);
     if let Some(res) = axum_app_state.play_media_redirect_cache.read().await.clone().get(&cache_key) {
         return axum::response::Redirect::permanent(&res).into_response();
     }
