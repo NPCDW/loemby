@@ -71,17 +71,17 @@
                                 <span>{{ useDirectLink ? '直链播放' : '禁用直链' }}</span>
                             </el-button>
                             <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                                <el-button plain type="success" :loading="play_loading" @click="play_video(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">
+                                <el-button plain type="success" :loading="play_loading" @click="call_player(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">
                                     <el-icon :size="20" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                     <span>继续播放</span>
                                 </el-button>
-                                <el-button plain type="success" :loading="play_loading" @click="play_video(currentEpisodes.Id, 0)">
+                                <el-button plain type="success" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0)">
                                     <el-icon :size="20" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                     <span>从头播放</span>
                                 </el-button>
                             </template>
                             <template v-else>
-                                <el-button plain type="success" :loading="play_loading" @click="play_video(currentEpisodes.Id, 0)">
+                                <el-button plain type="success" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0)">
                                     <el-icon :size="20" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                     <span>播放</span>
                                 </el-button>
@@ -101,14 +101,14 @@
                                     <span>收藏</span>
                                 </template>
                             </el-button>
-                            <el-button plain type="primary" :loading="play_loading" @click="play_video(currentEpisodes.Id, 0, true)">
+                            <el-button plain type="primary" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0, true)">
                                 <el-icon :size="20" v-if="!play_loading"><i-ep-Download /></el-icon>
                                 <span>下载</span>
                             </el-button>
                         </p>
                         <p>
                             <span>章节：</span>
-                            <el-tag v-for="chapter in currentEpisodes.Chapters" @click="play_video(currentEpisodes.Id, chapter.StartPositionTicks)" style="margin-right: 10px; cursor: pointer;" disable-transitions>{{ chapter.ChapterIndex + ". " + chapter.MarkerType + " " + secondsToHMS2(chapter.StartPositionTicks / 1000_0000) + " " + chapter.Name }}</el-tag>
+                            <el-tag v-for="chapter in currentEpisodes.Chapters" @click="call_player(currentEpisodes.Id, chapter.StartPositionTicks)" style="margin-right: 10px; cursor: pointer;" disable-transitions>{{ chapter.ChapterIndex + ". " + chapter.MarkerType + " " + secondsToHMS2(chapter.StartPositionTicks / 1000_0000) + " " + chapter.Name }}</el-tag>
                         </p>
                         <p>
                             <span>外部标签：</span>
@@ -448,9 +448,9 @@ function getPlayVersionAutoSelectPolicy() {
 }
 getPlayVersionAutoSelectPolicy()
 
-function play_video(item_id: string, playbackPositionTicks: number, download: boolean = false) {
+function call_player(item_id: string, playbackPositionTicks: number, download: boolean = false) {
     play_loading.value = true
-    return invokeApi.play_video({
+    return invokeApi.call_player({
         emby_server_id: embyServerId,
         series_id: currentEpisodes.value?.SeriesId,
         item_id: item_id,

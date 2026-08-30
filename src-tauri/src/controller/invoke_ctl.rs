@@ -29,8 +29,8 @@ pub struct PlayVideoParam {
 }
 
 #[tauri::command]
-pub async fn play_video(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
-    player_svc::play_video(body, &state, app_handle).await
+pub async fn call_player(body: PlayVideoParam, state: tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+    player_svc::call_player(body, &state, app_handle).await
 }
 
 #[tauri::command]

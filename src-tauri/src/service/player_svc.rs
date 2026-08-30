@@ -9,7 +9,7 @@ use tokio_stream::StreamExt;
 
 use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateEmbyStreamRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
 
-pub async fn play_video(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
+pub async fn call_player(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let emby_server = match emby_server_mapper::get_cache(&body.emby_server_id, state).await {
         Some(emby_server) => emby_server,
         None => return Err("emby_server not found".to_string()),
@@ -322,11 +322,16 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
         sender: None,
         play_info_init_finished: false,
     };
+    let video_url_clone = video_url.clone();
+    let axum_app_state_clone = axum_app_state.clone();
     tauri::async_runtime::spawn(async move {
+        let cache_key = format!("{}-{}", playback_process_param.id.clone(), playback_process_param.media_source_select);
+        axum_app_state_clone.play_media_redirect_cache.write().await.insert(cache_key.clone(), video_url_clone);
         let res = playback_process(playback_process_param).await;
         if res.is_err() {
             tracing::error!("播放进程失败: {:?}", res.unwrap_err());
         }
+        axum_app_state_clone.play_media_redirect_cache.write().await.remove(&cache_key);
     });
 
     Ok(video_url)
@@ -335,23 +340,11 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
 async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> anyhow::Result<()> {
     let PlaybackProcessParam {
         ref params,
-        episode: _,
         ref media_source,
-        playback_info: _,
         ref app_handle,
-        axum_app_state: _,
-        scrobble_trakt_param: _,
-        scrobble_simkl_param: _,
-        scrobble_yamtrack_param: _,
-        start_time: _,
-        file_duration: _,
         ref emby_server,
         ref play_proxy_url,
-        id: _,
-        media_source_select: _,
-        media_source_index: _,
-        sender: _,
-        play_info_init_finished: _,
+        ..
     } = playback_process_param;
     let app_state = app_handle.state::<AppState>();
 
@@ -557,23 +550,17 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
 async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow::Result<(tokio::task::JoinHandle<()>, EpisodeItem, Option<TraktScrobbleParam>, Option<TraktScrobbleParam>, Option<YamTrackParam>)> {
     let PlaybackProcessParam {
         params,
-        episode: _,
         media_source,
         playback_info,
         app_handle,
         axum_app_state,
-        scrobble_trakt_param: _,
-        scrobble_simkl_param: _,
-        scrobble_yamtrack_param: _,
-        file_duration: _,
-        start_time: _,
         emby_server,
         play_proxy_url,
         id,
         media_source_select,
         media_source_index,
         sender,
-        play_info_init_finished: _,
+        ..
     } = playback_process_param;
     let app_state = app_handle.state::<AppState>();
     let sender = sender.clone().unwrap();
@@ -996,19 +983,14 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         media_source,
         playback_info,
         app_handle,
-        axum_app_state: _,
         scrobble_trakt_param,
         scrobble_simkl_param,
         scrobble_yamtrack_param,
         file_duration,
         start_time,
         emby_server,
-        play_proxy_url: _,
-        id: _,
-        media_source_select: _,
-        media_source_index: _,
-        sender: _,
         play_info_init_finished,
+        ..
     } = playback_process_param;
     if !play_info_init_finished {
         return Ok(());

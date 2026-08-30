@@ -19,8 +19,8 @@ interface PlayVideoParam {
     download?: boolean,
 }
 
-async function play_video(param: PlayVideoParam): Promise<string> {
-    return invoke('play_video', {body: param});
+async function call_player(param: PlayVideoParam): Promise<string> {
+    return invoke('call_player', {body: param});
 }
 
 async function go_trakt_auth(): Promise<void> {
@@ -64,5 +64,5 @@ async function open_file(path_type: string): Promise<void> {
 }
 
 export default {
-    getSysInfo, play_video, go_trakt_auth, go_simkl_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file
+    getSysInfo, call_player, go_trakt_auth, go_simkl_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file
 }

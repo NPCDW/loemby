@@ -56,7 +56,6 @@ async fn play_media(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>
         ).into_response();
     }
     let res = res.unwrap();
-    axum_app_state.play_media_redirect_cache.write().await.insert(cache_key, res.clone());
     axum::response::Redirect::permanent(&res).into_response()
 }
 
