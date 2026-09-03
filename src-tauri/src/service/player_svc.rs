@@ -456,13 +456,13 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         if read.is_err() {
             tracing::error!("MPV IPC Failed to read pipe {:?}", read);
             if let Some(send_task) = send_task { send_task.abort(); }
-            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Error).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
         tracing::debug!("MPV IPC Received: {}", buffer.trim());
         if buffer.trim().is_empty() {
             if let Some(send_task) = send_task { send_task.abort(); }
-            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Error).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             tracing::error!("mpv-ipc 响应为空，连接已断开");
             break;
         }
@@ -470,7 +470,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
         if json.is_err() {
             tracing::error!("解析 mpv-ipc 响应失败 {:?}", json);
             if let Some(send_task) = send_task { send_task.abort(); }
-            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Error).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             break;
         }
         let json = json?;
@@ -497,7 +497,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
                 let res = play_info_init(&playback_process_param).await;
                 if let Err(e) = res {
                     tracing::error!("初始化播放信息失败: {:?}", e);
-                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Error).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
                     return Err(e);
                 }
                 let (send_task_res, episode, scrobble_trakt_param, scrobble_simkl_param, scrobble_yamtrack_param) = res?;
@@ -516,12 +516,20 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
             tracing::debug!("MPV IPC 播放结束");
             if let Some(send_task) = send_task { send_task.abort(); }
             // end-file 事件 reason 详情: [quit 播放器退出] [stop 点击上一集或下一集] [eof 每一集播放到末尾都是此事件]
-            if json.reason == Some("eof") && playback_process_param.params.playlist_index == playback_process_param.params.playlist_total { // 最后一集播放完成
-                save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::EndOfPlaylist).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            if json.reason == Some("eof") { // 当前剧集自然播放到最后，未点击下一集按钮
+                if playback_process_param.params.playlist_index == playback_process_param.params.playlist_total {
+                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::EndOfPlaylist).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                } else {  // 非最后一集播放完成
+                    save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Next).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+                }
             } else if json.reason == Some("stop") { // 上一集下一集
                 save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Next).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
-            } else { // 程序退出 或 发生错误
+            } else if json.reason == Some("redirect") { // 播放列表重定向，类似发生于一个 m3u8 中的一个播放项重定向到另一个 m3u8 播放列表的情况
+                tracing::debug!("MPV IPC 播放列表重定向消息，无事发生");
+            } else if json.reason == Some("quit") { // 程序退出
                 save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Quit).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
+            } else { // 发生错误
+                save_playback_progress(&playback_process_param, last_record_position, PlayingProgressEnum::Error).await.unwrap_or_else(|e| tracing::error!("保存播放进度失败: {:?}", e));
             }
             break;
         }
@@ -1043,7 +1051,7 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
     }
 
     // 退出调起APP
-    if playback_status == PlayingProgressEnum::Quit || playback_status == PlayingProgressEnum::EndOfPlaylist {
+    if playback_status == PlayingProgressEnum::Quit || playback_status == PlayingProgressEnum::EndOfPlaylist || playback_status == PlayingProgressEnum::Error {
         let window = app_handle.webview_windows();
         let window = window.values().next().expect("Sorry, no window found");
         window.unminimize().expect("Sorry, no window unminimize");
@@ -1051,7 +1059,7 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         window.set_focus().expect("Can't Bring Window to Focus");
     }
     
-    if playback_status == PlayingProgressEnum::EndOfPlaylist {
+    if playback_status == PlayingProgressEnum::EndOfPlaylist || playback_status == PlayingProgressEnum::Error {
         if let Some(sender) = sender.clone() {
             let command = format!(r#"{{ "command": ["quit"] }}{}"#, "\n");
             let _ = sender.write().await.write_all(command.as_bytes()).await;
@@ -1157,6 +1165,7 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
 #[derive(PartialEq)]
 enum PlayingProgressEnum {
     Quit,
+    Error,
     Next,
     EndOfPlaylist,
     Playing,
