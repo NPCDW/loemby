@@ -990,8 +990,7 @@ pub async fn get_subtitle_stream_url(param: EmbyGetSubtitleStreamUrlParam, state
     if !param.media_streams_is_external {
         return Err(anyhow::anyhow!("media_streams Subtitles not external"));
     }
-    let media_id = if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id};
-    let url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.base_url.clone().unwrap(), media_id, param.media_source_id, param.media_streams_index, param.media_streams_codec.unwrap_or("flac".to_string()));
+    let url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.base_url.clone().unwrap(), param.item_id, param.media_source_id, param.media_streams_index, param.media_streams_codec.unwrap_or("flac".to_string()));
     tracing::debug!("拼接字幕地址 {}", url);
     Ok(url)
 }
