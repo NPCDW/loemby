@@ -20,8 +20,9 @@ pub async fn get_server_info(param: EmbyGetServerInfoParam, state: &tauri::State
     headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
+    let url = url::Url::parse(&format!("{}/emby/System/Info/Public", emby_server.base_url.as_ref().unwrap()))?;
     let builder = client
-        .get(format!("{}/emby/System/Info/Public", emby_server.base_url.clone().unwrap()))
+        .get(url)
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -40,7 +41,7 @@ pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &ta
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
-    let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
+    let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id.clone(), state).await;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -49,11 +50,12 @@ pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &ta
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let body = serde_json::json!({
-            "Username": emby_server.username,
-            "Pw": emby_server.password,
+            "Username": emby_server.username.as_ref().unwrap(),
+            "Pw": emby_server.password.as_ref().unwrap(),
         }).to_string();
+    let url = url::Url::parse(&format!("{}/emby/Users/AuthenticateByName", emby_server.base_url.as_ref().unwrap()))?;
     let builder = client
-        .post(format!("{}/emby/Users/AuthenticateByName", emby_server.base_url.clone().unwrap()))
+        .post(url)
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -81,8 +83,15 @@ pub async fn logout(param: EmbyLogoutParam, state: &tauri::State<'_, AppState>) 
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
+    let mut url = url::Url::parse(&format!("{}/emby/Sessions/Logout", emby_server.base_url.clone().unwrap()))?;
+    url.query_pairs_mut()
+        .append_pair("X-Emby-Client", emby_server.client.as_ref().unwrap())
+        .append_pair("X-Emby-Device-Name", emby_server.device.as_ref().unwrap())
+        .append_pair("X-Emby-Device-Id", emby_server.device_id.as_ref().unwrap())
+        .append_pair("X-Emby-Client-Version", emby_server.client_version.as_ref().unwrap())
+        .append_pair("X-Emby-Token", emby_server.auth_token.as_ref().unwrap());
     let builder = client
-        .post(format!("{}/emby/Sessions/Logout", emby_server.base_url.clone().unwrap()))
+        .post(url)
         .headers(headers)
         .body(serde_json::json!({}).to_string());
     let builder_print = format!("{:?}", &builder);
