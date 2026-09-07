@@ -1,6 +1,6 @@
 use std::{collections::HashMap, net::SocketAddr, str::FromStr, sync::Arc};
 
-use axum::{extract::{Path, Query, State}, response::IntoResponse, routing::get, Router};
+use axum::{Router, extract::{Path, Query, State}, http::HeaderValue, response::IntoResponse, routing::get};
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
@@ -176,7 +176,11 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
-    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    req_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
+    req_headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
+    req_headers.insert("X-Emby-Device-Id", HeaderValue::from_str(emby_server.device_id.as_ref().unwrap()).unwrap());
+    req_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
     let mut url = request.stream_url.clone();
     // 处理错误和手动重定向
     let mut redirect_count = 0u8;
@@ -269,10 +273,10 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             headers,
         ).into_response();
     }
-    if Some(&axum::http::HeaderValue::from_str("application/vnd.apple.mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
-         || Some(&axum::http::HeaderValue::from_str("application/x-mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
-         || Some(&axum::http::HeaderValue::from_str("application/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
-         || Some(&axum::http::HeaderValue::from_str("audio/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE) {
+    if Some(&HeaderValue::from_str("application/vnd.apple.mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
+         || Some(&HeaderValue::from_str("application/x-mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
+         || Some(&HeaderValue::from_str("application/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
+         || Some(&HeaderValue::from_str("audio/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE) {
         let status = response.status();
         let headers = response.headers().clone();
         tracing::debug!("stream: {} {} 响应为 m3u8 文件", types, &id);
@@ -376,7 +380,11 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
     req_headers.insert(axum::http::header::REFERER, request.stream_url.clone().parse().unwrap());
-    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
+    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
+    req_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
+    req_headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
+    req_headers.insert("X-Emby-Device-Id", HeaderValue::from_str(emby_server.device_id.as_ref().unwrap()).unwrap());
+    req_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
     let res = client
         .get(request.stream_url.clone())
         .headers(req_headers.clone())
@@ -522,7 +530,7 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
     req_headers.insert(axum::http::header::USER_AGENT, param.user_agent.clone().parse().unwrap());
     req_headers.insert(axum::http::header::REFERER, param.image_url.clone().parse().unwrap());
     if let Some(token) = param.token.as_ref() {
-        req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), axum::http::HeaderValue::from_str(token).unwrap());
+        req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(token).unwrap());
     }
     let res = client
         .get(param.image_url.clone())
