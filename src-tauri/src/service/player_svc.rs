@@ -367,12 +367,26 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
                 continue;
             }
             let cache_file_tmp_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass.tmp", cache_digest), tauri::path::BaseDirectory::AppLocalData)?;
-            let (play_proxy_url, app_handle, user_agent) = (play_proxy_url.clone(), app_handle.clone(), emby_server.user_agent.as_ref().unwrap().clone());
+            let (play_proxy_url, app_handle, user_agent, auth_token, emby_server_client, device, device_id, client_version)
+                 = (play_proxy_url.clone(),
+                    app_handle.clone(),
+                    emby_server.user_agent.as_ref().unwrap().clone(),
+                    emby_server.auth_token.as_ref().unwrap().clone(),
+                    emby_server.client.as_ref().unwrap().clone(),
+                    emby_server.device.as_ref().unwrap().clone(),
+                    emby_server.device_id.as_ref().unwrap().clone(),
+                    emby_server.client_version.as_ref().unwrap().clone(),);
             tokio::spawn(async move {
-                async fn download_subtitle_file(subtitle_url: String, cache_file_path: PathBuf, play_proxy_url: Option<String>, user_agent: String, app_state: tauri::State<'_, AppState>, cache_file_tmp_path: PathBuf) -> anyhow::Result<()> {
+                async fn download_subtitle_file(subtitle_url: String, cache_file_path: PathBuf, play_proxy_url: Option<String>, user_agent: String, auth_token: String,
+                         emby_server_client: String, device: String, device_id: String, client_version: String, app_state: tauri::State<'_, AppState>, cache_file_tmp_path: PathBuf) -> anyhow::Result<()> {
                     let client = http_pool::get_image_http_client(play_proxy_url.clone(), &app_state).await?;
                     let mut headers = reqwest::header::HeaderMap::new();
-                    headers.insert(reqwest::header::USER_AGENT, reqwest::header::HeaderValue::from_str(&user_agent)?);
+                    headers.insert(axum::http::header::USER_AGENT, reqwest::header::HeaderValue::from_str(&user_agent).unwrap());
+                    headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), reqwest::header::HeaderValue::from_str(&auth_token).unwrap());
+                    headers.insert("X-Emby-Client", reqwest::header::HeaderValue::from_str(&emby_server_client).unwrap());
+                    headers.insert("X-Emby-Device-Name", reqwest::header::HeaderValue::from_str(&device).unwrap());
+                    headers.insert("X-Emby-Device-Id", reqwest::header::HeaderValue::from_str(&device_id).unwrap());
+                    headers.insert("X-Emby-Client-Version", reqwest::header::HeaderValue::from_str(&client_version).unwrap());
                     let builder = client
                         .get(subtitle_url.clone())
                         .headers(headers);
@@ -397,7 +411,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
                     Ok(())
                 }
                 let app_state = app_handle.state::<AppState>();
-                match download_subtitle_file(subtitle_url, cache_file_path, play_proxy_url, user_agent, app_state, cache_file_tmp_path).await {
+                match download_subtitle_file(subtitle_url, cache_file_path, play_proxy_url, user_agent, auth_token, emby_server_client, device, device_id, client_version, app_state, cache_file_tmp_path).await {
                     Ok(_) => {}
                     Err(e) => {
                         tracing::error!("cache subtitle file failed: {}", e);
