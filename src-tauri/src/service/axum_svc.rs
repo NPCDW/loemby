@@ -379,7 +379,7 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
-    req_headers.insert(axum::http::header::REFERER, request.stream_url.clone().parse().unwrap());
+    // req_headers.insert(axum::http::header::REFERER, request.stream_url.clone().parse().unwrap());
     req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     req_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     req_headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -528,7 +528,7 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, param.user_agent.clone().parse().unwrap());
-    req_headers.insert(axum::http::header::REFERER, param.image_url.clone().parse().unwrap());
+    // req_headers.insert(axum::http::header::REFERER, param.image_url.clone().parse().unwrap());
     if let Some(token) = param.token.as_ref() {
         req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(token).unwrap());
     }

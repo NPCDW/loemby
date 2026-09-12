@@ -279,14 +279,12 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
             play_session_id: playback_info.play_session_id.clone(),
         }, &app_state).await?
     };
-    if play_proxy_url.is_some() {
-        let uuid = uuid::Uuid::new_v4().to_string();
-        axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
-            stream_url: video_url,
-            emby_server_id: emby_server.id.clone().unwrap(),
-        });
-        video_url = format!("http://127.0.0.1:{}/stream/video/{}", &axum_app_state.port, &uuid);
-    }
+    let uuid = uuid::Uuid::new_v4().to_string();
+    axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
+        stream_url: video_url,
+        emby_server_id: emby_server.id.clone().unwrap(),
+    });
+    video_url = format!("http://127.0.0.1:{}/stream/video/{}", &axum_app_state.port, &uuid);
 
     if params.download {
         let notify_param = DownloadNotifyParamEvent {
@@ -579,7 +577,6 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
         app_handle,
         axum_app_state,
         emby_server,
-        play_proxy_url,
         id,
         media_source_select,
         media_source_index,
@@ -700,14 +697,12 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
                 media_streams_index: media_stream.index,
                 media_streams_is_external: true,
             }, &app_state).await?;
-            if play_proxy_url.is_some() {
-                let uuid = uuid::Uuid::new_v4().to_string();
-                axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
-                    stream_url: audio_url,
-                    emby_server_id: emby_server.id.clone().unwrap(),
-                });
-                audio_url = format!("http://127.0.0.1:{}/stream/audio/{}", &axum_app_state.port, &uuid);
-            }
+            let uuid = uuid::Uuid::new_v4().to_string();
+            axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
+                stream_url: audio_url,
+                emby_server_id: emby_server.id.clone().unwrap(),
+            });
+            audio_url = format!("http://127.0.0.1:{}/stream/audio/{}", &axum_app_state.port, &uuid);
             let command = format!(r#"{{ "command": ["audio-add", "{}", "auto", "{}"] }}{}"#, audio_url, media_stream.display_title.clone().unwrap_or("".to_string()), "\n");
             sender.write().await.write_all(command.as_bytes()).await?;
             sender.write().await.flush().await?;
@@ -722,14 +717,12 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
                 media_streams_index: media_stream.index,
                 media_streams_is_external: true,
             }, &app_state).await?;
-            if play_proxy_url.is_some() {
-                let uuid = uuid::Uuid::new_v4().to_string();
-                axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
-                    stream_url: subtitle_url,
-                    emby_server_id: emby_server.id.clone().unwrap(),
-                });
-                subtitle_url = format!("http://127.0.0.1:{}/subtitle/{}", &axum_app_state.port, &uuid);
-            }
+            let uuid = uuid::Uuid::new_v4().to_string();
+            axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
+                stream_url: subtitle_url,
+                emby_server_id: emby_server.id.clone().unwrap(),
+            });
+            subtitle_url = format!("http://127.0.0.1:{}/subtitle/{}", &axum_app_state.port, &uuid);
             let command = format!(r#"{{ "command": ["sub-add", "{}", "select", "{}"] }}{}"#, subtitle_url, media_stream.display_title.clone().unwrap_or("".to_string()), "\n");
             sender.write().await.write_all(command.as_bytes()).await?;
             sender.write().await.flush().await?;

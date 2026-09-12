@@ -18,7 +18,7 @@ pub async fn get_server_info(param: EmbyGetServerInfoParam, state: &tauri::State
     let url = url::Url::parse(&format!("{}/emby/System/Info/Public", emby_server.base_url.as_ref().unwrap()))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
@@ -49,7 +49,7 @@ pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &ta
         }).to_string();
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Authorization").unwrap(), HeaderValue::from_str(&format!(r#"Emby Client="{}", Device="{}", DeviceId="{}", Version="{}""#, emby_server.client.unwrap(), emby_server.device.unwrap(), emby_server.device_id.unwrap(), emby_server.client_version.unwrap())).unwrap());
 
@@ -79,7 +79,7 @@ pub async fn logout(param: EmbyLogoutParam, state: &tauri::State<'_, AppState>) 
     let url = url::Url::parse(&format!("{}/emby/Sessions/Logout", emby_server.base_url.clone().unwrap()))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
@@ -120,7 +120,7 @@ pub async fn search(param: EmbySearchParam, state: &tauri::State<'_, AppState>) 
         .append_pair("Limit", &param.limit.to_string());
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -157,7 +157,7 @@ pub async fn get_continue_play_list(param: EmbyGetContinuePlayListParam, state: 
         .append_pair("Limit", &param.limit.to_string());
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -196,7 +196,7 @@ pub async fn get_favorite_list(param: EmbyGetFavoriteListParam, state: &tauri::S
         .append_pair("Limit", &param.limit.to_string());
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -234,7 +234,7 @@ pub async fn next_up(param: EmbyNextUpParam, state: &tauri::State<'_, AppState>)
         .append_pair("Limit", &param.limit.to_string());
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -266,7 +266,7 @@ pub async fn get_media_library_list(param: EmbyGetMediaLibraryListParam, state: 
     let url = url::Url::parse(&format!("{}/emby/Users/{}/Views", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -301,7 +301,7 @@ pub async fn get_media_library_child_latest(param: EmbyGetMediaLibraryChildLates
         .append_pair("Limit", &param.limit.to_string());
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -339,7 +339,7 @@ pub async fn get_media_library_child(param: EmbyGetMediaLibraryChildParam, state
         .append_pair("Limit", &param.limit.to_string());
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -373,7 +373,7 @@ pub async fn count(param: EmbyCountParam, state: &tauri::State<'_, AppState>) ->
         .append_pair("UserId", &emby_server.user_id.as_ref().unwrap());
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -411,7 +411,7 @@ pub async fn items(param: EmbyItemsParam, state: &tauri::State<'_, AppState>, us
     let url = url::Url::parse(&format!("{}/emby/Users/{}/Items/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -447,7 +447,7 @@ pub async fn seasons(param: EmbySeasonsParam, state: &tauri::State<'_, AppState>
         .append_pair("UserId", &emby_server.user_id.as_ref().unwrap());
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -486,7 +486,7 @@ pub async fn episodes(param: EmbyEpisodesParam, state: &tauri::State<'_, AppStat
     if let Some(start_item_id) = param.start_item_id { url.query_pairs_mut().append_pair("StartItemId", &start_item_id.to_string()); };
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -541,7 +541,7 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
         }).to_string();
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
@@ -597,7 +597,7 @@ pub async fn playing(param: EmbyPlayingParam, state: &tauri::State<'_, AppState>
         }).to_string();
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
@@ -653,7 +653,7 @@ pub async fn playing_progress(param: EmbyPlayingProgressParam, state: &tauri::St
         }).to_string();
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
@@ -709,7 +709,7 @@ pub async fn playing_stopped(param: EmbyPlayingStoppedParam, state: &tauri::Stat
         }).to_string();
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
@@ -743,7 +743,7 @@ pub async fn star(param: EmbyStarParam, state: &tauri::State<'_, AppState>) -> a
     let url = url::Url::parse(&format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
@@ -777,7 +777,7 @@ pub async fn unstar(param: EmbyUnstarParam, state: &tauri::State<'_, AppState>) 
     let url = url::Url::parse(&format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -809,7 +809,7 @@ pub async fn played(param: EmbyPlayedParam, state: &tauri::State<'_, AppState>) 
     let url = url::Url::parse(&format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
@@ -843,7 +843,7 @@ pub async fn unplayed(param: EmbyUnplayedParam, state: &tauri::State<'_, AppStat
     let url = url::Url::parse(&format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
@@ -878,7 +878,7 @@ pub async fn hide_from_resume(param: EmbyHideFromResumeParam, state: &tauri::Sta
         }).to_string();
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
-    headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
+    // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
     headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
     headers.insert(HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
