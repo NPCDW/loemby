@@ -16,6 +16,7 @@ pub struct AppState {
     pub emby_server_cache: Arc::<RwLock<HashMap<String, crate::mapper::emby_server_mapper::EmbyServer>>>,
     pub global_config_cache: Arc::<RwLock<HashMap<String, String>>>,
     pub proxy_server_cache: Arc::<RwLock<HashMap<String, String>>>,
+    pub reverse_proxy_server_cache: Arc::<RwLock<HashMap<String, String>>>,
     pub emby_http_cache: Arc::<RwLock<HashMap<String, String>>>,
 }
 

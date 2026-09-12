@@ -4,3 +4,4 @@ pub mod emby_server_mapper;
 pub mod global_config_mapper;
 pub mod play_history_mapper;
 pub mod proxy_server_mapper;
+pub mod reverse_proxy_server_mapper;

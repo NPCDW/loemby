@@ -12,6 +12,7 @@ pub struct EmbyLine {
     pub base_url: Option<String>,
     pub browse_proxy_id: Option<String>,
     pub play_proxy_id: Option<String>,
+    pub reverse_proxy_id: Option<String>,
 }
 
 pub async fn get_by_id(id: String, pool: &DbPool) -> anyhow::Result<Option<EmbyLine>> {
@@ -71,6 +72,7 @@ pub async fn create(
     let base_url = entity.base_url.clone();
     let browse_proxy_id = entity.browse_proxy_id.clone();
     let play_proxy_id = entity.play_proxy_id.clone();
+    let reverse_proxy_id = entity.reverse_proxy_id.clone();
 
     let res = db_execute!(pool, |qb| {
         qb.push("insert into emby_line(");
@@ -95,6 +97,9 @@ pub async fn create(
         if entity.play_proxy_id.is_some() {
             separated.push("play_proxy_id");
         }
+        if entity.reverse_proxy_id.is_some() {
+            separated.push("reverse_proxy_id");
+        }
         qb.push(")  values(");
         let mut separated = qb.separated(", ");
         separated.push_bind(id);
@@ -117,6 +122,9 @@ pub async fn create(
         if play_proxy_id.is_some() {
             separated.push_bind(play_proxy_id.unwrap());
         }
+        if reverse_proxy_id.is_some() {
+            separated.push_bind(reverse_proxy_id.unwrap());
+        }
         qb.push(")");
     })?;
 
@@ -134,6 +142,7 @@ pub async fn update_by_id(
     let base_url = entity.base_url.clone();
     let browse_proxy_id = entity.browse_proxy_id.clone();
     let play_proxy_id = entity.play_proxy_id.clone();
+    let reverse_proxy_id = entity.reverse_proxy_id.clone();
     let entity_id = entity.id.clone();
 
     let res = db_execute!(pool, |qb| {
@@ -162,6 +171,10 @@ pub async fn update_by_id(
         if play_proxy_id.is_some() {
             separated.push("play_proxy_id = ");
             separated.push_bind_unseparated(play_proxy_id.unwrap());
+        }
+        if reverse_proxy_id.is_some() {
+            separated.push("reverse_proxy_id = ");
+            separated.push_bind_unseparated(reverse_proxy_id.unwrap());
         }
         qb.push(" where id = ");
         qb.push_bind(entity_id.unwrap());

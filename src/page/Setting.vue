@@ -275,6 +275,25 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                 </el-table>
             </el-scrollbar>
         </el-tab-pane>
+        <el-tab-pane label="反代服务器" name="ReverseProxyServer">
+            <el-scrollbar style="height: calc(100vh - 120px);">
+                <h1>反代服务器</h1>
+                <p>反代服务器地址末尾会自动补充 /，请求地址将拼接为：反代服务器地址 + 原始地址</p>
+                <el-table :data="reverseProxyServers" style="width: 100%">
+                    <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
+                    <el-table-column prop="url" label="Url" show-overflow-tooltip />
+                    <el-table-column fixed="right" label="Operations" width="210" align="center">
+                        <template #header>
+                            <el-button plain type="primary" size="small" @click.prevent="addReverseProxy()">添加反代服务器</el-button>
+                        </template>
+                        <template #default="scope">
+                            <el-button plain type="primary" size="small" @click.prevent="editReverseProxy(scope.$index)">编辑</el-button>
+                            <el-button plain type="danger" size="small" @click.prevent="delReverseProxy(scope.$index)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-scrollbar>
+        </el-tab-pane>
         <el-tab-pane label="Emby线路代理" name="EmbyLineProxy">
             <el-scrollbar style="height: calc(100vh - 120px);">
                 <h1>Emby线路代理配置</h1>
@@ -309,6 +328,14 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                 <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod">
                     <el-table-column prop="emby_server_name" label="Emby" show-overflow-tooltip />
                     <el-table-column prop="name" label="线路" show-overflow-tooltip />
+                    <el-table-column label="反代服务器">
+                        <template #default="scope">
+                            <el-select v-model="scope.row.reverse_proxy_id" @change="proxyChange(scope.row)">
+                                <el-option key="no" label="不使用反代" value="no"/>
+                                <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+                            </el-select>
+                        </template>
+                    </el-table-column>
                     <el-table-column label="媒体库浏览">
                         <template #default="scope">
                             <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)">
@@ -478,6 +505,28 @@ C:\App\mpv_config-2024.12.04\mpv.exe
         </el-scrollbar>
     </el-dialog>
     <el-dialog
+        v-model="dialogReverseProxyServerVisible"
+        title="反代服务器"
+        width="800"
+    >
+        <el-scrollbar>
+            <el-form label-position="top">
+                <el-form-item label="反代名称">
+                    <el-input v-model="dialogReverseProxyServer.name" placeholder="反代名称" />
+                </el-form-item>
+                <el-form-item label="服务器地址">
+                    <el-input v-model="dialogReverseProxyServer.url" placeholder="反代服务器地址，例如 https://proxy.example.org/" />
+                </el-form-item>
+                <el-form-item>
+                    <div style="width: 100%; display: flex; justify-content: end;">
+                        <el-button @click="saveReverseProxyServer" type="primary">保存</el-button>
+                        <el-button @click="dialogReverseProxyServerVisible = false">取消</el-button>
+                    </div>
+                </el-form-item>
+            </el-form>
+        </el-scrollbar>
+    </el-dialog>
+    <el-dialog
         v-model="dialogEmbyIconLibraryVisible"
         title="Emby图标库"
         width="800"
@@ -505,6 +554,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
 import { computed, h, onMounted, onUnmounted, ref } from 'vue';
 import { ElButton, ElMessage, ElMessageBox, ElNotification, TableColumnCtx } from 'element-plus';
 import { ProxyServer, useProxyServer } from '../store/db/proxyServer';
+import { ReverseProxyServer, useReverseProxyServer } from '../store/db/reverseProxyServer';
 import _ from 'lodash';
 import { generateGuid } from '../util/uuid_util';
 import appApi from '../api/appApi';
@@ -528,6 +578,63 @@ function listAllProxyServer() {
 listAllProxyServer()
 onMounted(() => useEventBus().on('ProxyServerChanged', listAllProxyServer))
 onUnmounted(() => useEventBus().remove('ProxyServerChanged', listAllProxyServer))
+
+const reverseProxyServers = ref<ReverseProxyServer[]>([]);
+function listAllReverseProxyServer() {
+    useReverseProxyServer().listAllReverseProxyServer().then(list => {
+        reverseProxyServers.value = list;
+    })
+}
+listAllReverseProxyServer()
+onMounted(() => useEventBus().on('ReverseProxyServerChanged', listAllReverseProxyServer))
+onUnmounted(() => useEventBus().remove('ReverseProxyServerChanged', listAllReverseProxyServer))
+
+const dialogReverseProxyServerVisible = ref(false);
+const dialogReverseProxyServer = ref<ReverseProxyServer>({})
+
+function addReverseProxy() {
+    dialogReverseProxyServerVisible.value = true;
+    dialogReverseProxyServer.value = {};
+}
+function editReverseProxy(index: number) {
+    dialogReverseProxyServerVisible.value = true;
+    dialogReverseProxyServer.value = _.clone(reverseProxyServers.value[index]);
+}
+function saveReverseProxyServer() {
+    // 反代地址末尾必须为 /
+    if (dialogReverseProxyServer.value.url && !dialogReverseProxyServer.value.url.trim().endsWith('/')) {
+        dialogReverseProxyServer.value.url = dialogReverseProxyServer.value.url.trim() + '/';
+    }
+    let savePromise;
+    if (dialogReverseProxyServer.value.id) {
+        savePromise = useReverseProxyServer().updateReverseProxyServer(dialogReverseProxyServer.value)
+    } else {
+        dialogReverseProxyServer.value.id = generateGuid();
+        savePromise = useReverseProxyServer().addReverseProxyServer(dialogReverseProxyServer.value)
+    }
+    savePromise.then(() => {
+        useEventBus().emit('ReverseProxyServerChanged', {})
+        ElMessage.success('保存成功');
+    }).catch(e => {
+        ElMessage.error('保存失败' + e);
+    }).finally(() => dialogReverseProxyServerVisible.value = false)
+}
+function delReverseProxy(index: number) {
+    ElMessageBox.confirm(
+    `确认删除反代服务器「${reverseProxyServers.value[index].name}」吗`,
+    'Warning',
+    {
+      confirmButtonText: 'OK',
+      cancelButtonText: 'Cancel',
+      type: 'warning',
+    }
+  ).then(async () => {
+        useReverseProxyServer().delReverseProxyServer(reverseProxyServers.value[index].id!).then(() => {
+            useEventBus().emit('ReverseProxyServerChanged', {})
+            ElMessage.success('删除成功');
+        }).catch(e => ElMessage.error('删除失败' + e))
+  })
+}
 
 const dialogProxyServerVisible = ref(false);
 const dialogProxyServer = ref<ProxyServer>({})
@@ -886,13 +993,19 @@ function getGlobalPlayProxy() {
 }
 getGlobalPlayProxy()
 function proxyChange(line: EmbyLine) {
+    // 选择反代服务器后，两个代理服务器默认切换为不使用代理
+    if (line.reverse_proxy_id && line.reverse_proxy_id !== 'no') {
+        line.browse_proxy_id = 'no'
+        line.play_proxy_id = 'no'
+    }
     useEmbyLine().updateEmbyLine(line).then(() => {
         useEventBus().emit('EmbyLineChanged', {})
         if (line.id === embyServerMap.value[line.emby_server_id!].line_id) {
             useEmbyServer().updateEmbyServer({
                 id: line.emby_server_id,
                 browse_proxy_id: line.browse_proxy_id,
-                play_proxy_id: line.play_proxy_id
+                play_proxy_id: line.play_proxy_id,
+                reverse_proxy_id: line.reverse_proxy_id
             }).then(() => {
                 useEventBus().emit('EmbyServerChanged', {event: 'update', id: line.emby_server_id})
             }).catch(e => ElMessage.error('修改失败' + e));
@@ -1113,6 +1226,8 @@ function handlePaneChange() {
         getYamTrackSyncSwitch()
         getYamTrackProxy()
     } else if (activePane.value == 'ProxyServer') {
+    } else if (activePane.value == 'ReverseProxyServer') {
+        listAllReverseProxyServer()
     } else if (activePane.value == 'EmbyLineProxy') {
         listAllEmbyLine()
     } else if (activePane.value == 'EmbyIconLibrary') {
