@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     config::app_state::AppState,
     db_execute, db_fetch_all, db_fetch_optional,
+    mapper::reverse_proxy_server_mapper,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, sqlx::FromRow)]
@@ -30,6 +31,10 @@ pub struct EmbyServer {
 
     pub browse_proxy_id: Option<String>,
     pub play_proxy_id: Option<String>,
+    pub reverse_proxy_id: Option<String>,
+    /// 拼接反代地址的 base_url ，不存库
+    #[sqlx(skip)]
+    pub reverse_base_url: Option<String>,
     pub line_id: Option<String>,
 
     pub last_playback_time: Option<chrono::DateTime<chrono::FixedOffset>>,
@@ -42,17 +47,34 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
     let list = list_all(state).await?;
     let mut cache_map_write = state.emby_server_cache.write().await;
     cache_map_write.clear();
-    for server in list {
+    for mut server in list {
+        server.reverse_base_url = resolve_reverse_base_url(server.base_url.clone(), server.reverse_proxy_id.clone(), state).await;
         cache_map_write.insert(server.id.clone().unwrap(), server);
     }
     anyhow::Ok(())
+}
+
+/// 将反代服务器地址拼接到 base_url 前，若未配置反代则原样返回
+/// 例如 base_url = https://emby.example.com, reverse proxy url = https://proxy.example.org/
+/// 结果: https://proxy.example.org/https://emby.example.com
+pub async fn resolve_reverse_base_url(
+    base_url: Option<String>,
+    reverse_proxy_id: Option<String>,
+    state: &tauri::State<'_, AppState>,
+) -> Option<String> {
+    let base_url = base_url?;
+    match reverse_proxy_server_mapper::get_reverse_proxy_url(reverse_proxy_id, state).await {
+        Some(reverse_proxy_url) => Some(format!("{}{}", reverse_proxy_url, base_url)),
+        None => Some(base_url),
+    }
 }
 
 pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
     let emby_server = get_by_id(id.to_string(), state).await?;
     let mut cache_map_write = state.emby_server_cache.write().await;
     match emby_server {
-        Some(emby_server) => {
+        Some(mut emby_server) => {
+            emby_server.reverse_base_url = resolve_reverse_base_url(emby_server.base_url.clone(), emby_server.reverse_proxy_id.clone(), state).await;
             cache_map_write.insert(id.to_string(), emby_server);
         }
         None => {
@@ -118,6 +140,7 @@ pub async fn create(
     let icon_url = entity.icon_url.clone();
     let browse_proxy_id = entity.browse_proxy_id.clone();
     let play_proxy_id = entity.play_proxy_id.clone();
+    let reverse_proxy_id = entity.reverse_proxy_id.clone();
     let line_id = entity.line_id.clone();
     let last_playback_time = entity.last_playback_time.clone();
     let keep_alive_days = entity.keep_alive_days.clone();
@@ -175,6 +198,9 @@ pub async fn create(
         }
         if entity.play_proxy_id.is_some() {
             separated.push("play_proxy_id");
+        }
+        if entity.reverse_proxy_id.is_some() {
+            separated.push("reverse_proxy_id");
         }
         if entity.line_id.is_some() {
             separated.push("line_id");
@@ -240,6 +266,9 @@ pub async fn create(
         if play_proxy_id.is_some() {
             separated.push_bind(play_proxy_id.unwrap());
         }
+        if reverse_proxy_id.is_some() {
+            separated.push_bind(reverse_proxy_id.unwrap());
+        }
         if line_id.is_some() {
             separated.push_bind(line_id.unwrap());
         }
@@ -283,6 +312,7 @@ pub async fn update_by_id(
     let icon_url = entity.icon_url.clone();
     let browse_proxy_id = entity.browse_proxy_id.clone();
     let play_proxy_id = entity.play_proxy_id.clone();
+    let reverse_proxy_id = entity.reverse_proxy_id.clone();
     let line_id = entity.line_id.clone();
     let last_playback_time = entity.last_playback_time.clone();
     let keep_alive_days = entity.keep_alive_days.clone();
@@ -355,6 +385,10 @@ pub async fn update_by_id(
         if play_proxy_id.is_some() {
             separated.push("play_proxy_id = ");
             separated.push_bind_unseparated(play_proxy_id.unwrap());
+        }
+        if reverse_proxy_id.is_some() {
+            separated.push("reverse_proxy_id = ");
+            separated.push_bind_unseparated(reverse_proxy_id.unwrap());
         }
         if line_id.is_some() {
             separated.push("line_id = ");

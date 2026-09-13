@@ -149,6 +149,14 @@
                         <el-button size="small" @click="configLine(showEmbyServer)">配置线路</el-button>
                     </template>
                 </el-select>
+                <el-select v-model="showServerLine.reverse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 180px; margin-left: 5px;">
+                    <template #label="{ label }">
+                        <span style="font-weight: bold">反代: </span>
+                        <span>{{ label }}</span>
+                    </template>
+                    <el-option key="no" label="不使用反代" value="no"/>
+                    <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+                </el-select>
                 <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 180px; margin-left: 5px;">
                     <template #label="{ label }">
                         <span style="font-weight: bold">浏览: </span>
@@ -183,6 +191,12 @@
         <el-form label-position="top">
             <el-form-item label="服务器地址">
                 <el-input v-model="dialogEmbyServer.base_url" placeholder="Please input" />
+            </el-form-item>
+            <el-form-item label="反代服务器">
+                <el-select v-model="dialogEmbyServer.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServer)">
+                    <el-option key="no" label="不使用反代" value="no"/>
+                    <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+                </el-select>
             </el-form-item>
             <el-form-item label="媒体库浏览代理">
                 <el-select v-model="dialogEmbyServer.browse_proxy_id">
@@ -252,6 +266,12 @@
         <el-form-item label="密码">
             <el-input v-model="dialogEmbyServer.password" placeholder="Please input" show-password />
         </el-form-item>
+        <el-form-item label="反代服务器">
+            <el-select v-model="dialogEmbyServer.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServer)">
+                <el-option key="no" label="不使用反代" value="no"/>
+                <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+            </el-select>
+        </el-form-item>
         <el-form-item label="媒体库代理">
             <el-select v-model="dialogEmbyServer.browse_proxy_id">
                 <el-option key="no" label="不使用代理" value="no"/>
@@ -305,6 +325,12 @@
         </el-form-item>
         <el-form-item label="线路地址">
             <el-input v-model="dialogEmbyServerAddLine.base_url" placeholder="Please input" />
+        </el-form-item>
+        <el-form-item label="反代服务器">
+            <el-select v-model="dialogEmbyServerAddLine.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServerAddLine)">
+                <el-option key="no" label="不使用反代" value="no"/>
+                <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+            </el-select>
         </el-form-item>
         <el-form-item label="媒体库代理">
             <el-select v-model="dialogEmbyServerAddLine.browse_proxy_id">
@@ -363,6 +389,7 @@ import _ from "lodash";
 import { Container, Draggable } from "vue3-smooth-dnd";
 import invokeApi from "../api/invokeApi";
 import { ProxyServer, useProxyServer } from "../store/db/proxyServer";
+import { ReverseProxyServer, useReverseProxyServer } from "../store/db/reverseProxyServer";
 import { EmbyServer, useEmbyServer } from "../store/db/embyServer";
 import { EmbyLine, useEmbyLine } from "../store/db/embyLine";
 import dayjs from 'dayjs'
@@ -391,6 +418,16 @@ function listAllProxyServer() {
 listAllProxyServer()
 onMounted(() => useEventBus().on('ProxyServerChanged', listAllProxyServer))
 onUnmounted(() => useEventBus().remove('ProxyServerChanged', listAllProxyServer))
+
+const reverseProxyServers = ref<ReverseProxyServer[]>([]);
+function listAllReverseProxyServer() {
+    useReverseProxyServer().listAllReverseProxyServer().then(list => {
+        reverseProxyServers.value = list;
+    })
+}
+listAllReverseProxyServer()
+onMounted(() => useEventBus().on('ReverseProxyServerChanged', listAllReverseProxyServer))
+onUnmounted(() => useEventBus().remove('ReverseProxyServerChanged', listAllReverseProxyServer))
 
 const embyServers = ref<EmbyServer[]>([])
 const embyServerMap = ref<{[key: string]: EmbyServer}>({})
@@ -504,6 +541,7 @@ function addEmbyServer() {
                 device: hostname,
                 device_id: hostname,
                 order_by: 1,
+                reverse_proxy_id: 'no',
                 browse_proxy_id: 'follow',
                 play_proxy_id: 'follow',
             }
@@ -585,6 +623,7 @@ async function addEmbyServerAddr() {
             emby_server_id: dialogEmbyServer.value.id!,
             emby_server_name: dialogEmbyServer.value.server_name,
             in_use: 1,
+            reverse_proxy_id: dialogEmbyServer.value!.reverse_proxy_id,
             browse_proxy_id: dialogEmbyServer.value!.browse_proxy_id,
             play_proxy_id: dialogEmbyServer.value!.play_proxy_id
         }
@@ -660,6 +699,7 @@ async function saveEditEmbyServer() {
             return
         }
         line.base_url = dialogEmbyServer.value!.base_url
+        line.reverse_proxy_id = dialogEmbyServer.value!.reverse_proxy_id
         line.browse_proxy_id = dialogEmbyServer.value!.browse_proxy_id
         line.play_proxy_id = dialogEmbyServer.value!.play_proxy_id
         await updateEmbyLineDb(line)
@@ -702,6 +742,7 @@ function addLine() {
     dialogEmbyServerAddLine.value = {
         emby_server_id: dialogEmbyServer.value.id!,
         emby_server_name: dialogEmbyServer.value.server_name,
+        reverse_proxy_id: 'no',
         browse_proxy_id: 'follow',
         play_proxy_id: 'follow'
     }
@@ -746,6 +787,7 @@ async function savedialogEmbyServerAddLine() {
             updateEmbyServerDb({
                 id: dialogEmbyServerAddLine.value.emby_server_id,
                 base_url: dialogEmbyServerAddLine.value.base_url,
+                reverse_proxy_id: dialogEmbyServerAddLine.value.reverse_proxy_id,
                 browse_proxy_id: dialogEmbyServerAddLine.value.browse_proxy_id,
                 play_proxy_id: dialogEmbyServerAddLine.value.play_proxy_id
             });
@@ -771,6 +813,7 @@ async function configLineChange(value: string) {
         let tmpEmbyServer = {
             id: line.emby_server_id,
             base_url: line.base_url,
+            reverse_proxy_id: line.reverse_proxy_id,
             browse_proxy_id: line.browse_proxy_id,
             play_proxy_id: line.play_proxy_id,
             line_id: line.id,
@@ -784,6 +827,7 @@ function proxyChange(line: EmbyLine) {
         if (line.id === dialogEmbyServer.value.line_id || line.id === showEmbyServer.value.line_id) {
             useEmbyServer().updateEmbyServer({
                 id: line.emby_server_id,
+                reverse_proxy_id: line.reverse_proxy_id,
                 browse_proxy_id: line.browse_proxy_id,
                 play_proxy_id: line.play_proxy_id
             }).then(() => {
@@ -792,6 +836,14 @@ function proxyChange(line: EmbyLine) {
         }
         ElMessage.success('修改成功');
     }).catch(e => ElMessage.error('修改失败' + e));
+}
+
+// 选择反代服务器后，两个代理服务器默认切换为不使用代理
+function reverseProxyChange(target: {reverse_proxy_id?: string, browse_proxy_id?: string, play_proxy_id?: string}) {
+    if (target.reverse_proxy_id && target.reverse_proxy_id !== 'no') {
+        target.browse_proxy_id = 'no'
+        target.play_proxy_id = 'no'
+    }
 }
 
 const dialogEditEmbyIconVisible = ref(false)

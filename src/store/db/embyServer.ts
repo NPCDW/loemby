@@ -66,6 +66,7 @@ export interface EmbyServer {
 
     browse_proxy_id?: string,
     play_proxy_id?: string,
+    reverse_proxy_id?: string,
     line_id?: string,
 
     last_playback_time?: string,

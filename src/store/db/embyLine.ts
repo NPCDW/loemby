@@ -47,4 +47,5 @@ export interface EmbyLine {
     base_url?: string,
     browse_proxy_id?: string,
     play_proxy_id?: string,
+    reverse_proxy_id?: string,
 }

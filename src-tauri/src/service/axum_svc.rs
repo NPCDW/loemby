@@ -6,7 +6,7 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper}, service::{emby_http_svc, player_svc, simkl_http_svc::{self, SimklHttpTokenParam}, trakt_http_svc::{self, TraktHttpTokenParam}}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper, reverse_proxy_server_mapper}, service::{emby_http_svc, player_svc, simkl_http_svc::{self, SimklHttpTokenParam}, trakt_http_svc::{self, TraktHttpTokenParam}}};
 
 pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -288,6 +288,8 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         let text = String::from_utf8_lossy(&bytes);
         tracing::debug!("stream: {} {} m3u8 文件下载完成，开始解析链接", types, &id);
         // 将 m3u8 文件中的链接替换为本地链接
+        // 若配置了反代服务器，链接指向原始地址时需要拼接反代服务器前缀
+        let reverse_proxy_url = reverse_proxy_server_mapper::get_reverse_proxy_url(emby_server.reverse_proxy_id.clone(), &app_state).await;
         let mut res_lines = Vec::new();
         let re = regex::Regex::new(r#"https?://[^\s<>\"']+"#).unwrap();
         let mut request_guard = axum_app_state.request.write().await;
@@ -297,7 +299,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
                 let link = mat.as_str();
                 let uuid = uuid::Uuid::new_v4().to_string();
                 request_guard.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
-                    stream_url: link.to_string(),
+                    stream_url: format!("{}{}", reverse_proxy_url.as_ref().unwrap_or(&"".to_string()), link),
                     emby_server_id: emby_server.id.clone().unwrap(),
                 });
                 let local_url = format!("http://127.0.0.1:{}/stream/m3u8/{}", axum_app_state.port, uuid);
@@ -427,7 +429,7 @@ async fn image_emby(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, &state).await;
     let user_agent = emby_server.user_agent.unwrap();
-    let image_url = emby_http_svc::get_image_url(&emby_server.base_url.unwrap(), &param.item_id, &param.image_type);
+    let image_url = emby_http_svc::get_image_url(&emby_server.reverse_base_url.unwrap(), &param.item_id, &param.image_type);
     let cache_prefix = format!("image/{}/{}", param.emby_server_id, param.image_type);
     
     image(axum_app_state, ImageParam {
