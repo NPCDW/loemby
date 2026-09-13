@@ -693,7 +693,6 @@ async function login(embyServerConfig: EmbyServer) {
     }).catch(e => ElMessage.error('登录失败 ' + e))
 }
 async function saveEditEmbyServer() {
-    reverseProxyChange(dialogEmbyServer.value)
     await useEmbyLine().getEmbyLine(dialogEmbyServer.value!.line_id!).then(async line => {
         if (!line) {
             ElMessage.error('获取正在使用的线路失败')
@@ -776,7 +775,6 @@ function delLine(line: EmbyLine) {
     })
 }
 async function savedialogEmbyServerAddLine() {
-    reverseProxyChange(dialogEmbyServerAddLine.value)
     let savePromise
     if (dialogEmbyServerAddLine.value.id) {
         savePromise = updateEmbyLineDb(dialogEmbyServerAddLine.value)
@@ -824,11 +822,6 @@ async function configLineChange(value: string) {
     }).catch(e => ElMessage.error('获取线路失败' + e))
 }
 function proxyChange(line: EmbyLine) {
-    // 选择反代服务器后，两个代理服务器默认切换为不使用代理
-    if (line.reverse_proxy_id && line.reverse_proxy_id !== 'no') {
-        line.browse_proxy_id = 'no'
-        line.play_proxy_id = 'no'
-    }
     useEmbyLine().updateEmbyLine(line).then(() => {
         useEventBus().emit('EmbyLineChanged', {})
         if (line.id === dialogEmbyServer.value.line_id || line.id === showEmbyServer.value.line_id) {

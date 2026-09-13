@@ -32,9 +32,9 @@ pub struct EmbyServer {
     pub browse_proxy_id: Option<String>,
     pub play_proxy_id: Option<String>,
     pub reverse_proxy_id: Option<String>,
-    /// 原始 base_url（未拼接反代地址），不存库
+    /// 拼接反代地址的 base_url ，不存库
     #[sqlx(skip)]
-    pub raw_base_url: Option<String>,
+    pub reverse_base_url: Option<String>,
     pub line_id: Option<String>,
 
     pub last_playback_time: Option<chrono::DateTime<chrono::FixedOffset>>,
@@ -48,8 +48,7 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
     let mut cache_map_write = state.emby_server_cache.write().await;
     cache_map_write.clear();
     for mut server in list {
-        server.raw_base_url = server.base_url.clone();
-        server.base_url = resolve_base_url(server.base_url.clone(), server.reverse_proxy_id.clone(), state).await;
+        server.reverse_base_url = resolve_reverse_base_url(server.base_url.clone(), server.reverse_proxy_id.clone(), state).await;
         cache_map_write.insert(server.id.clone().unwrap(), server);
     }
     anyhow::Ok(())
@@ -58,7 +57,7 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
 /// 将反代服务器地址拼接到 base_url 前，若未配置反代则原样返回
 /// 例如 base_url = https://emby.example.com, reverse proxy url = https://proxy.example.org/
 /// 结果: https://proxy.example.org/https://emby.example.com
-pub async fn resolve_base_url(
+pub async fn resolve_reverse_base_url(
     base_url: Option<String>,
     reverse_proxy_id: Option<String>,
     state: &tauri::State<'_, AppState>,
@@ -75,8 +74,7 @@ pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyh
     let mut cache_map_write = state.emby_server_cache.write().await;
     match emby_server {
         Some(mut emby_server) => {
-            emby_server.raw_base_url = emby_server.base_url.clone();
-            emby_server.base_url = resolve_base_url(emby_server.base_url.clone(), emby_server.reverse_proxy_id.clone(), state).await;
+            emby_server.reverse_base_url = resolve_reverse_base_url(emby_server.base_url.clone(), emby_server.reverse_proxy_id.clone(), state).await;
             cache_map_write.insert(id.to_string(), emby_server);
         }
         None => {

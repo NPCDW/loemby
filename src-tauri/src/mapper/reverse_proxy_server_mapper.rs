@@ -32,7 +32,7 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
     cache_map_write.clear();
     for reverse_proxy in list {
         let id = reverse_proxy.id.clone().unwrap();
-        let url = normalize_url(reverse_proxy.url.clone().unwrap_or_default());
+        let url = normalize_url(&reverse_proxy.url.clone().unwrap_or_default());
         if !url.is_empty() {
             cache_map_write.insert(id, url);
         }
@@ -45,7 +45,7 @@ pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyh
     let mut cache_map_write = state.reverse_proxy_server_cache.write().await;
     match reverse_proxy {
         Some(reverse_proxy) => {
-            let url = normalize_url(reverse_proxy.url.clone().unwrap_or_default());
+            let url = normalize_url(&reverse_proxy.url.clone().unwrap_or_default());
             if url.is_empty() {
                 cache_map_write.remove(id);
             } else {

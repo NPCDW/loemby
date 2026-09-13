@@ -290,7 +290,6 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         // 将 m3u8 文件中的链接替换为本地链接
         // 若配置了反代服务器，链接指向原始地址时需要拼接反代服务器前缀
         let reverse_proxy_url = reverse_proxy_server_mapper::get_reverse_proxy_url(emby_server.reverse_proxy_id.clone(), &app_state).await;
-        let raw_base_url = emby_server.raw_base_url.clone();
         let mut res_lines = Vec::new();
         let re = regex::Regex::new(r#"https?://[^\s<>\"']+"#).unwrap();
         let mut request_guard = axum_app_state.request.write().await;
@@ -298,16 +297,9 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             let mut res = line.to_string();
             for mat in re.find_iter(line) {
                 let link = mat.as_str();
-                // 已包含反代地址的链接不再处理
-                let mut stream_url = link.to_string();
-                if let (Some(reverse_proxy_url), Some(raw_base_url)) = (reverse_proxy_url.as_ref(), raw_base_url.as_ref()) {
-                    if !link.starts_with(reverse_proxy_url.as_str()) && link.starts_with(raw_base_url.as_str()) {
-                        stream_url = format!("{}{}", reverse_proxy_url, link);
-                    }
-                }
                 let uuid = uuid::Uuid::new_v4().to_string();
                 request_guard.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
-                    stream_url: stream_url.clone(),
+                    stream_url: format!("{}{}", reverse_proxy_url.as_ref().unwrap_or(&"".to_string()), link),
                     emby_server_id: emby_server.id.clone().unwrap(),
                 });
                 let local_url = format!("http://127.0.0.1:{}/stream/m3u8/{}", axum_app_state.port, uuid);
@@ -437,7 +429,7 @@ async fn image_emby(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, &state).await;
     let user_agent = emby_server.user_agent.unwrap();
-    let image_url = emby_http_svc::get_image_url(&emby_server.base_url.unwrap(), &param.item_id, &param.image_type);
+    let image_url = emby_http_svc::get_image_url(&emby_server.reverse_base_url.unwrap(), &param.item_id, &param.image_type);
     let cache_prefix = format!("image/{}/{}", param.emby_server_id, param.image_type);
     
     image(axum_app_state, ImageParam {

@@ -15,7 +15,7 @@ pub async fn get_server_info(param: EmbyGetServerInfoParam, state: &tauri::State
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let url = url::Url::parse(&format!("{}/emby/System/Info/Public", emby_server.base_url.as_ref().unwrap()))?;
+    let url = url::Url::parse(&format!("{}/emby/System/Info/Public", emby_server.reverse_base_url.as_ref().unwrap()))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -42,7 +42,7 @@ pub async fn authenticate_by_name(param: EmbyAuthenticateByNameParam, state: &ta
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id.clone(), state).await;
-    let url = url::Url::parse(&format!("{}/emby/Users/AuthenticateByName", emby_server.base_url.as_ref().unwrap()))?;
+    let url = url::Url::parse(&format!("{}/emby/Users/AuthenticateByName", emby_server.reverse_base_url.as_ref().unwrap()))?;
     let body = serde_json::json!({
             "Username": emby_server.username.as_ref().unwrap(),
             "Pw": emby_server.password.as_ref().unwrap(),
@@ -76,7 +76,7 @@ pub async fn logout(param: EmbyLogoutParam, state: &tauri::State<'_, AppState>) 
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let url = url::Url::parse(&format!("{}/emby/Sessions/Logout", emby_server.base_url.clone().unwrap()))?;
+    let url = url::Url::parse(&format!("{}/emby/Sessions/Logout", emby_server.reverse_base_url.clone().unwrap()))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -110,7 +110,7 @@ pub async fn search(param: EmbySearchParam, state: &tauri::State<'_, AppState>) 
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("SearchTerm", &param.search_str)
         .append_pair("IncludeItemTypes", &param.item_types.join(","))
@@ -149,7 +149,7 @@ pub async fn get_continue_play_list(param: EmbyGetContinuePlayListParam, state: 
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items/Resume", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items/Resume", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("Recursive", "true")
         .append_pair("MediaTypes", "Video")
@@ -186,7 +186,7 @@ pub async fn get_favorite_list(param: EmbyGetFavoriteListParam, state: &tauri::S
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("Recursive", "true")
         .append_pair("Filters", "IsFavorite")
@@ -225,7 +225,7 @@ pub async fn next_up(param: EmbyNextUpParam, state: &tauri::State<'_, AppState>)
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Shows/NextUp", emby_server.base_url.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Shows/NextUp", emby_server.reverse_base_url.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("Fields", "AlternateMediaSources,MediaSources")
         .append_pair("UserId", &emby_server.user_id.clone().unwrap())
@@ -263,7 +263,7 @@ pub async fn get_media_library_list(param: EmbyGetMediaLibraryListParam, state: 
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let url = url::Url::parse(&format!("{}/emby/Users/{}/Views", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
+    let url = url::Url::parse(&format!("{}/emby/Users/{}/Views", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -295,7 +295,7 @@ pub async fn get_media_library_child_latest(param: EmbyGetMediaLibraryChildLates
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items/Latest", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items/Latest", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("ParentId", &param.parent_id)
         .append_pair("Limit", &param.limit.to_string());
@@ -330,7 +330,7 @@ pub async fn get_media_library_child(param: EmbyGetMediaLibraryChildParam, state
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Users/{}/Items", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("Recursive", "true")
         .append_pair("IncludeItemTypes", "Series,Movie")
@@ -368,7 +368,7 @@ pub async fn count(param: EmbyCountParam, state: &tauri::State<'_, AppState>) ->
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Items/Counts", emby_server.base_url.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Items/Counts", emby_server.reverse_base_url.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("UserId", &emby_server.user_id.as_ref().unwrap());
     let mut headers = HeaderMap::new();
@@ -408,7 +408,7 @@ pub async fn items(param: EmbyItemsParam, state: &tauri::State<'_, AppState>, us
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let url = url::Url::parse(&format!("{}/emby/Users/{}/Items/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
+    let url = url::Url::parse(&format!("{}/emby/Users/{}/Items/{}", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -441,7 +441,7 @@ pub async fn seasons(param: EmbySeasonsParam, state: &tauri::State<'_, AppState>
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Shows/{}/Seasons", emby_server.base_url.clone().unwrap(), param.series_id))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Shows/{}/Seasons", emby_server.reverse_base_url.clone().unwrap(), param.series_id))?;
     url.query_pairs_mut()
         .append_pair("Fields", "ProductionYear,Overview")
         .append_pair("UserId", &emby_server.user_id.as_ref().unwrap());
@@ -476,7 +476,7 @@ pub async fn episodes(param: EmbyEpisodesParam, state: &tauri::State<'_, AppStat
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Shows/{}/Episodes", emby_server.base_url.clone().unwrap(), param.series_id))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Shows/{}/Episodes", emby_server.reverse_base_url.clone().unwrap(), param.series_id))?;
     url.query_pairs_mut()
         .append_pair("SeasonId", &param.season_id)
         .append_pair("UserId", &emby_server.user_id.as_ref().unwrap());
@@ -516,7 +516,7 @@ pub async fn playback_info(param: EmbyPlaybackInfoParam, state: &tauri::State<'_
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
     let is_playback = global_config_mapper::get_cache("play_param_IsPlayback", state).await;
-    let url = url::Url::parse(&format!("{}/emby/Items/{}/PlaybackInfo", emby_server.base_url.clone().unwrap(), param.item_id))?;
+    let url = url::Url::parse(&format!("{}/emby/Items/{}/PlaybackInfo", emby_server.reverse_base_url.clone().unwrap(), param.item_id))?;
     let body = serde_json::json!({
             "UserId": emby_server.user_id.clone().unwrap(),
             "IsPlayback": Some("true".to_string()) == is_playback || None == is_playback,
@@ -581,7 +581,7 @@ pub async fn playing(param: EmbyPlayingParam, state: &tauri::State<'_, AppState>
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Sessions/Playing", emby_server.base_url.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Sessions/Playing", emby_server.reverse_base_url.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("ItemId", &param.item_id)
         .append_pair("MediaSourceId", &param.media_source_id)
@@ -637,7 +637,7 @@ pub async fn playing_progress(param: EmbyPlayingProgressParam, state: &tauri::St
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Sessions/Playing/Progress", emby_server.base_url.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Sessions/Playing/Progress", emby_server.reverse_base_url.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("ItemId", &param.item_id)
         .append_pair("MediaSourceId", &param.media_source_id)
@@ -693,7 +693,7 @@ pub async fn playing_stopped(param: EmbyPlayingStoppedParam, state: &tauri::Stat
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let mut url = url::Url::parse(&format!("{}/emby/Sessions/Playing/Stopped", emby_server.base_url.clone().unwrap()))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Sessions/Playing/Stopped", emby_server.reverse_base_url.clone().unwrap()))?;
     url.query_pairs_mut()
         .append_pair("ItemId", &param.item_id)
         .append_pair("MediaSourceId", &param.media_source_id)
@@ -740,7 +740,7 @@ pub async fn star(param: EmbyStarParam, state: &tauri::State<'_, AppState>) -> a
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let url = url::Url::parse(&format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
+    let url = url::Url::parse(&format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -774,7 +774,7 @@ pub async fn unstar(param: EmbyUnstarParam, state: &tauri::State<'_, AppState>) 
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let url = url::Url::parse(&format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
+    let url = url::Url::parse(&format!("{}/emby/Users/{}/FavoriteItems/{}", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -806,7 +806,7 @@ pub async fn played(param: EmbyPlayedParam, state: &tauri::State<'_, AppState>) 
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let url = url::Url::parse(&format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
+    let url = url::Url::parse(&format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -840,7 +840,7 @@ pub async fn unplayed(param: EmbyUnplayedParam, state: &tauri::State<'_, AppStat
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let url = url::Url::parse(&format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
+    let url = url::Url::parse(&format!("{}/emby/Users/{}/PlayedItems/{}", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(emby_server.user_agent.as_ref().unwrap()).unwrap());
     // headers.insert(reqwest::header::REFERER, HeaderValue::from_str(emby_server.base_url.as_ref().unwrap()).unwrap());
@@ -872,7 +872,7 @@ pub async fn hide_from_resume(param: EmbyHideFromResumeParam, state: &tauri::Sta
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, state).await;
-    let url = url::Url::parse(&format!("{}/emby/Users/{}/Items/{}/HideFromResume", emby_server.base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
+    let url = url::Url::parse(&format!("{}/emby/Users/{}/Items/{}/HideFromResume", emby_server.reverse_base_url.clone().unwrap(), emby_server.user_id.clone().unwrap(), param.item_id))?;
     let body = serde_json::json!({
             "Hide": param.hide,
         }).to_string();
@@ -914,7 +914,7 @@ pub async fn get_direct_stream_url(param: EmbyGetDirectStreamUrlParam, state: &t
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
-    let url = format!("{}/emby{}", emby_server.base_url.clone().unwrap(), param.direct_stream_url);
+    let url = format!("{}/emby{}", emby_server.reverse_base_url.clone().unwrap(), param.direct_stream_url);
     tracing::debug!("拼接播放地址 {}", url);
     Ok(url)
 }
@@ -933,7 +933,7 @@ pub async fn get_video_stream_url(param: EmbyGetVideoStreamUrlParam, state: &tau
         Some(emby_server) => emby_server,
         None => return Err(anyhow::anyhow!("emby_server not found")),
     };
-    let mut url = url::Url::parse(&format!("{}/emby/Videos/{}/stream.{}", emby_server.base_url.clone().unwrap(), param.item_id, param.container))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Videos/{}/stream.{}", emby_server.reverse_base_url.clone().unwrap(), param.item_id, param.container))?;
     url.query_pairs_mut()
         .append_pair("Static", "true")
         .append_pair("mediaSourceId", &param.media_source_id)
@@ -962,7 +962,7 @@ pub async fn get_audio_stream_url(param: EmbyGetAudioStreamUrlParam, state: &tau
         return Err(anyhow::anyhow!("media_streams audio not external"));
     }
     let media_id = if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id};
-    let mut url = url::Url::parse(&format!("{}/emby/Audio/{}/stream.{}", emby_server.base_url.clone().unwrap(), media_id, param.media_streams_codec.unwrap_or("flac".to_string())))?;
+    let mut url = url::Url::parse(&format!("{}/emby/Audio/{}/stream.{}", emby_server.reverse_base_url.clone().unwrap(), media_id, param.media_streams_codec.unwrap_or("flac".to_string())))?;
     url.query_pairs_mut()
         .append_pair("Static", "true")
         .append_pair("AudioStreamIndex", &param.media_streams_index.to_string());
@@ -990,7 +990,7 @@ pub async fn get_subtitle_stream_url(param: EmbyGetSubtitleStreamUrlParam, state
     if !param.media_streams_is_external {
         return Err(anyhow::anyhow!("media_streams Subtitles not external"));
     }
-    let url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.base_url.clone().unwrap(), param.item_id, param.media_source_id, param.media_streams_index, param.media_streams_codec.unwrap_or("flac".to_string()));
+    let url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.reverse_base_url.clone().unwrap(), param.item_id, param.media_source_id, param.media_streams_index, param.media_streams_codec.unwrap_or("flac".to_string()));
     tracing::debug!("拼接字幕地址 {}", url);
     Ok(url)
 }
