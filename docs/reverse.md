@@ -63,9 +63,17 @@ server {
 2. 对多个 Emby 服务器反代，本客户端对这种有良好的适配，本客户端需要配置反代服务器地址，而 Emby 服务器地址只需要配置 Emby 提供者提供的即可，nginx 配置示例如下：
 ```nginx
 server {
+    listen       80;
+    listen       [::]:80;
+    server_name 83d834712f8f.emby.example.com v6-83d834712f8f.emby.example.com;
+
+    rewrite ^(.*) https://$server_name$1 permanent; 
+}
+
+server {
     listen 443 ssl;
     listen [::]:443 ssl;
-    server_name 83d834712f8f.emby.example.com;
+    server_name 83d834712f8f.emby.example.com v6-83d834712f8f.emby.example.com;
 
     ssl_certificate   /etc/ssl/nginx/all.emby/all.emby.example.com.pem;
     ssl_certificate_key  /etc/ssl/nginx/all.emby/all.emby.example.com.key;
@@ -110,11 +118,11 @@ server {
         # ----------------- 关键修改：配置 proxy_redirect -----------------
         # 1. 重写绝对路径重定向 (如 Location: http(s)://ccccc.com/path)
         # 将其替换为: https://http-proxy.aaaa.dev/http(s)://ccccc.com/path
-        proxy_redirect ~*^(https?://.+) https://83d834712f8f.emby.example.com/$1;
+        proxy_redirect ~*^(https?://.+) https://$http_host/$1;
 
         # 2. 重写相对路径重定向 (如 Location: /path/to/page)
         # 将其替换为: https://http-proxy.aaaa.dev/https://bbbbb.com/path/to/page
-        proxy_redirect ~^/(.*)$ https://83d834712f8f.emby.example.com/$target_scheme://$target_host/$1;
+        proxy_redirect ~^/(.*)$ https://$http_host/$target_scheme://$target_host/$1;
         # -----------------------------------------------------------------
 
         # 不要开启 error_page 拦截，让 301/302 直接透传（但 Location 头已被上面重写）
