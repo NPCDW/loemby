@@ -278,7 +278,11 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
          || Some(&HeaderValue::from_str("application/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
          || Some(&HeaderValue::from_str("audio/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE) {
         let status = response.status();
-        let headers = response.headers().clone();
+        // 不能复用上游响应头：m3u8 内容被改写后长度与上游 content-length 不一致，没有这个头，出现了 transfer-encoding: chunked 这个头也有问题，
+        // hyper 在 debug 构建下会直接 assert panic（连接被关闭，客户端收到空响应）。
+        // 这里只保留 content-type，其余由 axum/hyper 重新生成。
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(axum::http::header::CONTENT_TYPE, response.headers().get(axum::http::header::CONTENT_TYPE).unwrap().clone());
         tracing::debug!("stream: {} {} 响应为 m3u8 文件", types, &id);
         let mut stream = response.bytes_stream();
         let mut bytes = Vec::new();
