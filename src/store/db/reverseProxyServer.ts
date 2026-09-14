@@ -74,4 +74,7 @@ export interface ReverseProxyServer {
 
     name?: string,
     url?: string,
+
+    // 前端展示字段
+    location?: string,
 }

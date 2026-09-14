@@ -9,7 +9,7 @@ mod mapper;
 mod service;
 mod util;
 
-use controller::app_http_ctl::{app_http_get_emby_icon_library, app_http_get_proxy_location};
+use controller::app_http_ctl::{app_http_get_emby_icon_library, app_http_get_proxy_location, app_http_get_reverse_proxy_location};
 use controller::emby_http_ctl::{emby_get_server_info, emby_authenticate_by_name, emby_logout, emby_search, emby_get_continue_play_list, emby_get_favorite_list, emby_next_up, emby_get_media_library_list, emby_get_media_library_child_latest, emby_get_media_library_child, emby_count, emby_items, emby_seasons, emby_episodes, emby_playback_info, emby_star, emby_unstar, emby_played, emby_unplayed, emby_hide_from_resume};
 use controller::proxy_server_ctl::{get_proxy_server, list_all_proxy_server, add_proxy_server, update_proxy_server, delete_proxy_server};
 use controller::reverse_proxy_server_ctl::{get_reverse_proxy_server, list_all_reverse_proxy_server, add_reverse_proxy_server, update_reverse_proxy_server, delete_reverse_proxy_server};
@@ -27,7 +27,7 @@ use crate::service::{cache_svc, updater_svc};
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            app_http_get_proxy_location, app_http_get_emby_icon_library,
+            app_http_get_proxy_location, app_http_get_reverse_proxy_location, app_http_get_emby_icon_library,
             emby_get_server_info, emby_authenticate_by_name, emby_logout, emby_search, emby_get_continue_play_list, emby_get_favorite_list, emby_next_up, emby_get_media_library_list, emby_get_media_library_child_latest, emby_get_media_library_child, emby_count, emby_items, emby_seasons, emby_episodes, emby_playback_info, emby_star, emby_unstar, emby_played, emby_unplayed, emby_hide_from_resume,
             get_proxy_server, list_all_proxy_server, add_proxy_server, update_proxy_server, delete_proxy_server,
             get_reverse_proxy_server, list_all_reverse_proxy_server, add_reverse_proxy_server, update_reverse_proxy_server, delete_reverse_proxy_server,

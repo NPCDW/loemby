@@ -10,6 +10,15 @@ async function getProxyLocation(proxy_id: string): Promise<string> {
 }
 
 /**
+ * 校验反代服务器
+ */
+async function getReverseProxyLocation(reverse_proxy_id: string): Promise<string> {
+    return invoke('app_http_get_reverse_proxy_location', {body: {
+        reverse_proxy_id
+    }});
+}
+
+/**
  * 获取emby图标库
  */
 async function getEmbyIconLibrary(url: string): Promise<string> {
@@ -19,5 +28,5 @@ async function getEmbyIconLibrary(url: string): Promise<string> {
 }
 
 export default {
-    getProxyLocation, getEmbyIconLibrary
+    getProxyLocation, getReverseProxyLocation, getEmbyIconLibrary
 }

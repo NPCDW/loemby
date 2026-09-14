@@ -17,6 +17,20 @@ pub async fn app_http_get_proxy_location(body: AppHttpGetProxyLocationParam, sta
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct AppHttpGetReverseProxyLocationParam {
+    pub reverse_proxy_id: String,
+}
+
+#[tauri::command]
+pub async fn app_http_get_reverse_proxy_location(body: AppHttpGetReverseProxyLocationParam, state: tauri::State<'_, AppState>) -> Result<String, String> {
+    let res = app_http_svc::get_reverse_proxy_location(body, &state).await;
+    if res.is_err() {
+        return Err(res.err().unwrap().to_string());
+    }
+    Ok(res.unwrap())
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct AppHttpGetEmbyIconLibraryParam {
     pub url: String,
 }

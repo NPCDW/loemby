@@ -282,11 +282,13 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                 <el-table :data="reverseProxyServers" style="width: 100%">
                     <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
                     <el-table-column prop="url" label="Url" show-overflow-tooltip />
+                    <el-table-column prop="location" label="Location" show-overflow-tooltip />
                     <el-table-column fixed="right" label="Operations" width="210" align="center">
                         <template #header>
                             <el-button plain type="primary" size="small" @click.prevent="addReverseProxy()">添加反代服务器</el-button>
                         </template>
                         <template #default="scope">
+                            <el-button plain :loading="checkReverseProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkReverseProxy(scope.row.id)">检测</el-button>
                             <el-button plain type="primary" size="small" @click.prevent="editReverseProxy(scope.$index)">编辑</el-button>
                             <el-button plain type="danger" size="small" @click.prevent="delReverseProxy(scope.$index)">删除</el-button>
                         </template>
@@ -738,6 +740,19 @@ function checkProxy(id: string) {
             }
         }
     }).catch(e => ElMessage.error('检测代理失败，可能是代理配置错误，请检查代理配置' + e)).finally(() => checkProxyLoading.value[id] = false);
+}
+
+const checkReverseProxyLoading = ref<{[key: string]: boolean}>({});
+function checkReverseProxy(id: string) {
+    checkReverseProxyLoading.value[id] = true;
+    appApi.getReverseProxyLocation(id).then(async response => {
+        let json = JSON.parse(response);
+        for (let index = 0; index < reverseProxyServers.value.length; index++) {
+            if (reverseProxyServers.value[index].id === id) {
+                reverseProxyServers.value[index].location = json["ip"] + " " + json["country_code"];
+            }
+        }
+    }).catch(e => ElMessage.error('检测反代失败，可能是反代配置错误，请检查反代配置' + e)).finally(() => checkReverseProxyLoading.value[id] = false);
 }
 
 const checkUpdateLoading = ref<boolean>(false);
