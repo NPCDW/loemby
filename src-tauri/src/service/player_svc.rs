@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, sync::RwLock};
 use tokio_stream::StreamExt;
 
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateEmbyStreamRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateEmbyStreamRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
 
 pub async fn call_player(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let emby_server = match emby_server_mapper::get_cache(&body.emby_server_id, state).await {
@@ -266,10 +266,7 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
     let mut video_url = if params.use_direct_link && support_direct_link {
         media_source.path.clone().unwrap()
     } else if media_source.direct_stream_url.is_some() {
-        emby_http_svc::get_direct_stream_url(EmbyGetDirectStreamUrlParam {
-            emby_server_id: params.emby_server_id.clone(),
-            direct_stream_url: media_source.direct_stream_url.clone().unwrap(),
-        }, &app_state).await?
+        media_source.direct_stream_url.clone().unwrap()
     } else {
         emby_http_svc::get_video_stream_url(EmbyGetVideoStreamUrlParam {
             emby_server_id: params.emby_server_id.clone(),

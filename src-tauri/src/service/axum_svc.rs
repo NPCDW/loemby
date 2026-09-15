@@ -6,7 +6,7 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper, reverse_proxy_server_mapper}, service::{emby_http_svc, player_svc, simkl_http_svc::{self, SimklHttpTokenParam}, trakt_http_svc::{self, TraktHttpTokenParam}}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper, reverse_proxy_server_mapper}, service::{emby_http_svc::{self, EmbyGetDirectStreamUrlParam}, player_svc, simkl_http_svc::{self, SimklHttpTokenParam}, trakt_http_svc::{self, TraktHttpTokenParam}}};
 
 pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -182,6 +182,12 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     req_headers.insert("X-Emby-Device-Id", HeaderValue::from_str(emby_server.device_id.as_ref().unwrap()).unwrap());
     req_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
     let mut url = request.stream_url.clone();
+    if !url.starts_with("http") {
+        url = emby_http_svc::get_direct_stream_url(EmbyGetDirectStreamUrlParam {
+            emby_server_id: request.emby_server_id.clone(),
+            direct_stream_url: url.clone(),
+        }, &app_state).await.unwrap();
+    }
     // 处理错误和手动重定向
     let mut redirect_count = 0u8;
     let response = loop {
