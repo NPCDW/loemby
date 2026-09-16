@@ -6,7 +6,7 @@ use tauri::{Emitter, Manager};
 use tokio::{fs::File, io::AsyncWriteExt, sync::RwLock};
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_stream::StreamExt;
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper, reverse_proxy_server_mapper}, service::{emby_http_svc::{self, EmbyGetDirectStreamUrlParam}, player_svc, simkl_http_svc::{self, SimklHttpTokenParam}, trakt_http_svc::{self, TraktHttpTokenParam}}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{emby_server_mapper, global_config_mapper, proxy_server_mapper, reverse_proxy_server_mapper}, service::{emby_http_svc, player_svc, simkl_http_svc::{self, SimklHttpTokenParam}, trakt_http_svc::{self, TraktHttpTokenParam}}};
 
 pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, app_handle: tauri::AppHandle) -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 0));
@@ -183,10 +183,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     req_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
     let mut url = request.stream_url.clone();
     if !url.starts_with("http") {
-        url = emby_http_svc::get_direct_stream_url(EmbyGetDirectStreamUrlParam {
-            emby_server_id: request.emby_server_id.clone(),
-            direct_stream_url: url.clone(),
-        }, &app_state).await.unwrap();
+        url = format!("{}{}", emby_server.reverse_base_url.as_ref().unwrap(), url);
     }
     // 处理错误和手动重定向
     let mut redirect_count = 0u8;
@@ -347,8 +344,21 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
             ).into_response();
         }
     };
+    let app_state = axum_app_state.app.state::<AppState>().clone();
+    let emby_server = match emby_server_mapper::get_cache(&request.emby_server_id, &app_state).await {
+        Some(emby_server) => emby_server,
+        None => return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new("emby_server 不存在".to_string())
+        ).into_response(),
+    };
 
-    let cache_digest = sha256::digest(&request.stream_url);
+    let mut url = request.stream_url.clone();
+    if !url.starts_with("http") {
+        url = format!("{}{}", emby_server.reverse_base_url.as_ref().unwrap(), url);
+    }
+    let cache_digest = sha256::digest(&url);
     let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/subtitle/{}.ass", cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
     if cache_file_path.exists() {
         tracing::debug!("subtitle: {:?} {} 从缓存读取", cache_file_path, id);
@@ -368,15 +378,6 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
         ).into_response();
     }
 
-    let app_state = axum_app_state.app.state::<AppState>().clone();
-    let emby_server = match emby_server_mapper::get_cache(&request.emby_server_id, &app_state).await {
-        Some(emby_server) => emby_server,
-        None => return (
-            axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            axum::http::HeaderMap::new(),
-            axum::body::Body::new("emby_server 不存在".to_string())
-        ).into_response(),
-    };
     let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id, &app_state).await;
     let client = match http_pool::get_image_http_client(proxy_url, &app_state).await {
         Ok(client) => client,
@@ -391,14 +392,14 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
     req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
-    // req_headers.insert(axum::http::header::REFERER, request.stream_url.clone().parse().unwrap());
+    // req_headers.insert(axum::http::header::REFERER, url.clone().parse().unwrap());
     req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
     req_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
     req_headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
     req_headers.insert("X-Emby-Device-Id", HeaderValue::from_str(emby_server.device_id.as_ref().unwrap()).unwrap());
     req_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
     let res = client
-        .get(request.stream_url.clone())
+        .get(url)
         .headers(req_headers.clone())
         .send()
         .await;

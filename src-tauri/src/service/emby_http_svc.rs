@@ -903,49 +903,28 @@ pub async fn hide_from_resume(param: EmbyHideFromResumeParam, state: &tauri::Sta
     Ok(text)
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct EmbyGetDirectStreamUrlParam {
-    pub emby_server_id: String,
-    pub direct_stream_url: String,
-}
-
-pub async fn get_direct_stream_url(param: EmbyGetDirectStreamUrlParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
-        Some(emby_server) => emby_server,
-        None => return Err(anyhow::anyhow!("emby_server not found")),
-    };
-    let url = format!("{}/emby{}", emby_server.reverse_base_url.clone().unwrap(), param.direct_stream_url);
+pub fn get_half_direct_stream_url(direct_stream_url: String) -> String {
+    let url = format!("/emby{}", direct_stream_url);
     tracing::debug!("拼接播放地址 {}", url);
-    Ok(url)
+    url
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct EmbyGetVideoStreamUrlParam {
-    pub emby_server_id: String,
     pub item_id: String,
     pub container: String,
     pub media_source_id: String,
     pub play_session_id: String,
 }
 
-pub async fn get_video_stream_url(param: EmbyGetVideoStreamUrlParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
-        Some(emby_server) => emby_server,
-        None => return Err(anyhow::anyhow!("emby_server not found")),
-    };
-    let mut url = url::Url::parse(&format!("{}/emby/Videos/{}/stream.{}", emby_server.reverse_base_url.clone().unwrap(), param.item_id, param.container))?;
-    url.query_pairs_mut()
-        .append_pair("Static", "true")
-        .append_pair("mediaSourceId", &param.media_source_id)
-        .append_pair("playSessionId", &param.play_session_id);
-    let url = url.to_string();
+pub fn get_half_video_stream_url(param: EmbyGetVideoStreamUrlParam) -> String {
+    let url = format!("/emby/Videos/{}/stream.{}?Static=true&mediaSourceId={}&playSessionId={}", param.item_id, param.container, &param.media_source_id, &param.play_session_id);
     tracing::debug!("拼接视频地址 {}", url);
-    Ok(url)
+    url
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct EmbyGetAudioStreamUrlParam {
-    pub emby_server_id: String,
     pub item_id: String,
     pub media_source_item_id: Option<String>,
     pub media_streams_codec: Option<String>,
@@ -953,27 +932,18 @@ pub struct EmbyGetAudioStreamUrlParam {
     pub media_streams_is_external: bool,
 }
 
-pub async fn get_audio_stream_url(param: EmbyGetAudioStreamUrlParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
-        Some(emby_server) => emby_server,
-        None => return Err(anyhow::anyhow!("emby_server not found")),
-    };
+pub fn get_half_audio_stream_url(param: EmbyGetAudioStreamUrlParam) -> anyhow::Result<String> {
     if !param.media_streams_is_external {
         return Err(anyhow::anyhow!("media_streams audio not external"));
     }
     let media_id = if param.media_source_item_id.is_some() {param.media_source_item_id.unwrap()} else {param.item_id};
-    let mut url = url::Url::parse(&format!("{}/emby/Audio/{}/stream.{}", emby_server.reverse_base_url.clone().unwrap(), media_id, param.media_streams_codec.unwrap_or("flac".to_string())))?;
-    url.query_pairs_mut()
-        .append_pair("Static", "true")
-        .append_pair("AudioStreamIndex", &param.media_streams_index.to_string());
-    let url = url.to_string();
+    let url = format!("/emby/Audio/{}/stream.{}?Static=true&AudioStreamIndex={}", media_id, param.media_streams_codec.unwrap_or("flac".to_string()), &param.media_streams_index.to_string());
     tracing::debug!("拼接音频地址 {}", url);
     Ok(url)
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct EmbyGetSubtitleStreamUrlParam {
-    pub emby_server_id: String,
     pub item_id: String,
     pub media_source_id: String,
     pub media_source_item_id: Option<String>,
@@ -982,15 +952,11 @@ pub struct EmbyGetSubtitleStreamUrlParam {
     pub media_streams_is_external: bool,
 }
 
-pub async fn get_subtitle_stream_url(param: EmbyGetSubtitleStreamUrlParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
-    let emby_server = match emby_server_mapper::get_cache(&param.emby_server_id, state).await {
-        Some(emby_server) => emby_server,
-        None => return Err(anyhow::anyhow!("emby_server not found")),
-    };
+pub fn get_half_subtitle_stream_url(param: EmbyGetSubtitleStreamUrlParam) -> anyhow::Result<String> {
     if !param.media_streams_is_external {
         return Err(anyhow::anyhow!("media_streams Subtitles not external"));
     }
-    let url = format!("{}/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", emby_server.reverse_base_url.clone().unwrap(), param.item_id, param.media_source_id, param.media_streams_index, param.media_streams_codec.unwrap_or("flac".to_string()));
+    let url = format!("/emby/Videos/{}/{}/Subtitles/{}/Stream.{}", param.item_id, param.media_source_id, param.media_streams_index, param.media_streams_codec.unwrap_or("flac".to_string()));
     tracing::debug!("拼接字幕地址 {}", url);
     Ok(url)
 }
