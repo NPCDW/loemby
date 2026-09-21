@@ -102,18 +102,21 @@ server {
     # 关键点 1：禁止 Nginx 自动压缩双斜杠 //
     merge_slashes off;
     
+    # 使用原始未解码的 $request_uri 进行正则匹配与提取
     location ~* ^/(https?):/+(.+) {
-        set $target_scheme $1;
-        set $target_rest $2;
-
-        if ($target_rest ~* "^([^/]+)(/.*)?$") {
-            set $target_host $1;
-            set $target_path $2;
+        # 利用正则从原始请求 $request_uri 中精准提取 scheme、host 和原始带编码的 path
+        if ($request_uri ~* ^/(https?):/+([^/]+)(/.*)?$) {
+            set $target_scheme $1;
+            set $target_host $2;
+            set $target_path $3;
         }
 
         if ($target_path = "") {
             set $target_path "/";
         }
+
+        # 关键：直接改写 URI，避免 proxy_pass 变量拼接导致二次编码
+        rewrite ^/(https?):/+([^/]+)(/.*)?$ $3 break;
 
         # ----------------- 关键修改：配置 proxy_redirect -----------------
         # 1. 重写绝对路径重定向 (如 Location: http(s)://ccccc.com/path)
@@ -142,8 +145,9 @@ server {
         proxy_http_version 1.1;
         proxy_ssl_server_name on;
         proxy_ssl_name $target_host;
-
-        proxy_pass $target_scheme://$target_host$target_path$is_args$args;
+        
+        # 注意：这里 proxy_pass 不带 URI，URI 由 rewrite 后的 $uri 决定
+        proxy_pass $target_scheme://$target_host;
     }
 }
 ```

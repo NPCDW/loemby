@@ -1,6 +1,6 @@
 # loemby
 
-一个简陋的 Emby 客户端（兼容 Jellyfin）。
+一个简陋的 Emby 客户端（兼容 Jellyfin 12 以下）。
 
 当前支持 Windows 和 Linux 平台，理论上兼容 macOS，但尚未经过测试，不保证可用性。
 
