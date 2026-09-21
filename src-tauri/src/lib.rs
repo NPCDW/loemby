@@ -66,6 +66,7 @@ pub fn run() {
                 auxm_app_state: axum_app_state,
                 api_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
                 image_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
+                stream_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
                 emby_server_cache: Arc::new(RwLock::new(HashMap::new())),
                 global_config_cache: Arc::new(RwLock::new(HashMap::new())),
                 proxy_server_cache: Arc::new(RwLock::new(HashMap::new())),

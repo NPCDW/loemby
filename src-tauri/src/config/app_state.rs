@@ -12,6 +12,7 @@ pub struct AppState {
     pub auxm_app_state: Arc::<RwLock<Option<AxumAppState>>>,
     pub api_reqwest_pool: Arc::<RwLock<HashMap<String, ClientWithMiddleware>>>,
     pub image_reqwest_pool: Arc::<RwLock<HashMap<String, ClientWithMiddleware>>>,
+    pub stream_reqwest_pool: Arc::<RwLock<HashMap<String, ClientWithMiddleware>>>,
     pub db_pool: DbPool,
     pub emby_server_cache: Arc::<RwLock<HashMap<String, crate::mapper::emby_server_mapper::EmbyServer>>>,
     pub global_config_cache: Arc::<RwLock<HashMap<String, String>>>,

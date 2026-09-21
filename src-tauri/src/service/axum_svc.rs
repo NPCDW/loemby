@@ -144,6 +144,27 @@ async fn simkl_auth(headers: axum::http::HeaderMap, State(axum_app_state): State
     axum::response::Html("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>授权成功，您可以关闭网页，并返回应用了</body></html>").into_response()
 }
 
+/// 逐跳首部（hop-by-hop），只描述当前这一条 TCP 连接的语义，代理不能原样转发，
+/// 否则上游的 connection: close / transfer-encoding: chunked 会被透传给播放器（或反向透传给上游），
+/// mpv 会认为这条连接已经不能复用，于是每个 ts 都重新建连
+const HOP_BY_HOP_HEADERS: [axum::http::HeaderName; 9] = [
+    axum::http::header::CONNECTION,
+    axum::http::HeaderName::from_static("keep-alive"),
+    axum::http::HeaderName::from_static("proxy-connection"),
+    axum::http::header::TRANSFER_ENCODING,
+    axum::http::header::UPGRADE,
+    axum::http::header::TE,
+    axum::http::header::TRAILER,
+    axum::http::header::PROXY_AUTHENTICATE,
+    axum::http::header::PROXY_AUTHORIZATION,
+];
+
+fn remove_hop_by_hop_headers(headers: &mut axum::http::HeaderMap) {
+    for name in HOP_BY_HOP_HEADERS.iter() {
+        headers.remove(name);
+    }
+}
+
 async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path((types, id)): Path<(String, String)>) -> axum::response::Response {
     tracing::debug!("stream: {} {} {:?}", types, id, headers);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
@@ -175,6 +196,8 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     req_headers.remove(axum::http::header::HOST);
     req_headers.remove(axum::http::header::REFERER);
     req_headers.remove(axum::http::header::USER_AGENT);
+    // 播放器到本代理的连接语义不应该被带去请求上游，否则上游会跟着关闭连接，ts 之间无法复用连接
+    remove_hop_by_hop_headers(&mut req_headers);
     req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
     req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
     req_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
@@ -324,9 +347,14 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             axum::body::Body::new(res_lines.join("\n"))
         ).into_response();
     }
+    // 上游响应头中的逐跳首部不能透传给播放器：
+    // 1. connection: close 会让 mpv 认为这条连接不能复用，下一个 ts 又去新建连接
+    // 2. transfer-encoding 需要交给 hyper 依据实际的 body 重新生成，否则会出现二次分块
+    let mut res_headers = response.headers().clone();
+    remove_hop_by_hop_headers(&mut res_headers);
     (
         response.status(),
-        response.headers().clone(),
+        res_headers,
         axum::body::Body::from_stream(response.bytes_stream())
     ).into_response()
 }
