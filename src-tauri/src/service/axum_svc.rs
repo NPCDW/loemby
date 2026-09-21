@@ -276,10 +276,12 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             headers,
         ).into_response();
     }
-    if Some(&HeaderValue::from_str("application/vnd.apple.mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
-         || Some(&HeaderValue::from_str("application/x-mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
-         || Some(&HeaderValue::from_str("application/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE)
-         || Some(&HeaderValue::from_str("audio/mpegurl").unwrap()) == response.headers().get(axum::http::header::CONTENT_TYPE) {
+    // 内容类型可能包含编码，如: Content-Type: application/vnd.apple.mpegurl; charset=utf-8
+    let response_content_type = if let Some(content_type) = response.headers().get(axum::http::header::CONTENT_TYPE) {
+        content_type.to_str().unwrap_or("")
+    } else { "" };
+    if response_content_type.contains("application/vnd.apple.mpegurl") || response_content_type.contains("application/x-mpegurl")
+        || response_content_type.contains("application/mpegurl") || response_content_type.contains("audio/mpegurl") {
         let status = response.status();
         // 不能复用上游响应头：m3u8 内容被改写后长度与上游 content-length 不一致，没有这个头，出现了 transfer-encoding: chunked 这个头也有问题，
         // hyper 在 debug 构建下会直接 assert panic（连接被关闭，客户端收到空响应）。
