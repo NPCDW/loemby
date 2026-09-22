@@ -1,40 +1,49 @@
 <template>
-    <div>
-        <div style="display: flex; padding: 10px;">
-            <el-checkbox-group v-model="item_types" style="flex: none; margin-right: 5px;">
-                <el-checkbox-button key="Movie" value="Movie">电影</el-checkbox-button>
-                <el-checkbox-button key="Series" value="Series">剧</el-checkbox-button>
-                <el-checkbox-button key="Episode" value="Episode">集</el-checkbox-button>
+    <div class="roe-page">
+        <div class="roe-toolrow">
+            <el-checkbox-group v-model="item_types">
+                <el-checkbox-button value="Movie">电影</el-checkbox-button>
+                <el-checkbox-button value="Series">剧</el-checkbox-button>
+                <el-checkbox-button value="Episode">集</el-checkbox-button>
             </el-checkbox-group>
-            <el-input v-model="search_str" autofocus @keyup.enter="search" :disabled="search_loading" style="flex: auto;">
+            <el-input v-model="search_str" autofocus @keyup.enter="search" :disabled="search_loading" placeholder="在所有服务器中搜索" class="query__input">
                 <template #append>
-                    <el-button type="primary" @click="search" :loading="search_loading"><el-icon><i-ep-Search /></el-icon></el-button>
+                    <el-button type="primary" :loading="search_loading" @click="search">
+                        <el-icon><i-ep-Search /></el-icon>
+                    </el-button>
                 </template>
             </el-input>
         </div>
-        
-        <el-scrollbar ref="scrollbarRef" style="height: calc(100vh - 82px); padding: 0 20px;">
+
+        <div v-if="searched.length === 0" class="roe-empty">
+            <span class="roe-empty__line">一次搜索，覆盖全部服务器</span>
+            <span>输入片名后按回车，结果会按服务器分组显示。</span>
+        </div>
+
+        <el-scrollbar ref="scrollbarRef" v-else>
             <el-collapse v-model="embyServerKeys">
-                <el-collapse-item :title="embySearchItem.embyServer.server_name" :name="embySearchItem.embyServer.id" :disabled="embySearchItem.result?.Items.length == 0" v-for="embySearchItem in emby_search_result_list">
-                    <template #icon>
-                        <span style="display: flex; align-items: center; margin: auto 18px auto auto;">
-                            <el-icon v-if="embySearchItem.request_status" class="is-loading" style="color: #409EFF;"><i-ep-Loading /></el-icon>
-                            <el-icon v-else-if="!embySearchItem.success" style="color: #E6A23C;"><i-ep-WarningFilled /></el-icon>
-                            <el-icon v-else-if="embySearchItem.result?.Items.length == 0" style="color: #909399;">empty</el-icon>
-                            <el-icon v-else style="color: #67C23A;"><i-ep-SuccessFilled /></el-icon>
+                <el-collapse-item
+                    v-for="entry in searched"
+                    :key="entry.embyServer.id"
+                    :name="entry.embyServer.id"
+                    :disabled="entry.result?.Items.length == 0"
+                >
+                    <template #title>
+                        <span class="group__title">{{ entry.embyServer.server_name }}</span>
+                        <span class="group__state" :data-state="entry.request_status ? 'loading' : entry.success ? 'ok' : 'error'">
+                            {{ entry.request_status ? '搜索中' : !entry.success ? '请求失败' : (entry.result?.Items.length ? entry.result!.Items.length + ' 条' : '无结果') }}
                         </span>
                     </template>
-                    <div v-if="embySearchItem.success" style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <ItemCard v-for="rootItem in embySearchItem.result?.Items" :key="rootItem.Id" :item="rootItem" :embyServerId="embySearchItem.embyServer.id!" />
+                    <div v-if="entry.success" class="grid">
+                        <ItemCard v-for="rootItem in entry.result?.Items" :key="rootItem.Id" :item="rootItem" :embyServerId="entry.embyServer.id!" />
                     </div>
-                    <div v-else style="text-align: center;">
-                        <el-text type="danger" style="word-break: break-all;display: block;">{{ embySearchItem.message }}</el-text>
-                        <el-button type="primary" @click="singleEmbySearch(embySearchItem.embyServer)">重试</el-button>
+                    <div v-else class="group__error">
+                        <span>{{ entry.message }}</span>
+                        <el-button type="primary" plain size="small" @click="singleEmbySearch(entry.embyServer)">重试</el-button>
                     </div>
                 </el-collapse-item>
             </el-collapse>
         </el-scrollbar>
-        <el-button circle style="position: absolute; bottom: 20px; right: 20px" @click="scrollbarRef!.setScrollTop(0)"><i-ep-ArrowUpBold /></el-button>
     </div>
 </template>
 
@@ -50,8 +59,8 @@ function listAllEmbyServer() {
     useEmbyServer().listAllEmbyServer().then(list => {
         embyServers.value = list.sort((a, b) => a.order_by! - b.order_by!);
         embyServers.value.forEach(item => {
-            if (emby_search_result.value[item.id!]) {
-                emby_search_result.value[item.id!].embyServer = item
+            if (searchResult.value[item.id!]) {
+                searchResult.value[item.id!].embyServer = item
             }
         })
     }).catch(e => ElMessage.error('获取Emby服务器失败' + e))
@@ -64,12 +73,13 @@ const search_str = ref('')
 const embyServerKeys = ref<string[]>([])
 const item_types = ref<string[]>(['Movie', 'Series'])
 
-const emby_search_result = ref<{[key: string]: {embyServer: EmbyServer, request_status: boolean, success: boolean, message?: string, result?: EmbyPageList<SearchItem>}}>({})
+const searchResult = ref<{[key: string]: {embyServer: EmbyServer, request_status: boolean, success: boolean, message?: string, result?: EmbyPageList<SearchItem>}}>({})
 
-const emby_search_result_list = computed(() => {
-    const embyServersSort = embyServers.value.map(item=> item.id)
-    Object.entries(emby_search_result.value).map(([_key, value]) => (value)).sort((a,b) => embyServersSort.indexOf(a.embyServer.id) - embyServersSort.indexOf(b.embyServer.id))
-    return emby_search_result.value
+/** 按导航里的服务器顺序输出，结果顺序与列表顺序一致 */
+const searched = computed(() => {
+    return embyServers.value
+        .filter(server => searchResult.value[server.id!])
+        .map(server => searchResult.value[server.id!])
 })
 
 async function search() {
@@ -77,7 +87,7 @@ async function search() {
         return
     }
     embyServerKeys.value = []
-    emby_search_result.value = {}
+    searchResult.value = {}
     let promises = []
 
     search_loading.value = true
@@ -90,22 +100,66 @@ async function search() {
     Promise.allSettled(promises).then(() => search_loading.value = false);
 }
 async function singleEmbySearch(embyServer: EmbyServer) {
-    emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: true, success: false}
+    searchResult.value[embyServer.id!] = {embyServer: embyServer, request_status: true, success: false}
     return embyApi.search(embyServer.id!, search_str.value, item_types.value, 0, 30).then(async response => {
         let json: EmbyPageList<SearchItem> = JSON.parse(response);
-        emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: true, result: json}
+        searchResult.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: true, result: json}
         if (json.Items.length > 0) {
-            embyServerKeys.value.push(embyServer.id!)
+            if (!embyServerKeys.value.includes(embyServer.id!)) {
+                embyServerKeys.value.push(embyServer.id!)
+            }
         } else {
             if (embyServerKeys.value.includes(embyServer.id!)) {
                 embyServerKeys.value.splice(embyServerKeys.value.indexOf(embyServer.id!), 1)
             }
         }
     }).catch(e => {
-        emby_search_result.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: false, message: e}
+        searchResult.value[embyServer.id!] = {embyServer: embyServer, request_status: false, success: false, message: e}
     })
 }
 </script>
 
 <style scoped>
+.query__input {
+    flex: auto;
+}
+
+.group__title {
+    margin-right: 12px;
+}
+
+.group__state {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-3);
+}
+
+.group__state[data-state='ok'] {
+    color: #6FBF7C;
+}
+
+.group__state[data-state='error'] {
+    color: #E07972;
+}
+
+.group__state[data-state='loading'] {
+    color: var(--lamp);
+}
+
+.grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 6px 0 16px;
+}
+
+.group__error {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0 18px;
+    color: var(--text-2);
+    font-size: var(--text-sm);
+    word-break: break-all;
+}
 </style>

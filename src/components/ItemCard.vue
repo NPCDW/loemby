@@ -1,136 +1,141 @@
 <template>
-    <el-card style="width: 300px; margin: 5px;">
-        <div v-if="showSeriesName">
-            <el-link v-if="item.Type == 'Episode' || item.Type == 'Season'" :underline="false" @click="gotoSeries((item as EpisodeItem).SeriesId)" style="display: block;">
-                <h2>{{ (item as EpisodeItem).SeriesName }}</h2>
-            </el-link>
-        </div>
-        <div>
-            <el-link v-if="item.Type == 'Series'" :underline="false" @click="gotoSeries(item.Id)" style="display: block;">{{ item.Name }}</el-link>
-            <el-link v-else-if="item.Type == 'Episode'" :underline="false" @click="gotoEpisodes(item.Id)" style="display: block;">
-                {{ 'S' + ((item as EpisodeItem).ParentIndexNumber || '-') + 'E' + ((item as EpisodeItem).IndexNumber || '-') + '. ' + item.Name }}
-            </el-link>
-            <el-link v-else-if="item.Type == 'Season'" :underline="false" @click="showSeason(item as SeasonItem)" style="display: block;">
-                {{ 'S' + ((item as SeasonItem).IndexNumber || '-') + '. ' + item.Name }}
-            </el-link>
-            <el-link v-else-if="item.Type == 'Movie'" :underline="false" @click="gotoEpisodes(item.Id)" style="display: block;">{{ item.Name }}</el-link>
-        </div>
-        <div style="margin: 10px 0;">
-            <span v-if="item.Type == 'Series'">
-                {{ item.ProductionYear + ((item as SeriesItem).EndDate && (item as SeriesItem).EndDate.substring(0, 4) != item.ProductionYear + '' ? '-' + (item as SeriesItem).EndDate.substring(0, 4) : '') }}
+    <article class="card">
+        <!-- 封面：状态用零散信息表达，不堆标签 -->
+        <div class="card__poster loe-cover-img" @click="openPrimary()">
+            <img v-lazy="useImage().images[embyServerId + ':cover:' + item.Id]" />
+            <span v-if="item.UserData?.Played" class="card__progress">
+                <span class="card__progress-fill" style="width: 100%"></span>
             </span>
-            <span v-else-if="item.Type == 'Episode'" style="display: flex;justify-content: space-between;align-items: center;">
-                <span>{{ (item as EpisodeItem).PremiereDate ? (item as EpisodeItem).PremiereDate.substring(0, 10) : '' }}</span>
-                <span style="display: flex; flex-direction: column;">
-                    <el-tag disable-transitions v-for="value in mediaSourceTag[item.Id]">{{ value }}</el-tag>
+            <span v-else-if="progressPercent > 0" class="card__progress">
+                <span class="card__progress-fill" :style="{width: progressPercent + '%'}"></span>
+            </span>
+            <span v-if="item.UserData?.UnplayedItemCount" class="card__pending">{{ item.UserData.UnplayedItemCount }}</span>
+        </div>
+
+        <div class="card__body">
+            <div class="card__line1">
+                <span v-if="item.Type == 'Episode'" class="card__index">
+                    {{ 'S' + ((item as EpisodeItem).ParentIndexNumber || '-') + ' E' + ((item as EpisodeItem).IndexNumber || '-') }}
                 </span>
-            </span>
-            <span v-else-if="item.Type == 'Movie'" style="display: flex;justify-content: space-between;align-items: center;">
-                <span>{{ item.ProductionYear }}</span>
-                <span style="display: flex; flex-direction: column;">
-                    <el-tag disable-transitions v-for="value in mediaSourceTag[item.Id]">{{ value }}</el-tag>
-                </span>
-            </span>
+                <span class="card__title" :title="item.Name">{{ item.Name }}</span>
+            </div>
+
+            <div v-if="showSeriesName && ((item as EpisodeItem).SeriesName)" class="card__series">
+                <el-link :underline="false" @click="gotoSeries((item as EpisodeItem).SeriesId)">{{ (item as EpisodeItem).SeriesName }}</el-link>
+            </div>
+
+            <div class="card__facts">
+                <span v-if="yearText">{{ yearText }}</span>
+                <span v-if="dateText" class="card__mono">{{ dateText }}</span>
+                <span v-for="value in mediaSourceTag[item.Id]" :key="value" class="card__mono card__quality">{{ value }}</span>
+            </div>
+
+            <div class="card__ops">
+                <button
+                    class="card__op"
+                    :class="{ 'is-on': item.UserData?.IsFavorite }"
+                    :disabled="starLoading[item.Id]"
+                    :title="item.UserData?.IsFavorite ? '取消收藏' : '收藏'"
+                    @click="star(item)"
+                >
+                    <el-icon :size="16" :class="starLoading[item.Id] ? 'is-loading' : ''">
+                        <i-ep-StarFilled v-if="item.UserData?.IsFavorite" />
+                        <i-ep-Star v-else />
+                    </el-icon>
+                </button>
+                <button
+                    class="card__op"
+                    :class="{ 'is-done': item.UserData?.Played }"
+                    :disabled="playedLoading[item.Id]"
+                    :title="item.UserData?.Played ? '标记为未播放' : '标记为已播放'"
+                    @click="played(item)"
+                >
+                    <el-icon :size="16" :class="playedLoading[item.Id] ? 'is-loading' : ''">
+                        <i-ep-CircleCheckFilled v-if="item.UserData?.Played" />
+                        <i-ep-CircleCheck v-else />
+                    </el-icon>
+                </button>
+                <button v-if="item.Type == 'Series' || item.Type == 'Season'" class="card__more" @click="openList()">
+                    展开剧集
+                </button>
+            </div>
         </div>
-        <div style="display: flex;justify-content: space-between;">
-            <span>
-                <el-link :underline="false" v-if="item.UserData" :disabled="starLoading[item.Id]" @click="star(item)">
-                    <el-icon color="#E6A23C" :size="24" :class="starLoading[item.Id] ? 'is-loading' : ''" v-if="item.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
-                    <el-icon :size="24" :class="starLoading[item.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
-                </el-link>
-                <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[item.Id]" v-if="item.UserData" @click="played(item)">
-                    <el-icon color="#67C23A" :size="24" :class="playedLoading[item.Id] ? 'is-loading' : ''" v-if="item.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                    <el-icon :size="24" :class="playedLoading[item.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
-                </el-link>
-            </span>
-            <span v-if="item.Type == 'Series'">
-                <el-badge :value="item.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
-                    <el-button @click="showSeries(item as SeriesItem)" type="primary" plain>剧集</el-button>
-                </el-badge>
-            </span>
-            <span v-if="item.Type == 'Season'">
-                <el-badge :value="item.UserData?.UnplayedItemCount" :max="999" :show-zero="false" type="primary">
-                    <el-button @click="showSeason(item as SeasonItem)" type="primary" plain>剧集</el-button>
-                </el-badge>
-            </span>
-        </div>
-    </el-card>
-    
+    </article>
+
     <el-dialog
         v-model="dialogSeriesVisible"
         :title="dialogSeries?.Name"
-        width="800"
+        width="860"
     >
-        <div class="note-container">
-            <div class="note-sidebar">
+        <div class="season-picker">
+            <div class="season-picker__aside">
                 <el-scrollbar>
                     <el-skeleton :loading="dialogSeasonsLoading" animated>
                         <template #template>
-                            <div class="box-item" v-for="i in 5" :key="i">
-                                <el-skeleton-item variant="h3" style="width: 50%; margin-top: 10px;" />
-                                <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                            <div class="season-item" v-for="i in 5" :key="i">
+                                <el-skeleton-item variant="text" style="width: 60%" />
+                                <el-skeleton-item variant="text" style="width: 35%; margin-top: 6px;" />
                             </div>
                         </template>
-                        <div
+                        <button
                             v-for="seasonItem in dialogSeasonsList"
                             :key="seasonItem.Id"
-                            class="box-item"
-                            :class="{ active: dialogSeasons?.Id === seasonItem.Id }"
+                            class="season-item"
+                            :class="{ 'is-active': dialogSeasons?.Id === seasonItem.Id }"
                             @click="getEpisodes(dialogEmbyServerId!, dialogSeries!.Id, seasonItem, 1, 10)"
                         >
-                            <h3>{{ 'S' + seasonItem.IndexNumber + '. ' + seasonItem.Name }}</h3>
-                            <div style="display: flex;justify-content: space-between;">
-                                <span>
-                                    <span style="margin-right: 10px;">{{ seasonItem.ProductionYear }}</span>
-                                    <el-tag type="primary" effect="dark" round disable-transitions>{{ seasonItem.UserData?.UnplayedItemCount }}</el-tag>
-                                </span>
-                                <span>
-                                    <el-link :underline="false" v-if="seasonItem.UserData" :disabled="starLoading[seasonItem.Id]" @click="star(seasonItem)">
-                                        <el-icon color="#E6A23C" :size="24" :class="starLoading[seasonItem.Id] ? 'is-loading' : ''" v-if="seasonItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
-                                        <el-icon :size="24" :class="starLoading[seasonItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
+                            <span class="season-item__name">{{ 'S' + seasonItem.IndexNumber + '. ' + seasonItem.Name }}</span>
+                            <span class="season-item__foot">
+                                <span class="season-item__year">{{ seasonItem.ProductionYear }}</span>
+                                <span class="season-item__ops">
+                                    <el-link :underline="false" v-if="seasonItem.UserData" :disabled="starLoading[seasonItem.Id]" @click.stop="star(seasonItem)">
+                                        <el-icon :size="16" class="season-icon season-icon--star" :class="[seasonItem.UserData.IsFavorite ? 'is-on' : '', starLoading[seasonItem.Id] ? 'is-loading' : '']">
+                                            <i-ep-StarFilled v-if="seasonItem.UserData.IsFavorite" />
+                                            <i-ep-Star v-else />
+                                        </el-icon>
                                     </el-link>
-                                    <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[seasonItem.Id]" v-if="seasonItem.UserData" @click="played(seasonItem)">
-                                        <el-icon color="#67C23A" :size="24" :class="playedLoading[seasonItem.Id] ? 'is-loading' : ''" v-if="seasonItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                        <el-icon :size="24" :class="playedLoading[seasonItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                                    <el-link :underline="false" v-if="seasonItem.UserData" :disabled="playedLoading[seasonItem.Id]" @click.stop="played(seasonItem)">
+                                        <el-icon :size="16" class="season-icon season-icon--done" :class="[seasonItem.UserData.Played ? 'is-on' : '', playedLoading[seasonItem.Id] ? 'is-loading' : '']">
+                                            <i-ep-CircleCheckFilled v-if="seasonItem.UserData.Played" />
+                                            <i-ep-CircleCheck v-else />
+                                        </el-icon>
                                     </el-link>
+                                    <span v-if="seasonItem.UserData?.UnplayedItemCount" class="season-item__pending">{{ seasonItem.UserData.UnplayedItemCount }}</span>
                                 </span>
-                            </div>
-                        </div>
+                            </span>
+                        </button>
                     </el-skeleton>
                 </el-scrollbar>
             </div>
-            <div class="note-content">
+            <div class="season-picker__main">
                 <el-scrollbar>
                     <el-skeleton :loading="dialogEpisodesLoading" animated>
                         <template #template>
-                            <div class="box-item" v-for="i in 5" :key="i">
-                                <p><el-skeleton-item variant="text" style="width: 50%" /></p>
-                                <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                            <div class="episode-row" v-for="i in 6" :key="i">
+                                <el-skeleton-item variant="text" style="width: 45%" />
+                                <el-skeleton-item variant="text" style="width: 25%" />
                             </div>
                         </template>
-                        <div v-for="episodeItem in dialogEpisodesList" class="box-item">
-                            <p>
-                                <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)">
-                                    {{ episodeItem.IndexNumber + '. ' + episodeItem.Name }}
+                        <button v-for="episodeItem in dialogEpisodesList" :key="episodeItem.Id" class="episode-row" @click="gotoEpisodes(episodeItem.Id)">
+                            <span class="episode-row__num">{{ episodeItem.IndexNumber }}</span>
+                            <span class="episode-row__name">{{ episodeItem.Name }}</span>
+                            <span class="episode-row__tag" v-for="value in mediaSourceTag[episodeItem.Id]" :key="value">{{ value }}</span>
+                            <span class="episode-row__date">{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>
+                            <span class="episode-row__ops" @click.stop>
+                                <el-link :underline="false" v-if="episodeItem.UserData" :disabled="starLoading[episodeItem.Id]" @click="star(episodeItem)">
+                                    <el-icon :size="16" class="season-icon season-icon--star" :class="[episodeItem.UserData.IsFavorite ? 'is-on' : '', starLoading[episodeItem.Id] ? 'is-loading' : '']">
+                                        <i-ep-StarFilled v-if="episodeItem.UserData.IsFavorite" />
+                                        <i-ep-Star v-else />
+                                    </el-icon>
                                 </el-link>
-                            </p>
-                            <div style="display: flex;justify-content: space-between;align-items: end;">
-                                <span style="display: flex; flex-direction: column;">
-                                    <el-tag disable-transitions style="margin-left: 10px;" v-for="value in mediaSourceTag[episodeItem.Id]">{{ value }}</el-tag>
-                                </span>
-                                <span style="display: flex; justify-content: center; align-items: center;">
-                                    <span>{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>
-                                    <el-link style="margin-left: 7px;" :underline="false" v-if="episodeItem.UserData" :disabled="starLoading[episodeItem.Id]" @click="star(episodeItem)">
-                                        <el-icon color="#E6A23C" :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-if="episodeItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
-                                        <el-icon :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
-                                    </el-link>
-                                    <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodeItem.Id]" v-if="episodeItem.UserData" @click="played(episodeItem)">
-                                        <el-icon color="#67C23A" :size="24" :class="playedLoading[episodeItem.Id] ? 'is-loading' : ''" v-if="episodeItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                        <el-icon :size="24" :class="playedLoading[episodeItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
-                                    </el-link>
-                                </span>
-                            </div>
-                        </div>
+                                <el-link :underline="false" v-if="episodeItem.UserData" :disabled="playedLoading[episodeItem.Id]" @click="played(episodeItem)">
+                                    <el-icon :size="16" class="season-icon season-icon--done" :class="[episodeItem.UserData.Played ? 'is-on' : '', playedLoading[episodeItem.Id] ? 'is-loading' : '']">
+                                        <i-ep-CircleCheckFilled v-if="episodeItem.UserData.Played" />
+                                        <i-ep-CircleCheck v-else />
+                                    </el-icon>
+                                </el-link>
+                            </span>
+                        </button>
                     </el-skeleton>
                     <el-pagination
                         v-if="episodes_result[dialogSeries!.Id + '|' + dialogSeasons?.Id]"
@@ -145,60 +150,59 @@
             </div>
         </div>
     </el-dialog>
+
     <el-dialog
         v-model="dialogSeasonsVisible"
         :title="dialogSeasons?.Name"
-        width="800"
+        width="860"
     >
-        <el-scrollbar style="padding: 0 20px;">
-            <p>简介：{{ dialogSeasons?.Overview }}</p>
-            <p>
-                <el-button plain :disabled="playedLoading[dialogSeasons!.Id]" @click="played(dialogSeasons!)">
-                    <el-icon color="#67C23A" :size="20" :class="playedLoading[dialogSeasons!.Id] ? 'is-loading' : ''" v-if="dialogSeasons?.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
-                    <el-icon :size="20" :class="playedLoading[dialogSeasons!.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
-                    <span>已播放</span>
-                </el-button>
-                <el-button plain :disabled="starLoading[dialogSeasons!.Id]" @click="star(dialogSeasons!)">
-                    <template v-if="dialogSeasons?.UserData?.IsFavorite">
-                        <el-icon color="#E6A23C" :size="20" :class="starLoading[dialogSeasons!.Id] ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
-                        <span>取消收藏</span>
-                    </template>
-                    <template v-else>
-                        <el-icon :size="20" :class="starLoading[dialogSeasons!.Id] ? 'is-loading' : ''"><i-ep-Star /></el-icon>
-                        <span>收藏</span>
-                    </template>
-                </el-button>
-            </p>
+        <div class="season-head">
+            <p class="season-head__overview">{{ dialogSeasons?.Overview || '暂无简介。' }}</p>
+            <div class="season-head__ops">
+                <button class="card__op" :class="{ 'is-done': dialogSeasons?.UserData?.Played }" :disabled="playedLoading[dialogSeasons!.Id]" @click="played(dialogSeasons!)">
+                    <el-icon :size="16" :class="playedLoading[dialogSeasons!.Id] ? 'is-loading' : ''">
+                        <i-ep-CircleCheckFilled v-if="dialogSeasons?.UserData?.Played" />
+                        <i-ep-CircleCheck v-else />
+                    </el-icon>
+                    <span>{{ dialogSeasons?.UserData?.Played ? '已播放' : '标记已播放' }}</span>
+                </button>
+                <button class="card__op" :class="{ 'is-on': dialogSeasons?.UserData?.IsFavorite }" :disabled="starLoading[dialogSeasons!.Id]" @click="star(dialogSeasons!)">
+                    <el-icon :size="16" :class="starLoading[dialogSeasons!.Id] ? 'is-loading' : ''">
+                        <i-ep-StarFilled v-if="dialogSeasons?.UserData?.IsFavorite" />
+                        <i-ep-Star v-else />
+                    </el-icon>
+                    <span>{{ dialogSeasons?.UserData?.IsFavorite ? '取消收藏' : '收藏' }}</span>
+                </button>
+            </div>
+        </div>
+        <el-scrollbar style="max-height: 60vh;">
             <el-skeleton :loading="dialogEpisodesLoading" animated>
                 <template #template>
-                    <div class="box-item" v-for="i in 5" :key="i">
-                        <p><el-skeleton-item variant="text" style="width: 50%" /></p>
-                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
+                    <div class="episode-row" v-for="i in 6" :key="i">
+                        <el-skeleton-item variant="text" style="width: 45%" />
+                        <el-skeleton-item variant="text" style="width: 25%" />
                     </div>
                 </template>
-                <div v-for="episodeItem in dialogEpisodesList" class="box-item">
-                    <p>
-                        <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)">
-                            {{ episodeItem.IndexNumber + '. ' + episodeItem.Name }}
+                <button v-for="episodeItem in dialogEpisodesList" :key="episodeItem.Id" class="episode-row" @click="gotoEpisodes(episodeItem.Id)">
+                    <span class="episode-row__num">{{ episodeItem.IndexNumber }}</span>
+                    <span class="episode-row__name">{{ episodeItem.Name }}</span>
+                    <span class="episode-row__tag" v-for="value in mediaSourceTag[episodeItem.Id]" :key="value">{{ value }}</span>
+                    <span class="episode-row__date">{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>
+                    <span class="episode-row__ops" @click.stop>
+                        <el-link :underline="false" v-if="episodeItem.UserData" :disabled="starLoading[episodeItem.Id]" @click="star(episodeItem)">
+                            <el-icon :size="16" class="season-icon season-icon--star" :class="[episodeItem.UserData.IsFavorite ? 'is-on' : '', starLoading[episodeItem.Id] ? 'is-loading' : '']">
+                                <i-ep-StarFilled v-if="episodeItem.UserData.IsFavorite" />
+                                <i-ep-Star v-else />
+                            </el-icon>
                         </el-link>
-                    </p>
-                    <div style="display: flex;justify-content: space-between;align-items: end;">
-                        <span style="display: flex; flex-direction: column;">
-                            <el-tag disable-transitions style="margin-left: 10px;" v-for="value in mediaSourceTag[episodeItem.Id]">{{ value }}</el-tag>
-                        </span>
-                        <span style="display: flex; justify-content: center; align-items: center;">
-                            <span>{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>
-                            <el-link style="margin-left: 7px;" :underline="false" v-if="episodeItem.UserData" :disabled="starLoading[episodeItem.Id]" @click="star(episodeItem)">
-                                <el-icon color="#E6A23C" :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-if="episodeItem.UserData.IsFavorite"><i-ep-StarFilled /></el-icon>
-                                <el-icon :size="24" :class="starLoading[episodeItem.Id] ? 'is-loading' : ''" v-else><i-ep-Star /></el-icon>
-                            </el-link>
-                            <el-link style="margin-left: 7px;" :underline="false" :disabled="playedLoading[episodeItem.Id]" v-if="episodeItem.UserData" @click="played(episodeItem)">
-                                <el-icon color="#67C23A" :size="24" :class="playedLoading[episodeItem.Id] ? 'is-loading' : ''" v-if="episodeItem.UserData.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                <el-icon :size="24" :class="playedLoading[episodeItem.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
-                            </el-link>
-                        </span>
-                    </div>
-                </div>
+                        <el-link :underline="false" v-if="episodeItem.UserData" :disabled="playedLoading[episodeItem.Id]" @click="played(episodeItem)">
+                            <el-icon :size="16" class="season-icon season-icon--done" :class="[episodeItem.UserData.Played ? 'is-on' : '', playedLoading[episodeItem.Id] ? 'is-loading' : '']">
+                                <i-ep-CircleCheckFilled v-if="episodeItem.UserData.Played" />
+                                <i-ep-CircleCheck v-else />
+                            </el-icon>
+                        </el-link>
+                    </span>
+                </button>
             </el-skeleton>
             <el-pagination
                 v-if="episodes_result[dialogSeasons!.SeriesId + '|' + dialogSeasons?.Id]"
@@ -214,12 +218,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, SearchItem, SeasonItem, SeriesItem, UserData } from '../api/embyApi';
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus';
 import { formatBytes } from '../util/str_util'
 import { getResolutionFromMediaSources } from '../util/play_info_util'
+import { useImage } from '../store/image'
 
 const router = useRouter()
 
@@ -229,15 +234,57 @@ const {item, embyServerId, showSeriesName} = defineProps<{
   showSeriesName?: boolean,
 }>()
 
+const progressPercent = computed(() => {
+    const data = item.UserData
+    if (!data || data.Played) return 0
+    return Math.trunc(data.PlayedPercentage || 0)
+})
+
+const yearText = computed(() => {
+    if (item.Type == 'Series') {
+        const start = item.ProductionYear
+        const end = (item as SeriesItem).EndDate && (item as SeriesItem).EndDate!.substring(0, 4) != item.ProductionYear + ''
+            ? (item as SeriesItem).EndDate!.substring(0, 4)
+            : ''
+        return end ? start + ' – ' + end : start
+    }
+    return item.ProductionYear
+})
+
+const dateText = computed(() => {
+    if (item.Type == 'Episode') {
+        return (item as EpisodeItem).PremiereDate ? (item as EpisodeItem).PremiereDate!.substring(0, 10) : ''
+    }
+    return ''
+})
+
+/** 点击封面：按条目类型走最合理的一步 */
+function openPrimary() {
+    if (item.Type == 'Series') {
+        gotoSeries(item.Id)
+    } else if (item.Type == 'Season') {
+        showSeason(item as SeasonItem)
+    } else {
+        gotoEpisodes(item.Id)
+    }
+}
+
+function openList() {
+    if (item.Type == 'Series') {
+        showSeries(item as SeriesItem)
+    } else {
+        showSeason(item as SeasonItem)
+    }
+}
+
 const mediaSourceTag = ref<{[key: string]: string[]}>({})
 function getTag(itemId: string, mediaSources?: MediaSource[]) {
     mediaSourceTag.value[itemId] = []
     if (mediaSources) {
         for (let mediaSource of mediaSources) {
             const size = formatBytes(mediaSource.Size) || '0 KB'
-            // const bitrate = formatMbps(mediaSource.Bitrate) || '0 Kbps'
             let resolution = getResolutionFromMediaSources(mediaSource)
-            mediaSourceTag.value[itemId].push(size + " | " + resolution)
+            mediaSourceTag.value[itemId].push(size + " · " + resolution)
         }
     }
 }
@@ -354,47 +401,348 @@ async function showSeason(season: SeasonItem) {
     dialogSeasonsVisible.value = true
     getEpisodes(embyServerId, season.SeriesId, season, 1, 10)
 }
-
 </script>
 
 <style scoped>
-.note-container {
-  display: flex;
-  height: 500px;
+/* 卡片：信息分四行，行距即节奏，不使用投影 */
+.card {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    width: 344px;
+    margin: 0;
+    background: var(--ink-card);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
 }
 
-.note-sidebar {
-  width: 30%;
-  border-right: 1px solid #18222C;
-  padding-right: 20px;
-  overflow-y: auto;
+.card__poster {
+    position: relative;
+    flex: none;
+    width: 112px;
+    height: 158px;
+    cursor: pointer;
 }
 
-.box-item {
-  padding: 3px 10px;
-  cursor: pointer;
-  border-bottom: 1px solid #18222C;
+.card__poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-.box-item:hover {
-  background-color: #18222C;
+/* 播放进度：贴底的一条灯带 */
+.card__progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: rgba(10, 12, 16, 0.7);
 }
 
-.box-item.active {
-  color: #409EFF;
+.card__progress-fill {
+    display: block;
+    height: 100%;
+    background: var(--lamp);
 }
 
-.note-content {
-  width: 70%;
-  padding-left: 20px;
+.card__pending {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    min-width: 20px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(10, 12, 16, 0.82);
+    color: var(--lamp);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-align: center;
 }
 
-h2 {
-  margin-top: 0;
-  margin-bottom: 0;
+.card__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: auto;
 }
 
-.el-scrollbar {
-  height: 100%;
+.card__line1 {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+}
+
+.card__index {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+}
+
+.card__title {
+    font-size: var(--text-base);
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.card__series {
+    margin-top: 3px;
+    font-size: var(--text-sm);
+}
+
+.card__facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: var(--text-xs);
+    color: var(--text-3);
+}
+
+.card__mono {
+    font-family: var(--font-mono);
+}
+
+.card__quality {
+    padding: 0 5px;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+}
+
+/* 卡片操作：默认安静，悬停/聚焦时出现 */
+.card__ops {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+.card__op {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-3);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.card__op:hover:not(:disabled) {
+    color: var(--text-1);
+    border-color: #333C48;
+}
+
+.card__op.is-on {
+    color: var(--lamp);
+    border-color: var(--lamp-line);
+}
+
+.card__op.is-done {
+    color: #6FBF7C;
+    border-color: rgba(79, 163, 94, 0.4);
+}
+
+.card__op:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.card__more {
+    margin-left: auto;
+    padding: 4px 2px;
+    border: none;
+    background: transparent;
+    color: var(--text-2);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+}
+
+.card__more:hover {
+    color: var(--lamp);
+}
+
+/* 季 / 集 选择器：左列表右剧集，单层边框 */
+.season-picker {
+    display: flex;
+    gap: 18px;
+    height: 460px;
+}
+
+.season-picker__aside {
+    flex: none;
+    width: 208px;
+    border-right: 1px solid var(--hairline);
+    padding-right: 12px;
+    overflow: hidden;
+}
+
+.season-picker__main {
+    flex: auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.season-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    padding: 9px 10px;
+    margin-bottom: 2px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-2);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    text-align: left;
+    cursor: pointer;
+}
+
+.season-item:hover {
+    background: #1A2028;
+    color: var(--text-1);
+}
+
+.season-item.is-active {
+    background: var(--lamp-soft);
+    color: var(--text-1);
+    box-shadow: inset 2px 0 0 var(--lamp);
+}
+
+.season-item__name {
+    font-weight: 500;
+    color: inherit;
+}
+
+.season-item__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.season-item__year,
+.season-item__pending {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+}
+
+.season-item__ops {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.season-icon {
+    color: var(--text-3);
+}
+
+.season-icon--star.is-on {
+    color: var(--lamp);
+}
+
+.season-icon--done.is-on {
+    color: #6FBF7C;
+}
+
+.episode-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    border: none;
+    border-bottom: 1px solid var(--hairline);
+    background: transparent;
+    color: var(--text-1);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    text-align: left;
+    cursor: pointer;
+}
+
+.episode-row:hover {
+    background: #1A2028;
+}
+
+.episode-row__num {
+    flex: none;
+    width: 22px;
+    font-family: var(--font-mono);
+    color: var(--text-3);
+}
+
+.episode-row__name {
+    flex: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.episode-row__tag {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: 0 5px;
+}
+
+.episode-row__date {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+}
+
+.episode-row__ops {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.season-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 12px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--hairline);
+}
+
+.season-head__overview {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--text-2);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+}
+
+.season-head__ops {
+    flex: none;
+    display: flex;
+    gap: 6px;
 }
 </style>

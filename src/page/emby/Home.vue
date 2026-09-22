@@ -1,146 +1,150 @@
 <template>
-    <div style="padding: 10px; display: flex;">
-        <el-button type="primary" @click="gotoMediaLibrary" style="flex: none; margin-right: 5px;"><i-ep-Film /> 媒体库</el-button>
-        <el-input v-model="search_str" autofocus @keyup.enter="search" style="flex: auto;">
-            <template #append>
-                <el-button type="primary" @click="search"><el-icon><i-ep-Search /></el-icon></el-button>
-            </template>
-        </el-input>
-    </div>
+    <div class="roe-page">
+        <div class="roe-toolrow">
+            <el-button plain @click="gotoMediaLibrary" class="nav-btn">
+                <el-icon><i-ep-Film /></el-icon>
+                <span>媒体库</span>
+            </el-button>
+            <el-input v-model="search_str" autofocus @keyup.enter="search" placeholder="在这台服务器中搜索" class="query__input">
+                <template #append>
+                    <el-button type="primary" @click="search"><el-icon><i-ep-Search /></el-icon></el-button>
+                </template>
+            </el-input>
+        </div>
 
-    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 82px); padding: 0 20px;">
-        <el-tab-pane label="继续观看" name="ContinuePlay">
-            <el-scrollbar style="height: calc(100vh - 137px);">
-                <el-skeleton :loading="episodesLoading" animated>
-                    <template #template>
-                        <div class="episode-grid">
-                            <el-card class="episode-card" v-for="i in 6" :key="i">
-                                <div class="episode-cover">
-                                    <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
-                                </div>
-                                <div class="episode-info">
-                                    <div class="episode-content">
-                                        <div class="episode-title">
-                                            <h1><el-skeleton-item variant="text" style="width: 50%" /></h1>
-                                        </div>
-                                        <div class="episode-number">
-                                            <p><el-skeleton-item variant="text" style="width: 80%" /></p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </el-card>
-                        </div>
-                    </template>
-                    <div class="episode-grid">
-                        <div class="episode-card" v-for="episodeItem in episodesList" :key="episodeItem.Id">
-                            <div class="episode-cover">
-                                <template v-if="episodeItem.Type == 'Episode'">
-                                    <img v-lazy="useImage().images[embyServerId + ':parent-cover:' + episodeItem.Id]" />
-                                </template>
-                                <template v-else>
-                                    <img v-lazy="useImage().images[embyServerId + ':cover:' + episodeItem.Id]" />
-                                </template>
-                            </div>
-                            <div class="episode-info">
-                                <div class="background-pattern">
-                                    <img v-lazy="useImage().images[embyServerId + ':cover:' + episodeItem.Id]" style="width: 100%;height: 100%;object-fit: cover" />
-                                </div>
-                                <div class="episode-content">
-                                    <div>
-                                        <template v-if="episodeItem.Type == 'Episode'">
-                                            <el-link :underline="false" @click="gotoSeries(episodeItem.SeriesId)" style="display: block;">
-                                                <div class="episode-title">{{ episodeItem.SeriesName }}</div>
-                                            </el-link>
-                                            <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)" style="display: block;">
-                                                <div class="episode-number">{{ 'S' + (episodeItem.ParentIndexNumber || '-') + 'E' + (episodeItem.IndexNumber || '-') + '. ' + episodeItem.Name }}</div>
-                                            </el-link>
-                                        </template>
-                                        <template v-else>
-                                            <el-link :underline="false" @click="gotoEpisodes(episodeItem.Id)" style="display: block;">
-                                                <div class="episode-title">{{ episodeItem.Name }}</div>
-                                            </el-link>
-                                        </template>
-                                    </div>
-                                    <div class="episode-duration">
-                                        <el-progress style="width: 80%;" :percentage="episodeItem.UserData?.Played ? 100 : episodeItem.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
-                                        <el-button type="primary" @click="gotoEpisodes(episodeItem.Id)">Go</el-button>
-                                        <template v-if="deletedContinuePlayList.indexOf(episodeItem.Id) == -1">
-                                            <el-button plain type="danger" :loading="deleteContinuePlayLoading[episodeItem.Id]" @click="deleteContinuePlay(episodeItem.Id, true)"><i-ep-Delete /></el-button></template>
-                                        <template v-else>
-                                            <el-button type="danger" :loading="deleteContinuePlayLoading[episodeItem.Id]" @click="deleteContinuePlay(episodeItem.Id, false)">撤销</el-button>
-                                        </template>
-                                    </div>
+        <!-- 三个区：继续观看 / 收藏 / 统计。切换用下划线标签，不用卡片外框 -->
+        <el-tabs v-model="activePane" @tab-change="handlePaneChange" class="panes">
+            <el-tab-pane label="继续观看" name="ContinuePlay">
+                <el-scrollbar style="height: calc(100vh - 232px);">
+                    <el-skeleton :loading="episodesLoading" animated>
+                        <template #template>
+                            <div class="continue">
+                                <div class="continue__card" v-for="i in 4" :key="i">
+                                    <el-skeleton-item variant="image" style="height: 132px; width: 234px;" />
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                    <div style="display: flex;justify-content: center; margin-top: 10px;">
-                        <el-empty v-if="episodesList && episodesList.length == 0" :image-size="200" description="" />
-                    </div>
-                </el-skeleton>
-                <el-pagination
-                    v-model:current-page="episodesCurrentPage"
-                    v-model:page-size="episodesPageSize"
-                    layout="total, prev, pager, next, jumper"
-                    :total="episodesTotal"
-                    @current-change="handleContinuePlayPageChange"
-                    hide-on-single-page
-                />
-            </el-scrollbar>
-        </el-tab-pane>
-        <el-tab-pane label="收藏" name="Favorite">
-            <el-scrollbar style="height: calc(100vh - 137px);">
-                <el-skeleton :loading="favoriteLoading" animated>
-                    <template #template>
-                        <div class="episode-grid">
-                            <el-card class="episode-card" v-for="i in 6" :key="i">
-                                <div class="episode-cover">
-                                    <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
+                        </template>
+                        <div v-if="episodesList.length" class="continue">
+                            <article
+                                v-for="episodeItem in episodesList"
+                                :key="episodeItem.Id"
+                                class="continue__card"
+                                :class="{ 'is-dismissed': deletedContinuePlayList.indexOf(episodeItem.Id) > -1 }"
+                                @click="gotoEpisodes(episodeItem.Id)"
+                            >
+                                <div class="continue__art">
+                                    <img v-if="episodeItem.Type == 'Episode'" v-lazy="useImage().images[embyServerId + ':parent-cover:' + episodeItem.Id]" />
+                                    <img v-else v-lazy="useImage().images[embyServerId + ':cover:' + episodeItem.Id]" />
+                                    <span class="continue__bar">
+                                        <span class="continue__bar-fill" :style="{ width: (episodeItem.UserData?.Played ? 100 : Math.trunc(episodeItem.UserData?.PlayedPercentage || 0)) + '%' }"></span>
+                                    </span>
                                 </div>
-                                <div class="episode-info">
-                                    <div class="episode-content">
-                                        <div class="episode-title">
-                                            <h1><el-skeleton-item variant="text" style="width: 50%" /></h1>
-                                        </div>
-                                        <div class="episode-number">
-                                            <p><el-skeleton-item variant="text" style="width: 80%" /></p>
-                                        </div>
+                                <div class="continue__meta">
+                                    <div class="continue__line1">
+                                        <span class="continue__series" v-if="episodeItem.Type == 'Episode'">{{ episodeItem.SeriesName }}</span>
+                                        <span class="continue__title">{{ episodeItem.Name }}</span>
+                                    </div>
+                                    <div class="continue__foot">
+                                        <span class="continue__ep mono" v-if="episodeItem.Type == 'Episode'">
+                                            {{ 'S' + (episodeItem.ParentIndexNumber || '-') + ' E' + (episodeItem.IndexNumber || '-') }}
+                                        </span>
+                                        <span class="continue__percent mono">
+                                            {{ episodeItem.UserData?.Played ? '已看完' : Math.trunc(episodeItem.UserData?.PlayedPercentage || 0) + '%' }}
+                                        </span>
+                                        <span class="continue__ops" @click.stop>
+                                            <button
+                                                v-if="deletedContinuePlayList.indexOf(episodeItem.Id) == -1"
+                                                class="mini-op"
+                                                title="从继续观看中移除"
+                                                :disabled="deleteContinuePlayLoading[episodeItem.Id]"
+                                                @click="deleteContinuePlay(episodeItem.Id, true)"
+                                            >
+                                                <el-icon :size="14" :class="deleteContinuePlayLoading[episodeItem.Id] ? 'is-loading' : ''"><i-ep-Delete /></el-icon>
+                                            </button>
+                                            <button
+                                                v-else
+                                                class="mini-op mini-op--undo"
+                                                :disabled="deleteContinuePlayLoading[episodeItem.Id]"
+                                                @click="deleteContinuePlay(episodeItem.Id, false)"
+                                            >撤销</button>
+                                        </span>
                                     </div>
                                 </div>
-                            </el-card>
+                            </article>
+                        </div>
+                        <div v-else class="roe-empty">
+                            <span class="roe-empty__line">没有未看完的内容</span>
+                            <span>播放任意影片后，会自动出现在这里。</span>
+                        </div>
+                    </el-skeleton>
+                    <el-pagination
+                        v-model:current-page="episodesCurrentPage"
+                        v-model:page-size="episodesPageSize"
+                        layout="total, prev, pager, next, jumper"
+                        :total="episodesTotal"
+                        @current-change="handleContinuePlayPageChange"
+                        hide-on-single-page
+                    />
+                </el-scrollbar>
+            </el-tab-pane>
+
+            <el-tab-pane :label="'收藏 ' + (favoriteTotal || '')" name="Favorite">
+                <el-scrollbar style="height: calc(100vh - 232px);">
+                    <el-skeleton :loading="favoriteLoading" animated>
+                        <template #template>
+                            <div class="grid">
+                                <div class="grid__cell" v-for="i in 8" :key="i">
+                                    <el-skeleton-item variant="image" style="height: 160px; width: 112px;" />
+                                </div>
+                            </div>
+                        </template>
+                        <div v-if="favoriteList.length" class="grid">
+                            <ItemCard v-for="favoriteItem in favoriteList" :key="favoriteItem.Id" :item="favoriteItem" :embyServerId="embyServerId" :show-series-name="true" />
+                        </div>
+                        <div v-else class="roe-empty">
+                            <span class="roe-empty__line">还没有收藏</span>
+                            <span>在影片或单集上点星标，就会汇总到这里。</span>
+                        </div>
+                    </el-skeleton>
+                    <el-pagination
+                        v-model:current-page="favoriteCurrentPage"
+                        v-model:page-size="favoritePageSize"
+                        layout="total, prev, pager, next, jumper"
+                        :total="favoriteTotal"
+                        @current-change="handleFavoritePageChange"
+                        hide-on-single-page
+                    />
+                </el-scrollbar>
+            </el-tab-pane>
+
+            <el-tab-pane label="统计" name="MediaLibraryCount">
+                <el-skeleton :loading="mediaLibraryCountLoading" animated>
+                    <template #template>
+                        <div class="stats">
+                            <div class="stat" v-for="i in 3" :key="i">
+                                <el-skeleton-item variant="text" style="width: 60px;" />
+                                <el-skeleton-item variant="h1" style="width: 90px; margin-top: 8px;" />
+                            </div>
                         </div>
                     </template>
-                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <ItemCard v-for="favoriteItem in favoriteList" :key="favoriteItem.Id" :item="favoriteItem" :embyServerId="embyServerId" :show-series-name="true" />
+                    <div class="stats">
+                        <div class="stat">
+                            <span class="stat__label">电影</span>
+                            <span class="stat__value mono">{{ (mediaLibraryCount?.MovieCount || 0).toLocaleString() }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat__label">剧</span>
+                            <span class="stat__value mono">{{ (mediaLibraryCount?.SeriesCount || 0).toLocaleString() }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat__label">单集</span>
+                            <span class="stat__value mono">{{ (mediaLibraryCount?.EpisodeCount || 0).toLocaleString() }}</span>
+                        </div>
                     </div>
                 </el-skeleton>
-                <el-pagination
-                    v-model:current-page="favoriteCurrentPage"
-                    v-model:page-size="favoritePageSize"
-                    layout="total, prev, pager, next, jumper"
-                    :total="favoriteTotal"
-                    @current-change="handleFavoritePageChange"
-                    hide-on-single-page
-                />
-            </el-scrollbar>
-        </el-tab-pane>
-        <el-tab-pane label="统计" name="MediaLibraryCount">
-            <el-descriptions title="媒体库统计" :column="1" size="large" label-width="40">
-                <el-descriptions-item label="电影">
-                    <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
-                    <span v-else>{{ mediaLibraryCount?.MovieCount.toLocaleString() }}</span>
-                </el-descriptions-item>
-                <el-descriptions-item label="剧">
-                    <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
-                    <span v-else>{{ mediaLibraryCount?.SeriesCount.toLocaleString() }}</span>
-                </el-descriptions-item>
-                <el-descriptions-item label="剧集">
-                    <el-icon v-if="mediaLibraryCountLoading" class="is-loading"><i-ep-Loading /></el-icon>
-                    <span v-else>{{ mediaLibraryCount?.EpisodeCount.toLocaleString() }}</span>
-                </el-descriptions-item>
-            </el-descriptions>
-        </el-tab-pane>
-    </el-tabs>
+            </el-tab-pane>
+        </el-tabs>
+    </div>
 </template>
 
 <script lang="ts" setup>
@@ -191,9 +195,6 @@ function getContinuePlayList(currentPage: number, pageSize: number) {
 
 function gotoEpisodes(episodesId: string) {
     router.push('/nav/emby/' + embyServerId + '/episodes/' + episodesId)
-}
-function gotoSeries(seriesId: string) {
-    router.push('/nav/emby/' + embyServerId + '/series/' + seriesId)
 }
 function gotoMediaLibrary() {
     router.push('/nav/emby/' + embyServerId + '/mediaLibrary')
@@ -266,95 +267,188 @@ handlePaneChange()
 </script>
 
 <style scoped>
-.el-scrollbar {
-  height: 100%;
+.nav-btn {
+    flex: none;
 }
 
-.episode-grid {
+.query__input {
+    flex: auto;
+}
+
+.panes {
+    margin-top: 4px;
+}
+
+/* 继续观看：宽幅横卡，封面 16:9，信息在右侧一列 */
+.continue {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 25px;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 14px;
 }
 
-.episode-card {
+.continue__card {
     display: flex;
-    height: 180px;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    gap: 12px;
+    padding: 10px;
+    background: var(--ink-card);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color 0.15s ease;
 }
 
-.episode-cover {
-    flex: 0 0 120px;
-    height: 100%;
-    overflow: hidden;
+.continue__card:hover {
+    border-color: #333C48;
 }
 
-.episode-cover img {
-    border-radius: 10px;
-    width: 100%;
-    height: 100%;
-    /* object-fit: cover; */
-}
-
-.episode-info {
-    flex: 1;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-.background-pattern {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+.continue__card.is-dismissed {
     opacity: 0.45;
-    background-size: cover;
-    background-position: center;
-    /* 添加从左到右的透明度渐变 */
-    mask-image: linear-gradient(to left, 
-        rgba(0,0,0,0.8) 0%, 
-        rgba(0,0,0,0.5) 30%, 
-        rgba(0,0,0,0.2) 70%, 
-        rgba(0,0,0,0) 100%);
-    -webkit-mask-image: linear-gradient(to left, 
-        rgba(0,0,0,0.8) 0%, 
-        rgba(0,0,0,0.5) 30%, 
-        rgba(0,0,0,0.2) 70%, 
-        rgba(0,0,0,0) 100%);
 }
 
-.episode-content {
+.continue__art {
     position: relative;
-    z-index: 2;
+    flex: none;
+    width: 176px;
+    height: 99px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #1B2128;
+}
+
+.continue__art img {
+    width: 100%;
     height: 100%;
+    object-fit: cover;
+}
+
+.continue__bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: rgba(10, 12, 16, 0.7);
+}
+
+.continue__bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--lamp);
+}
+
+.continue__meta {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    min-width: 0;
+    flex: auto;
+    padding: 2px 0 4px;
 }
 
-.episode-title {
-    font-size: 18px;
+.continue__line1 {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.continue__series {
+    font-size: var(--text-xs);
+    color: var(--text-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.continue__title {
+    font-size: var(--text-base);
     font-weight: 600;
-    margin-bottom: 5px;
-    line-height: 1.3;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    color: var(--text-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.episode-number {
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.9);
-    margin-bottom: 15px;
-    font-weight: 400;
-}
-
-.episode-duration {
+.continue__foot {
     display: flex;
     align-items: center;
-    margin-top: auto;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.85);
+    gap: 10px;
+    font-size: var(--text-xs);
+    color: var(--text-3);
+}
+
+.continue__ep {
+    color: var(--text-2);
+}
+
+.continue__percent {
+    color: var(--lamp);
+}
+
+.continue__ops {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.mini-op {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 7px;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-3);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+}
+
+.mini-op:hover:not(:disabled) {
+    color: #E07972;
+    border-color: rgba(207, 91, 84, 0.45);
+}
+
+.mini-op--undo:hover {
+    color: var(--lamp);
+    border-color: var(--lamp-line);
+}
+
+.grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.grid__cell {
+    width: 112px;
+}
+
+.mono {
+    font-family: var(--font-mono);
+}
+
+/* 统计：三个数字，不做成卡片墙 */
+.stats {
+    display: flex;
+    gap: 56px;
+    padding-top: 8px;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat__label {
+    font-size: var(--text-sm);
+    color: var(--text-3);
+}
+
+.stat__value {
+    font-size: var(--text-2xl);
+    color: var(--text-1);
+    letter-spacing: 0.01em;
 }
 </style>

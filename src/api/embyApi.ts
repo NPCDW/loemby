@@ -313,6 +313,8 @@ export interface BaseItemImageTags {
 
 export interface SeriesItem extends BaseItem {
     EndDate: string,
+    OfficialRating?: string,
+    Genres?: string[],
 }
 
 export interface SeasonItem extends BaseItem {

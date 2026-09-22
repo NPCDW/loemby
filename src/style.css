@@ -1,127 +1,480 @@
+/**
+ * loemby 设计系统 —— “排片表 / 放映室”
+ * 参考 anthropics/claude-code frontend-design skill：先立 token，再落页面。
+ * 唯一记忆点：冷调墨蓝放映室 + 放映机暖光琥珀（光线作为唯一高亮，不做装饰）。
+ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    /* —— 色彩（命名即用途，避免散落的十六进制） —— */
+    --ink: #0C0F14;            /* 应用底色，冷调近黑，非纯黑 */
+    --ink-lift: #11151B;       /* 导航栏、顶栏 */
+    --ink-card: #171C23;       /* 卡片、面板 */
+    --hairline: #232A34;       /* 唯一层级分隔线 */
+    --text-1: #E9EDF3;         /* 主文本 */
+    --text-2: #A9B3C0;         /* 次要文本 */
+    --text-3: #6F7A88;         /* 元信息 */
+    --lamp: #F2A13B;           /* 放映机暖光：焦点、进度、激活态 */
+    --lamp-soft: rgba(242, 161, 59, 0.16);
+    --lamp-line: rgba(242, 161, 59, 0.42);
+    --cyan: #1D9FD8;           /* Emby 谱系蓝，仅用于链接与信息 */
+
+    /* —— 结构 —— */
+    --title-bar-height: 40px;
+    --topbar-height: 52px;
+    --status-bar-height: 30px;
+    --nav-menu-width: 228px;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --page-gutter: 28px;
+
+    /* —— 字体：显示/正文用无衬线，数字与路径用等宽 —— */
+    --font-sans: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "HarmonyOS Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", "SFMono-Regular", "Cascadia Mono", Consolas, "Noto Sans Mono CJK SC", monospace;
+    --text-xs: 12px;
+    --text-sm: 13px;
+    --text-base: 15px;
+    --text-lg: 18px;
+    --text-xl: 24px;
+    --text-2xl: 32px;
+
+    /* —— 兼容旧变量名（NavMenu 等仍引用） —— */
+    --dark-background-color: var(--ink-lift);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body, #app {
+    height: 100%;
+}
+
 body {
-    /*background: #121212;*/
     margin: 0;
     padding: 0;
+    background: var(--ink);
+    color: var(--text-1);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
-:root {
-    --title-bar-height: 40px;
-    --nav-menu-width: 63px;
-    --dark-background-color: #121212
+::selection {
+    background: var(--lamp-soft);
+    color: var(--text-1);
 }
 
-img[lazy=error] {
+/* 键盘可达性：统一焦点环，不使用 outline: none */
+:focus-visible {
+    outline: 2px solid var(--lamp);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+a {
+    color: var(--cyan);
+}
+
+/* 滚动条保持安静，不抢内容 */
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: #2A323D;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: #3A444F;
+    background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* 尊重系统的减少动效设置 */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ———————————————————————————————
+   通用对象：页面骨架
+   页面只有三种横排：工具行(toolrow) / 舞台(stage) / 网格(grid)
+   ——————————————————————————————— */
+.roe-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: var(--page-gutter) var(--page-gutter) 48px;
+}
+
+.roe-toolrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex: none;
+}
+
+/* 媒体库的横向天桥，单独处理滚动，不参与页面纵向滚动 */
+.roe-shelf-scroll {
+    flex: none;
     width: 100%;
-    height: 100%;
-  transform: scale(1);
-  content: '';
-  background: #1D1E1F;
 }
 
-img[lazy=error]::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
+.roe-section {
+    margin-top: 34px;
 }
 
+.roe-section:first-child {
+    margin-top: 0;
+}
+
+.roe-section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.roe-section-head h2 {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+/* 标题右侧的计数用等宽数字，滚动时不跳动 */
+.roe-section-count {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-3);
+}
+
+.roe-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 40vh;
+    color: var(--text-2);
+    text-align: center;
+}
+
+.roe-empty__line {
+    font-size: var(--text-lg);
+    color: var(--text-1);
+}
+
+/* ———————————————————————————————
+   @element-plus/theme-chalk/dark/css-vars.css 使用 :root.dark 提升优先级，
+   因此这里同样用 :root.dark 覆盖，保证生效。
+   ——————————————————————————————— */
+:root.dark {
+    --el-color-primary: var(--lamp);
+    --el-color-primary-light-3: #C9832F;
+    --el-color-primary-light-5: #A66C28;
+    --el-color-primary-light-7: #6E4A1E;
+    --el-color-primary-light-8: #4C3416;
+    --el-color-primary-light-9: #2A1F0F;
+    --el-color-primary-dark-2: #F7B25E;
+
+    --el-color-success: #4FA35E;
+    --el-color-warning: #D9973F;
+    --el-color-danger: #CF5B54;
+    --el-color-error: #CF5B54;
+    --el-color-info: var(--text-2);
+
+    --el-text-color-primary: var(--text-1);
+    --el-text-color-regular: var(--text-2);
+    --el-text-color-secondary: var(--text-3);
+    --el-text-color-placeholder: var(--text-3);
+    --el-text-color-disabled: #4C5560;
+
+    --el-bg-color: var(--ink-card);
+    --el-bg-color-page: var(--ink);
+    --el-bg-color-overlay: #1B2128;
+
+    --el-border-color: var(--hairline);
+    --el-border-color-light: var(--hairline);
+    --el-border-color-lighter: var(--hairline);
+    --el-border-color-extra-light: var(--hairline);
+    --el-border-color-dark: #2C343F;
+    --el-border-color-darker: #333C48;
+
+    --el-fill-color: #1B2128;
+    --el-fill-color-light: #1B2128;
+    --el-fill-color-lighter: #171C23;
+    --el-fill-color-blank: transparent;
+
+    --el-mask-color: rgba(8, 10, 14, 0.72);
+    --el-box-shadow-light: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+    --el-border-radius-base: var(--radius-sm);
+    --el-border-radius-small: 4px;
+
+    /* 去掉生成式设计里最常见的那层柔和灰阴影 + 全站大圆角 */
+    --el-box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+    --el-box-shadow-dark: 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+
+:root.dark .el-card {
+    --el-card-border-color: transparent;
+    --el-card-border-radius: var(--radius);
+    --el-card-bg-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+/* 卡片不做“每张都带阴影的圆角砖”；靠分隔线组织信息 */
+.roe-card,
+:root.dark .roe-card.el-card {
+    background: var(--ink-card);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+    color: var(--text-1);
+    overflow: hidden;
+}
+
+/* 链接在导航/卡片内应继承文本色，避免满屏蓝 */
+:root.dark .el-link {
+    --el-link-text-color: var(--text-1);
+    --el-link-hover-text-color: var(--lamp);
+    font-weight: inherit;
+}
+
+:root.dark .el-link.el-link--primary {
+    --el-link-text-color: var(--cyan);
+    --el-link-hover-text-color: #46B7E8;
+}
+
+/* 表单：标签小一号、留白更紧凑，设置页不再像一团散开的字段 */
+:root.dark .el-form-item {
+    margin-bottom: 18px;
+}
+
+:root.dark .el-form-item__label {
+    color: var(--text-2);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+    padding-bottom: 4px;
+}
+
+:root.dark .el-input__wrapper,
+:root.dark .el-textarea__inner,
+:root.dark .el-select__wrapper {
+    background: #141920;
+    box-shadow: 0 0 0 1px var(--hairline) inset;
+}
+
+:root.dark .el-input__wrapper.is-focus,
+:root.dark .el-select__wrapper.is-focused {
+    box-shadow: 0 0 0 1px var(--lamp-line) inset;
+}
+
+:root.dark .el-input-group__append {
+    background: #141920;
+    box-shadow: none;
+    border: 1px solid var(--hairline);
+    border-left: none;
+    color: var(--text-2);
+}
+
+/* 表格：只留横向分隔线，表头用文字层级而非底色 */
+:root.dark .el-table {
+    --el-table-border-color: var(--hairline);
+    --el-table-bg-color: transparent;
+    --el-table-tr-bg-color: transparent;
+    --el-table-header-bg-color: transparent;
+    --el-table-header-text-color: var(--text-3);
+    --el-table-text-color: var(--text-1);
+    --el-table-row-hover-bg-color: #1B2128;
+    background: transparent;
+}
+
+:root.dark .el-table th.el-table__cell {
+    font-weight: 500;
+    font-size: var(--text-xs);
+    border-bottom: 1px solid var(--hairline);
+}
+
+:root.dark .el-table--border,
+:root.dark .el-table--border .el-table__cell {
+    border-right: none;
+}
+
+:root.dark .el-table__inner-wrapper::before {
+    display: none;
+}
+
+/* 分页保持安静 */
+:root.dark .el-pagination {
+    --el-pagination-bg-color: transparent;
+    --el-pagination-button-bg-color: transparent;
+    --el-pagination-hover-color: var(--lamp);
+    color: var(--text-2);
+    margin-top: 22px;
+}
+
+/* 对话框、抽屉：靠边线而不是投影浮起 */
+:root.dark .el-dialog {
+    background: var(--ink-lift);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius);
+}
+
+:root.dark .el-dialog__title {
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+:root.dark .el-drawer,
+:root.dark .el-message-box {
+    background: var(--ink-lift);
+}
+
+:root.dark .el-tag {
+    --el-tag-border-color: var(--hairline);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.01em;
+}
+
+:root.dark .el-progress-bar__outer {
+    background: #232A34;
+}
+
+:root.dark .el-progress-bar__inner {
+    background: var(--lamp);
+}
+
+/* 标签页：下划线指示器，去掉卡片式外框 */
+:root.dark .el-tabs--top > .el-tabs__header .el-tabs__nav-wrap::after {
+    background: var(--hairline);
+}
+
+:root.dark .el-tabs__item {
+    color: var(--text-2);
+    font-size: var(--text-base);
+}
+
+:root.dark .el-tabs__item.is-active {
+    color: var(--text-1);
+    font-weight: 600;
+}
+
+:root.dark .el-tabs__active-bar {
+    background: var(--lamp);
+    height: 2px;
+}
+
+/* 折叠面板：用作搜索结果的“合并条” */
+:root.dark .el-collapse,
+:root.dark .el-collapse-item__header,
+:root.dark .el-collapse-item__wrap {
+    background: transparent;
+    border-color: var(--hairline);
+}
+
+:root.dark .el-collapse-item__header {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--text-1);
+    height: 54px;
+    line-height: 54px;
+}
+
+:root.dark .el-radio.is-bordered {
+    border-color: var(--hairline);
+    background: var(--ink-card);
+}
+
+:root.dark .el-radio.is-bordered.is-checked {
+    border-color: var(--lamp-line);
+    background: var(--lamp-soft);
+}
+
+/* ———————————————————————————————
+   旧对象：封面与懒加载占位（保留类名，视觉统一到新体系）
+   ——————————————————————————————— */
+.loe-cover-img {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #1B2128;
+    transition: box-shadow 0.25s ease, outline-color 0.25s ease;
+    outline: 1px solid transparent;
+}
+
+.loe-cover-img img {
+    border-radius: var(--radius);
+    transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* 悬停：放大留给图片，高亮交给放映灯，不再叠一层白光 */
+.loe-cover-img:hover {
+    outline-color: var(--lamp-line);
+}
+
+.loe-cover-img:hover img {
+    transform: scale(1.04);
+}
+
+img[lazy=error],
 img[lazy=loading] {
     width: 100%;
     height: 100%;
-  transform: scale(1);
-  content: '';
-  background: #1D1E1F;
+    transform: scale(1);
+    content: '';
+    background: #1B2128;
 }
 
+img[lazy=error]::before,
 img[lazy=loading]::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
 }
 
 .loe-logo-img img[lazy=error] {
     display: none;
 }
 
-.loe-cover-img {
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* 播放历史里被 Pin 的行：用左侧灯条表示，而不是整行改色 */
+.roe-row-pinned td:first-child {
+    box-shadow: inset 2px 0 0 var(--lamp);
 }
 
-.loe-cover-img img {
-  border-radius: 8px;
-  transition: all 0.3s ease;
+/* ———————————————————————————————
+   self-critique 之后的收敛：
+   1. 横向天桥统一滚动条留白，避免滚动时跳动
+   2. 播放参数第一行不需要大量留白
+   ——————————————————————————————— */
+.shelf,
+.strip {
+    scrollbar-width: thin;
 }
 
-.loe-cover-img:hover {
-  transform: scale(1.05);
+.roe-page > * + * {
+    margin-top: 0;
 }
-
-.loe-cover-img:hover img {
-  box-shadow: 0 8px 16px rgba(255, 255, 255, 0.3);
-}
-
-/* 炫彩悬停效果 */
-/* .loe-cover-img {
-    display: inline-block;
-    position: relative;
-    margin: 20px;
-}
-
-.loe-cover-img img {
-    width: 300px;
-    height: 200px;
-    object-fit: cover;
-    border-radius: 8px;
-    transition: all 0.5s ease;
-    position: relative;
-    z-index: 1;
-}
-
-.loe-cover-img::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(45deg, 
-        #ff0000, #ff7300, #fffb00, 
-        #48ff00, #00ffd5, #002bff, 
-        #7a00ff, #ff00c8, #ff0000);
-    background-size: 400%;
-    border-radius: 8px;
-    opacity: 0;
-    transition: 0.5s;
-    filter: blur(20px);
-    z-index: 0;
-}
-
-.loe-cover-img:hover::before {
-    opacity: 1;
-    animation: rainbow-shadow 20s linear infinite;
-}
-
-.loe-cover-img:hover img {
-    transform: scale(1.05);
-}
-
-@keyframes rainbow-shadow {
-    0% {
-        background-position: 0 0;
-    }
-    50% {
-        background-position: 400% 0;
-    }
-    100% {
-        background-position: 0 0;
-    }
-} */
