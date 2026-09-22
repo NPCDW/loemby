@@ -192,18 +192,18 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     };
     let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id, &app_state).await;
     let client = http_pool::get_stream_http_client(proxy_url, &app_state).await.unwrap();
-    let mut req_headers = headers.clone();
-    req_headers.remove(axum::http::header::HOST);
-    req_headers.remove(axum::http::header::REFERER);
-    req_headers.remove(axum::http::header::USER_AGENT);
+    let mut request_headers = headers.clone();
+    request_headers.remove(axum::http::header::HOST);
+    request_headers.remove(axum::http::header::REFERER);
+    request_headers.remove(axum::http::header::USER_AGENT);
     // 播放器到本代理的连接语义不应该被带去请求上游，否则上游会跟着关闭连接，ts 之间无法复用连接
-    remove_hop_by_hop_headers(&mut req_headers);
-    req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
-    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
-    req_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
-    req_headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
-    req_headers.insert("X-Emby-Device-Id", HeaderValue::from_str(emby_server.device_id.as_ref().unwrap()).unwrap());
-    req_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
+    remove_hop_by_hop_headers(&mut request_headers);
+    request_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
+    request_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
+    request_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
+    request_headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
+    request_headers.insert("X-Emby-Device-Id", HeaderValue::from_str(emby_server.device_id.as_ref().unwrap()).unwrap());
+    request_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
     let mut url = request.stream_url.clone();
     if !url.starts_with("http") {
         url = format!("{}{}", emby_server.reverse_base_url.as_ref().unwrap(), url);
@@ -227,10 +227,10 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         }
         let res = client
             .get(url)
-            .headers(req_headers.clone())
+            .headers(request_headers.clone())
             .send()
             .await;
-        tracing::debug!("stream: {} {} {:?} {:?} 重定向次数 {} 媒体流响应 {:?}", types, &id, request, req_headers, redirect_count, res);
+        tracing::debug!("stream: {} {} {:?} {:?} 重定向次数 {} 媒体流响应 {:?}", types, &id, request, request_headers, redirect_count, res);
         match res {
             Err(err) => {
                 tracing::error!("stream: {} {} {:?} 媒体流响应 {:?}", types, &id, emby_server.user_agent, err);
@@ -277,17 +277,21 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             },
         }
     };
+    let mut response_headers = response.headers().clone();
+    // 上游响应头中的逐跳首部不能透传给播放器：
+    // 1. connection: close 会让 mpv 认为这条连接不能复用，下一个 ts 又去新建连接
+    // 2. transfer-encoding 需要交给 hyper 依据实际的 body 重新生成，否则会出现二次分块
+    remove_hop_by_hop_headers(&mut response_headers);
     if !response.status().is_success() {
         let status = response.status();
-        let headers = response.headers().clone();
-        tracing::error!("stream: {} {} {:?} 媒体流响应 {:?} {:?}", types, &id, req_headers, status, headers);
+        tracing::error!("stream: {} {} {:?} 媒体流响应 {:?} {:?}", types, &id, request_headers, status, headers);
         let mut stream = response.bytes_stream();
         let mut bytes = Vec::new();
         while let Some(Ok(chunk)) = stream.next().await {
             bytes.extend_from_slice(&chunk);
         }
         let text = String::from_utf8_lossy(&bytes);
-        tracing::error!("stream: {} {} {:?} 错误响应内容: {}", types, &id, req_headers, text);
+        tracing::error!("stream: {} {} {:?} 错误响应内容: {}", types, &id, request_headers, text);
         axum_app_state.app.emit("tauri_notify", TauriNotify {
             event_type: "ElMessage".to_string(),
             message_type: "error".to_string(),
@@ -296,11 +300,11 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         }).unwrap();
         return (
             status,
-            headers,
+            response_headers,
         ).into_response();
     }
     // 内容类型可能包含编码，如: Content-Type: application/vnd.apple.mpegurl; charset=utf-8
-    let response_content_type = if let Some(content_type) = response.headers().get(axum::http::header::CONTENT_TYPE) {
+    let response_content_type = if let Some(content_type) = response_headers.get(axum::http::header::CONTENT_TYPE) {
         content_type.to_str().unwrap_or("")
     } else { "" };
     if response_content_type.contains("application/vnd.apple.mpegurl") || response_content_type.contains("application/x-mpegurl")
@@ -310,7 +314,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         // hyper 在 debug 构建下会直接 assert panic（连接被关闭，客户端收到空响应）。
         // 这里只保留 content-type，其余由 axum/hyper 重新生成。
         let mut headers = axum::http::HeaderMap::new();
-        headers.insert(axum::http::header::CONTENT_TYPE, response.headers().get(axum::http::header::CONTENT_TYPE).unwrap().clone());
+        headers.insert(axum::http::header::CONTENT_TYPE, response_headers.get(axum::http::header::CONTENT_TYPE).unwrap().clone());
         tracing::debug!("stream: {} {} 响应为 m3u8 文件", types, &id);
         let mut stream = response.bytes_stream();
         let mut bytes = Vec::new();
@@ -347,14 +351,9 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
             axum::body::Body::new(res_lines.join("\n"))
         ).into_response();
     }
-    // 上游响应头中的逐跳首部不能透传给播放器：
-    // 1. connection: close 会让 mpv 认为这条连接不能复用，下一个 ts 又去新建连接
-    // 2. transfer-encoding 需要交给 hyper 依据实际的 body 重新生成，否则会出现二次分块
-    let mut res_headers = response.headers().clone();
-    remove_hop_by_hop_headers(&mut res_headers);
     (
         response.status(),
-        res_headers,
+        response_headers,
         axum::body::Body::from_stream(response.bytes_stream())
     ).into_response()
 }
@@ -417,20 +416,21 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
             axum::body::Body::new(format!("http连接池获取失败 {}", err))
         ).into_response(),
     };
-    let mut req_headers = headers.clone();
-    req_headers.remove(axum::http::header::HOST);
-    req_headers.remove(axum::http::header::REFERER);
-    req_headers.remove(axum::http::header::USER_AGENT);
-    req_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
-    // req_headers.insert(axum::http::header::REFERER, url.clone().parse().unwrap());
-    req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
-    req_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
-    req_headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
-    req_headers.insert("X-Emby-Device-Id", HeaderValue::from_str(emby_server.device_id.as_ref().unwrap()).unwrap());
-    req_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
+    let mut request_headers = headers.clone();
+    request_headers.remove(axum::http::header::HOST);
+    request_headers.remove(axum::http::header::REFERER);
+    request_headers.remove(axum::http::header::USER_AGENT);
+    remove_hop_by_hop_headers(&mut request_headers);
+    request_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
+    // request_headers.insert(axum::http::header::REFERER, url.clone().parse().unwrap());
+    request_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
+    request_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
+    request_headers.insert("X-Emby-Device-Name", HeaderValue::from_str(emby_server.device.as_ref().unwrap()).unwrap());
+    request_headers.insert("X-Emby-Device-Id", HeaderValue::from_str(emby_server.device_id.as_ref().unwrap()).unwrap());
+    request_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
     let res = client
         .get(url)
-        .headers(req_headers.clone())
+        .headers(request_headers.clone())
         .send()
         .await;
     tracing::debug!("subtitle: {:?} 媒体流响应 {:?}", id, res);
@@ -442,9 +442,11 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
         ).into_response()
     }
     let response = res.unwrap();
+    let mut response_headers = response.headers().clone();
+    remove_hop_by_hop_headers(&mut response_headers);
     (
         response.status(),
-        response.headers().clone(),
+        response_headers,
         axum::body::Body::from_stream(response.bytes_stream())
     ).into_response()
 }
@@ -566,21 +568,22 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
             axum::body::Body::new(format!("http连接池获取失败 {}", err))
         ).into_response(),
     };
-    let mut req_headers = axum::http::HeaderMap::new();
-    req_headers.remove(axum::http::header::HOST);
-    req_headers.remove(axum::http::header::REFERER);
-    req_headers.remove(axum::http::header::USER_AGENT);
-    req_headers.insert(axum::http::header::USER_AGENT, param.user_agent.clone().parse().unwrap());
-    // req_headers.insert(axum::http::header::REFERER, param.image_url.clone().parse().unwrap());
+    let mut request_headers = axum::http::HeaderMap::new();
+    request_headers.remove(axum::http::header::HOST);
+    request_headers.remove(axum::http::header::REFERER);
+    request_headers.remove(axum::http::header::USER_AGENT);
+    remove_hop_by_hop_headers(&mut request_headers);
+    request_headers.insert(axum::http::header::USER_AGENT, param.user_agent.clone().parse().unwrap());
+    // request_headers.insert(axum::http::header::REFERER, param.image_url.clone().parse().unwrap());
     if let Some(token) = param.token.as_ref() {
-        req_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(token).unwrap());
+        request_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(token).unwrap());
     }
     let res = client
         .get(param.image_url.clone())
-        .headers(req_headers.clone())
+        .headers(request_headers.clone())
         .send()
         .await;
-    tracing::debug!("image: {:?} {:?} 媒体流响应 {:?}", param, req_headers, res);
+    tracing::debug!("image: {:?} {:?} 媒体流响应 {:?}", param, request_headers, res);
     if let Err(err) = res {
         return (
             axum::http::StatusCode::SERVICE_UNAVAILABLE,
@@ -590,12 +593,13 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
     }
     let response = res.unwrap();
     let status = response.status();
-    let header = response.headers().clone();
+    let mut response_headers = response.headers().clone();
+    remove_hop_by_hop_headers(&mut response_headers);
     let mut stream = response.bytes_stream();
     if disabled_image_cache {
         return (
             status,
-            header,
+            response_headers,
             axum::body::Body::from_stream(stream)
         ).into_response();
     }
@@ -612,9 +616,9 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
     // 保存元数据到 .metadata 文件
     let mut metadata_file = File::create(&metadata_file_path).await.unwrap();
     let metadata = serde_json::json!({
-        "content_type": header.get("content-type").map(|v| v.to_str().unwrap().to_string()),
-        "content_length": header.get("content-length").map(|v| v.to_str().unwrap().to_string()),
-        "content_encoding": header.get("content-encoding").map(|v| v.to_str().unwrap().to_string()),
+        "content_type": response_headers.get("content-type").map(|v| v.to_str().unwrap().to_string()),
+        "content_length": response_headers.get("content-length").map(|v| v.to_str().unwrap().to_string()),
+        "content_encoding": response_headers.get("content-encoding").map(|v| v.to_str().unwrap().to_string()),
     });
     metadata_file.write_all(metadata.to_string().as_bytes()).await.unwrap();
     metadata_file.flush().await.unwrap();
@@ -630,7 +634,7 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
     };
     (
         status,
-        header,
+        response_headers,
         axum::body::Body::from_stream(FramedRead::new(file, BytesCodec::new()))
     ).into_response()
 }
