@@ -18,6 +18,11 @@ export const useReverseProxyServer = defineStore('reverseProxyServer', () => {
         return name || "不使用反代"
     }
 
+    /** 同步读缓存名称，供不等待的展示场景使用（缓存未就绪时返回空串） */
+    function cacheName(id: string): string {
+        return cacheReverseProxyServer.value[id] || ''
+    }
+
     async function refreshCache(id: string) {
         let server = await getReverseProxyServer(id)
         if (!server) {
@@ -65,7 +70,7 @@ export const useReverseProxyServer = defineStore('reverseProxyServer', () => {
         })
     }
 
-    return { getReverseProxyServer, delReverseProxyServer, addReverseProxyServer, updateReverseProxyServer, listAllReverseProxyServer, initCache, refreshCache, getReverseProxyServerName }
+    return { getReverseProxyServer, delReverseProxyServer, addReverseProxyServer, updateReverseProxyServer, listAllReverseProxyServer, initCache, refreshCache, getReverseProxyServerName, cacheName }
 })
 
 export interface ReverseProxyServer {

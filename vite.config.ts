@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { viteMockTauri, MOCK_TAURI_ENTRY } from "./vite.mock-tauri";
 import vue from "@vitejs/plugin-vue";
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
@@ -10,8 +11,12 @@ import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig(async ({ mode }) => {
+  // mock 模式才把桩加进入口，生产包里不会出现 mock 代码
+  const isMock = mode === 'mock';
+  return {
   plugins: [
+    viteMockTauri(),
     vue(),
     AutoImport({
         resolvers: [
@@ -74,7 +79,9 @@ export default defineConfig(async () => ({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
+        ...(isMock ? { [MOCK_TAURI_ENTRY]: resolve(__dirname, 'mock/tauri-stub.ts') } : {}),
       },
     },
   },
-}));
+  };
+});

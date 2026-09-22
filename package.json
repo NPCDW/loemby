@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
+    "build:mock": "vue-tsc --noEmit && vite build --mode mock",
+    "preview:mock": "vite preview --outDir dist-mock",
     "tauri": "tauri"
   },
   "dependencies": {
