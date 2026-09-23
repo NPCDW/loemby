@@ -1,160 +1,183 @@
 <template>
-    <el-scrollbar style="height: calc(100vh - 30px);">
-        <div style="padding: 20px 32px;">
-            <el-skeleton :loading="playbackInfoLoading" animated>
-                <template #template>
-                    <div style="width: 100%;padding: 10px;">
-                        <h2><el-skeleton-item variant="h1" style="width: 50%;" /></h2>
-                        <p v-for="_i in 15"><el-skeleton-item variant="text" style="width: 97%;" /></p>
-                    </div>
-                </template>
-                <div v-if="currentEpisodes">
-                    <div style="width: 100%;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <div>
-                                <h1 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h1>
-                                <template v-else>
-                                    <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)" style="display: block;"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
-                                    <div>{{ 'S' + (currentEpisodes.ParentIndexNumber || '-') + 'E' + (currentEpisodes.IndexNumber || '-') + '. ' + currentEpisodes.Name }}</div>
-                                </template>
-                                <div style="display: flex;align-items: center;margin: 15px 0;">
-                                    <span>时长：{{ displayTimeLength }}</span>
-                                    <span style="flex: auto; margin-left: 5px;">
-                                        <el-progress style="width: 240px;" :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
-                                    </span>
-                                </div>
-                                <div style="display: flex;align-items: center;margin: 15px 0;">
-                                    标签：
-                                    <span>大小：<el-tag disable-transitions>{{ mediaSourceSizeTag }}</el-tag></span>
-                                    <span style="margin-left: 10px;">码率：<el-tag disable-transitions>{{ mediaSourceBitrateTag }}</el-tag></span>
-                                    <span style="margin-left: 10px;">分辨率：<el-tag disable-transitions>{{ mediaStreamResolutionTag }}</el-tag></span>
-                                </div>
-                            </div>
-                            <div class="loe-logo-img">
-                                <img v-lazy="useImage().images[embyServerId + ':logo:' + currentEpisodes.Id]" style="max-height: 170px; max-width: 400px;" />
-                            </div>
+    <div class="roe-page">
+        <el-skeleton :loading="playbackInfoLoading" animated>
+            <template #template>
+                <div class="watch__head">
+                    <el-skeleton-item variant="h1" style="width: 40%;" />
+                    <el-skeleton-item variant="text" style="width: 90%; margin-top: 16px;" />
+                    <el-skeleton-item variant="text" style="width: 80%; margin-top: 8px;" />
+                </div>
+            </template>
+            <div v-if="currentEpisodes" class="watch">
+                <!-- 头部：标题 + 主操作。播放是唯一实心按钮，其余退到次级样式 -->
+                <header class="watch__head">
+                    <div class="watch__titles">
+                        <template v-if="currentEpisodes.Type === 'Movie'">
+                            <h1 class="watch__title">{{ currentEpisodes.Name }}</h1>
+                        </template>
+                        <template v-else>
+                            <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)" class="watch__series">
+                                {{ currentEpisodes.SeriesName }}
+                            </el-link>
+                            <h1 class="watch__title">
+                                <span class="watch__title-num">{{ 'S' + (currentEpisodes.ParentIndexNumber || '-') + ' E' + (currentEpisodes.IndexNumber || '-') }}</span>
+                                {{ currentEpisodes.Name }}
+                            </h1>
+                        </template>
+                        <div class="watch__facts">
+                            <span v-if="displayTimeLength" class="mono">{{ displayTimeLength }}</span>
+                            <span v-if="mediaStreamResolutionTag && mediaStreamResolutionTag !== 'Unknown'" class="chip">{{ mediaStreamResolutionTag }}</span>
+                            <span v-if="mediaSourceSizeTag" class="chip">{{ mediaSourceSizeTag }}</span>
+                            <span v-if="mediaSourceBitrateTag" class="chip">{{ mediaSourceBitrateTag }}</span>
+                            <span v-if="progressPercent > 0" class="watch__progress">
+                                <span class="watch__progress-fill" :style="{ width: progressPercent + '%' }"></span>
+                            </span>
+                            <span v-if="progressPercent > 0" class="mono watch__percent">
+                                {{ currentEpisodes.UserData?.Played ? '已看完' : '已看 ' + progressPercent + '%' }}
+                            </span>
                         </div>
-                        <div>
-                            版本：
-                            <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 840px" :disabled="versionOptions.length <= 1">
-                                <template #label="{ label }">
-                                    {{ label }}
-                                </template>
-                                <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value">
-                                    {{ item.name }} <el-tag disable-transitions>{{ item.size || "0 KB" }}</el-tag> <el-tag disable-transitions>{{ item.bitrate || "0 Kbps" }}</el-tag> <el-tag disable-transitions>{{ item.resolution || "Unknown" }}</el-tag>
-                                </el-option>
+                    </div>
+                    <div class="loe-logo-img watch__logo">
+                        <img v-lazy="useImage().images[embyServerId + ':logo:' + currentEpisodes.Id]" />
+                    </div>
+                </header>
+
+                <div class="watch__actions">
+                    <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0 && !currentEpisodes.UserData.Played">
+                        <el-button type="primary" size="large" :loading="play_loading" @click="call_player(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">
+                            <el-icon v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                            <span>继续播放</span>
+                        </el-button>
+                        <el-button size="large" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0)">从头播放</el-button>
+                    </template>
+                    <template v-else>
+                        <el-button type="primary" size="large" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0)">
+                            <el-icon v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                            <span>播放</span>
+                        </el-button>
+                    </template>
+                    <button class="op" :class="{ 'is-done': currentEpisodes.UserData?.Played }" :disabled="playedLoading" @click="played()">
+                        <el-icon :size="16" :class="playedLoading ? 'is-loading' : ''">
+                            <i-ep-CircleCheckFilled v-if="currentEpisodes.UserData?.Played" />
+                            <i-ep-CircleCheck v-else />
+                        </el-icon>
+                        <span>{{ currentEpisodes.UserData?.Played ? '已播放' : '标记已播放' }}</span>
+                    </button>
+                    <button class="op" :class="{ 'is-on': currentEpisodes.UserData?.IsFavorite }" :disabled="starLoading" @click="star()">
+                        <el-icon :size="16" :class="starLoading ? 'is-loading' : ''">
+                            <i-ep-StarFilled v-if="currentEpisodes.UserData?.IsFavorite" />
+                            <i-ep-Star v-else />
+                        </el-icon>
+                        <span>{{ currentEpisodes.UserData?.IsFavorite ? '取消收藏' : '收藏' }}</span>
+                    </button>
+                    <button class="op" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0, true)">
+                        <el-icon :size="16"><i-ep-Download /></el-icon>
+                        <span>下载</span>
+                    </button>
+                </div>
+
+                <!-- 播放配置：按“版本 → 轨道 → 策略”分三行，宽度受控，不再是狼牙棒 -->
+                <section class="conf">
+                    <div class="conf__row">
+                        <span class="conf__key">版本</span>
+                        <el-select v-model="versionSelect" @change="playbackVersionChange(versionSelect)" :disabled="versionOptions.length <= 1" class="conf__wide">
+                            <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value">
+                                {{ item.name }} <el-tag disable-transitions>{{ item.size || "0 KB" }}</el-tag> <el-tag disable-transitions>{{ item.bitrate || "0 Kbps" }}</el-tag> <el-tag disable-transitions>{{ item.resolution || "Unknown" }}</el-tag>
+                            </el-option>
+                        </el-select>
+                    </div>
+                    <div class="conf__row">
+                        <span class="conf__key">轨道</span>
+                        <div class="conf__tracks">
+                            <el-select v-model="videoSelect" :disabled="videoOptions.length <= 1" placeholder="视频">
+                                <template #prefix><span class="conf__mini">视频</span></template>
+                                <el-option v-for="item in videoOptions" :key="item.value" :label="item.label" :value="item.value" />
+                            </el-select>
+                            <el-select v-model="audioSelect" :disabled="audioOptions.length <= 1" placeholder="音频">
+                                <template #prefix><span class="conf__mini">音频</span></template>
+                                <el-option v-for="item in audioOptions" :key="item.value" :label="item.label" :value="item.value" />
+                            </el-select>
+                            <el-select v-model="subtitleSelect" :disabled="subtitleOptions.length <= 1" placeholder="字幕">
+                                <template #prefix><span class="conf__mini">字幕</span></template>
+                                <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
                             </el-select>
                         </div>
-                        <div style="margin: 15px 0;">
-                            <span>视频：
-                            <el-select v-model="videoSelect" size="large" style="width: 235px" :disabled="videoOptions.length <= 1">
-                                <el-option v-for="item in videoOptions" :key="item.value" :label="item.label" :value="item.value" />
-                            </el-select></span>
-                            <span style="margin-left: 15px;">音频：
-                            <el-select v-model="audioSelect" size="large" style="width: 235px" :disabled="audioOptions.length <= 1">
-                                <el-option v-for="item in audioOptions" :key="item.value" :label="item.label" :value="item.value" />
-                            </el-select></span>
-                            <span style="margin-left: 15px;">字幕：
-                            <el-select v-model="subtitleSelect" size="large" style="width: 235px" :disabled="subtitleOptions.length <= 1">
-                                <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
-                            </el-select></span>
-                        </div>
-                        <p style="display: flex; justify-content: center;">
-                            <el-button plain @click="rememberSelect = !rememberSelect">
-                                <el-icon :size="20" v-if="rememberSelect"><i-ep-Pointer /></el-icon>
-                                <el-icon :size="20" v-else><i-ep-Position /></el-icon>
-                                <span>{{ rememberSelect ? '手动选择媒体' : '自动选择媒体' }}</span>
-                            </el-button>
-                            <el-button plain v-if="supportDirectLink" @click="useDirectLink = !useDirectLink">
-                                <el-icon :size="20" v-if="useDirectLink"><i-ep-Connection /></el-icon>
-                                <el-icon :size="20" v-else><i-ep-CircleClose /></el-icon>
-                                <span>{{ useDirectLink ? '直链播放' : '禁用直链' }}</span>
-                            </el-button>
-                            <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                                <el-button plain type="success" :loading="play_loading" @click="call_player(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">
-                                    <el-icon :size="20" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
-                                    <span>继续播放</span>
-                                </el-button>
-                                <el-button plain type="success" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0)">
-                                    <el-icon :size="20" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
-                                    <span>从头播放</span>
-                                </el-button>
-                            </template>
-                            <template v-else>
-                                <el-button plain type="success" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0)">
-                                    <el-icon :size="20" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
-                                    <span>播放</span>
-                                </el-button>
-                            </template>
-                            <el-button plain :disabled="playedLoading" @click="played()">
-                                <el-icon color="#67C23A" :size="20" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                <el-icon :size="20" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
-                                <span>已播放</span>
-                            </el-button>
-                            <el-button plain :disabled="starLoading" @click="star()">
-                                <template v-if="currentEpisodes.UserData?.IsFavorite">
-                                    <el-icon color="#E6A23C" :size="20" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
-                                    <span>取消收藏</span>
-                                </template>
-                                <template v-else>
-                                    <el-icon :size="20" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
-                                    <span>收藏</span>
-                                </template>
-                            </el-button>
-                            <el-button plain type="primary" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0, true)">
-                                <el-icon :size="20" v-if="!play_loading"><i-ep-Download /></el-icon>
-                                <span>下载</span>
-                            </el-button>
-                        </p>
-                        <p>
-                            <span>章节：</span>
-                            <el-tag v-for="chapter in currentEpisodes.Chapters" @click="call_player(currentEpisodes.Id, chapter.StartPositionTicks)" style="margin-right: 10px; cursor: pointer;" disable-transitions>{{ chapter.ChapterIndex + ". " + chapter.MarkerType + " " + secondsToHMS2(chapter.StartPositionTicks / 1000_0000) + " " + chapter.Name }}</el-tag>
-                        </p>
-                        <p>
-                            <span>外部标签：</span>
-                            <el-tag v-for="(value, key) in currentEpisodes.ProviderIds" style="margin-right: 10px;" disable-transitions>{{ key + ':' + value }}</el-tag>
-                        </p>
-                        <p>
-                            <el-tooltip v-for="externalUrl in currentEpisodes.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
-                                <el-button round @click="invokeApi.open_url(externalUrl.Url)" style="height: 92px; width: 92px;">
-                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                                        <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" style="width: 48px; height: 48px;" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" style="width: 48px; height: 48px;" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" style="width: 48px; height: 48px;" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" style="width: 48px; height: 48px;" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" style="width: 48px; height: 48px;" />
-                                        <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" style="width: 48px; height: 48px;" />
-                                        <i-ep-Link v-else />
-                                        <span style="margin-top: 5px;">{{ externalUrl.Name }}</span>
-                                    </div>
-                                </el-button>
-                            </el-tooltip>
-                        </p>
                     </div>
-                </div>
-            </el-skeleton>
-            <div v-if="currentEpisodes?.Type !== 'Movie' && currentEpisodes?.SeriesId">
-                <h1>接下来</h1>
-                <p>
-                    <el-button @click="handleNextUpPageChange(1, true)">本季所有</el-button>
-                    <el-button @click="handleNextUpPageChange(1)">本季接下来</el-button>
-                    <el-button @click="nextEpisode()">下一个</el-button>
-                </p>
+                    <div class="conf__row">
+                        <span class="conf__key">策略</span>
+                        <div class="conf__flags">
+                            <button class="flag" :class="{ 'is-on': rememberedManual }" @click="toggleRememberSelect">
+                                <el-icon :size="14"><i-ep-Pointer /></el-icon>
+                                <span>{{ rememberedManual ? '手动选择媒体' : '自动选择媒体' }}</span>
+                            </button>
+                            <button v-if="supportDirectLink" class="flag" :class="{ 'is-on': useDirectLink }" @click="useDirectLink = !useDirectLink">
+                                <el-icon :size="14"><i-ep-Connection /></el-icon>
+                                <span>{{ useDirectLink ? '直链播放' : '直链已禁用' }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 章节：可跳转的时间点，横向排列 -->
+                <section class="roe-section" v-if="currentEpisodes.Chapters && currentEpisodes.Chapters.length">
+                    <div class="roe-section-head">
+                        <h2>章节</h2>
+                        <span class="roe-section-count">{{ currentEpisodes.Chapters.length }}</span>
+                    </div>
+                    <div class="chapters">
+                        <button v-for="chapter in currentEpisodes.Chapters" :key="chapter.ChapterIndex" class="chapter" @click="call_player(currentEpisodes.Id, chapter.StartPositionTicks)">
+                            <span class="chapter__time mono">{{ secondsToHMS2(chapter.StartPositionTicks / 1000_0000) }}</span>
+                            <span class="chapter__name">{{ chapter.Name || chapter.MarkerType }}</span>
+                        </button>
+                    </div>
+                </section>
+
+                <section class="roe-section" v-if="overviewText">
+                    <div class="roe-section-head"><h2>简介</h2></div>
+                    <p class="overview">{{ overviewText }}</p>
+                </section>
+
+                <section class="roe-section" v-if="providerEntries.length || (currentEpisodes.ExternalUrls && currentEpisodes.ExternalUrls.length)">
+                    <div class="roe-section-head"><h2>外部信息</h2></div>
+                    <div class="externals">
+                        <button v-for="externalUrl in currentEpisodes.ExternalUrls" :key="externalUrl.Url" class="ext" :title="externalUrl.Url" @click="invokeApi.open_url(externalUrl.Url)">
+                            <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" size="18" />
+                            <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" size="18" />
+                            <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" size="18" />
+                            <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" size="18" />
+                            <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" size="18" />
+                            <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" style="width: 18px; height: 18px;" />
+                            <el-icon v-else :size="16"><i-ep-Link /></el-icon>
+                            <span>{{ externalUrl.Name }}</span>
+                        </button>
+                        <span v-for="(value, key) in currentEpisodes.ProviderIds" :key="key" class="chip mono">{{ key }}:{{ value }}</span>
+                    </div>
+                </section>
+            </div>
+        </el-skeleton>
+
+        <section class="roe-section" v-if="currentEpisodes?.Type !== 'Movie' && currentEpisodes?.SeriesId">
+            <div class="roe-section-head">
+                <h2>接下来</h2>
+                <span class="roe-section-count">{{ nextUpTotal }}</span>
+                <span class="head-ops">
+                    <button class="flag" :class="{ 'is-on': nextUpShow && !episodesQueryAll }" @click="handleNextUpPageChange(1)">本季接下来</button>
+                    <button class="flag" :class="{ 'is-on': nextUpShow && episodesQueryAll }" @click="handleNextUpPageChange(1, true)">本季全部</button>
+                    <button class="flag" @click="nextEpisode()">下一集</button>
+                </span>
             </div>
             <el-skeleton :loading="nextUpLoading" animated v-if="nextUpShow">
                 <template #template>
-                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <el-card style="width: 300px; margin: 5px;" v-for="i in 5" :key="i">
-                            <p><el-skeleton-item variant="text" style="width: 90%" /></p>
-                            <p><el-skeleton-item variant="text" style="width: 60%" /></p>
-                        </el-card>
+                    <div class="grid">
+                        <el-card v-for="i in 3" :key="i" style="width: 344px; height: 182px; background: transparent;" />
                     </div>
                 </template>
-                <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                <div class="grid">
                     <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServerId="embyServerId" />
                 </div>
             </el-skeleton>
             <el-pagination
+                v-if="nextUpShow"
                 v-model:current-page="nextUpCurrentPage"
                 v-model:page-size="nextUpPageSize"
                 layout="total, prev, pager, next, jumper"
@@ -162,12 +185,12 @@
                 @current-change="handleNextUpPageChange(nextUpCurrentPage, episodesQueryAll)"
                 hide-on-single-page
             />
-        </div>
-    </el-scrollbar>
+        </section>
+    </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS, isInternalUrl, secondsToHMS2 } from '../../util/str_util'
 import { getResolutionFromMediaSources, getResolutionLevelFromMediaSources } from '../../util/play_info_util'
@@ -208,6 +231,28 @@ const nextUpPageSize = ref(6)
 const nextUpTotal = ref(0)
 
 const currentEpisodes = ref<EpisodeItem>()
+
+/* —— 仅用于展示的派生值，不改动原有取数与播放逻辑 —— */
+const progressPercent = computed(() => {
+    const data = currentEpisodes.value?.UserData
+    if (!data) return 0
+    if (data.Played) return 100
+    return Math.trunc(data.PlayedPercentage || 0)
+})
+
+const overviewText = computed(() => currentEpisodes.value?.Overview || '')
+
+const providerEntries = computed(() => Object.entries(currentEpisodes.value?.ProviderIds || {}))
+
+const rememberedManual = computed({
+    get: () => rememberSelect.value,
+    set: (value: boolean) => { rememberSelect.value = value },
+})
+
+function toggleRememberSelect() {
+    rememberSelect.value = !rememberSelect.value
+}
+
 function updateCurrentEpisodes(silent: boolean = false) {
     if (!silent) {
         playbackInfoLoading.value = true

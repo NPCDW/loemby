@@ -1,7 +1,8 @@
 <template>
-    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 40px); padding: 10px 20px 0 20px;">
-        <el-tab-pane label="常规" name="Common">
-            <el-scrollbar style="height: calc(100vh - 120px);">
+    <div class="roe-page">
+    <el-tabs v-model="activePane" @tab-change="handlePaneChange" class="settings-panes">
+        <el-tab-pane label="通用" name="Common">
+            <el-scrollbar style="padding-bottom: 40px;">
                 <el-form label-position="top">
                     <el-form-item label="应用更新">
                         <span style="margin-right: 10px;">当前版本: {{ runtimeConfig?.version }}</span>
@@ -22,7 +23,7 @@
         </el-tab-pane>
         
         <el-tab-pane label="播放" name="MPV">
-            <el-scrollbar style="height: calc(100vh - 120px);">
+            <el-scrollbar style="padding-bottom: 40px;">
                 <el-form label-position="top">
                     <el-form-item label="播放版本自动选择策略">
                         <el-select
@@ -166,7 +167,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
         </el-tab-pane>
         
         <el-tab-pane label="追踪" name="Track">
-            <el-scrollbar style="height: calc(100vh - 120px);">
+            <el-scrollbar style="padding-bottom: 40px;">
                 <el-card>
                     <el-form label-position="top">
                         <el-form-item label="Trakt （播放进度 >80% 才能在网页端看到记录）">
@@ -253,7 +254,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="代理服务器" name="ProxyServer">
-            <el-scrollbar style="height: calc(100vh - 120px);">
+            <el-scrollbar style="padding-bottom: 40px;">
                 <h1>代理服务器</h1>
                 <p>推荐使用 http 代理，reqwest 库的 socks5 代理在某些服可能有问题</p>
                 <el-table :data="proxyServers" style="width: 100%">
@@ -276,7 +277,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="反代服务器" name="ReverseProxyServer">
-            <el-scrollbar style="height: calc(100vh - 120px);">
+            <el-scrollbar style="padding-bottom: 40px;">
                 <h1>反代服务器</h1>
                 <p>反代服务器地址末尾会自动补充 /，请求地址将拼接为：反代服务器地址 + 原始地址</p>
                 <el-table :data="reverseProxyServers" style="width: 100%">
@@ -297,7 +298,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="Emby线路代理" name="EmbyLineProxy">
-            <el-scrollbar style="height: calc(100vh - 120px);">
+            <el-scrollbar style="padding-bottom: 40px;">
                 <h1>Emby线路代理配置</h1>
                 <el-form :inline="true">
                     <el-form-item label="全局媒体库浏览">
@@ -360,7 +361,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="Emby图标库" name="EmbyIconLibrary">
-            <el-scrollbar style="height: calc(100vh - 120px);">
+            <el-scrollbar style="padding-bottom: 40px;">
                 <h1>Emby图标库</h1>
                 <el-form :inline="true">
                     <el-form-item label="应用数据代理（图标、自动更新等）">
@@ -391,7 +392,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="缓存与日志" name="CacheAndLog">
-            <el-scrollbar style="height: calc(100vh - 120px);width: 100%">
+            <el-scrollbar style="padding-bottom: 40px;">
                 <el-form label-position="top">
                     <el-form-item label="日志保存天数">
                         <el-input-number
@@ -441,7 +442,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                         <el-button plain type="primary" :loading="cleanIconCacheLoading" @click="cleanIconCache()" style="margin-left: 10px;">清除所有图标缓存</el-button>
                     </el-form-item>
                 </el-form>
-                <el-table :data="embyServers" style="width: calc(100% - 10px)">
+                <el-table :data="embyServers" style="width: 100%">
                     <el-table-column prop="server_name" label="服务名" />
                     <el-table-column prop="username" label="用户名" />
                     <el-table-column fixed="right" label="Operations" width="180" align="center">
@@ -456,7 +457,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
             </el-scrollbar>
         </el-tab-pane>
         <el-tab-pane label="其他" name="Other">
-            <el-scrollbar style="height: calc(100vh - 120px);width: 100%">
+            <el-scrollbar style="padding-bottom: 40px;">
                 <el-form label-position="top">
                     <el-form-item label="忽略SSL证书错误（重启应用生效）">
                         <el-switch
@@ -470,14 +471,14 @@ C:\App\mpv_config-2024.12.04\mpv.exe
             </el-scrollbar>
         </el-tab-pane>
     </el-tabs>
+    </div>
 
     <el-dialog
         v-model="dialogProxyServerVisible"
         title="代理服务器"
         width="800"
     >
-        <el-scrollbar>
-            <el-form label-position="top">
+        <el-form label-position="top" class="dlg-form">
                 <el-form-item label="代理名称">
                     <el-input v-model="dialogProxyServer.name" placeholder="代理名称" />
                 </el-form-item>
@@ -503,16 +504,14 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                         <el-button @click="dialogProxyServerVisible = false">取消</el-button>
                     </div>
                 </el-form-item>
-            </el-form>
-        </el-scrollbar>
+        </el-form>
     </el-dialog>
     <el-dialog
         v-model="dialogReverseProxyServerVisible"
         title="反代服务器"
         width="800"
     >
-        <el-scrollbar>
-            <el-form label-position="top">
+        <el-form label-position="top" class="dlg-form">
                 <el-form-item label="反代名称">
                     <el-input v-model="dialogReverseProxyServer.name" placeholder="反代名称" />
                 </el-form-item>
@@ -525,16 +524,14 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                         <el-button @click="dialogReverseProxyServerVisible = false">取消</el-button>
                     </div>
                 </el-form-item>
-            </el-form>
-        </el-scrollbar>
+        </el-form>
     </el-dialog>
     <el-dialog
         v-model="dialogEmbyIconLibraryVisible"
         title="Emby图标库"
         width="800"
     >
-        <el-scrollbar>
-            <el-form label-position="top">
+        <el-form label-position="top" class="dlg-form">
                 <el-form-item label="名称">
                     <el-input v-model="dialogEmbyIconLibrary.name" placeholder="图标库名称" />
                 </el-form-item>
@@ -547,8 +544,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                         <el-button @click="dialogEmbyIconLibraryVisible = false">取消</el-button>
                     </div>
                 </el-form-item>
-            </el-form>
-        </el-scrollbar>
+        </el-form>
     </el-dialog>
 </template>
 

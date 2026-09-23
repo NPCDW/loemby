@@ -1,35 +1,57 @@
 <template>
-    <div>
-        <div style="display: flex; flex-direction: row; height: calc(100vh - 30px);">
-            <el-menu style="height: 100%; width: 200px; min-height: calc(100vh - 30px); background-color: var(--dark-background-color)" :collapse="false" :default-active="active">
-                <el-menu-item index="/nav/history" @click="jumpRoute('/nav/history')">
-                    <el-icon><i-ep-Clock /></el-icon>播放历史
-                </el-menu-item>
-                <el-menu-item index="/nav/search" @click="jumpRoute('/nav/search')">
-                    <el-icon><i-ep-Search /></el-icon>聚合搜索
-                </el-menu-item>
-                <el-menu-item index="/nav/setting" @click="jumpRoute('/nav/setting')">
-                    <el-icon><i-ep-Setting /></el-icon>设置
-                </el-menu-item>
-                <el-menu-item index="addEmbyServer" @click="addEmbyServer()">
-                    <el-icon><i-ep-Plus /></el-icon>添加服务器
-                </el-menu-item>
-                <el-scrollbar style="height: calc(100vh - 254px); flex: none;">
-                    <Container @drop="onDrop" style="height: 100%; width: 100%;">  
-                        <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
-                            <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
-                                <el-menu-item style="height: 100%; width: 100%;" :index="'/nav/emby/' + embyServer.id" @click="jumpRoute('/nav/emby/' + embyServer.id)" :disabled="embyServer.disabled ? true : false">
-                                    <div style="height: 100%; width: 100%; display: flex; align-items: center;">
-                                        <el-icon size="24" style="width: 24px; height: 24px;">
-                                            <img v-if="embyServer.icon_url" v-lazy="embyIconLocalUrl[embyServer.id!]" style="max-width: 24px; max-height: 24px;">
-                                            <svg-icon v-else name="emby" />
-                                        </el-icon>
-                                        {{ embyServer.server_name }}
-                                        <el-tag v-if="embyServer.keep_alive_days" disable-transitions size="small" :type="keep_alive_days[embyServer.id!] > 7 ? 'success' : keep_alive_days[embyServer.id!] > 3 ? 'warning' : 'danger'">
-                                            {{ keep_alive_days[embyServer.id!] }}
-                                        </el-tag>
-                                    </div>
-                                </el-menu-item>
+    <div class="shell">
+        <div class="shell__body">
+            <!-- 导航栏：单列，服务器是一等公民，可拖拽排序 -->
+            <aside class="rail">
+                <div class="rail__brand" @click="jumpRoute('/nav/history')">
+                    <span class="rail__mark">
+                        <svg-icon name="app-icon" size="22" color="#F2A13B" />
+                    </span>
+                    <span class="rail__name">loemby</span>
+                    <span class="rail__version">v{{ appVersion }}</span>
+                </div>
+
+                <nav class="rail__group">
+                    <button
+                        v-for="entry in railEntries"
+                        :key="entry.path"
+                        class="rail__item"
+                        :class="{ 'is-active': active === entry.path }"
+                        @click="jumpRoute(entry.path)"
+                    >
+                        <el-icon :size="18"><component :is="entry.icon" /></el-icon>
+                        <span>{{ entry.label }}</span>
+                    </button>
+                </nav>
+
+                <div class="rail__label">
+                    <span>服务器</span>
+                    <button class="rail__add" title="添加服务器" @click="addEmbyServer()">
+                        <el-icon :size="14"><i-ep-Plus /></el-icon>
+                    </button>
+                </div>
+
+                <el-scrollbar class="rail__servers">
+                    <Container @drop="onDrop" style="height: 100%; width: 100%;">
+                        <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="width: 100%;">
+                            <el-dropdown trigger="contextmenu" style="width: 100%;">
+                                <button
+                                    class="rail__item rail__item--server"
+                                    :class="{ 'is-active': active === '/nav/emby/' + embyServer.id, 'is-off': embyServer.disabled }"
+                                    @click="jumpRoute('/nav/emby/' + embyServer.id)"
+                                >
+                                    <span class="rail__icon">
+                                        <img v-if="embyServer.icon_url" v-lazy="embyIconLocalUrl[embyServer.id!]">
+                                        <svg-icon v-else name="emby" size="16" color="currentColor" />
+                                    </span>
+                                    <span class="rail__server-name">{{ embyServer.server_name }}</span>
+                                    <span
+                                        v-if="embyServer.keep_alive_days"
+                                        class="rail__keepalive"
+                                        :data-level="keep_alive_days[embyServer.id!] > 7 ? 'ok' : keep_alive_days[embyServer.id!] > 3 ? 'soon' : 'over'"
+                                        :title="'距离上次观看 ' + keep_alive_days[embyServer.id!] + ' 天'"
+                                    >{{ keep_alive_days[embyServer.id!] }}</span>
+                                </button>
                                 <template #dropdown>
                                     <el-dropdown-menu>
                                         <el-dropdown-item @click="configLine(embyServer)">
@@ -58,11 +80,11 @@
                                             <i-ep-Promotion style="position: absolute; left: 10;" />
                                             <span style="margin-left: 15px;">重新登录</span>
                                         </el-dropdown-item>
-                                        <el-dropdown-item style="color: #E6A23C" @click="logoutEmbyServer(embyServer)">
+                                        <el-dropdown-item style="color: #D9973F" @click="logoutEmbyServer(embyServer)">
                                             <i-ep-WarnTriangleFilled style="position: absolute; left: 10;" />
                                             <span style="margin-left: 15px;">退出登录</span>
                                         </el-dropdown-item>
-                                        <el-dropdown-item style="color: #F56C6C" @click="delEmbyServer(embyServer)">
+                                        <el-dropdown-item style="color: #CF5B54" @click="delEmbyServer(embyServer)">
                                             <i-ep-Delete style="position: absolute; left: 10;" />
                                             <span style="margin-left: 15px;">删除</span>
                                         </el-dropdown-item>
@@ -71,75 +93,39 @@
                             </el-dropdown>
                         </Draggable>
                     </Container>
-                </el-scrollbar>
-            </el-menu>
-            <el-scrollbar style="flex: auto; height: calc(100vh - 30px); width: calc(100% - 200px); position: relative;">
-                <router-view v-slot="{ Component }">
-                    <keep-alive>
-                        <component :is="Component" :key="$route.fullPath" v-if="$route.meta.keepAlive" />
-                    </keep-alive>
-                    <component :is="Component" :key="$route.fullPath" v-if="!$route.meta.keepAlive" />
-                </router-view>
-            </el-scrollbar>
-        </div>
-        <div style="height: 29px; border-top: 1px solid #4c4d4f; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; margin-left: 3px;">
-                <el-popover
-                    :visible="dialogNotifyCenterVisible"
-                    :width="400"
-                    transition="el-zoom-in-bottom"
-                    placement="top-start">
-                    <template #reference>
-                        <el-icon @click="() => {dialogNotifyCenterVisible = !dialogNotifyCenterVisible;notifyScrollBottom()}" style="margin: 0 7px;"><i-ep-BellFilled /></el-icon>
-                    </template>
-                    <div>
-                        <div @click="dialogNotifyCenterVisible = false" style="display: flex; justify-content: space-between;">
-                            <el-text>消息中心</el-text>
-                            <el-icon><i-ep-ArrowDownBold /></el-icon>
-                        </div>
-                        <el-scrollbar max-height="500px" ref="notifyScrollbarRef">
-                            <div v-if="!notifyMessages || notifyMessages.length <= 0" style="text-align: center;">
-                                无新通知
-                            </div>
-                            <template v-else>
-                                <transition-group name="el-zoom-in-left">
-                                    <div v-for="message in notifyMessages" :key="message.id" style="display: flex; margin: 10px 7px 0 3px;">
-                                        <el-icon size="32" style="width: 32px; height: 32px; margin: 0 5px 0 0;">
-                                            <svg-icon v-if="message.username == 'trakt'" name="trakt" />
-                                            <svg-icon v-else-if="message.username == 'simkl'" name="simkl" />
-                                            <img style="width: 32px; height: 32px;" v-else-if="message.username == 'YamTrack'" src="../icons/yamtrack.png" />
-                                            <template v-else-if="message.username == 'embyServer'">
-                                                <img v-if="message.embyServerId && embyServerMap[message.embyServerId] && embyServerMap[message.embyServerId].icon_url" v-lazy="embyIconLocalUrl[embyServerMap[message.embyServerId].id!]" style="max-width: 32px; max-height: 32px;">
-                                                <svg-icon v-else name="emby" />
-                                            </template>
-                                            <svg-icon v-else name="app-icon" />
-                                        </el-icon>
-                                        <div>
-                                            <div style="display: flex; justify-content: space-between;">
-                                                <el-text>
-                                                    <template v-if="message.username == 'embyServer' && message.embyServerId && embyServerMap[message.embyServerId]">
-                                                        {{ embyServerMap[message.embyServerId].server_name }}
-                                                    </template>
-                                                    <template v-else>{{ message.username }}</template>
-                                                </el-text>
-                                                <el-text>{{ message.datetime }}</el-text>
-                                            </div>
-                                            <div :style="{'background-color': messageContentBg(message.level)}" class="message-content">
-                                                <component v-if="isVNode(message.content)" :is="message.content"></component>
-                                                <template v-else>{{ message.content }}</template>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </transition-group>
-                            </template>
-                        </el-scrollbar>
+                    <div v-if="embyServers.length === 0" class="rail__hint">
+                        还没有服务器，点右上角 + 添加
                     </div>
-                </el-popover>
-                <el-text>服务器总数：{{ embyServers.length }}</el-text>
+                </el-scrollbar>
+            </aside>
+
+            <!-- 内容区：顶栏负责搜索与线路，页面自己负责排版 -->
+            <main class="board">
+
+                <el-scrollbar class="board__scroll">
+                    <router-view v-slot="{ Component }">
+                        <keep-alive>
+                            <component :is="Component" :key="$route.fullPath" v-if="$route.meta.keepAlive" />
+                        </keep-alive>
+                        <component :is="Component" :key="$route.fullPath" v-if="!$route.meta.keepAlive" />
+                    </router-view>
+                </el-scrollbar>
+            </main>
+        </div>
+
+        <!-- 状态栏：消息与全局状态，保持一行 -->
+        <footer class="status">
+            <div class="status__left">
+                <button class="status__notify" @click="() => {dialogNotifyCenterVisible = !dialogNotifyCenterVisible;notifyScrollBottom()}">
+                    <el-icon :size="15"><i-ep-BellFilled /></el-icon>
+                    <span>消息</span>
+                    <span v-if="notifyMessages && notifyMessages.length" class="status__badge">{{ notifyMessages.length }}</span>
+                </button>
+                <span class="status__meta">{{ embyServers.length }} 台服务器</span>
             </div>
-            <div v-if="$route.path.startsWith('/nav/emby/')" style="display: flex; align-items: center; margin-right: 3px;">
-                <el-text>{{ showEmbyServer.server_name }}</el-text>
-                <el-select v-model="showEmbyServer.line_id" @change="configLineChange" placement="top" size="small" style="width: 180px; margin-left: 5px;">
+            <div class="status__pick" v-if="$route.path.startsWith('/nav/emby/')">
+                <span class="status__server">{{ showEmbyServer.server_name }}</span>
+                <el-select v-model="showEmbyServer.line_id" @change="configLineChange" placement="top" size="small" style="width: 170px;">
                     <template #label="{ label }">
                         <span style="font-weight: bold">线路: </span>
                         <span>{{ label }}</span>
@@ -149,7 +135,7 @@
                         <el-button size="small" @click="configLine(showEmbyServer)">配置线路</el-button>
                     </template>
                 </el-select>
-                <el-select v-model="showServerLine.reverse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 180px; margin-left: 5px;">
+                <el-select v-model="showServerLine.reverse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 170px;">
                     <template #label="{ label }">
                         <span style="font-weight: bold">反代: </span>
                         <span>{{ label }}</span>
@@ -157,7 +143,7 @@
                     <el-option key="no" label="不使用反代" value="no"/>
                     <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
                 </el-select>
-                <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 180px; margin-left: 5px;">
+                <el-select v-model="showServerLine.browse_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 170px;">
                     <template #label="{ label }">
                         <span style="font-weight: bold">浏览: </span>
                         <span>{{ label }}</span>
@@ -166,7 +152,7 @@
                     <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
                     <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                 </el-select>
-                <el-select v-model="showServerLine.play_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 180px; margin-left: 5px;">
+                <el-select v-model="showServerLine.play_proxy_id" @change="proxyChange(showServerLine)" placement="top" size="small" style="width: 170px;">
                     <template #label="{ label }">
                         <span style="font-weight: bold">播放: </span>
                         <span>{{ label }}</span>
@@ -176,207 +162,267 @@
                     <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                 </el-select>
             </div>
-        </div>
-    </div>
+            <div class="status__right">
+                <span class="status__meta">loemby v{{ appVersion }}</span>
+            </div>
+        </footer>
 
-  <el-dialog v-model="dialogAddEmbyServerVisible" title="Emby Server" width="800">
-    <el-steps :active="stepActive" align-center>
-        <el-step title="服务器地址" />
-        <el-step title="用户名密码">
-        </el-step>
-        <el-step title="完成">
-        </el-step>
-    </el-steps>
-    <div v-if="stepActive == 1" style="width: 60%; margin: 25px auto;">
-        <el-form label-position="top">
-            <el-form-item label="服务器地址">
-                <el-input v-model="dialogEmbyServer.base_url" placeholder="Please input" />
-            </el-form-item>
-            <el-form-item label="反代服务器">
-                <el-select v-model="dialogEmbyServer.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServer)">
-                    <el-option key="no" label="不使用反代" value="no"/>
-                    <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
-                </el-select>
-            </el-form-item>
-            <el-form-item label="媒体库浏览代理">
-                <el-select v-model="dialogEmbyServer.browse_proxy_id">
-                    <el-option key="no" label="不使用代理" value="no"/>
-                    <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
-                    <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                </el-select>
-            </el-form-item>
-            <el-form-item label="媒体流播放代理">
-                <el-select v-model="dialogEmbyServer.play_proxy_id">
-                    <el-option key="no" label="不使用代理" value="no"/>
-                    <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
-                    <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                </el-select>
-            </el-form-item>
-            <el-form-item>
-                <div style="width: 100%; display: flex; justify-content: end;">
-                    <el-button :loading="addEmbyServerAddrLoading" @click="addEmbyServerAddr" type="primary">下一步</el-button>
-                </div>
-            </el-form-item>
-        </el-form>
-    </div>
-    <div v-if="stepActive == 2" style="width: 60%; margin: 25px auto;">
-        <el-form label-position="top">
-            <el-form-item label="服务器名称">
-                <el-input v-model="dialogEmbyServer.server_name" placeholder="Please input" />
-            </el-form-item>
-            <el-form-item label="用户名">
-                <el-input v-model="dialogEmbyServer.username" placeholder="Please input" />
-            </el-form-item>
-            <el-form-item label="密码">
-                <el-input v-model="dialogEmbyServer.password" placeholder="Please input" show-password />
-            </el-form-item>
-            <el-form-item>
-                <div style="width: 100%; display: flex; justify-content: space-between;">
-                    <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerPrevStep">上一步</el-button>
-                    <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerAuth" type="primary">下一步</el-button>
-                </div>
-            </el-form-item>
-        </el-form>
-    </div>
-    <div v-if="stepActive == 3">
-        <el-result
-            icon="success"
-            title="Success"
+        <el-popover
+            :visible="dialogNotifyCenterVisible"
+            :width="420"
+            transition="el-zoom-in-bottom"
+            placement="top-start"
+            popper-class="roe-notify"
         >
-            <template #extra>
-                <el-button type="primary" @click="dialogAddEmbyServerVisible = false">完成</el-button>
+            <template #reference>
+                <span class="status__anchor"></span>
             </template>
-        </el-result>
-    </div>
-  </el-dialog>
-  <el-dialog v-model="dialogEditEmbyServerVisible" title="Emby Server" width="800">
-    <el-form label-position="top" style="width: 60%; margin: 25px auto;">
-        <el-form-item label="服务器地址">
-            <el-input v-model="dialogEmbyServer.base_url" placeholder="Please input" />
-        </el-form-item>
-        <el-form-item label="服务器名称">
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <el-input v-model="dialogEmbyServer.server_name" placeholder="Please input" />
-                <el-button :loading="serverInfoLoading" @click="getServerInfo(dialogEmbyServer)" style="margin-left: 5px;">获取</el-button>
-            </div>
-        </el-form-item>
-        <el-form-item label="用户名">
-            <el-input v-model="dialogEmbyServer.username" placeholder="Please input" />
-        </el-form-item>
-        <el-form-item label="密码">
-            <el-input v-model="dialogEmbyServer.password" placeholder="Please input" show-password />
-        </el-form-item>
-        <el-form-item label="反代服务器">
-            <el-select v-model="dialogEmbyServer.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServer)">
-                <el-option key="no" label="不使用反代" value="no"/>
-                <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
-            </el-select>
-        </el-form-item>
-        <el-form-item label="媒体库代理">
-            <el-select v-model="dialogEmbyServer.browse_proxy_id">
-                <el-option key="no" label="不使用代理" value="no"/>
-                <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
-                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-            </el-select>
-        </el-form-item>
-        <el-form-item label="媒体流代理">
-            <el-select v-model="dialogEmbyServer.play_proxy_id">
-                <el-option key="no" label="不使用代理" value="no"/>
-                <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
-                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-            </el-select>
-        </el-form-item>
-        <el-form-item label="提醒我观看（大于7天显示绿色，小于等于7天显示黄色，小于等于3天显示红色）">
-            <el-input-number v-model="dialogEmbyServer.keep_alive_days" />
-        </el-form-item>
-        <el-form-item>
-            <div style="width: 100%; display: flex; justify-content: center;">
-                <el-button type="primary" @click="saveEditEmbyServer">保存</el-button>
-                <el-button @click="dialogEditEmbyServerVisible = false">取消</el-button>
-            </div>
-        </el-form-item>
-    </el-form>
-  </el-dialog>
-  <el-dialog v-model="dialogConfigLineVisible" title="线路配置" width="800">
-    <el-scrollbar style="width: 100%;height: 400px; padding: 20px;">
-        <el-button @click="addLine" type="primary">添加</el-button>
-        <div style="padding-top: 20px;">
-            <el-radio-group v-model="dialogEmbyServer.line_id" @change="configLineChange">
-                <el-radio v-for="line in dialogEmbyServerLines" :value="line.id" size="large" border style="height: 100%; margin-bottom: 20px;">
-                    <div style="padding: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            {{ line.name }}
-                            <span>
-                                <el-button type="primary" text size="small" @click="editLine(line)"><i-ep-Edit /></el-button>
-                                <el-button type="danger" :disabled="line.id === dialogEmbyServer.line_id ? true : false" text size="small" @click="delLine(line)"><i-ep-Delete /></el-button>
-                            </span>
-                        </div>
-                        <el-text truncated style="width: 280px;">{{ line.base_url }}</el-text>
-                    </div>
-                </el-radio>
-            </el-radio-group>
-        </div>
-    </el-scrollbar>
-  </el-dialog>
-  <el-dialog v-model="dialogAddLineVisible" title="配置线路" width="800">
-    <el-form label-position="top" style="width: 60%; margin: 25px auto;">
-        <el-form-item label="线路名称">
-            <el-input v-model="dialogEmbyServerAddLine.name" placeholder="Please input" />
-        </el-form-item>
-        <el-form-item label="线路地址">
-            <el-input v-model="dialogEmbyServerAddLine.base_url" placeholder="Please input" />
-        </el-form-item>
-        <el-form-item label="反代服务器">
-            <el-select v-model="dialogEmbyServerAddLine.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServerAddLine)">
-                <el-option key="no" label="不使用反代" value="no"/>
-                <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
-            </el-select>
-        </el-form-item>
-        <el-form-item label="媒体库代理">
-            <el-select v-model="dialogEmbyServerAddLine.browse_proxy_id">
-                <el-option key="no" label="不使用代理" value="no"/>
-                <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
-                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-            </el-select>
-        </el-form-item>
-        <el-form-item label="媒体流代理">
-            <el-select v-model="dialogEmbyServerAddLine.play_proxy_id">
-                <el-option key="no" label="不使用代理" value="no"/>
-                <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
-                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-            </el-select>
-        </el-form-item>
-        <el-form-item>
-            <div style="width: 100%; display: flex; justify-content: center;">
-                <el-button type="primary" @click="savedialogEmbyServerAddLine">保存</el-button>
-                <el-button @click="dialogAddLineVisible = false">取消</el-button>
-            </div>
-        </el-form-item>
-    </el-form>
-  </el-dialog>
-  <el-dialog v-model="dialogEditEmbyIconVisible" title="Emby Icon" width="400" style="height: 400px;">
-    <el-select v-model="selectedEmbyIconLibrary" @change="embyIconLibraryChange">
-      <el-option
-        v-for="item in embyIconLibrary"
-        :key="item.id"
-        :label="item.name"
-        :value="item.id"
-      />
-    </el-select>
-    <el-input v-model="searchEmbyIconName" placeholder="搜索图标" style="margin-top: 5px;" />
-    <el-scrollbar style="height: 240px; padding: 10px;">
-        <div style="display: flex; flex-wrap: wrap; flex-direction: row; height: 240px;" v-loading="embyIconListLoading">
-            <template v-for="embyIcon in embyIconList">
-                <div style="display: flex; flex-direction: column; align-items: center; margin: 5px; width: 75px;" v-if="embyIcon.name.toLowerCase().includes(searchEmbyIconName.toLowerCase())">
-                        <el-icon :size="48" @click="updateEmbyIcon(embyIcon.url)" style="max-height: 48px; max-width: 48px;">
-                            <img v-lazy="embyIcon.local_url" style="max-height: 48px; max-width: 48px; cursor: pointer;" />
-                        </el-icon>
-                        <span style="word-break: break-all; font-size: small; max-width: 60px; text-align: center;">{{ embyIcon.name }}</span>
+            <div class="notify">
+                <div class="notify__head">
+                    <span>消息中心</span>
+                    <button class="notify__close" @click="dialogNotifyCenterVisible = false">
+                        <el-icon><i-ep-ArrowDownBold /></el-icon>
+                    </button>
                 </div>
-            </template>
-        </div>
-    </el-scrollbar>
-  </el-dialog>
+                <el-scrollbar max-height="440px" ref="notifyScrollbarRef">
+                    <div v-if="!notifyMessages || notifyMessages.length <= 0" class="notify__empty">
+                        暂无消息，播放与同步结果会出现在这里。
+                    </div>
+                    <template v-else>
+                        <transition-group name="el-zoom-in-left">
+                            <div v-for="message in notifyMessages" :key="message.id" class="notify__item">
+                                <span class="notify__source">
+                                    <svg-icon v-if="message.username == 'trakt'" name="trakt" size="24" />
+                                    <svg-icon v-else-if="message.username == 'simkl'" name="simkl" size="24" />
+                                    <img style="width: 24px; height: 24px;" v-else-if="message.username == 'YamTrack'" src="../icons/yamtrack.png" />
+                                    <template v-else-if="message.username == 'embyServer'">
+                                        <img v-if="message.embyServerId && embyServerMap[message.embyServerId] && embyServerMap[message.embyServerId].icon_url" v-lazy="embyIconLocalUrl[embyServerMap[message.embyServerId].id!]" style="max-width: 24px; max-height: 24px;">
+                                        <svg-icon v-else name="emby" size="24" color="currentColor" />
+                                    </template>
+                                    <svg-icon v-else name="app-icon" size="24" color="currentColor" />
+                                </span>
+                                <div class="notify__body">
+                                    <div class="notify__meta">
+                                        <span class="notify__from">
+                                            <template v-if="message.username == 'embyServer' && message.embyServerId && embyServerMap[message.embyServerId]">
+                                                {{ embyServerMap[message.embyServerId].server_name }}
+                                            </template>
+                                            <template v-else>{{ message.username }}</template>
+                                        </span>
+                                        <span class="notify__time">{{ message.datetime }}</span>
+                                    </div>
+                                    <div class="notify__content" :data-level="message.level || 'info'" :style="{ backgroundColor: messageContentBg(message.level) }">
+                                        <component v-if="isVNode(message.content)" :is="message.content"></component>
+                                        <template v-else>{{ message.content }}</template>
+                                    </div>
+                                </div>
+                            </div>
+                        </transition-group>
+                    </template>
+                </el-scrollbar>
+            </div>
+        </el-popover>
+
+        <el-dialog v-model="dialogAddEmbyServerVisible" title="添加服务器" width="720">
+            <el-steps :active="stepActive" align-center>
+                <el-step title="服务器地址" />
+                <el-step title="用户名密码" />
+                <el-step title="完成" />
+            </el-steps>
+            <div v-if="stepActive == 1" class="dlg-form">
+                <el-form label-position="top">
+                    <el-form-item label="服务器地址">
+                        <el-input v-model="dialogEmbyServer.base_url" placeholder="例如 http://192.168.1.2:8096" />
+                    </el-form-item>
+                    <el-form-item label="反代服务器">
+                        <el-select v-model="dialogEmbyServer.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServer)">
+                            <el-option key="no" label="不使用反代" value="no"/>
+                            <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="媒体库浏览代理">
+                        <el-select v-model="dialogEmbyServer.browse_proxy_id">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="媒体流播放代理">
+                        <el-select v-model="dialogEmbyServer.play_proxy_id">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <div class="dlg-actions">
+                        <el-button :loading="addEmbyServerAddrLoading" @click="addEmbyServerAddr" type="primary">下一步</el-button>
+                    </div>
+                </el-form>
+            </div>
+            <div v-if="stepActive == 2" class="dlg-form">
+                <el-form label-position="top">
+                    <el-form-item label="服务器名称">
+                        <el-input v-model="dialogEmbyServer.server_name" placeholder="自定义名称" />
+                    </el-form-item>
+                    <el-form-item label="用户名">
+                        <el-input v-model="dialogEmbyServer.username" placeholder="Emby 用户名" />
+                    </el-form-item>
+                    <el-form-item label="密码">
+                        <el-input v-model="dialogEmbyServer.password" placeholder="Emby 密码" show-password />
+                    </el-form-item>
+                    <div class="dlg-actions dlg-actions--split">
+                        <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerPrevStep">上一步</el-button>
+                        <el-button :loading="addEmbyServerAuthLoading" @click="addEmbyServerAuth" type="primary">下一步</el-button>
+                    </div>
+                </el-form>
+            </div>
+            <div v-if="stepActive == 3" class="dlg-done">
+                <div class="dlg-done__title">服务器已添加</div>
+                <div class="dlg-done__text">现在可以从左侧列表进入媒体库并开始播放。</div>
+                <el-button type="primary" @click="dialogAddEmbyServerVisible = false">完成</el-button>
+            </div>
+        </el-dialog>
+
+        <el-dialog v-model="dialogEditEmbyServerVisible" title="编辑服务器" width="720">
+            <div class="dlg-form">
+                <el-form label-position="top">
+                    <el-form-item label="服务器地址">
+                        <el-input v-model="dialogEmbyServer.base_url" placeholder="例如 http://192.168.1.2:8096" />
+                    </el-form-item>
+                    <el-form-item label="服务器名称">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <el-input v-model="dialogEmbyServer.server_name" placeholder="自定义名称" />
+                            <el-button :loading="serverInfoLoading" @click="getServerInfo(dialogEmbyServer)" style="margin-left: 8px;">从服务器获取</el-button>
+                        </div>
+                    </el-form-item>
+                    <el-form-item label="用户名">
+                        <el-input v-model="dialogEmbyServer.username" placeholder="Emby 用户名" />
+                    </el-form-item>
+                    <el-form-item label="密码">
+                        <el-input v-model="dialogEmbyServer.password" placeholder="Emby 密码" show-password />
+                    </el-form-item>
+                    <el-form-item label="反代服务器">
+                        <el-select v-model="dialogEmbyServer.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServer)">
+                            <el-option key="no" label="不使用反代" value="no"/>
+                            <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="媒体库代理">
+                        <el-select v-model="dialogEmbyServer.browse_proxy_id">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="媒体流代理">
+                        <el-select v-model="dialogEmbyServer.play_proxy_id">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="观看提醒（超过 N 天未观看会在左侧列表提醒）">
+                        <el-input-number v-model="dialogEmbyServer.keep_alive_days" />
+                    </el-form-item>
+                    <div class="dlg-actions dlg-actions--split">
+                        <span></span>
+                        <span>
+                            <el-button type="primary" @click="saveEditEmbyServer">保存</el-button>
+                            <el-button @click="dialogEditEmbyServerVisible = false">取消</el-button>
+                        </span>
+                    </div>
+                </el-form>
+            </div>
+        </el-dialog>
+
+        <el-dialog v-model="dialogConfigLineVisible" title="线路配置" width="720">
+            <el-scrollbar style="height: 420px; padding-right: 6px;">
+                <button class="ghost-add" @click="addLine">
+                    <el-icon><i-ep-Plus /></el-icon>
+                    <span>添加线路</span>
+                </button>
+                <el-radio-group v-model="dialogEmbyServer.line_id" @change="configLineChange" class="line-list">
+                    <el-radio v-for="line in dialogEmbyServerLines" :value="line.id" size="large" border class="line-item">
+                        <div class="line-item__body">
+                            <div class="line-item__head">
+                                <span class="line-item__name">{{ line.name }}</span>
+                                <span class="line-item__ops">
+                                    <el-button type="primary" text size="small" @click="editLine(line)"><i-ep-Edit /></el-button>
+                                    <el-button type="danger" :disabled="line.id === dialogEmbyServer.line_id ? true : false" text size="small" @click="delLine(line)"><i-ep-Delete /></el-button>
+                                </span>
+                            </div>
+                            <span class="line-item__url">{{ line.base_url }}</span>
+                        </div>
+                    </el-radio>
+                </el-radio-group>
+            </el-scrollbar>
+        </el-dialog>
+
+        <el-dialog v-model="dialogAddLineVisible" title="线路" width="720">
+            <div class="dlg-form">
+                <el-form label-position="top">
+                    <el-form-item label="线路名称">
+                        <el-input v-model="dialogEmbyServerAddLine.name" placeholder="例如 直连 / 中转" />
+                    </el-form-item>
+                    <el-form-item label="线路地址">
+                        <el-input v-model="dialogEmbyServerAddLine.base_url" placeholder="例如 http://192.168.1.2:8096" />
+                    </el-form-item>
+                    <el-form-item label="反代服务器">
+                        <el-select v-model="dialogEmbyServerAddLine.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServerAddLine)">
+                            <el-option key="no" label="不使用反代" value="no"/>
+                            <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="媒体库代理">
+                        <el-select v-model="dialogEmbyServerAddLine.browse_proxy_id">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="媒体流代理">
+                        <el-select v-model="dialogEmbyServerAddLine.play_proxy_id">
+                            <el-option key="no" label="不使用代理" value="no"/>
+                            <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
+                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                        </el-select>
+                    </el-form-item>
+                    <div class="dlg-actions dlg-actions--split">
+                        <span></span>
+                        <span>
+                            <el-button type="primary" @click="savedialogEmbyServerAddLine">保存</el-button>
+                            <el-button @click="dialogAddLineVisible = false">取消</el-button>
+                        </span>
+                    </div>
+                </el-form>
+            </div>
+        </el-dialog>
+
+        <el-dialog v-model="dialogEditEmbyIconVisible" title="选择图标" width="520">
+            <div class="iconpick">
+                <div class="iconpick__tools">
+                    <el-select v-model="selectedEmbyIconLibrary" @change="embyIconLibraryChange" placeholder="图标库">
+                        <el-option v-for="item in embyIconLibrary" :key="item.id" :label="item.name" :value="item.id" />
+                    </el-select>
+                    <el-input v-model="searchEmbyIconName" placeholder="搜索图标" />
+                </div>
+                <el-scrollbar style="height: 300px;">
+                    <div class="iconpick__grid" v-loading="embyIconListLoading">
+                        <button
+                            v-for="embyIcon in embyIconList"
+                            :key="embyIcon.url"
+                            v-show="embyIcon.name.toLowerCase().includes(searchEmbyIconName.toLowerCase())"
+                            class="iconpick__cell"
+                            @click="updateEmbyIcon(embyIcon.url)"
+                        >
+                            <img v-lazy="embyIcon.local_url" />
+                            <span>{{ embyIcon.name }}</span>
+                        </button>
+                    </div>
+                </el-scrollbar>
+            </div>
+        </el-dialog>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -401,9 +447,18 @@ import { useGlobalConfig } from "../store/db/globalConfig";
 import { useImage } from "../store/image";
 import { useNotifyCenter } from "../store/notifyCenter";
 
+const appVersion = import.meta.env.VITE_APP_VERSION || ''
+
 const active = ref("/nav/search");
 const route = useRoute();
 const router = useRouter()
+
+const railEntries = [
+    { path: '/nav/history', label: '播放历史', icon: 'i-ep-Clock' },
+    { path: '/nav/search', label: '聚合搜索', icon: 'i-ep-Search' },
+    { path: '/nav/setting', label: '设置', icon: 'i-ep-Setting' },
+]
+
 watchEffect(() => {
     active.value = route.path;
     console.log(active.value)
@@ -957,11 +1012,560 @@ function notifyScrollBottom() {
 </script>
 
 <style scoped>
-.message-content {
-    margin: 0;
-    padding: 5px;
-    background-color: #303030;
+/* ——— 外壳 ——— */
+.shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--ink);
+}
+
+.shell__body {
+    display: flex;
+    flex: auto;
+    min-height: 0;
+}
+
+/* ——— 左侧导航 ——— */
+.rail {
+    flex: none;
+    width: var(--nav-menu-width);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 14px 10px 8px;
+    background: var(--ink-lift);
+    border-right: 1px solid var(--hairline);
+}
+
+.rail__brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 2px 8px 16px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.rail__mark {
+    align-self: center;
+    display: flex;
+    color: var(--lamp);
+}
+
+.rail__name {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.rail__version {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+}
+
+.rail__group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--hairline);
+    margin-bottom: 12px;
+}
+
+.rail__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-2);
+    font-family: inherit;
+    font-size: var(--text-base);
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rail__item:hover {
+    background: #1A2028;
+    color: var(--text-1);
+}
+
+.rail__item.is-active {
+    background: var(--lamp-soft);
+    color: var(--text-1);
+}
+
+.rail__item.is-active::before {
+    content: '';
+    position: absolute;
+}
+
+.rail__group .rail__item.is-active {
+    box-shadow: inset 2px 0 0 var(--lamp);
+}
+
+.rail__label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px 6px;
+    font-size: var(--text-xs);
+    color: var(--text-3);
+}
+
+.rail__add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.rail__add:hover {
+    border-color: var(--lamp-line);
+    color: var(--lamp);
+}
+
+.rail__servers {
+    flex: auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.rail__item--server {
+    position: relative;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.rail__item--server.is-active {
+    box-shadow: inset 2px 0 0 var(--lamp);
+}
+
+.rail__item--server.is-off {
+    opacity: 0.5;
+}
+
+.rail__dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-3);
+}
+
+.rail__dot[data-state='on'] {
+    background: #4FA35E;
+}
+
+.rail__dot[data-state='unsigned'] {
+    background: var(--lamp);
+}
+
+.rail__dot[data-state='off'] {
+    background: #4C5560;
+}
+
+.rail__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: currentColor;
+}
+
+.rail__icon img {
+    max-width: 16px;
+    max-height: 16px;
+    border-radius: 3px;
+}
+
+.rail__server-name {
+    flex: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rail__keepalive {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--hairline);
+    color: var(--text-3);
+}
+
+.rail__keepalive[data-level='ok'] {
+    color: #6FBF7C;
+    border-color: rgba(79, 163, 94, 0.4);
+}
+
+.rail__keepalive[data-level='soon'] {
+    color: var(--lamp);
+    border-color: var(--lamp-line);
+}
+
+.rail__keepalive[data-level='over'] {
+    color: #E07972;
+    border-color: rgba(207, 91, 84, 0.45);
+}
+
+.rail__hint {
+    padding: 10px;
+    font-size: var(--text-sm);
+    color: var(--text-3);
+    line-height: 1.6;
+}
+
+/* ——— 右侧内容区 ——— */
+.board {
+    flex: auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.board__scroll {
+    flex: auto;
+    min-height: 0;
+}
+
+/* ——— 状态栏：消息 + 当前服务器的线路/反代/代理 ——— */
+.status {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: var(--status-bar-height);
+    padding: 0 12px 0 10px;
+    background: var(--ink-lift);
+    border-top: 1px solid var(--hairline);
+    font-size: var(--text-xs);
+    color: var(--text-3);
+}
+
+.status__left,
+.status__right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.status__notify {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-2);
+    font-family: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+}
+
+.status__notify:hover {
+    background: #1A2028;
+    color: var(--text-1);
+}
+
+.status__badge {
+    font-family: var(--font-mono);
+    color: var(--lamp);
+}
+
+.status__meta {
+    font-family: var(--font-mono);
+    color: var(--text-3);
+}
+
+.status__anchor {
+    display: block;
+    width: 1px;
+    height: 1px;
+}
+
+/* 当前服务器上下文：名称 + 线路 / 反代 / 浏览 / 播放 */
+.status__pick {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    min-width: 0;
+}
+
+.status__server {
+    color: var(--text-2);
+    font-size: var(--text-xs);
+    margin-right: 2px;
+    white-space: nowrap;
+}
+
+/* ——— 消息中心 ——— */
+.notify__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--hairline);
+    color: var(--text-1);
+    font-weight: 600;
+}
+
+.notify__close {
+    display: flex;
+    border: none;
+    background: transparent;
+    color: var(--text-3);
+    cursor: pointer;
+}
+
+.notify__empty {
+    padding: 28px 0;
+    text-align: center;
+    color: var(--text-3);
+    font-size: var(--text-sm);
+}
+
+.notify__item {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--hairline);
+}
+
+.notify__source {
+    flex: none;
+    display: flex;
+    color: var(--text-2);
+}
+
+.notify__body {
+    flex: auto;
+    min-width: 0;
+}
+
+.notify__meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: var(--text-sm);
+}
+
+.notify__from {
+    color: var(--text-1);
+}
+
+.notify__time {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+}
+
+.notify__content {
+    margin-top: 6px;
+    padding: 7px 9px;
+    border-left: 2px solid var(--hairline);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: #1B2128;
+    font-size: var(--text-sm);
+    color: var(--text-2);
     word-break: break-all;
-    border-radius: 5px;
+}
+
+.notify__content[data-level='success'] {
+    border-left-color: #4FA35E;
+}
+
+.notify__content[data-level='warning'] {
+    border-left-color: var(--lamp);
+}
+
+.notify__content[data-level='danger'] {
+    border-left-color: #CF5B54;
+}
+
+.notify__content[data-level='primary'] {
+    border-left-color: var(--cyan);
+}
+
+/* ——— 对话框内统一排版 ——— */
+.dlg-form {
+    width: 80%;
+    margin: 22px auto 4px;
+}
+
+.dlg-actions {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.dlg-actions--split {
+    justify-content: space-between;
+}
+
+.dlg-done {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 34px 0 40px;
+    text-align: center;
+}
+
+.dlg-done__title {
+    font-size: var(--text-lg);
+    color: var(--text-1);
+}
+
+.dlg-done__text {
+    color: var(--text-3);
+    font-size: var(--text-sm);
+    margin-bottom: 10px;
+}
+
+/* 线路列表 */
+.ghost-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    padding: 7px 12px;
+    border: 1px dashed var(--hairline);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-2);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+
+.ghost-add:hover {
+    border-color: var(--lamp-line);
+    color: var(--lamp);
+}
+
+.line-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+    width: 100%;
+}
+
+.line-item {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 10px 12px;
+}
+
+.line-item :deep(.el-radio__label) {
+    flex: auto;
+    min-width: 0;
+    width: 100%;
+    color: var(--text-1);
+}
+
+.line-item__body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+}
+
+.line-item__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.line-item__name {
+    font-weight: 500;
+}
+
+.line-item__ops {
+    flex: none;
+}
+
+.line-item__url {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 图标选择 */
+.iconpick__tools {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.iconpick__grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 200px;
+}
+
+.iconpick__cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 72px;
+    padding: 8px 4px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-3);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.iconpick__cell:hover {
+    border-color: var(--lamp-line);
+    background: var(--lamp-soft);
+    color: var(--text-1);
+}
+
+.iconpick__cell img {
+    max-width: 40px;
+    max-height: 40px;
+}
+
+.iconpick__cell span {
+    width: 100%;
+    text-align: center;
+    word-break: break-all;
 }
 </style>

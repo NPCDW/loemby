@@ -1,30 +1,32 @@
 <template>
-    <div>
-        <div style="display: flex; padding: 10px;">
-            <el-checkbox-group v-model="item_types" style="flex: none; margin-right: 5px;">
-                <el-checkbox-button key="Movie" value="Movie">电影</el-checkbox-button>
-                <el-checkbox-button key="Series" value="Series">剧</el-checkbox-button>
-                <el-checkbox-button key="Episode" value="Episode">集</el-checkbox-button>
+    <div class="roe-page">
+        <div class="roe-toolrow">
+            <el-checkbox-group v-model="item_types">
+                <el-checkbox-button value="Movie">电影</el-checkbox-button>
+                <el-checkbox-button value="Series">剧</el-checkbox-button>
+                <el-checkbox-button value="Episode">集</el-checkbox-button>
             </el-checkbox-group>
-            <el-input v-model="search_str" autofocus @keyup.enter="search" :disabled="search_loading" style="flex: auto;">
+            <el-input v-model="search_str" autofocus @keyup.enter="search" :disabled="search_loading" placeholder="在这台服务器中搜索" class="query__input">
                 <template #append>
                     <el-button type="primary" @click="search" :loading="search_loading"><el-icon><i-ep-Search /></el-icon></el-button>
                 </template>
             </el-input>
         </div>
-    
-        <el-scrollbar style="height: calc(100vh - 82px); padding: 0 20px;">
-            <div v-if="emby_search_result.success" style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                <ItemCard v-for="rootItem in emby_search_result.result?.Items" :key="rootItem.Id" :item="rootItem" :embyServerId="embyServerId" />
-            </div>
-            <div v-else style="text-align: center;">
-                <el-text type="danger" style="word-break: break-all;display: block;">{{ emby_search_result.message }}</el-text>
-                <el-button type="primary" @click="search()">重试</el-button>
-            </div>
-            <div v-if="emby_search_result.success && emby_search_result.result?.Items.length == 0" style="text-align: center;">
-                <el-empty :image-size="200" />
-            </div>
-        </el-scrollbar>
+
+        <div v-if="!emby_search_result.success" class="roe-empty">
+            <span class="roe-empty__line">搜索失败</span>
+            <span class="error-text">{{ emby_search_result.message }}</span>
+            <el-button type="primary" plain @click="search()">重试</el-button>
+        </div>
+
+        <div v-else-if="emby_search_result.result && emby_search_result.result.Items.length === 0" class="roe-empty">
+            <span class="roe-empty__line">没有找到「{{ search_str }}」</span>
+            <span>换个片名，或把上方类型放宽到「集」。</span>
+        </div>
+
+        <div v-else class="grid">
+            <ItemCard v-for="rootItem in emby_search_result.result?.Items" :key="rootItem.Id" :item="rootItem" :embyServerId="embyServerId" />
+        </div>
     </div>
 </template>
 
@@ -60,4 +62,19 @@ search()
 </script>
 
 <style scoped>
+.query__input {
+    flex: auto;
+}
+
+.grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.error-text {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    word-break: break-all;
+}
 </style>
