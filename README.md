@@ -40,18 +40,6 @@ pnpm run tauri build
 pnpm run tauri icon app-icon.svg
 ```
 
-## 前端
-
-界面基于一套「放映室」设计系统（冷调墨蓝底 + 放映机暖光琥珀作为唯一强调色）。
-分层、页面写法约定与核版流程见 [前端架构与设计系统](./docs/frontend-architecture.md)。
-
-纯浏览器里核排版（不需要 Rust 侧）：
-
-```bash
-pnpm build:mock   # 用 mock 模式构建，注入 Tauri IPC 桩
-pnpm preview      # http://127.0.0.1:4173
-```
-
 ## 子项目
 - [Trakt与Simkl授权](https://github.com/NPCDW/token-exchange.git)
 

@@ -1,182 +1,199 @@
 import { invoke } from '@tauri-apps/api/core';
 
 /**
- * Emby 接口层。
- *
- * Rust 侧把这些接口的响应作为 JSON 字符串返回，这里统一在边界处解析成类型化对象，
- * 页面只面对对象，不再散落 JSON.parse。
- *
- * 约定：所有函数返回 Promise<T>，失败时 reject 出字符串错误。
+ * 获取服务器信息，无需验证
  */
-
-/** 在边界处把 Rust 返回的 JSON 字符串解析成对象 */
-function parse<T>(raw: unknown): T {
-    if (typeof raw === 'string') {
-        return JSON.parse(raw) as T;
+async function getServerInfo(emby_server_id: string): Promise<string> {
+    if (!emby_server_id) {
+        return Promise.reject("参数缺失");
     }
-    return raw as T;
-}
-
-async function getServerInfo(embyServerId: string): Promise<ServerInfo> {
-    return parse<ServerInfo>(await invoke('emby_get_server_info', { body: { emby_server_id: embyServerId } }));
-}
-
-async function authenticateByName(embyServerId: string): Promise<AuthenticateResult> {
-    return parse<AuthenticateResult>(await invoke('emby_authenticate_by_name', { body: { emby_server_id: embyServerId } }));
-}
-
-async function logout(embyServerId: string): Promise<string> {
-    return invoke('emby_logout', { body: { emby_server_id: embyServerId } });
+    return invoke('emby_get_server_info', {body: {
+        emby_server_id
+    }});
 }
 
 /**
- * 搜索。types: Movie / Series / Episode
- *
- * 已知上游问题：传入 search_str 与 limit 时 TotalRecordCount 可能为 0，结果本身正常。
+ * 通过用户名密码授权
  */
-async function search(
-    embyServerId: string,
-    searchStr: string,
-    itemTypes: string[],
-    startIndex: number,
-    limit: number,
-): Promise<EmbyPageList<SearchItem>> {
-    return parse<EmbyPageList<SearchItem>>(await invoke('emby_search', {
-        body: { emby_server_id: embyServerId, search_str: searchStr, item_types: itemTypes, start_index: startIndex, limit },
-    }));
-}
-
-/** 继续观看 */
-async function getContinuePlayList(embyServerId: string, startIndex: number, limit: number): Promise<EmbyPageList<EpisodeItem>> {
-    return parse<EmbyPageList<EpisodeItem>>(await invoke('emby_get_continue_play_list', {
-        body: { emby_server_id: embyServerId, start_index: startIndex, limit },
-    }));
-}
-
-/** 收藏 */
-async function getFavoriteList(embyServerId: string, startIndex: number, limit: number): Promise<EmbyPageList<SearchItem>> {
-    return parse<EmbyPageList<SearchItem>>(await invoke('emby_get_favorite_list', {
-        body: { emby_server_id: embyServerId, start_index: startIndex, limit },
-    }));
-}
-
-/** 剧集的「接下来」（按剧自己的排序，特别季不一定按序） */
-async function nextUp(embyServerId: string, seriesId: string, startIndex: number, limit: number): Promise<EmbyPageList<EpisodeItem>> {
-    return parse<EmbyPageList<EpisodeItem>>(await invoke('emby_next_up', {
-        body: { emby_server_id: embyServerId, series_id: seriesId, start_index: startIndex, limit },
-    }));
-}
-
-async function getMediaLibraryList(embyServerId: string): Promise<EmbyPageList<MediaLibraryItem>> {
-    return parse<EmbyPageList<MediaLibraryItem>>(await invoke('emby_get_media_library_list', {
-        body: { emby_server_id: embyServerId },
-    }));
-}
-
-/** 媒体库下最新的若干条 */
-async function getMediaLibraryChildLatest(embyServerId: string, parentId: string, limit: number): Promise<SearchItem[]> {
-    return parse<SearchItem[]>(await invoke('emby_get_media_library_child_latest', {
-        body: { emby_server_id: embyServerId, parent_id: parentId, limit },
-    }));
-}
-
-async function getMediaLibraryChild(embyServerId: string, parentId: string, startIndex: number, limit: number): Promise<EmbyPageList<SearchItem>> {
-    return parse<EmbyPageList<SearchItem>>(await invoke('emby_get_media_library_child', {
-        body: { emby_server_id: embyServerId, parent_id: parentId, start_index: startIndex, limit },
-    }));
-}
-
-async function count(embyServerId: string): Promise<MediaLibraryCount> {
-    return parse<MediaLibraryCount>(await invoke('emby_count', { body: { emby_server_id: embyServerId } }));
+async function authenticateByName(emby_server_id: string): Promise<string> {
+    if (!emby_server_id) {
+        return Promise.reject("参数缺失");
+    }
+    return invoke('emby_authenticate_by_name', {body: {
+        emby_server_id
+    }});
 }
 
 /**
- * 条目详情。
- *
- * 同一个接口返回电影 / 剧 / 季 / 合集 / 单集，字段是并集，
- * 因此这里返回宽类型，由调用方按 Type 收窄（见 asSeries / asEpisode）。
+ * 登出
  */
-async function items(embyServerId: string, itemId: string): Promise<EpisodeItem> {
-    return parse<EpisodeItem>(await invoke('emby_items', { body: { emby_server_id: embyServerId, item_id: itemId } }));
+async function logout(emby_server_id: string): Promise<string> {
+    return invoke('emby_logout', {body: {
+        emby_server_id
+    }});
 }
 
-/** 把详情收窄成剧集形态（只有 Type 为 Series 时字段才完整） */
-function asSeries(item: EpisodeItem): SeriesItem {
-    return item as unknown as SeriesItem;
+/**
+ * 搜索，该处问题：当搜索电影时，如果传入了搜索关键字和限制条数，搜索结果的总数会返回0（搜索返回的结果正常），不传这两个值又没办法分页
+ * types: Movie,Series,Episode
+ * @returns EmbyPageList<SearchItems>
+ */
+async function search(emby_server_id: string, search_str: string, item_types: string[], start_index: number, limit: number): Promise<string> {
+    return invoke('emby_search', {body: {
+        emby_server_id,
+        search_str,
+        item_types,
+        start_index,
+        limit
+    }});
 }
 
-/** 把详情收窄成合集 / 文件夹形态 */
-function asLibraryItem(item: EpisodeItem): MediaLibraryItem {
-    return item as unknown as MediaLibraryItem;
+/**
+ * 首页继续播放列表
+ * @returns EmbyPageList<EpisodeItems>
+ */
+async function getContinuePlayList(emby_server_id: string, start_index: number, limit: number): Promise<string> {
+    return invoke('emby_get_continue_play_list', {body: {
+        emby_server_id,
+        start_index,
+        limit
+    }});
 }
 
-async function seasons(embyServerId: string, seriesId: string): Promise<EmbyPageList<SeasonItem>> {
-    return parse<EmbyPageList<SeasonItem>>(await invoke('emby_seasons', {
-        body: { emby_server_id: embyServerId, series_id: seriesId },
-    }));
+/**
+ * 收藏列表
+ * @returns EmbyPageList<EpisodeItems>
+ */
+async function getFavoriteList(emby_server_id: string, start_index: number, limit: number): Promise<string> {
+    return invoke('emby_get_favorite_list', {body: {
+        emby_server_id,
+        start_index,
+        limit
+    }});
 }
 
-async function episodes(
-    embyServerId: string,
-    seriesId: string,
-    seasonId: string,
-    startIndex: number,
-    limit: number,
-    startItemId?: string,
-): Promise<EmbyPageList<EpisodeItem>> {
-    return parse<EmbyPageList<EpisodeItem>>(await invoke('emby_episodes', {
-        body: {
-            emby_server_id: embyServerId,
-            series_id: seriesId,
-            season_id: seasonId,
-            start_item_id: startItemId,
-            start_index: startIndex,
-            limit,
-        },
-    }));
+/**
+ * 系列剧集 接下来 应该播放的剧集（按剧的排序，有些特别季不会按顺序排序）
+ * @returns EmbyPageList<EpisodeItems>
+ */
+async function nextUp(emby_server_id: string, series_id: string, start_index: number, limit: number): Promise<string> {
+    return invoke('emby_next_up', {body: {
+        emby_server_id,
+        series_id,
+        start_index,
+        limit
+    }});
 }
 
-async function playbackInfo(embyServerId: string, itemId: string): Promise<PlaybackInfo> {
-    return parse<PlaybackInfo>(await invoke('emby_playback_info', {
-        body: { emby_server_id: embyServerId, item_id: itemId },
-    }));
+/**
+ * 首页媒体库列表
+ * @returns EmbyPageList<MediaLibraryItem>
+ */
+async function getMediaLibraryList(emby_server_id: string): Promise<string> {
+    return invoke('emby_get_media_library_list', {body: {
+        emby_server_id,
+    }});
 }
 
-async function star(embyServerId: string, itemId: string): Promise<UserData> {
-    return parse<UserData>(await invoke('emby_star', { body: { emby_server_id: embyServerId, item_id: itemId } }));
+/**
+ * 首页媒体库子项目最新几条
+ * @returns SearchItem[]
+ */
+async function getMediaLibraryChildLatest(emby_server_id: string, parent_id: string, limit: number): Promise<string> {
+    return invoke('emby_get_media_library_child_latest', {body: {
+        emby_server_id,
+        parent_id,
+        limit
+    }});
 }
 
-async function unstar(embyServerId: string, itemId: string): Promise<UserData> {
-    return parse<UserData>(await invoke('emby_unstar', { body: { emby_server_id: embyServerId, item_id: itemId } }));
+/**
+ * 首页媒体库子项目
+ * @returns EmbyPageList<SearchItem>
+ */
+async function getMediaLibraryChild(emby_server_id: string, parent_id: string, start_index: number, limit: number): Promise<string> {
+    return invoke('emby_get_media_library_child', {body: {
+        emby_server_id,
+        parent_id,
+        start_index,
+        limit
+    }});
 }
 
-async function played(embyServerId: string, itemId: string): Promise<UserData> {
-    return parse<UserData>(await invoke('emby_played', { body: { emby_server_id: embyServerId, item_id: itemId } }));
+/**
+ * 剧集数量统计
+ * @returns MediaLibraryCount
+ */
+async function count(emby_server_id: string): Promise<string> {
+    return invoke('emby_count', {body: {
+        emby_server_id,
+    }});
 }
 
-async function unplayed(embyServerId: string, itemId: string): Promise<UserData> {
-    return parse<UserData>(await invoke('emby_unplayed', { body: { emby_server_id: embyServerId, item_id: itemId } }));
+/**
+ * 电影详情、剧集详情、季详情、系列详情、合集详情
+ * @returns EpisodeItems
+ */
+async function items(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_items', {body: {
+        emby_server_id,
+        item_id,
+    }});
 }
 
-/** 从继续观看中移除 */
-async function hideFromResume(embyServerId: string, itemId: string, hide: boolean): Promise<string> {
-    return invoke('emby_hide_from_resume', { body: { emby_server_id: embyServerId, item_id: itemId, hide } });
+/**
+ * 系列 下的 季列表
+ * @returns EmbyPageList<SeasonItem>
+ */
+async function seasons(emby_server_id: string, series_id: string): Promise<string> {
+    return invoke('emby_seasons', {body: {
+        emby_server_id,
+        series_id,
+    }});
+}
+
+/**
+ * 季 下的 剧集列表
+ * @returns EmbyPageList<EpisodeItems>
+ */
+async function episodes(emby_server_id: string, series_id: string, season_id: string, start_index: number, limit: number, start_item_id?: string): Promise<string> {
+    return invoke('emby_episodes', {body: {
+        emby_server_id,
+        series_id,
+        season_id,
+        start_item_id,
+        start_index,
+        limit
+    }});
+}
+
+/**
+ * 播放流媒体详情
+ * @returns PlaybackInfo
+ */
+async function playbackInfo(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_playback_info', {body: {
+        emby_server_id,
+        item_id,
+    }});
 }
 
 /**
  * 组装直连视频流地址
+ * @returns
  */
-function getDirectStreamUrl(directStreamUrl: string): string | null {
+function getDirectStreamUrl(directStreamUrl: string) {
     if (!directStreamUrl) {
         return null;
     }
-    return '/emby' + directStreamUrl;
+    return "/emby" + directStreamUrl;
 }
 
 /**
  * 组装视频流地址
+ * @returns
  */
-function getVideoStreamUrl(item: BaseItem, mediaSource: MediaSource, playSessionId: string): string | null {
+function getVideoStreamUrl(item: EpisodeItem, mediaSource: MediaSource, playSessionId: string) {
     if (!item || !mediaSource) {
         return null;
     }
@@ -184,206 +201,227 @@ function getVideoStreamUrl(item: BaseItem, mediaSource: MediaSource, playSession
 }
 
 /**
- * 组装音频流地址。请确保音频流支持外部流，否则会加载整个视频。
+ * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
+ * @returns
  */
-function getAudioStreamUrl(item: BaseItem, mediaSource: MediaSource, mediaStream: MediaStream): string | null {
-    if (!mediaStream.IsExternal) {
+function getAudioStreamUrl(item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
+    if (!mediaStreams.IsExternal) {
         return null;
     }
-    return `/emby/Audio/${mediaSource.ItemId || item.Id}/stream.${mediaStream.Codec}?AudioStreamIndex=${mediaStream.Index}&Static=true`;
+    return `/emby/Audio/${mediaSource.ItemId || item.Id}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
 }
 
 /**
- * 组装字幕流地址。请确保字幕流支持外部流。
+ * 组装字幕流地址，请确保字幕流支持外部流
+ * @returns
  */
-function getSubtitleStreamUrl(item: BaseItem, mediaSource: MediaSource, mediaStream: MediaStream): string | null {
-    if (!mediaStream.IsExternal) {
+function getSubtitleStreamUrl(item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
+    if (!mediaStreams.IsExternal) {
         return null;
     }
-    return `/emby/Videos/${mediaSource.ItemId || item.Id}/${mediaSource.Id}/Subtitles/${mediaStream.Index}/Stream.${mediaStream.Codec}`;
+    return `/emby/Videos/${mediaSource.ItemId || item.Id}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
+}
+
+/**
+ * 收藏
+ * @returns
+ */
+async function star(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_star', {body: {
+        emby_server_id,
+        item_id,
+    }});
+}
+
+/**
+ * 取消收藏
+ * @returns
+ */
+async function unstar(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_unstar', {body: {
+        emby_server_id,
+        item_id,
+    }});
+}
+
+/**
+ * 标记已播放
+ * @returns
+ */
+async function played(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_played', {body: {
+        emby_server_id,
+        item_id,
+    }});
+}
+
+/**
+ * 取消已播放
+ * @returns
+ */
+async function unplayed(emby_server_id: string, item_id: string): Promise<string> {
+    return invoke('emby_unplayed', {body: {
+        emby_server_id,
+        item_id,
+    }});
+}
+
+/**
+ * 隐藏继续观看记录
+ * @returns
+ */
+async function hideFromResume(emby_server_id: string, item_id: string, hide: boolean): Promise<string> {
+    return invoke('emby_hide_from_resume', {body: {
+        emby_server_id,
+        item_id,
+        hide,
+    }});
 }
 
 export default {
-    getServerInfo,
-    authenticateByName,
-    logout,
-    search,
-    items,
-    seasons,
-    episodes,
-    playbackInfo,
-    getContinuePlayList,
-    nextUp,
-    getFavoriteList,
-    getDirectStreamUrl,
-    getVideoStreamUrl,
-    getAudioStreamUrl,
-    getSubtitleStreamUrl,
-    star,
-    unstar,
-    played,
-    unplayed,
-    getMediaLibraryList,
-    getMediaLibraryChildLatest,
-    count,
-    hideFromResume,
-    getMediaLibraryChild,
-    asSeries,
-    asLibraryItem,
-};
+    getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, getContinuePlayList, nextUp,
+    getFavoriteList, getDirectStreamUrl, getVideoStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
+    count, hideFromResume, getMediaLibraryChild, 
+}
 
-/* —————————————————————————— 类型 —————————————————————————— */
-
-/** 条目类型，Emby 侧的字符串字面量 */
-export type ItemType = 'Movie' | 'Series' | 'Season' | 'Episode' | 'BoxSet' | string;
 
 export interface EmbyPageList<T> {
-    TotalRecordCount: number;
-    Items: T[];
-}
-
-export interface UserData {
-    PlayedPercentage: number;
-    UnplayedItemCount: number;
-    PlaybackPositionTicks: number;
-    PlayCount: number;
-    IsFavorite: boolean;
-    Played: boolean;
-}
-
-export interface ExternalUrl {
-    Url: string;
-    Name: string;
-}
-
-export interface Chapter {
-    StartPositionTicks: number;
-    Name: string;
-    MarkerType: string;
-    ChapterIndex: number;
-}
-
-export interface BaseItemImageTags {
-    Primary?: string;
-    Art?: string;
-    Banner?: string;
-    Logo?: string;
-    Thumb?: string;
+    TotalRecordCount: number,
+    Items: T[]
 }
 
 export interface BaseItem {
-    Id: string;
-    Name: string;
-    Type: ItemType;
-    ProductionYear: number;
-    UserData?: UserData;
-    Overview: string;
-    ProviderIds: { [key: string]: string };
-    ExternalUrls: ExternalUrl[];
-    ImageTags: BaseItemImageTags;
-    Chapters: Chapter[];
+    Id: string,
+    Name: string,
+    Type: string,
+    ProductionYear: number,
+    UserData?: UserData,
+    Overview: string,
+    ProviderIds: {[key: string]: string},
+    ExternalUrls: ExternalUrl[],
+    ImageTags: BaseItemImageTags,
+    Chapters: Chapter[],
+}
+
+export interface BaseItemImageTags {
+    Primary: string,
+    Art: string,
+    Banner: string,
+    Logo: string,
+    Thumb: string,
 }
 
 export interface SeriesItem extends BaseItem {
-    EndDate: string;
-    OfficialRating?: string;
-    Genres?: string[];
+    EndDate: string,
 }
 
 export interface SeasonItem extends BaseItem {
-    SeriesId: string;
-    SeriesName: string;
-    IndexNumber: number;
-    ParentLogoItemId: string;
-    ParentThumbItemId: string;
-    SeriesPrimaryImageTag: string;
+    SeriesId: string,
+    SeriesName: string,
+    Overview: string,
+    IndexNumber: number,
+    ParentLogoItemId: string,
+    ParentThumbItemId: string,
+    SeriesPrimaryImageTag: string,
 }
 
 export interface EpisodeItem extends BaseItem {
-    SeriesName: string;
-    PremiereDate: string;
-    ParentIndexNumber: number;
-    IndexNumber: number;
-    /** 搜索时可能没有媒体源字段 */
-    MediaSources?: MediaSource[];
-    SeriesId: string;
-    SeasonId: string;
-    SeasonName: string;
-    ParentLogoItemId: string;
-    ParentThumbItemId: string;
-    SeriesPrimaryImageTag: string;
+    SeriesName: string,
+    PremiereDate: string,
+    ParentIndexNumber: number,
+    IndexNumber: number,
+    MediaSources?: MediaSource[],    // 搜索时，zdz无媒体源字段
+    SeriesId: string,
+    SeasonId: string,
+    SeasonName: string,
+    ParentLogoItemId: string,
+    ParentThumbItemId: string,
+    SeriesPrimaryImageTag: string,
 }
 
-/** 列表里出现的条目，可能是电影 / 剧 / 季 / 单集 */
-export type SearchItem = SeriesItem | SeasonItem | EpisodeItem;
+export type SearchItem = SeriesItem | SeasonItem | EpisodeItem
 
 export interface PlaybackInfo {
-    PlaySessionId: string;
-    MediaSources: MediaSource[];
-    ErrorCode?: string;
+    PlaySessionId: string,
+    MediaSources: MediaSource[],
+    ErrorCode?: string,
 }
 
 export interface MediaSource {
-    Id: string;
-    /** 电影与剧集的 id；同一剧集的多个媒体源 ItemId 相同 */
-    ItemId?: string;
-    Name: string;
-    RunTimeTicks: number;
-    Size: number;
-    Bitrate: number;
-    DirectStreamUrl: string;
-    MediaStreams: MediaStream[];
-    IsRemote: boolean;
-    Path: string;
-    Container: string;
+    Id: string,
+    ItemId?: string, // 电影和剧集的id，一个剧集有多个媒体源，但每个媒体源的itemid不一样，但是用不同的itemid能查询到同一个剧集   ++nya无此字段
+    Name: string,
+    RunTimeTicks: number,
+    Size: number,
+    Bitrate: number,
+    DirectStreamUrl: string,
+    MediaStreams: MediaStream[],
+    IsRemote: boolean,
+    Path: string,
+    Container: string,
 }
 
 export interface MediaStream {
-    Codec: string;
-    DisplayTitle: string;
-    DisplayLanguage: string;
-    Title: string;
-    BitRate: number;
-    Height: number;
-    Width: number;
-    Type: 'Video' | 'Audio' | 'Subtitle';
-    Language: string;
-    Index: number;
-    IsDefault: boolean;
-    IsExternal: boolean;
+    // 视频、音频、字幕编码
+    Codec: string,
+    // 主标题
+    DisplayTitle: string,
+    DisplayLanguage: string,
+    // 副标题
+    Title: string,
+    // 码率
+    BitRate: number,
+    Height: number,
+    Width: number,
+    Type: 'Video' | 'Audio' | 'Subtitle',
+    Language: string,
+    Index: number,
+    IsDefault: boolean,
+    IsExternal: boolean,
+}
+
+export interface UserData {
+    PlayedPercentage: number,
+    UnplayedItemCount: number,
+    PlaybackPositionTicks: number,
+    PlayCount: number,
+    IsFavorite: boolean,
+    Played: boolean,
+}
+
+export interface ExternalUrl {
+    Url: string,
+    Name: string,
+}
+
+export interface Chapter {
+    StartPositionTicks: number,
+    Name: string,
+    MarkerType: string,
+    ChapterIndex: number,
 }
 
 export interface MediaLibraryItem {
-    Name: string;
-    Id: string;
-    Type: ItemType;
-    CollectionType: string;
-    ImageTags: BaseItemImageTags;
+    Name: string,
+    Id: string,
+    Type: string,
+    CollectionType: string,
+    ImageTags: BaseItemImageTags,
 }
 
 export interface MediaLibraryCount {
-    MovieCount: number;
-    SeriesCount: number;
-    EpisodeCount: number;
-    GameCount: number;
-    ArtistCount: number;
-    ProgramCount: number;
-    GameSystemCount: number;
-    TrailerCount: number;
-    SongCount: number;
-    AlbumCount: number;
-    MusicVideoCount: number;
-    BoxSetCount: number;
-    BookCount: number;
-    ItemCount: number;
-}
-
-export interface ServerInfo {
-    ServerName: string;
-    Id: string;
-}
-
-export interface AuthenticateResult {
-    User: { Id: string };
-    AccessToken: string;
+    MovieCount: number,
+    SeriesCount: number,
+    EpisodeCount: number,
+    GameCount: number,
+    ArtistCount: number,
+    ProgramCount: number,
+    GameSystemCount: number,
+    TrailerCount: number,
+    SongCount: number,
+    AlbumCount: number,
+    MusicVideoCount: number,
+    BoxSetCount: number,
+    BookCount: number,
+    ItemCount: number,
 }

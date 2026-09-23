@@ -8,7 +8,8 @@ import { createPinia } from 'pinia'
 import svgIcon from "./components/SvgIcon/index.vue";
 import 'virtual:svg-icons-register'
 import VueLazyLoad from 'vue3-lazyload'
-import { useRuntimeConfig } from './store/runtimeConfig.ts'
+// import updaer_util from './util/updater_util'
+import {useRuntimeConfig} from "./store/runtimeConfig.ts";
 import { useNotifyCenter } from './store/notifyCenter.ts'
 import { useGlobalConfig } from './store/db/globalConfig.ts'
 import { useProxyServer } from './store/db/proxyServer.ts'
@@ -23,21 +24,13 @@ app.use(router)
 app.component('svg-icon', svgIcon)
 app.use(VueLazyLoad, {})
 
-/**
- * 启动顺序有依赖：
- * 1) 先拿运行时配置（axum 端口、版本号），图片地址与部分页面依赖它
- * 2) 再挂载应用，保证首屏不阻塞在缓存上
- * 3) 最后并行预热各缓存并订阅后端事件
- */
 await useRuntimeConfig().getRuntimeConfig()
 
 app.mount('#app')
 
-void Promise.all([
-    useGlobalConfig().initCache(),
-    useProxyServer().initCache(),
-    useReverseProxyServer().initCache(),
-])
-
+useGlobalConfig().initCache()
+useProxyServer().initCache()
+useReverseProxyServer().initCache()
 useNotifyCenter().listen_tauri_notify()
 useEmbyServer().listenEmbyServerChange()
+// updaer_util.getUpdate()

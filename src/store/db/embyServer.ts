@@ -34,6 +34,7 @@ export const useEmbyServer = defineStore('embyServer', () => {
 
     async function listenEmbyServerChange() {
         listen<EmbyServerChangeParam>('EmbyServerChange', (event) => {
+            console.log("tauri EmbyServerChange event", event)
             useEventBus().emit('EmbyServerChanged', {event: event.payload.event, id: event.payload.id})
         });
     }

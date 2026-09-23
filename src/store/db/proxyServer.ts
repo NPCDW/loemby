@@ -18,11 +18,6 @@ export const useProxyServer = defineStore('proxyServer', () => {
         return proxyServerName || "不使用代理"
     }
 
-    /** 同步读缓存名称，供不等待的展示场景使用（缓存未就绪时返回空串） */
-    function cacheName(id: string): string {
-        return cacheProxyServer.value[id] || ''
-    }
-
     async function refreshCache(id: string) {
         let server = await getProxyServer(id)
         if (!server) {
@@ -70,7 +65,7 @@ export const useProxyServer = defineStore('proxyServer', () => {
         })
     }
 
-    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, initCache, refreshCache, getProxyServerName, cacheName }
+    return { getProxyServer, delProxyServer, addProxyServer, updateProxyServer, listAllProxyServer, initCache, refreshCache, getProxyServerName }
 })
 
 export interface ProxyServer {

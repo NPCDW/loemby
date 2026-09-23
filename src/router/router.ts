@@ -1,71 +1,80 @@
-import * as VueRouter from 'vue-router';
-import AppShell from '../layout/AppShell.vue';
+import * as VueRouter from 'vue-router'
+import NavMenu from '../components/NavMenu.vue'
+import Search from '../page/Search.vue'
+import Setting from '../page/Setting.vue'
+import History from '../page/History.vue'
+import EmbyHome from '../page/emby/Home.vue'
+import EmbyEpisodes from '../page/emby/Episodes.vue'
+import EmbySeries from '../page/emby/Series.vue'
+import EmbyMediaLibrary from '../page/emby/MediaLibrary.vue'
+import EmbyMediaLibraryItems from '../page/emby/MediaLibraryItems.vue'
+import EmbySearch from '../page/emby/Search.vue'
 
-/**
- * 路由表。
- *
- * 所有页面都挂在 AppShell 之下，外壳提供服务器上下文；
- * keepAlive 的页面用组件名标识（见 AppShell 里的 KEEP_ALIVE），
- * 这样从详情页返回列表时滚动位置与已加载的数据都还在。
- */
-const routes: VueRouter.RouteRecordRaw[] = [
+const routes = [
     { path: '/', redirect: '/nav/history' },
     {
         path: '/nav',
-        component: AppShell,
+        component: NavMenu,
         children: [
             {
                 path: 'history',
-                name: 'HistoryPage',
-                component: () => import('../pages/History.vue'),
+                component: History,
             },
             {
                 path: 'search',
-                name: 'AggregateSearchPage',
-                component: () => import('../pages/Search.vue'),
+                component: Search,
+                meta: {
+                    keepAlive: true,
+                }
             },
             {
                 path: 'setting',
-                name: 'SettingPage',
-                component: () => import('../pages/Setting.vue'),
+                component: Setting,
             },
             {
                 path: 'emby/:embyId',
-                name: 'ServerHomePage',
-                component: () => import('../pages/emby/Home.vue'),
-            },
-            {
-                path: 'emby/:embyId/mediaLibrary',
-                name: 'MediaLibraryPage',
-                component: () => import('../pages/emby/MediaLibrary.vue'),
-            },
-            {
-                path: 'emby/:embyId/mediaLibrary/items/:parentId',
-                name: 'LibraryItemsPage',
-                component: () => import('../pages/emby/MediaLibraryItems.vue'),
-            },
-            {
-                path: 'emby/:embyId/search',
-                name: 'ServerSearchPage',
-                component: () => import('../pages/emby/Search.vue'),
-            },
-            {
-                path: 'emby/:embyId/series/:serieId',
-                name: 'SeriesPage',
-                component: () => import('../pages/emby/Series.vue'),
+                component: EmbyHome,
             },
             {
                 path: 'emby/:embyId/episodes/:episodeId',
-                name: 'EpisodePage',
-                component: () => import('../pages/emby/Episodes.vue'),
+                component: EmbyEpisodes,
+            },
+            {
+                path: 'emby/:embyId/series/:serieId',
+                component: EmbySeries,
+                meta: {
+                    keepAlive: true,
+                }
+            },
+            {
+                path: 'emby/:embyId/mediaLibrary',
+                component: EmbyMediaLibrary,
+                meta: {
+                    keepAlive: true,
+                }
+            },
+            {
+                path: 'emby/:embyId/mediaLibrary/items/:parentId',
+                component: EmbyMediaLibraryItems,
+                meta: {
+                    keepAlive: true,
+                }
+            },
+            {
+                path: 'emby/:embyId/search',
+                component: EmbySearch,
+                meta: {
+                    keepAlive: true,
+                }
             },
         ],
     },
-];
+    // { path: '/screenshot', component: Screenshot },
+]
 
 const router = VueRouter.createRouter({
     history: VueRouter.createWebHistory(import.meta.env.BASE_URL),
     routes,
-});
+})
 
-export default router;
+export default router

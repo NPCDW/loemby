@@ -6,8 +6,6 @@ import { waitUntilTrue } from '../../util/sleep';
 export const useGlobalConfig = defineStore('globalConfig', () => {
     const cacheGlobalConfig = ref<{[key: string]: GlobalConfig}>({});
     const initCacheFinish = ref(false)
-    /** 并发调用 initCache 时复用同一个请求，避免重复拉全量配置 */
-    let initCachePromise: Promise<void> | null = null
 
     async function refreshCache(key: string) {
         let config = await getGlobalConfig(key)
@@ -18,36 +16,17 @@ export const useGlobalConfig = defineStore('globalConfig', () => {
         cacheGlobalConfig.value[key] = config;
     }
 
-    function initCache(): Promise<void> {
-        if (initCachePromise) {
-            return initCachePromise
+    async function initCache() {
+        let globalConfigList: GlobalConfig[] = await invoke('list_all_global_config');
+        for (const item of globalConfigList) {
+            cacheGlobalConfig.value[item.config_key!] = item;
         }
-        initCachePromise = (async () => {
-            try {
-                const globalConfigList: GlobalConfig[] = await invoke('list_all_global_config');
-                for (const item of globalConfigList) {
-                    cacheGlobalConfig.value[item.config_key!] = item;
-                }
-                initCacheFinish.value = true
-            } catch (e) {
-                // 失败也要放行，否则所有读配置的地方会永久挂住
-                initCacheFinish.value = true
-                throw e
-            }
-        })()
-        return initCachePromise
+        initCacheFinish.value = true
     }
 
-    /**
-     * 读一个配置值。
-     *
-     * 冷启动时（缓存还没就绪）会先等缓存；这里主动触发一次 initCache，
-     * 避免调用方没预热缓存时永久等待。
-     */
     async function getGlobalConfigValue(config_key: string) {
         if (!initCacheFinish.value) {
-            initCache().catch(() => undefined)
-            await waitUntilTrue(() => initCacheFinish.value, 50)
+            await waitUntilTrue(() => initCacheFinish.value, 100)
         }
         if (!cacheGlobalConfig.value[config_key]) {
             cacheGlobalConfig.value[config_key] = {};
