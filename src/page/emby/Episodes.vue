@@ -1,76 +1,130 @@
 <template>
-    <el-scrollbar style="height: calc(100vh - 30px);">
-        <div style="padding: 20px 32px;">
+    <el-scrollbar class="episodes-scrollbar">
+        <div class="episodes-page">
             <el-skeleton :loading="playbackInfoLoading" animated>
                 <template #template>
                     <!-- 骨架与真实渲染保持同一结构：左信息 + 右侧 logo，避免加载完成时跳动 -->
                     <div class="episodes-skeleton">
-                        <div class="eps-head">
+                        <div class="eps-hero">
                             <div class="eps-main">
                                 <el-skeleton-item variant="h1" class="eps-title" />
                                 <el-skeleton-item variant="text" class="eps-subtitle" />
-                                <div class="eps-time-row">
+                                <div class="eps-meta-row">
                                     <el-skeleton-item variant="text" class="eps-time" />
                                     <el-skeleton-item variant="text" class="eps-progress" />
                                 </div>
-                                <div class="eps-tags-row">
+                                <div class="eps-tag-row">
                                     <el-skeleton-item variant="text" class="eps-tag" />
                                     <el-skeleton-item variant="text" class="eps-tag" />
                                     <el-skeleton-item variant="text" class="eps-tag" />
                                 </div>
                             </div>
-                            <el-skeleton-item variant="image" class="eps-logo" />
+                            <div class="eps-logo-wrap">
+                                <el-skeleton-item variant="image" class="eps-logo" />
+                            </div>
                         </div>
-                        <div class="eps-field">
-                            <el-skeleton-item variant="text" class="eps-label" />
-                            <el-skeleton-item variant="text" class="eps-select-wide" />
+                        <!-- 参数卡片：一行版本 + 一行三列流选择 -->
+                        <div class="eps-card eps-skel-card">
+                            <div class="eps-field eps-field-version">
+                                <el-skeleton-item variant="text" class="eps-label" />
+                                <el-skeleton-item variant="text" class="eps-select-wide" />
+                            </div>
+                            <div class="eps-field eps-field-streams">
+                                <el-skeleton-item variant="text" class="eps-select" />
+                                <el-skeleton-item variant="text" class="eps-select" />
+                                <el-skeleton-item variant="text" class="eps-select" />
+                            </div>
                         </div>
-                        <div class="eps-field">
-                            <el-skeleton-item variant="text" class="eps-label" />
-                            <el-skeleton-item variant="text" class="eps-select" />
-                            <el-skeleton-item variant="text" class="eps-label" />
-                            <el-skeleton-item variant="text" class="eps-select" />
-                            <el-skeleton-item variant="text" class="eps-label" />
-                            <el-skeleton-item variant="text" class="eps-select" />
+                        <!-- 操作区卡片 -->
+                        <div class="eps-card eps-actions-card eps-skel-card">
+                            <div class="eps-switch-group">
+                                <el-skeleton-item variant="button" class="eps-action" />
+                                <el-skeleton-item variant="button" class="eps-action" />
+                            </div>
+                            <div class="eps-play-group">
+                                <el-skeleton-item variant="button" class="eps-action-wide" />
+                                <el-skeleton-item variant="button" class="eps-action" />
+                                <el-skeleton-item variant="button" class="eps-action" />
+                                <el-skeleton-item variant="button" class="eps-action" />
+                            </div>
                         </div>
-                        <div class="eps-actions">
-                            <el-skeleton-item variant="button" v-for="i in 4" :key="i" class="eps-action" />
+                        <!-- 章节卡片 -->
+                        <div class="eps-card eps-tags-card eps-skel-card">
+                            <el-skeleton-item variant="text" class="eps-card-title-skel" />
+                            <div class="eps-tags-wrap">
+                                <el-skeleton-item variant="text" class="eps-chapter-skel" />
+                                <el-skeleton-item variant="text" class="eps-chapter-skel" />
+                                <el-skeleton-item variant="text" class="eps-chapter-skel" />
+                            </div>
                         </div>
-                        <div class="eps-lines">
-                            <el-skeleton-item variant="text" class="eps-line" />
-                            <el-skeleton-item variant="text" class="eps-line" />
+                        <!-- 外部标签卡片 -->
+                        <div class="eps-card eps-tags-card eps-skel-card">
+                            <el-skeleton-item variant="text" class="eps-card-title-skel" />
+                            <div class="eps-tags-wrap">
+                                <el-skeleton-item variant="text" class="eps-provider-skel" />
+                                <el-skeleton-item variant="text" class="eps-provider-skel" />
+                            </div>
                         </div>
                     </div>
                 </template>
-                <div v-if="currentEpisodes">
-                    <div style="width: 100%;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <div>
-                                <h1 v-if="currentEpisodes.Type === 'Movie'">{{ currentEpisodes.Name }}</h1>
+                <div v-if="currentEpisodes" class="episodes-detail">
+                    <!-- 头部：剧名 / 集号 / 时长进度 / 规格标签 + 右侧 logo -->
+                    <div class="eps-hero">
+                        <div class="eps-main">
+                            <div class="eps-title-row">
+                                <h1 v-if="currentEpisodes.Type === 'Movie'" class="eps-title-text">{{ currentEpisodes.Name }}</h1>
                                 <template v-else>
-                                    <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)" style="display: block;"><h1>{{ currentEpisodes.SeriesName }}</h1></el-link>
-                                    <div>{{ 'S' + (currentEpisodes.ParentIndexNumber || '-') + 'E' + (currentEpisodes.IndexNumber || '-') + '. ' + currentEpisodes.Name }}</div>
+                                    <el-link :underline="false" @click="gotoSeries(currentEpisodes.SeriesId)" class="eps-series-link">
+                                        <h1 class="eps-title-text">{{ currentEpisodes.SeriesName }}</h1>
+                                    </el-link>
+                                    <div class="eps-episode-no">
+                                        <span class="eps-chip">{{ 'S' + (currentEpisodes.ParentIndexNumber || '-') + 'E' + (currentEpisodes.IndexNumber || '-') }}</span>
+                                        <span class="eps-episode-name">{{ currentEpisodes.Name }}</span>
+                                    </div>
                                 </template>
-                                <div style="display: flex;align-items: center;margin: 15px 0;">
-                                    <span>时长：{{ displayTimeLength }}</span>
-                                    <span style="flex: auto; margin-left: 5px;">
-                                        <el-progress style="width: 240px;" :percentage="currentEpisodes.UserData?.Played ? 100 : currentEpisodes.UserData?.PlayedPercentage" :format="(percentage: number) => Math.trunc(percentage) + '%'" />
-                                    </span>
+                            </div>
+
+                            <div class="eps-meta-row">
+                                <div class="eps-meta-item">
+                                    <span class="eps-meta-key">时长</span>
+                                    <span class="eps-meta-value">{{ displayTimeLength }}</span>
                                 </div>
-                                <div style="display: flex;align-items: center;margin: 15px 0;">
-                                    标签：
-                                    <span>大小：<el-tag disable-transitions>{{ mediaSourceSizeTag }}</el-tag></span>
-                                    <span style="margin-left: 10px;">码率：<el-tag disable-transitions>{{ mediaSourceBitrateTag }}</el-tag></span>
-                                    <span style="margin-left: 10px;">分辨率：<el-tag disable-transitions>{{ mediaStreamResolutionTag }}</el-tag></span>
+                                <div class="eps-meta-item eps-meta-progress">
+                                    <span class="eps-meta-key">进度</span>
+                                    <el-progress
+                                        class="eps-progress-bar"
+                                        :percentage="currentEpisodes.UserData?.Played ? 100 : (currentEpisodes.UserData?.PlayedPercentage || 0)"
+                                        :stroke-width="8"
+                                        :format="(percentage: number) => Math.trunc(percentage) + '%'" />
                                 </div>
                             </div>
-                            <div class="loe-logo-img">
-                                <img v-lazy="useImage().images[embyServerId + ':logo:' + currentEpisodes.Id]" style="max-height: 170px; max-width: 400px;" />
+
+                            <div class="eps-tag-row">
+                                <div class="eps-tag-item">
+                                    <span class="eps-meta-key">大小</span>
+                                    <el-tag disable-transitions round>{{ mediaSourceSizeTag }}</el-tag>
+                                </div>
+                                <div class="eps-tag-item">
+                                    <span class="eps-meta-key">码率</span>
+                                    <el-tag disable-transitions round>{{ mediaSourceBitrateTag }}</el-tag>
+                                </div>
+                                <div class="eps-tag-item">
+                                    <span class="eps-meta-key">分辨率</span>
+                                    <el-tag disable-transitions round>{{ mediaStreamResolutionTag }}</el-tag>
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            版本：
-                            <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" style="width: 840px" :disabled="versionOptions.length <= 1">
+
+                        <div class="eps-logo-wrap loe-logo-img">
+                            <img class="eps-logo-img" v-lazy="useImage().images[embyServerId + ':logo:' + currentEpisodes.Id]" />
+                        </div>
+                    </div>
+
+                    <!-- 播放参数：版本 + 视频/音频/字幕 -->
+                    <div class="eps-card eps-select-card">
+                        <div class="eps-field eps-field-version">
+                            <span class="eps-label">版本</span>
+                            <el-select v-model="versionSelect" @change="playbackVersionChange" size="large" class="eps-select-version" :disabled="versionOptions.length <= 1">
                                 <template #label="{ label }">
                                     {{ label }}
                                 </template>
@@ -79,131 +133,182 @@
                                 </el-option>
                             </el-select>
                         </div>
-                        <div style="margin: 15px 0;">
-                            <span>视频：
-                            <el-select v-model="videoSelect" size="large" style="width: 235px" :disabled="videoOptions.length <= 1">
-                                <el-option v-for="item in videoOptions" :key="item.value" :label="item.label" :value="item.value" />
-                            </el-select></span>
-                            <span style="margin-left: 15px;">音频：
-                            <el-select v-model="audioSelect" size="large" style="width: 235px" :disabled="audioOptions.length <= 1">
-                                <el-option v-for="item in audioOptions" :key="item.value" :label="item.label" :value="item.value" />
-                            </el-select></span>
-                            <span style="margin-left: 15px;">字幕：
-                            <el-select v-model="subtitleSelect" size="large" style="width: 235px" :disabled="subtitleOptions.length <= 1">
-                                <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
-                            </el-select></span>
+                        <div class="eps-field eps-field-streams">
+                            <div class="eps-field-item">
+                                <span class="eps-label">视频</span>
+                                <el-select v-model="videoSelect" size="large" class="eps-select-stream" :disabled="videoOptions.length <= 1">
+                                    <el-option v-for="item in videoOptions" :key="item.value" :label="item.label" :value="item.value" />
+                                </el-select>
+                            </div>
+                            <div class="eps-field-item">
+                                <span class="eps-label">音频</span>
+                                <el-select v-model="audioSelect" size="large" class="eps-select-stream" :disabled="audioOptions.length <= 1">
+                                    <el-option v-for="item in audioOptions" :key="item.value" :label="item.label" :value="item.value" />
+                                </el-select>
+                            </div>
+                            <div class="eps-field-item">
+                                <span class="eps-label">字幕</span>
+                                <el-select v-model="subtitleSelect" size="large" class="eps-select-stream" :disabled="subtitleOptions.length <= 1">
+                                    <el-option v-for="item in subtitleOptions" :key="item.value" :label="item.label" :value="item.value" />
+                                </el-select>
+                            </div>
                         </div>
-                        <p style="display: flex; justify-content: center;">
-                            <el-button plain @click="rememberSelect = !rememberSelect">
-                                <el-icon :size="20" v-if="rememberSelect"><i-ep-Pointer /></el-icon>
-                                <el-icon :size="20" v-else><i-ep-Position /></el-icon>
+                    </div>
+
+                    <!-- 操作区：开关 + 播放 + 标记 + 下载 -->
+                    <div class="eps-card eps-actions-card">
+                        <div class="eps-switch-group">
+                            <el-button class="eps-switch-btn" :class="{ 'is-on': rememberSelect }" plain @click="rememberSelect = !rememberSelect">
+                                <el-icon :size="18" v-if="rememberSelect"><i-ep-Pointer /></el-icon>
+                                <el-icon :size="18" v-else><i-ep-Position /></el-icon>
                                 <span>{{ rememberSelect ? '手动选择媒体' : '自动选择媒体' }}</span>
                             </el-button>
-                            <el-button plain v-if="supportDirectLink" @click="useDirectLink = !useDirectLink">
-                                <el-icon :size="20" v-if="useDirectLink"><i-ep-Connection /></el-icon>
-                                <el-icon :size="20" v-else><i-ep-CircleClose /></el-icon>
+                            <el-button v-if="supportDirectLink" class="eps-switch-btn" :class="{ 'is-on': useDirectLink }" plain @click="useDirectLink = !useDirectLink">
+                                <el-icon :size="18" v-if="useDirectLink"><i-ep-Connection /></el-icon>
+                                <el-icon :size="18" v-else><i-ep-CircleClose /></el-icon>
                                 <span>{{ useDirectLink ? '直链播放' : '禁用直链' }}</span>
                             </el-button>
+                        </div>
+                        <div class="eps-play-group">
                             <template v-if="currentEpisodes.UserData && currentEpisodes.UserData.PlaybackPositionTicks > 0">
-                                <el-button plain type="success" :loading="play_loading" @click="call_player(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">
+                                <el-button class="eps-primary-btn" type="primary" :loading="play_loading" @click="call_player(currentEpisodes.Id, currentEpisodes.UserData.PlaybackPositionTicks)">
                                     <el-icon :size="20" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                     <span>继续播放</span>
                                 </el-button>
-                                <el-button plain type="success" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0)">
-                                    <el-icon :size="20" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
+                                <el-button class="eps-secondary-btn" @click="call_player(currentEpisodes.Id, 0)">
+                                    <el-icon :size="18"><i-ep-RefreshLeft /></el-icon>
                                     <span>从头播放</span>
                                 </el-button>
                             </template>
                             <template v-else>
-                                <el-button plain type="success" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0)">
+                                <el-button class="eps-primary-btn" type="primary" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0)">
                                     <el-icon :size="20" v-if="!play_loading"><i-ep-VideoPlay /></el-icon>
                                     <span>播放</span>
                                 </el-button>
                             </template>
-                            <el-button plain :disabled="playedLoading" @click="played()">
-                                <el-icon color="#67C23A" :size="20" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
-                                <el-icon :size="20" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                            <el-button class="eps-secondary-btn" :disabled="playedLoading" @click="played()">
+                                <el-icon color="#67C23A" :size="18" :class="playedLoading ? 'is-loading' : ''" v-if="currentEpisodes.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
+                                <el-icon :size="18" :class="playedLoading ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                                 <span>已播放</span>
                             </el-button>
-                            <el-button plain :disabled="starLoading" @click="star()">
+                            <el-button class="eps-secondary-btn" :disabled="starLoading" @click="star()">
                                 <template v-if="currentEpisodes.UserData?.IsFavorite">
-                                    <el-icon color="#E6A23C" :size="20" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
+                                    <el-icon color="#E6A23C" :size="18" :class="starLoading ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
                                     <span>取消收藏</span>
                                 </template>
                                 <template v-else>
-                                    <el-icon :size="20" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
+                                    <el-icon :size="18" :class="starLoading ? 'is-loading' : ''"><i-ep-Star /></el-icon>
                                     <span>收藏</span>
                                 </template>
                             </el-button>
-                            <el-button plain type="primary" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0, true)">
-                                <el-icon :size="20" v-if="!play_loading"><i-ep-Download /></el-icon>
+                            <el-button class="eps-secondary-btn" :loading="play_loading" @click="call_player(currentEpisodes.Id, 0, true)">
+                                <el-icon :size="18" v-if="!play_loading"><i-ep-Download /></el-icon>
                                 <span>下载</span>
                             </el-button>
-                        </p>
-                        <p>
-                            <span>章节：</span>
-                            <el-tag v-for="chapter in currentEpisodes.Chapters" @click="call_player(currentEpisodes.Id, chapter.StartPositionTicks)" style="margin-right: 10px; cursor: pointer;" disable-transitions>{{ chapter.ChapterIndex + ". " + chapter.MarkerType + " " + secondsToHMS2(chapter.StartPositionTicks / 1000_0000) + " " + chapter.Name }}</el-tag>
-                        </p>
-                        <p>
-                            <span>外部标签：</span>
-                            <el-tag v-for="(value, key) in currentEpisodes.ProviderIds" style="margin-right: 10px;" disable-transitions>{{ key + ':' + value }}</el-tag>
-                        </p>
-                        <p>
+                        </div>
+                    </div>
+
+                    <!-- 章节 -->
+                    <div class="eps-card eps-tags-card" v-if="currentEpisodes.Chapters && currentEpisodes.Chapters.length > 0">
+                        <div class="eps-card-title">
+                            <span class="eps-card-title-mark"></span>
+                            <span>章节</span>
+                            <span class="eps-card-title-count">{{ currentEpisodes.Chapters.length }}</span>
+                        </div>
+                        <div class="eps-tags-wrap">
+                            <el-tag v-for="chapter in currentEpisodes.Chapters" @click="call_player(currentEpisodes.Id, chapter.StartPositionTicks)" class="eps-chapter-tag" disable-transitions>
+                                <span class="eps-chapter-index">{{ chapter.ChapterIndex }}</span>
+                                <span class="eps-chapter-type">{{ chapter.MarkerType }}</span>
+                                <span class="eps-chapter-time">{{ secondsToHMS2(chapter.StartPositionTicks / 1000_0000) }}</span>
+                                <span class="eps-chapter-name">{{ chapter.Name }}</span>
+                            </el-tag>
+                        </div>
+                    </div>
+
+                    <!-- 外部标签 -->
+                    <div class="eps-card eps-tags-card" v-if="currentEpisodes.ProviderIds && Object.keys(currentEpisodes.ProviderIds).length > 0">
+                        <div class="eps-card-title">
+                            <span class="eps-card-title-mark"></span>
+                            <span>外部标签</span>
+                        </div>
+                        <div class="eps-tags-wrap">
+                            <el-tag v-for="(value, key) in currentEpisodes.ProviderIds" class="eps-provider-tag" disable-transitions>
+                                <span class="eps-provider-key">{{ key }}</span>
+                                <span class="eps-provider-value">{{ value }}</span>
+                            </el-tag>
+                        </div>
+                    </div>
+
+                    <!-- 外部链接 -->
+                    <div class="eps-card eps-tags-card" v-if="currentEpisodes.ExternalUrls && currentEpisodes.ExternalUrls.length > 0">
+                        <div class="eps-card-title">
+                            <span class="eps-card-title-mark"></span>
+                            <span>外部链接</span>
+                        </div>
+                        <div class="eps-external-list">
                             <el-tooltip v-for="externalUrl in currentEpisodes.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
-                                <el-button round @click="invokeApi.open_url(externalUrl.Url)" style="height: 92px; width: 92px;">
-                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                                        <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" style="width: 48px; height: 48px;" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" style="width: 48px; height: 48px;" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" style="width: 48px; height: 48px;" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" style="width: 48px; height: 48px;" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" style="width: 48px; height: 48px;" />
-                                        <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" style="width: 48px; height: 48px;" />
-                                        <i-ep-Link v-else />
-                                        <span style="margin-top: 5px;">{{ externalUrl.Name }}</span>
-                                    </div>
-                                </el-button>
+                                <button class="eps-external-btn" @click="invokeApi.open_url(externalUrl.Url)">
+                                    <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" class="eps-external-icon" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" class="eps-external-icon" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" class="eps-external-icon" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" class="eps-external-icon" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" class="eps-external-icon" />
+                                    <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" class="eps-external-icon" />
+                                    <i-ep-Link v-else class="eps-external-icon" />
+                                    <span class="eps-external-name">{{ externalUrl.Name }}</span>
+                                </button>
                             </el-tooltip>
-                        </p>
+                        </div>
                     </div>
                 </div>
             </el-skeleton>
-            <div v-if="currentEpisodes?.Type !== 'Movie' && currentEpisodes?.SeriesId">
-                <h1>接下来</h1>
-                <p>
-                    <el-button @click="handleNextUpPageChange(1, true)">本季所有</el-button>
-                    <el-button @click="handleNextUpPageChange(1)">本季接下来</el-button>
-                    <el-button @click="nextEpisode()">下一个</el-button>
-                </p>
+
+            <!-- 接下来 -->
+            <div v-if="currentEpisodes?.Type !== 'Movie' && currentEpisodes?.SeriesId" class="eps-card eps-nextup-card">
+                <div class="table-card-header">
+                    <div class="card-title-group">
+                        <div class="card-title-row">
+                            <span class="eps-card-title-mark"></span>
+                            <span class="eps-section-title">接下来</span>
+                        </div>
+                        <span class="eps-section-desc">选择本季剧集，或直接跳到下一个</span>
+                    </div>
+                    <div class="eps-nextup-actions">
+                        <el-button size="small" @click="handleNextUpPageChange(1, true)">本季所有</el-button>
+                        <el-button size="small" @click="handleNextUpPageChange(1)">本季接下来</el-button>
+                        <el-button size="small" type="primary" plain @click="nextEpisode()">下一个</el-button>
+                    </div>
+                </div>
+                <el-skeleton :loading="nextUpLoading" animated v-if="nextUpShow">
+                    <template #template>
+                        <div class="eps-nextup-list">
+                            <el-card class="item-card-skeleton" v-for="i in 6" :key="i">
+                                <el-skeleton-item variant="text" style="width: 85%; height: 20px;" />
+                                <div style="margin: 10px 0;"><el-skeleton-item variant="text" style="width: 60%; height: 16px;" /></div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <el-skeleton-item variant="circle" style="width: 24px; height: 24px;" />
+                                    <el-skeleton-item variant="button" style="width: 70px; height: 32px;" />
+                                </div>
+                            </el-card>
+                        </div>
+                    </template>
+                    <div class="eps-nextup-list">
+                        <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServerId="embyServerId" />
+                    </div>
+                </el-skeleton>
+                <el-pagination
+                    class="eps-nextup-pagination"
+                    v-model:current-page="nextUpCurrentPage"
+                    v-model:page-size="nextUpPageSize"
+                    layout="total, prev, pager, next, jumper"
+                    :total="nextUpTotal"
+                    @current-change="handleNextUpPageChange(nextUpCurrentPage, episodesQueryAll)"
+                    hide-on-single-page
+                />
             </div>
-            <el-skeleton :loading="nextUpLoading" animated v-if="nextUpShow">
-                <template #template>
-                    <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <el-card class="item-card-skeleton" v-for="i in 6" :key="i">
-                            <el-skeleton-item variant="text" style="width: 85%; height: 20px;" />
-                            <div style="margin: 10px 0;"><el-skeleton-item variant="text" style="width: 60%; height: 16px;" /></div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <el-skeleton-item variant="circle" style="width: 24px; height: 24px;" />
-                                <el-skeleton-item variant="button" style="width: 70px; height: 32px;" />
-                            </div>
-                        </el-card>
-                    </div>
-                </template>
-                <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                    <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServerId="embyServerId" />
-                </div>
-            </el-skeleton>
-            <el-pagination
-                v-model:current-page="nextUpCurrentPage"
-                v-model:page-size="nextUpPageSize"
-                layout="total, prev, pager, next, jumper"
-                :total="nextUpTotal"
-                @current-change="handleNextUpPageChange(nextUpCurrentPage, episodesQueryAll)"
-                hide-on-single-page
-            />
         </div>
     </el-scrollbar>
 </template>
-
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, UserData } from '../../api/embyApi';
@@ -564,8 +669,491 @@ updateCurrentEpisodes().then(() => {
     }
 })
 </script>
-
 <style scoped>
+/* ============================================================
+ * 剧集详情播放页
+ * 结构：头部信息（左信息 + 右 logo）→ 播放参数卡片 → 操作区卡片
+ *       → 章节 / 外部标签 / 外部链接卡片 → 接下来列表
+ * 配色沿用全局变量：卡片 --el-bg-color-overlay，边框 --el-border-color-lighter，
+ * 内部分隔用 --el-border-color-extra-light，圆角统一 10px。
+ * ============================================================ */
+.episodes-scrollbar {
+    height: calc(100vh - 30px);
+}
+
+.episodes-page {
+    padding: 20px 32px 32px;
+}
+
+.episodes-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* ===== 头部 ===== */
+.eps-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.eps-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.eps-title-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.eps-title-text {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.3;
+    font-weight: 600;
+    color: var(--el-text-color-primary, #dcdfe6);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.eps-series-link {
+    max-width: 100%;
+}
+
+.eps-series-link :deep(.el-link__inner) {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.eps-series-link:hover :deep(.el-link__inner) {
+    color: var(--el-color-primary, #409eff);
+}
+
+.eps-episode-no {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.eps-chip {
+    flex: none;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--el-color-primary, #409eff);
+    background-color: var(--el-color-primary-light-9, #18222c);
+    border: 1px solid var(--el-color-primary-light-7, #2b3d52);
+}
+
+.eps-episode-name {
+    font-size: 15px;
+    color: var(--el-text-color-regular, #cfd3dc);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 元信息行：时长 / 进度 */
+.eps-meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 28px;
+}
+
+.eps-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.eps-meta-key {
+    flex: none;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-meta-value {
+    font-size: 13px;
+    color: var(--el-text-color-regular, #cfd3dc);
+}
+
+.eps-progress-bar {
+    width: 240px;
+}
+
+.eps-progress-bar :deep(.el-progress__text) {
+    font-size: 12px !important;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-progress-bar :deep(.el-progress-bar__outer) {
+    background-color: var(--el-fill-color-light, #262727);
+}
+
+/* 规格标签行 */
+.eps-tag-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+}
+
+.eps-tag-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.eps-tag-item :deep(.el-tag) {
+    background-color: var(--el-fill-color-light, #262727);
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+    color: var(--el-text-color-regular, #cfd3dc);
+}
+
+/* 右侧 logo */
+.eps-logo-wrap {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    /* 与骨架占位一致，避免加载完成时布局跳动 */
+    min-height: 100px;
+    max-width: 40%;
+}
+
+.eps-logo-img {
+    max-height: 170px;
+    max-width: 400px;
+    object-fit: contain;
+}
+
+/* ===== 卡片 ===== */
+.eps-card {
+    background-color: var(--el-bg-color-overlay, #1c1d1f);
+    border: 1px solid var(--el-border-color-lighter, #2e3034);
+    border-radius: 10px;
+    padding: 18px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.eps-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary, #dcdfe6);
+}
+
+.eps-card-title-mark {
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--el-color-primary, #409eff);
+}
+
+.eps-card-title-count {
+    padding: 0 8px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--el-text-color-secondary, #909399);
+    background-color: var(--el-fill-color-light, #262727);
+}
+
+/* ===== 播放参数 ===== */
+.eps-select-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.eps-field {
+    display: flex;
+    gap: 24px;
+}
+
+.eps-field-version {
+    align-items: center;
+}
+
+.eps-field-streams {
+    flex-wrap: wrap;
+}
+
+.eps-field-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.eps-label {
+    flex: none;
+    width: 34px;
+    font-size: 13px;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-select-version {
+    width: 100%;
+}
+
+.eps-select-stream {
+    width: 235px;
+}
+
+/* 下拉框：背景透明跟随卡片底色，仅保留描边 */
+.eps-card :deep(.el-select__wrapper) {
+    background-color: transparent;
+    box-shadow: 0 0 0 1px var(--el-border-color-extra-light, #2b2b2c) inset;
+    transition: box-shadow 0.2s ease;
+}
+
+.eps-card :deep(.el-select__wrapper:hover) {
+    box-shadow: 0 0 0 1px var(--el-border-color, #4c4d4f) inset;
+}
+
+.eps-card :deep(.el-select__wrapper.is-focused) {
+    box-shadow: 0 0 0 1px var(--el-color-primary, #409eff) inset;
+}
+
+/* 禁用态：不要亮灰块，压低对比度即可 */
+.eps-card :deep(.el-select.is-disabled .el-select__wrapper) {
+    background-color: var(--el-fill-color-lighter, #1d1d1d);
+    box-shadow: 0 0 0 1px var(--el-border-color-extra-light, #2b2b2c) inset;
+}
+
+/* 下拉浮层保持不透明，保证选项可读 */
+:deep(.el-select__popper.el-popper) {
+    background-color: var(--el-bg-color-overlay, #1c1d1f);
+}
+
+.eps-select-version :deep(.el-tag) {
+    background-color: var(--el-fill-color-light, #262727);
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+    color: var(--el-text-color-secondary, #909399);
+}
+
+/* ===== 操作区 ===== */
+.eps-actions-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px 24px;
+    flex-wrap: wrap;
+}
+
+.eps-switch-group,
+.eps-play-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.eps-switch-btn {
+    background-color: transparent;
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+    color: var(--el-text-color-secondary, #909399);
+    transition: all 0.2s ease;
+}
+
+.eps-switch-btn:hover {
+    border-color: var(--el-border-color, #4c4d4f);
+    color: var(--el-text-color-regular, #cfd3dc);
+}
+
+/* 开关打开：仅用描边与文字色表达状态，避免满屏实色块 */
+.eps-switch-btn.is-on {
+    color: var(--el-color-primary, #409eff);
+    border-color: var(--el-color-primary-light-5, #3375b9);
+    background-color: var(--el-color-primary-light-9, #18222c);
+}
+
+.eps-primary-btn {
+    min-width: 118px;
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(64, 158, 255, 0.25);
+}
+
+.eps-secondary-btn {
+    background-color: transparent;
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+    color: var(--el-text-color-regular, #cfd3dc);
+    transition: all 0.2s ease;
+}
+
+.eps-secondary-btn:hover {
+    border-color: var(--el-color-primary-light-5, #3375b9);
+    color: var(--el-color-primary, #409eff);
+    background-color: var(--el-color-primary-light-9, #18222c);
+}
+
+/* ===== 章节 / 外部标签 / 外部链接 ===== */
+.eps-tags-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.eps-chapter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    cursor: pointer;
+    background-color: var(--el-fill-color-light, #262727);
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+    color: var(--el-text-color-regular, #cfd3dc);
+    transition: all 0.2s ease;
+}
+
+.eps-chapter-tag:hover {
+    border-color: var(--el-color-primary-light-5, #3375b9);
+    color: var(--el-color-primary, #409eff);
+    background-color: var(--el-color-primary-light-9, #18222c);
+}
+
+.eps-chapter-index {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-chapter-type {
+    font-size: 11px;
+    padding: 0 5px;
+    border-radius: 4px;
+    background-color: var(--el-fill-color, #303030);
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-chapter-time {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--el-color-primary, #409eff);
+}
+
+.eps-chapter-name {
+    font-size: 12px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.eps-provider-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    background-color: var(--el-fill-color-light, #262727);
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+}
+
+.eps-provider-key {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-provider-value {
+    font-size: 12px;
+    color: var(--el-text-color-regular, #cfd3dc);
+}
+
+.eps-external-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.eps-external-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 92px;
+    height: 92px;
+    border-radius: 10px;
+    cursor: pointer;
+    background-color: var(--el-fill-color-light, #262727);
+    border: 1px solid var(--el-border-color-extra-light, #2b2b2c);
+    transition: all 0.2s ease;
+}
+
+.eps-external-btn:hover {
+    border-color: var(--el-color-primary-light-5, #3375b9);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.eps-external-icon {
+    width: 42px;
+    height: 42px;
+    color: var(--el-text-color-regular, #cfd3dc);
+}
+
+.eps-external-name {
+    font-size: 11px;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+/* ===== 接下来 ===== */
+.eps-nextup-card {
+    margin-top: 4px;
+}
+
+.eps-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-text-color-primary, #dcdfe6);
+}
+
+.eps-section-desc {
+    font-size: 12px;
+    color: var(--el-text-color-secondary, #909399);
+    padding-left: 11px;
+}
+
+.eps-nextup-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.eps-nextup-list {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+}
+
+.eps-nextup-pagination {
+    margin-top: 8px;
+    justify-content: flex-end;
+}
+
 /* 骨架卡片：对齐 ItemCard 使用的 el-card（宽 300px、margin 5px、10px 圆角） */
 .item-card-skeleton {
     width: 300px;
@@ -574,38 +1162,33 @@ updateCurrentEpisodes().then(() => {
     overflow: hidden;
 }
 
-/* ===== 播放详情页骨架：结构与真实渲染对齐 ===== */
+/* ===== 骨架屏：与真实结构 1:1 对齐，加载完成只替换内容不位移 ===== */
 .episodes-skeleton {
-    padding: 10px;
-}
-
-.eps-head {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
 }
 
-.eps-main {
-    flex: 1;
-    min-width: 0;
-    padding-right: 20px;
+/* hero 与真实一致：高 170，主信息纵向排布 */
+.eps-hero {
+    min-height: 170px;
 }
 
 .eps-title {
     width: 50%;
     height: 32px;
+    max-width: 420px;
 }
 
 .eps-subtitle {
     width: 30%;
+    max-width: 260px;
     height: 18px;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
-.eps-time-row {
-    display: flex;
-    align-items: center;
-    margin: 15px 0;
+.eps-meta-row {
+    margin-top: 14px;
 }
 
 .eps-time {
@@ -616,14 +1199,10 @@ updateCurrentEpisodes().then(() => {
 .eps-progress {
     width: 240px;
     height: 16px;
-    margin-left: 5px;
 }
 
-.eps-tags-row {
-    display: flex;
-    align-items: center;
-    margin: 15px 0;
-    gap: 15px;
+.eps-tag-row {
+    margin-top: 14px;
 }
 
 .eps-tag {
@@ -632,31 +1211,49 @@ updateCurrentEpisodes().then(() => {
     border-radius: 4px;
 }
 
-/* 右侧 logo 占位：与真实 logo 的最大尺寸（400x170）对齐，避免布局跳动 */
 .eps-logo {
     width: 400px;
-    max-width: 40%;
+    max-width: 100%;
     height: 170px;
     border-radius: 8px;
-    flex: none;
+}
+
+/* 卡片内占位：padding 与真实 .eps-card 一致（18px 24px），
+ * 内部间距与真实 gap 一致，使卡片高度逐张对齐。 */
+.eps-skel-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.eps-skel-card.eps-actions-card {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px 24px;
+    flex-wrap: wrap;
+    min-height: 70px;
+}
+
+.eps-skel-card.eps-tags-card {
+    gap: 0;
 }
 
 .eps-field {
     display: flex;
     align-items: center;
-    margin: 15px 0;
-    gap: 10px;
+    gap: 24px;
 }
 
 .eps-label {
-    width: 48px;
+    width: 34px;
     height: 16px;
     flex: none;
 }
 
 .eps-select-wide {
-    width: 840px;
-    max-width: 100%;
+    width: 100%;
     height: 40px;
     border-radius: 4px;
 }
@@ -667,26 +1264,31 @@ updateCurrentEpisodes().then(() => {
     border-radius: 4px;
 }
 
-/* 底部按钮组：真实渲染为居中布局 */
-.eps-actions {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin: 15px 0;
-}
-
 .eps-action {
     width: 100px;
     height: 32px;
 }
 
-.eps-lines {
-    margin: 15px 0;
+.eps-action-wide {
+    width: 118px;
+    height: 32px;
 }
 
-.eps-line {
-    width: 60%;
-    height: 24px;
-    margin-bottom: 12px;
+.eps-card-title-skel {
+    width: 72px;
+    height: 16px;
+    margin-bottom: 14px;
+}
+
+.eps-chapter-skel {
+    width: 150px;
+    height: 28px;
+    border-radius: 6px;
+}
+
+.eps-provider-skel {
+    width: 110px;
+    height: 28px;
+    border-radius: 6px;
 }
 </style>
