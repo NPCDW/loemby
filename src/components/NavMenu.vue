@@ -1,7 +1,7 @@
 <template>
     <div>
         <div style="display: flex; flex-direction: row; height: calc(100vh - 30px);">
-            <el-menu class="nav-side-menu" style="height: 100%; width: 200px; min-height: calc(100vh - 30px)" :collapse="false" :default-active="active">
+            <el-menu class="nav-side-menu" style="height: 100%; width: 200px;" :collapse="false" :default-active="active">
                 <el-menu-item index="/nav/history" @click="jumpRoute('/nav/history')">
                     <el-icon><i-ep-Clock /></el-icon>播放历史
                 </el-menu-item>
@@ -14,7 +14,7 @@
                 <el-menu-item index="addEmbyServer" @click="addEmbyServer()">
                     <el-icon><i-ep-Plus /></el-icon>添加服务器
                 </el-menu-item>
-                <el-scrollbar style="height: calc(100vh - 254px); flex: none;">
+                <el-scrollbar class="nav-server-scroll">
                     <Container @drop="onDrop" style="height: 100%; width: 100%;">  
                         <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
                             <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
@@ -73,7 +73,7 @@
                     </Container>
                 </el-scrollbar>
             </el-menu>
-            <el-scrollbar style="flex: auto; height: calc(100vh - 30px); width: calc(100% - 200px); position: relative;">
+            <el-scrollbar class="nav-content" style="flex: auto; height: 100%; width: calc(100% - 200px); position: relative;">
                 <router-view v-slot="{ Component }">
                     <keep-alive>
                         <component :is="Component" :key="$route.fullPath" v-if="$route.meta.keepAlive" />
@@ -82,7 +82,7 @@
                 </router-view>
             </el-scrollbar>
         </div>
-        <div class="nav-status-bar" style="height: 29px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="nav-status-bar" style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; margin-left: 3px;">
                 <el-popover
                     :visible="dialogNotifyCenterVisible"
@@ -972,13 +972,38 @@ function notifyScrollBottom() {
  * 已从模板内联样式中移除该色值，改由 CSS 统一指定。
  */
 .nav-side-menu {
-    --el-menu-bg-color: var(--el-fill-color-lighter, #1d1d1d);
+    --el-menu-bg-color: var(--loemby-surface-color, #1d1d1d);
     --el-menu-text-color: var(--el-text-color-regular, #cfd3dc);
     --el-menu-active-color: var(--el-color-primary, #409eff);
     --el-menu-hover-bg-color: var(--el-fill-color-light, #262727);
     --el-menu-item-height: 48px;
-    background-color: var(--el-fill-color-lighter, #1d1d1d);
+    display: flex;
+    flex-direction: column;
+    background-color: var(--loemby-surface-color, #1d1d1d);
     border-right: 1px solid var(--el-border-color-extra-light, #2b2b2c);
+}
+
+/*
+ * 服务器列表滚动区：撑满菜单项之外的剩余高度。
+ * 之前用固定的 calc(100vh - 269px)，与菜单项实际高度对不上，
+ * 在侧边栏底部留下约 47px 空白；改为 flex 撑满后与状态栏无缝衔接。
+ */
+.nav-server-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ===== 内容区 =====
+ * 统一为与侧边栏一致的底色，
+ * 兜住各页面高度不足 calc(100vh - 30px) 时露出的纯黑窗口底。
+ */
+.nav-content {
+    background-color: var(--loemby-surface-color, #1d1d1d);
+}
+
+.nav-content :deep(.el-scrollbar__view) {
+    min-height: 100%;
+    background-color: var(--loemby-surface-color, #1d1d1d);
 }
 
 /* 选中项：浅底色 + 左侧主色指示条，与卡片层次一致 */
@@ -1000,7 +1025,10 @@ function notifyScrollBottom() {
 
 /* ===== 底部状态栏 ===== */
 .nav-status-bar {
-    background-color: var(--el-fill-color-lighter, #1d1d1d);
+    /* 高度与状态栏 + 侧边栏的高度核算保持一致，避免出现空白条 */
+    height: 29px;
+    box-sizing: border-box;
+    background-color: var(--loemby-surface-color, #1d1d1d);
     border-top: 1px solid var(--el-border-color-extra-light, #2b2b2c);
     color: var(--el-text-color-regular, #cfd3dc);
 }
