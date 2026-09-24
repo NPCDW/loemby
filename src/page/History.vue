@@ -23,19 +23,20 @@
             <el-table-column prop="emby_server_name" label="服务器" show-overflow-tooltip />
             <el-table-column prop="series_name" label="剧" show-overflow-tooltip>
                 <template #default="scope">
-                    <el-link @click.prevent="gotoSeries(scope.row.emby_server_id, scope.row.series_id)" :type="scope.row.pinned ? 'primary' : 'default'">{{ scope.row.series_name }}</el-link>
+                    <el-link @click.prevent="gotoSeries(scope.row.emby_server_id, scope.row.series_id)" :type="scope.row.pinned == 1 ? 'primary' : scope.row.pinned == -1 ? 'danger' : 'default'">{{ scope.row.series_name }}</el-link>
                 </template>
             </el-table-column>
             <el-table-column prop="item_name" label="集、电影" show-overflow-tooltip>
                 <template #default="scope">
-                    <el-link @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)" :type="scope.row.pinned ? 'primary' : 'default'">{{ scope.row.item_name }}</el-link>
+                    <el-link @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)" :type="scope.row.pinned == 1 ? 'primary' : scope.row.pinned == -1 ? 'danger' : 'default'">{{ scope.row.item_name }}</el-link>
                 </template>
             </el-table-column>
             <el-table-column prop="played_duration" label="播放时长" :formatter="played_duration_formatter" width="100px" />
             <el-table-column fixed="right" label="Pin" width="50px">
                 <template #default="scope">
                     <el-link :underline="false" @click="pin(scope.row)" style="margin-left: 5px;">
-                        <el-icon :size="16" v-if=" scope.row.pinned"><svg-icon name="pin" /></el-icon>
+                        <el-icon :size="16" v-if="scope.row.pinned == 1"><svg-icon name="pin" /></el-icon>
+                        <el-icon :size="16" v-else-if="scope.row.pinned == -1"><svg-icon name="hidden" /></el-icon>
                         <el-icon :size="16" v-else><svg-icon name="unpin" /></el-icon>
                     </el-link>
                 </template>
@@ -108,14 +109,14 @@ function played_duration_formatter(row: PlayHistory) {
 }
 
 function pin(row: PlayHistory) {
-    let pinned = row.pinned ? 0 : 1
+    let pinned = row.pinned == 1 ? -1 : row.pinned! + 1
     usePlayHistory().updatePlayHistory({id: row.id, pinned: pinned}).then(() => {
         row.pinned = pinned
     }).catch(e => ElMessage.error('更新失败' + e))
 }
 
 function highlightRowFunction({row}: {row: PlayHistory}) {
-    return row.pinned ? 'color: #409EFF' : ''
+    return row.pinned == 1 ? 'color: #409EFF' : row.pinned == -1 ? 'color: #F56C6C' : ''
 }
 </script>
 
