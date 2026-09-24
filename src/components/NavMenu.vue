@@ -14,7 +14,7 @@
                 <el-menu-item index="addEmbyServer" @click="addEmbyServer()">
                     <el-icon><i-ep-Plus /></el-icon>添加服务器
                 </el-menu-item>
-                <el-scrollbar style="height: calc(100vh - 269px); flex: none;">
+                <el-scrollbar class="nav-server-scroll">
                     <Container @drop="onDrop" style="height: 100%; width: 100%;">  
                         <Draggable v-for="embyServer in embyServers" :key="embyServer.id" style="height: 100%; width: 100%;">
                             <el-dropdown trigger="contextmenu" style="height: 100%; width: 100%;">
@@ -977,8 +977,20 @@ function notifyScrollBottom() {
     --el-menu-active-color: var(--el-color-primary, #409eff);
     --el-menu-hover-bg-color: var(--el-fill-color-light, #262727);
     --el-menu-item-height: 48px;
+    display: flex;
+    flex-direction: column;
     background-color: var(--loemby-surface-color, #1d1d1d);
     border-right: 1px solid var(--el-border-color-extra-light, #2b2b2c);
+}
+
+/*
+ * 服务器列表滚动区：撑满菜单项之外的剩余高度。
+ * 之前用固定的 calc(100vh - 269px)，与菜单项实际高度对不上，
+ * 在侧边栏底部留下约 47px 空白；改为 flex 撑满后与状态栏无缝衔接。
+ */
+.nav-server-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 /* ===== 内容区 =====
