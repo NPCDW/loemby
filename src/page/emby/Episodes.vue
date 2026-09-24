@@ -803,11 +803,12 @@ updateCurrentEpisodes().then(() => {
 .eps-field {
     display: flex;
     /* 与 .eps-field-item 的 10px 保持一致，避免版本行标签与下拉之间出现大空白 */
-    gap: 10px;
+    gap: 24px;
 }
 
 .eps-field-version {
     align-items: center;
+    gap: 10px;
 }
 
 .eps-field-streams {
