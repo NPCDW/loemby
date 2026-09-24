@@ -385,10 +385,20 @@ function rowClassName({row}: {row: PlayHistory}) {
     align-items: center;
 }
 
-/* 输入框内文字垂直居中：行高与 wrapper 高度一致，避免文字下沉 */
+/*
+ * 输入框与选择框统一 32px 高：只给 wrapper 定高，
+ * inner 沿用 Element Plus 默认的 --el-input-inner-height + 居中的 line-height，
+ * 避免之前 height:100% 在自动高度 wrapper 里把输入框压扁。
+ */
+:deep(.el-input__wrapper) {
+    box-sizing: border-box;
+    min-height: 32px;
+    height: 32px;
+}
+
 :deep(.el-input__inner) {
-    height: 100%;
-    line-height: 1;
+    height: var(--el-input-inner-height);
+    line-height: var(--el-input-inner-height);
 }
 
 /* 下拉浮层不透明，保证选项可读 */

@@ -234,6 +234,7 @@
                         <div class="eps-tags-wrap">
                             <el-tag v-for="(value, key) in currentEpisodes.ProviderIds" class="eps-provider-tag" disable-transitions>
                                 <span class="eps-provider-key">{{ key }}</span>
+                                <span class="eps-provider-sep">:</span>
                                 <span class="eps-provider-value">{{ value }}</span>
                             </el-tag>
                         </div>
@@ -979,7 +980,8 @@ updateCurrentEpisodes().then(() => {
 .eps-provider-tag {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    /* 冒号紧贴 key，value 前留一个空格宽度，形成「key: value」 */
+    gap: 0;
     height: 28px;
     padding: 0 10px;
     background-color: var(--el-fill-color-light, #262727);
@@ -991,6 +993,15 @@ updateCurrentEpisodes().then(() => {
     font-weight: 600;
     text-transform: uppercase;
     color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-provider-sep {
+    font-size: 11px;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-provider-sep + .eps-provider-value {
+    margin-left: 4px;
 }
 
 .eps-provider-value {
@@ -1156,25 +1167,29 @@ updateCurrentEpisodes().then(() => {
     gap: 0;
 }
 
-.eps-field {
+/*
+ * 骨架参数卡片：这些类名与真实卡片共用（.eps-field/.eps-label/.eps-select*），
+ * 必须限定在 .eps-skel-card 内，否则会盖掉真实卡片的 gap/尺寸（之前的版本行大空白就是这个泄漏导致）。
+ */
+.eps-skel-card .eps-field {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 10px;
 }
 
-.eps-label {
+.eps-skel-card .eps-label {
     width: 34px;
     height: 16px;
     flex: none;
 }
 
-.eps-select-wide {
+.eps-skel-card .eps-select-wide {
     width: 100%;
     height: 40px;
     border-radius: 4px;
 }
 
-.eps-select {
+.eps-skel-card .eps-select {
     width: 235px;
     height: 40px;
     border-radius: 4px;
