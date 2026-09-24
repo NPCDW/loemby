@@ -25,16 +25,8 @@
                             class="filter-server">
                             <el-option v-for="embyServer in embyServers" :key="embyServer.id" :label="embyServer.server_name" :value="embyServer.id"/>
                         </el-select>
-                        <el-input v-model="query.series_name" @keyup.enter="getPlayHistory" placeholder="剧名" clearable class="filter-input">
-                            <template #prefix>
-                                <span class="filter-prefix">剧</span>
-                            </template>
-                        </el-input>
-                        <el-input v-model="query.item_name" @keyup.enter="getPlayHistory" placeholder="集名" clearable class="filter-input">
-                            <template #prefix>
-                                <span class="filter-prefix">集</span>
-                            </template>
-                        </el-input>
+                        <el-input v-model="query.series_name" @keyup.enter="getPlayHistory" placeholder="剧名" clearable class="filter-input" />
+                        <el-input v-model="query.item_name" @keyup.enter="getPlayHistory" placeholder="集名" clearable class="filter-input" />
                         <el-button class="filter-search-btn" type="primary" plain @click="getPlayHistory">
                             查询
                         </el-button>
@@ -270,11 +262,6 @@ function rowClassName({row}: {row: PlayHistory}) {
     min-width: 180px;
 }
 
-.filter-prefix {
-    color: var(--el-text-color-secondary, #909399);
-    font-size: 12px;
-}
-
 .filter-search-btn {
     flex: none;
 }
@@ -351,15 +338,6 @@ function rowClassName({row}: {row: PlayHistory}) {
     transform: scale(1.12);
 }
 
-/* 置顶 / 隐藏行的左侧色条提示 */
-:deep(.custom-data-table .row-pinned > td.el-table__cell:first-child) {
-    box-shadow: inset 3px 0 0 0 var(--el-color-primary, #409eff);
-}
-
-:deep(.custom-data-table .row-hidden > td.el-table__cell:first-child) {
-    box-shadow: inset 3px 0 0 0 var(--el-color-danger, #f56c6c);
-}
-
 /* 分页：与表格右对齐，去掉悬空感 */
 .history-pagination {
     margin-top: 16px;
@@ -404,6 +382,13 @@ function rowClassName({row}: {row: PlayHistory}) {
     background-color: transparent;
     box-shadow: 0 0 0 1px var(--el-border-color-extra-light, #2b2b2c) inset;
     transition: box-shadow 0.2s ease;
+    align-items: center;
+}
+
+/* 输入框内文字垂直居中：行高与 wrapper 高度一致，避免文字下沉 */
+:deep(.el-input__inner) {
+    height: 100%;
+    line-height: 1;
 }
 
 /* 下拉浮层不透明，保证选项可读 */

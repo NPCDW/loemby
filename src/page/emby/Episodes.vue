@@ -640,6 +640,8 @@ updateCurrentEpisodes().then(() => {
 
 .eps-series-link {
     max-width: 100%;
+    /* el-link 默认 justify-content: center，会把标题居中，这里改回左对齐 */
+    justify-content: flex-start;
 }
 
 .eps-series-link :deep(.el-link__inner) {
@@ -799,7 +801,8 @@ updateCurrentEpisodes().then(() => {
 
 .eps-field {
     display: flex;
-    gap: 24px;
+    /* 与 .eps-field-item 的 10px 保持一致，避免版本行标签与下拉之间出现大空白 */
+    gap: 10px;
 }
 
 .eps-field-version {
@@ -847,10 +850,10 @@ updateCurrentEpisodes().then(() => {
     box-shadow: 0 0 0 1px var(--el-color-primary, #409eff) inset;
 }
 
-/* 禁用态：不要亮灰块，压低对比度即可 */
+/* 禁用态：不要亮灰块，只比正常态略压一点对比度，保持可辨别 */
 .eps-card :deep(.el-select.is-disabled .el-select__wrapper) {
-    background-color: var(--el-fill-color-lighter, #1d1d1d);
-    box-shadow: 0 0 0 1px var(--el-border-color-extra-light, #2b2b2c) inset;
+    background-color: var(--el-fill-color, #242424);
+    box-shadow: 0 0 0 1px var(--el-border-color, #4c4d4f) inset;
 }
 
 /* 下拉浮层保持不透明，保证选项可读 */
