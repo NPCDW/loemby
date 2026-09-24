@@ -12,8 +12,10 @@
             <template #template>
                 <div style="padding: 20px; display: flex; flex-wrap: wrap;">
                     <div v-for="i in 18" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 18px;">
-                        <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
-                        <div><el-skeleton-item variant="text" style="width: 60px" /></div>
+                        <div class="loe-cover-skeleton">
+                            <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
+                        </div>
+                        <div style="margin-top: 5px;"><el-skeleton-item variant="text" style="width: 60px" /></div>
                     </div>
                 </div>
             </template>
@@ -93,4 +95,18 @@ handleMediaLibraryChildPageChange(1)
 </script>
 
 <style scoped>
+/* 骨架封面：对齐真实 .loe-cover-img 的 8px 圆角，避免方角跳变 */
+.loe-cover-skeleton {
+    border-radius: 8px;
+    overflow: hidden;
+    min-width: 115px;
+    min-height: 160px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loe-cover-skeleton :deep(.el-skeleton__item) {
+    border-radius: 8px;
+}
 </style>

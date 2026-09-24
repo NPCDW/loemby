@@ -14,7 +14,9 @@
                     <template #template>
                         <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
                             <div v-for="i in 5" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                                <el-skeleton-item variant="image" style="width: 267px; height: 150px;" />
+                                <div class="loe-cover-skeleton landscape">
+                                    <el-skeleton-item variant="image" style="width: 267px; height: 150px;" />
+                                </div>
                                 <p><el-skeleton-item variant="text" style="width: 100px" /></p>
                             </div>
                         </div>
@@ -42,7 +44,9 @@
                             <template #template>
                                 <div style="display: flex; flex-wrap: nowrap; flex-direction: row; padding: 20px;">
                                     <div v-for="i in 8" :key="i" style="display: flex; flex-direction: column; align-items: center; padding: 10px;">
-                                        <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
+                                        <div class="loe-cover-skeleton portrait">
+                                            <el-skeleton-item variant="image" style="width: 115px; height: 160px;" />
+                                        </div>
                                         <p><el-skeleton-item variant="text" style="width: 60px" /></p>
                                     </div>
                                 </div>
@@ -124,4 +128,27 @@ getMediaLibraryList()
 </script>
 
 <style scoped>
+/* 骨架屏封面：与真实 .loe-cover-img 保持一致的 8px 圆角与尺寸，
+   避免加载完成时出现方角->圆角的跳变 */
+.loe-cover-skeleton {
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loe-cover-skeleton :deep(.el-skeleton__item) {
+    border-radius: 8px;
+}
+
+.loe-cover-skeleton.landscape {
+    min-width: 267px;
+    min-height: 150px;
+}
+
+.loe-cover-skeleton.portrait {
+    min-width: 115px;
+    min-height: 160px;
+}
 </style>

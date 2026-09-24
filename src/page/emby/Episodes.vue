@@ -144,9 +144,13 @@
             <el-skeleton :loading="nextUpLoading" animated v-if="nextUpShow">
                 <template #template>
                     <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <el-card style="width: 300px; margin: 5px;" v-for="i in 5" :key="i">
-                            <p><el-skeleton-item variant="text" style="width: 90%" /></p>
-                            <p><el-skeleton-item variant="text" style="width: 60%" /></p>
+                        <el-card class="item-card-skeleton" v-for="i in 5" :key="i">
+                            <el-skeleton-item variant="text" style="width: 85%; height: 20px;" />
+                            <div style="margin: 10px 0;"><el-skeleton-item variant="text" style="width: 60%; height: 16px;" /></div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <el-skeleton-item variant="circle" style="width: 24px; height: 24px;" />
+                                <el-skeleton-item variant="button" style="width: 70px; height: 32px;" />
+                            </div>
                         </el-card>
                     </div>
                 </template>
@@ -528,4 +532,11 @@ updateCurrentEpisodes().then(() => {
 </script>
 
 <style scoped>
+/* 骨架卡片：对齐 ItemCard 使用的 el-card（宽 300px、margin 5px、10px 圆角） */
+.item-card-skeleton {
+    width: 300px;
+    margin: 5px;
+    border-radius: 10px;
+    overflow: hidden;
+}
 </style>

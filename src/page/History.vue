@@ -1,56 +1,76 @@
 <template>
-    <el-scrollbar style="padding: 10px;" ref="scrollbarRef">
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <el-select
-                v-model="query.emby_server_id"
-                @change="getPlayHistory"
-                clearable
-                placeholder="筛选服务器">
-                <el-option v-for="embyServer in embyServers" :key="embyServer.id" :label="embyServer.server_name" :value="embyServer.id"/>
-            </el-select>
-            <el-input v-model="query.series_name" @keyup.enter="getPlayHistory">
-                <template #prefix>
-                    <span>剧</span>
-                </template>
-            </el-input>
-            <el-input v-model="query.item_name" @keyup.enter="getPlayHistory">
-                <template #prefix>
-                    <span>集</span>
-                </template>
-            </el-input>
+    <el-scrollbar class="history-scrollbar" ref="scrollbarRef">
+        <div class="history-pane">
+            <!-- 筛选卡片：与设置页卡片风格统一 -->
+            <div class="table-section-card">
+                <div class="table-card-header">
+                    <div class="card-title-group">
+                        <span class="card-title">播放历史</span>
+                        <span class="card-desc">按服务器、剧名、集名筛选播放记录</span>
+                    </div>
+                </div>
+                <div class="table-card-body">
+                    <div class="history-filter-bar">
+                        <el-select
+                            v-model="query.emby_server_id"
+                            @change="getPlayHistory"
+                            clearable
+                            placeholder="筛选服务器"
+                            class="filter-server">
+                            <el-option v-for="embyServer in embyServers" :key="embyServer.id" :label="embyServer.server_name" :value="embyServer.id"/>
+                        </el-select>
+                        <el-input v-model="query.series_name" @keyup.enter="getPlayHistory" placeholder="剧名" clearable class="filter-input">
+                            <template #prefix>
+                                <span class="filter-prefix">剧</span>
+                            </template>
+                        </el-input>
+                        <el-input v-model="query.item_name" @keyup.enter="getPlayHistory" placeholder="集名" clearable class="filter-input">
+                            <template #prefix>
+                                <span class="filter-prefix">集</span>
+                            </template>
+                        </el-input>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 表格卡片 -->
+            <div class="table-section-card">
+                <div class="table-card-body">
+                    <el-table :data="list" :row-style="highlightRowFunction" class="custom-data-table history-table">
+                        <el-table-column prop="emby_server_name" label="服务器" min-width="140" show-overflow-tooltip />
+                        <el-table-column prop="series_name" label="剧" min-width="200" show-overflow-tooltip>
+                            <template #default="scope">
+                                <el-link @click.prevent="gotoSeries(scope.row.emby_server_id, scope.row.series_id)" :type="scope.row.pinned == 1 ? 'primary' : scope.row.pinned == -1 ? 'danger' : 'default'">{{ scope.row.series_name }}</el-link>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="item_name" label="集、电影" min-width="280" show-overflow-tooltip>
+                            <template #default="scope">
+                                <el-link @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)" :type="scope.row.pinned == 1 ? 'primary' : scope.row.pinned == -1 ? 'danger' : 'default'">{{ scope.row.item_name }}</el-link>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="played_duration" label="播放时长" :formatter="played_duration_formatter" width="110" align="center" />
+                        <el-table-column fixed="right" label="Pin" width="80" align="center">
+                            <template #default="scope">
+                                <el-link :underline="false" @click="pin(scope.row)">
+                                    <el-icon :size="16" v-if="scope.row.pinned == 1"><svg-icon name="pin" /></el-icon>
+                                    <el-icon :size="16" v-else-if="scope.row.pinned == -1"><svg-icon name="hidden" /></el-icon>
+                                    <el-icon :size="16" v-else><svg-icon name="unpin" /></el-icon>
+                                </el-link>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+                <el-pagination
+                    class="history-pagination"
+                    v-model:current-page="query.page_number"
+                    v-model:page-size="query.page_size"
+                    layout="total, prev, pager, next, jumper"
+                    :total="total"
+                    @current-change="handlePageChange"
+                    hide-on-single-page
+                />
+            </div>
         </div>
-        <el-table :data="list" :row-style="highlightRowFunction" class="custom-data-table history-table">
-            <el-table-column prop="emby_server_name" label="服务器" show-overflow-tooltip />
-            <el-table-column prop="series_name" label="剧" show-overflow-tooltip>
-                <template #default="scope">
-                    <el-link @click.prevent="gotoSeries(scope.row.emby_server_id, scope.row.series_id)" :type="scope.row.pinned == 1 ? 'primary' : scope.row.pinned == -1 ? 'danger' : 'default'">{{ scope.row.series_name }}</el-link>
-                </template>
-            </el-table-column>
-            <el-table-column prop="item_name" label="集、电影" show-overflow-tooltip>
-                <template #default="scope">
-                    <el-link @click.prevent="gotoEpisodes(scope.row.emby_server_id, scope.row.item_id)" :type="scope.row.pinned == 1 ? 'primary' : scope.row.pinned == -1 ? 'danger' : 'default'">{{ scope.row.item_name }}</el-link>
-                </template>
-            </el-table-column>
-            <el-table-column prop="played_duration" label="播放时长" :formatter="played_duration_formatter" width="100px" />
-            <el-table-column fixed="right" label="Pin" width="50px">
-                <template #default="scope">
-                    <el-link :underline="false" @click="pin(scope.row)" style="margin-left: 5px;">
-                        <el-icon :size="16" v-if="scope.row.pinned == 1"><svg-icon name="pin" /></el-icon>
-                        <el-icon :size="16" v-else-if="scope.row.pinned == -1"><svg-icon name="hidden" /></el-icon>
-                        <el-icon :size="16" v-else><svg-icon name="unpin" /></el-icon>
-                    </el-link>
-                </template>
-            </el-table-column>
-        </el-table>
-        <el-pagination
-            style="margin: 10px 0 0 0;"
-            v-model:current-page="query.page_number"
-            v-model:page-size="query.page_size"
-            layout="total, prev, pager, next, jumper"
-            :total="total"
-            @current-change="handlePageChange"
-            hide-on-single-page
-        />
     </el-scrollbar>
 </template>
 
@@ -95,7 +115,7 @@ async function getPlayHistory() {
     return usePlayHistory().pagePlayHistory(query.value).then(async response => {
         list.value = response[1]
         total.value = response[0]
-        scrollbarRef.value!.setScrollTop(0)
+        scrollbarRef.value?.setScrollTop(0)
     }).catch(e => ElMessage.error('获取播放历史失败' + e))
 }
 function handlePageChange(pageNumber: number) {
@@ -122,11 +142,78 @@ function highlightRowFunction({row}: {row: PlayHistory}) {
 
 <style scoped>
 /*
- * 配色对齐 PR #10 设置页方案：
- * 表格背景透明跟随页面底色，表头用 --el-fill-color-light(#262727) 做一级区分，
- * 斑马纹用 --el-fill-color-lighter(#1d1d1d) 兜底，边框用 --el-border-color-extra-light(#2b2b2c)，
- * 避免出现纯黑/亮灰色块。
+ * 配色与结构对齐设置页（Setting.vue）的卡片式表格方案：
+ * 筛选区与表格各自放入圆角卡片，表格背景透明跟随卡片底色，
+ * 表头用 --el-fill-color-light 做一级区分，边框用 --el-border-color-extra-light，
+ * 避免出现「悬空」的亮灰色块与突兀方角。
  */
+.history-scrollbar {
+    padding: 10px;
+}
+
+.history-pane {
+    width: 100%;
+}
+
+/* 卡片容器（与设置页 .table-section-card 保持一致） */
+.table-section-card {
+    background-color: var(--el-bg-color-overlay, #1c1d1f);
+    border: 1px solid var(--el-border-color-lighter, #2e3034);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.table-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.card-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-text-color-primary, #dcdfe6);
+}
+
+.card-desc {
+    font-size: 12px;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.table-card-body {
+    width: 100%;
+}
+
+/* 筛选区：等宽自适应，间距与卡片内边距统一 */
+.history-filter-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.history-filter-bar .filter-server {
+    width: 220px;
+}
+
+.history-filter-bar .filter-input {
+    flex: 1;
+    min-width: 180px;
+}
+
+.filter-prefix {
+    color: var(--el-text-color-secondary, #909399);
+}
+
+/* 表格：圆角裁剪，与卡片融为一体 */
 .custom-data-table {
     --el-table-bg-color: transparent;
     --el-table-tr-bg-color: transparent;
@@ -135,6 +222,8 @@ function highlightRowFunction({row}: {row: PlayHistory}) {
     --el-table-border-color: var(--el-border-color-extra-light, #2b2b2c);
     --el-table-text-color: var(--el-text-color-regular, #cfd3dc);
     --el-table-header-text-color: var(--el-text-color-primary, #dcdfe6);
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 :deep(.custom-data-table .el-table__header-wrapper th) {
@@ -144,13 +233,22 @@ function highlightRowFunction({row}: {row: PlayHistory}) {
     height: 44px;
 }
 
+:deep(.custom-data-table .el-table__row) {
+    height: 48px;
+}
+
 :deep(.custom-data-table .el-table__body tr > td.el-table__cell) {
     background-color: transparent;
-    height: 48px;
     border-bottom-color: var(--el-border-color-extra-light, #2b2b2c);
 }
 
-/* 顶部筛选区：输入框/选择框贴合底色，去掉亮灰对比 */
+/* 分页：与表格右对齐，去掉悬空感 */
+.history-pagination {
+    margin-top: 16px;
+    justify-content: flex-end;
+}
+
+/* 顶部筛选区内输入框/选择框贴合卡片底色，去掉亮灰对比 */
 :deep(.el-input__wrapper),
 :deep(.el-select__wrapper) {
     background-color: var(--el-fill-color-light, #262727);

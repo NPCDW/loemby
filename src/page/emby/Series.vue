@@ -3,7 +3,9 @@
         <el-skeleton :loading="serieInfoLoading" animated>
             <template #template>
                 <div style="display: flex; padding: 20px;">
-                    <el-skeleton-item variant="image" style="height: 416px; width: 300px;" />
+                    <div class="series-cover-skeleton">
+                        <el-skeleton-item variant="image" style="height: 416px; width: 300px;" />
+                    </div>
                     <div style="flex: 1;padding: 20px;">
                         <h1><el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" /></h1>
                         <p><el-skeleton-item variant="text" style="width: 100%" /></p>
@@ -65,9 +67,13 @@
         <el-skeleton :loading="episodesLoading" animated>
             <template #template>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row;padding: 20px;padding-top: 0;">
-                    <el-card style="width: 300px; margin: 5px;" v-for="i in 5" :key="i">
-                        <p><el-skeleton-item variant="text" style="width: 90%" /></p>
-                        <p><el-skeleton-item variant="text" style="width: 60%" /></p>
+                    <el-card class="item-card-skeleton" v-for="i in 5" :key="i">
+                        <el-skeleton-item variant="text" style="width: 85%; height: 20px;" />
+                        <div style="margin: 10px 0;"><el-skeleton-item variant="text" style="width: 60%; height: 16px;" /></div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <el-skeleton-item variant="circle" style="width: 24px; height: 24px;" />
+                            <el-skeleton-item variant="button" style="width: 70px; height: 32px;" />
+                        </div>
                     </el-card>
                 </div>
             </template>
@@ -87,7 +93,9 @@
             <template #template>
                 <div style="display: flex; flex-wrap: wrap; flex-direction: row; padding: 20px;">
                     <div v-for="i in 5" :key="i" style="display: flex; flex-direction: column; align-items: center; padding-right: 30px;">
-                        <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
+                        <div class="season-cover-skeleton">
+                            <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
+                        </div>
                         <p><el-skeleton-item variant="text" style="width: 60px" /></p>
                     </div>
                 </div>
@@ -330,4 +338,41 @@ function handleDialogEpisodesPageChange(page: number) {
   color: #409EFF;
 }
 
+/* 剧集信息封面骨架：对齐真实 .loe-cover-img 的 8px 圆角与 300x416 尺寸 */
+.series-cover-skeleton {
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 416px;
+    min-width: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.series-cover-skeleton :deep(.el-skeleton__item) {
+    border-radius: 8px;
+}
+
+/* 剧季封面骨架：对齐真实 .loe-cover-img 的 8px 圆角与 115x160 尺寸 */
+.season-cover-skeleton {
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 160px;
+    min-width: 115px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.season-cover-skeleton :deep(.el-skeleton__item) {
+    border-radius: 8px;
+}
+
+/* 剧集卡片骨架：对齐 ItemCard 使用的 el-card（宽 300px、margin 5px、10px 圆角） */
+.item-card-skeleton {
+    width: 300px;
+    margin: 5px;
+    border-radius: 10px;
+    overflow: hidden;
+}
 </style>

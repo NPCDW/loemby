@@ -14,21 +14,21 @@
                 <el-skeleton :loading="episodesLoading" animated>
                     <template #template>
                         <div class="episode-grid">
-                            <el-card class="episode-card" v-for="i in 6" :key="i">
+                            <div class="episode-card skeleton-episode-card" v-for="i in 6" :key="i">
                                 <div class="episode-cover">
-                                    <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
+                                    <el-skeleton-item variant="image" style="width: 100%; height: 100%;" />
                                 </div>
                                 <div class="episode-info">
                                     <div class="episode-content">
                                         <div class="episode-title">
-                                            <h1><el-skeleton-item variant="text" style="width: 50%" /></h1>
+                                            <el-skeleton-item variant="text" style="width: 60%" />
                                         </div>
                                         <div class="episode-number">
-                                            <p><el-skeleton-item variant="text" style="width: 80%" /></p>
+                                            <el-skeleton-item variant="text" style="width: 85%" />
                                         </div>
                                     </div>
                                 </div>
-                            </el-card>
+                            </div>
                         </div>
                     </template>
                     <div class="episode-grid">
@@ -92,20 +92,14 @@
             <el-scrollbar style="height: calc(100vh - 137px);">
                 <el-skeleton :loading="favoriteLoading" animated>
                     <template #template>
-                        <div class="episode-grid">
-                            <el-card class="episode-card" v-for="i in 6" :key="i">
-                                <div class="episode-cover">
-                                    <el-skeleton-item variant="image" style="height: 160px; width: 115px;" />
-                                </div>
-                                <div class="episode-info">
-                                    <div class="episode-content">
-                                        <div class="episode-title">
-                                            <h1><el-skeleton-item variant="text" style="width: 50%" /></h1>
-                                        </div>
-                                        <div class="episode-number">
-                                            <p><el-skeleton-item variant="text" style="width: 80%" /></p>
-                                        </div>
-                                    </div>
+                        <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
+                            <el-card class="favorite-skeleton-card" v-for="i in 12" :key="i">
+                                <h2><el-skeleton-item variant="text" style="width: 55%;" /></h2>
+                                <div style="margin: 10px 0;"><el-skeleton-item variant="text" style="width: 80%;" /></div>
+                                <div style="margin: 10px 0;"><el-skeleton-item variant="text" style="width: 40%;" /></div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <el-skeleton-item variant="circle" style="width: 24px; height: 24px;" />
+                                    <el-skeleton-item variant="button" style="width: 70px; height: 32px;" />
                                 </div>
                             </el-card>
                         </div>
@@ -356,5 +350,32 @@ handlePaneChange()
     margin-top: auto;
     font-size: 13px;
     color: rgba(255, 255, 255, 0.85);
+}
+
+/* 继续观看骨架卡片：完全对齐 .episode-card 尺寸/圆角，封面占满 120px 宽 */
+.skeleton-episode-card {
+    align-items: stretch;
+}
+
+.skeleton-episode-card .episode-cover :deep(.el-skeleton__item) {
+    border-radius: 10px;
+}
+
+.skeleton-episode-card .episode-content {
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+/* 收藏骨架：对齐 ItemCard 的 el-card（宽度 300px、margin 5px、10px 圆角） */
+.favorite-skeleton-card {
+    width: 300px;
+    margin: 5px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.favorite-skeleton-card h2 {
+    margin-top: 0;
+    margin-bottom: 0;
 }
 </style>
