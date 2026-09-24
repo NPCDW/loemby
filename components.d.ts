@@ -70,6 +70,7 @@ declare module 'vue' {
     IEpPosition: typeof import('~icons/ep/position')['default']
     IEpPriceTag: typeof import('~icons/ep/price-tag')['default']
     IEpPromotion: typeof import('~icons/ep/promotion')['default']
+    IEpRefreshLeft: typeof import('~icons/ep/refresh-left')['default']
     IEpSearch: typeof import('~icons/ep/search')['default']
     IEpSetting: typeof import('~icons/ep/setting')['default']
     IEpStar: typeof import('~icons/ep/star')['default']
