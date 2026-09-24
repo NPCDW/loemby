@@ -248,12 +248,20 @@ function highlightRowFunction({row}: {row: PlayHistory}) {
     justify-content: flex-end;
 }
 
-/* 顶部筛选区内输入框/选择框贴合卡片底色，去掉亮灰对比 */
+/*
+ * 顶部筛选区内输入框/选择框：背景透明跟随卡片底色，只保留可见边框，
+ * 与设置页的输入框风格保持一致，避免亮灰块。
+ */
 :deep(.el-input__wrapper),
 :deep(.el-select__wrapper) {
-    background-color: var(--el-fill-color-light, #262727);
+    background-color: transparent;
     box-shadow: 0 0 0 1px var(--el-border-color-extra-light, #2b2b2c) inset;
     transition: box-shadow 0.2s ease;
+}
+
+/* 下拉浮层不透明，保证选项可读 */
+:deep(.el-select__popper) {
+    background-color: var(--el-bg-color-overlay, #1c1d1f);
 }
 
 :deep(.el-input__wrapper:hover),

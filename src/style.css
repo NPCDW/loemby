@@ -31,6 +31,21 @@ html.dark {
     --el-bg-color: var(--loemby-surface-color);
 }
 
+/* ============================================================
+ * 输入框 / 选择框统一风格
+ * 背景透明跟随所在容器底色，仅保留可见边框，
+ * 与设置页卡片内输入框保持一致，避免浮在底色之上的亮灰色块。
+ * ============================================================ */
+.el-input__wrapper,
+.el-select__wrapper {
+    background-color: transparent;
+}
+
+/* 下拉浮层仍使用不透明底色，保证选项文字可读 */
+.el-select__popper.el-popper {
+    background-color: var(--el-bg-color-overlay, #1c1d1f);
+}
+
 img[lazy=error] {
     width: 100%;
     height: 100%;
