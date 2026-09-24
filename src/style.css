@@ -142,3 +142,69 @@ img[lazy=loading]::before {
         background-position: 0 0;
     }
 } */
+/* ============================================================
+ * 骨架屏对齐实际渲染样式
+ * 目标：让加载占位的圆角、尺寸、间距与真实渲染结果保持一致，
+ * 避免出现「方角骨架 → 圆角卡片」或尺寸不符的跳变。
+ * ============================================================ */
+
+/* 图片类骨架：与 .loe-cover-img / .loe-cover-img img 的 8px 圆角保持一致 */
+.el-skeleton__item.el-skeleton__image {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* 卡片类骨架：与 el-card / .episode-card 的圆角保持一致 */
+.el-skeleton__item.el-skeleton__p,
+.el-skeleton__item.el-skeleton__text,
+.el-skeleton__item.el-skeleton__h1,
+.el-skeleton__item.el-skeleton__h3,
+.el-skeleton__item.el-skeleton__button {
+    border-radius: 6px;
+}
+
+/* el-card 内骨架：跟随卡片圆角，避免溢出方角 */
+.el-skeleton .el-card {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* 竖版封面占位（115x160）：与真实竖版封面比例一致 */
+.skeleton-cover-portrait {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* 横版封面占位（267x150）：与真实横版封面比例一致 */
+.skeleton-cover-landscape {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* 继续观看卡片占位：对齐 .episode-card 结构（180 高 / 10px 圆角 / 120px 封面） */
+.skeleton-episode-card {
+    display: flex;
+    height: 180px;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: var(--el-fill-color-blank, #1d1d1d);
+    border: 1px solid var(--el-border-color-lighter, #2e3034);
+}
+
+.skeleton-episode-card .skeleton-episode-cover {
+    flex: 0 0 120px;
+    height: 100%;
+}
+
+.skeleton-episode-card .skeleton-episode-cover .el-skeleton__item {
+    border-radius: 10px;
+    height: 100%;
+}
+
+.skeleton-episode-card .skeleton-episode-info {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
