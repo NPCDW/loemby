@@ -554,10 +554,10 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 </div>
                             </div>
                             <div class="table-card-body">
-                                <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod" class="custom-data-table">
-                                    <el-table-column prop="emby_server_name" label="Emby 服务器" min-width="160" show-overflow-tooltip />
-                                    <el-table-column prop="name" label="线路" min-width="140" show-overflow-tooltip />
-                                    <el-table-column label="反代服务器" min-width="210">
+                                <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod" class="custom-data-table line-proxy-table">
+                                    <el-table-column prop="emby_server_name" label="Emby 服务器" min-width="130" show-overflow-tooltip />
+                                    <el-table-column prop="name" label="线路" min-width="110" show-overflow-tooltip />
+                                    <el-table-column label="反代服务器" min-width="170">
                                         <template #default="scope">
                                             <el-select v-model="scope.row.reverse_proxy_id" @change="proxyChange(scope.row)" style="width: 100%;">
                                                 <el-option key="no" label="不使用反代" value="no"/>
@@ -565,7 +565,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                             </el-select>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column label="媒体库浏览" min-width="230">
+                                    <el-table-column label="媒体库浏览" min-width="190">
                                         <template #default="scope">
                                             <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)" style="width: 100%;">
                                                 <el-option key="no" label="不使用代理" value="no"/>
@@ -574,7 +574,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                             </el-select>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column label="媒体流播放" min-width="230">
+                                    <el-table-column label="媒体流播放" min-width="190">
                                         <template #default="scope">
                                             <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)" style="width: 100%;">
                                                 <el-option key="no" label="不使用代理" value="no"/>
@@ -1860,14 +1860,38 @@ handlePaneChange()
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 13px;
     line-height: 1.5;
-    background-color: var(--el-fill-color-darker, #151617);
-    border-color: var(--el-border-color-lighter, #2e3034);
+    background-color: var(--el-fill-color-light, #262727);
+    border-color: var(--el-border-color-lighter, #363637);
+    color: var(--el-text-color-regular, #cfd3dc);
     border-radius: 6px;
     padding: 10px 12px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.mono-textarea :deep(.el-textarea__inner::placeholder) {
+    color: var(--el-text-color-placeholder, #8d9095);
+}
+
+.mono-textarea :deep(.el-textarea__inner:hover) {
+    border-color: var(--el-border-color, #4c4d4f);
 }
 
 .mono-textarea :deep(.el-textarea__inner:focus) {
     border-color: var(--el-color-primary, #409eff);
+    background-color: var(--el-fill-color, #303030);
+}
+
+/* 禁用态：贴合卡片底色，避免大块亮灰突兀 */
+.mono-textarea :deep(.el-textarea.is-disabled .el-textarea__inner),
+.mono-textarea :deep(.el-textarea__inner:disabled) {
+    background-color: var(--el-fill-color-lighter, #1d1d1d);
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+    color: var(--el-text-color-disabled, #6c6e72);
+}
+
+.mono-textarea :deep(.el-textarea.is-disabled .el-textarea__inner::placeholder),
+.mono-textarea :deep(.el-textarea__inner:disabled::placeholder) {
+    color: var(--el-text-color-disabled, #6c6e72);
 }
 
 /* 表格卡片容器 */
@@ -1923,6 +1947,26 @@ handlePaneChange()
 
 :deep(.custom-data-table.el-table--striped .el-table__body tr.el-table__row--striped > td.el-table__cell) {
     background-color: var(--el-fill-color-lighter, #1d1d1d);
+}
+
+/* 线路分流表格：避免列内下拉框撑破卡片 */
+:deep(.line-proxy-table .el-table__cell) {
+    padding: 8px 8px;
+}
+
+:deep(.line-proxy-table .el-select) {
+    width: 100%;
+}
+
+:deep(.line-proxy-table .el-select__wrapper),
+:deep(.line-proxy-table .el-select__selection) {
+    min-width: 0;
+}
+
+:deep(.line-proxy-table .el-select__selected-item) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 全局代理网格 */
