@@ -1,7 +1,7 @@
 <template>
     <div>
         <div style="display: flex; flex-direction: row; height: calc(100vh - 30px);">
-            <el-menu class="nav-side-menu" style="height: 100%; width: 200px; min-height: calc(100vh - 30px); background-color: var(--dark-background-color)" :collapse="false" :default-active="active">
+            <el-menu class="nav-side-menu" style="height: 100%; width: 200px; min-height: calc(100vh - 30px)" :collapse="false" :default-active="active">
                 <el-menu-item index="/nav/history" @click="jumpRoute('/nav/history')">
                     <el-icon><i-ep-Clock /></el-icon>播放历史
                 </el-menu-item>
@@ -966,12 +966,18 @@ function notifyScrollBottom() {
  */
 
 /* ===== 侧边栏 ===== */
+/*
+ * 内联样式里的 background-color: var(--dark-background-color) 指向 #121212，
+ * 优先级高于这里的 CSS 变量，会把侧边栏整块刷成纯黑（比页面底 #141414 还暗）。
+ * 已从模板内联样式中移除该色值，改由 CSS 统一指定。
+ */
 .nav-side-menu {
-    --el-menu-bg-color: transparent;
+    --el-menu-bg-color: var(--el-fill-color-lighter, #1d1d1d);
     --el-menu-text-color: var(--el-text-color-regular, #cfd3dc);
     --el-menu-active-color: var(--el-color-primary, #409eff);
     --el-menu-hover-bg-color: var(--el-fill-color-light, #262727);
     --el-menu-item-height: 48px;
+    background-color: var(--el-fill-color-lighter, #1d1d1d);
     border-right: 1px solid var(--el-border-color-extra-light, #2b2b2c);
 }
 
