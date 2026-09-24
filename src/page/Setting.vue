@@ -1,192 +1,241 @@
 <template>
-    <el-tabs v-model="activePane" @tab-change="handlePaneChange" style="height: calc(100vh - 40px); padding: 10px 20px 0 20px;">
+    <el-tabs v-model="activePane" @tab-change="handlePaneChange" class="setting-tabs">
         <el-tab-pane label="常规" name="Common">
-            <el-scrollbar style="height: calc(100vh - 120px);">
-                <el-form label-position="top">
-                    <el-form-item label="应用更新">
-                        <span style="margin-right: 10px;">当前版本: {{ runtimeConfig?.version }}</span>
-                        <el-button plain type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
-                    </el-form-item>
-                    <el-form-item label="日志等级">
-                        <span style="margin-right: 10px;">{{ runtimeConfig?.app_config.log_level }}</span>
-                        <el-button plain type="primary" size="small" @click="invokeApi.open_folder('config')">打开配置目录</el-button>
-                    </el-form-item>
-                    <el-form-item label="数据库类型">
-                        <span>{{ runtimeConfig?.app_config.database_type }}</span>
-                    </el-form-item>
-                    <el-form-item label="Web端口">
-                        <span>{{ runtimeConfig?.axum_port }}</span>
-                    </el-form-item>
-                </el-form>
-            </el-scrollbar>
-        </el-tab-pane>
-        
-        <el-tab-pane label="播放" name="MPV">
-            <el-scrollbar style="height: calc(100vh - 120px);">
-                <el-form label-position="top">
-                    <el-form-item label="播放版本自动选择策略">
-                        <el-select
-                            v-model="play_version_auto_select_policy"
-                            @change="configValueChange('play_version_auto_select_policy', play_version_auto_select_policy + '', getPlayVersionAutoSelectPolicy, '播放版本自动选择策略')"
-                            style="width: 230px;">
-                            <el-option key="high-resolution" label="高分辨率优先，后高码率优先" value="high-resolution"/>
-                            <el-option key="high-bitrate" label="高码率优先" value="high-bitrate"/>
-                        </el-select>
-                    </el-form-item>
-                    <el-form-item label="预加载下一集（当设定的缓存范围到达本集末尾时，提前获取下一集内容）">
-                        <el-switch
-                            v-model="prefetch_playlist"
-                            @change="configValueChange('prefetch_playlist', prefetch_playlist + '', getPrefetchPlaylist, '预加载下一集')"
-                            active-value="yes" inactive-value="no" />
-                    </el-form-item>
-                    <el-form-item label="播放参数IsPlayback">
-                        <el-switch
-                            v-model="play_param_IsPlayback"
-                            @change="configValueChange('play_param_IsPlayback', play_param_IsPlayback + '', getPlayParamIsPlayback, '播放参数IsPlayback开关')"
-                            active-value="true" inactive-value="false" />
-                    </el-form-item>
-                    <el-form-item label="网速显示">
-                        <el-switch
-                            v-model="cache_speed_enabled"
-                            @change="configValueChange('cache_speed_enabled', cache_speed_enabled + '', getCacheSpeedEnabled, '网速显示启用')"
-                            active-value="yes" inactive-value="no" />
-                        <el-input
-                            v-model="cache_speed_ass_style"
-                            @change="configValueChange('cache_speed_ass_style', cache_speed_ass_style + '', getCacheSpeedAssStyle, '网速显示ASS样式')"
-                            style="margin-left: 20px; width: 300px;" placeholder="ASS样式：示例：{\an9\3c&HA066FD&}" />
-                    </el-form-item>
-                    <el-form-item label="MPV缓存（按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小）" style="display: flex; flex-direction: column;">
-                        <div style="flex: auto;">
-                            <el-input-number
-                                v-model="mpv_cache_seconds"
-                                @change="configValueChange('mpv_cache_seconds', mpv_cache_seconds + '', getMpvCacheSeconds, '前向缓存')"
-                                :min="0" :precision="0" :controls="false" style="width: 200px;">
-                                <template #prefix>
-                                    <span>前向缓存</span>
-                                </template>
-                                <template #suffix>
-                                    <span>秒</span>
-                                </template>
-                            </el-input-number>
-                            <el-input-number
-                                v-model="mpv_cache_min_bytes"
-                                @change="configValueChange('mpv_cache_min_bytes', mpv_cache_min_bytes + '', getMpvCacheMinBytes, '前向最小缓存')"
-                                :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
-                                <template #prefix>
-                                    <span>前向最小缓存</span>
-                                </template>
-                                <template #suffix>
-                                    <span>MiB</span>
-                                </template>
-                            </el-input-number>
-                            <el-input-number
-                                v-model="mpv_cache_max_bytes"
-                                @change="configValueChange('mpv_cache_max_bytes', mpv_cache_max_bytes + '', getMpvCacheMaxBytes, '前向最大缓存')"
-                                :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
-                                <template #prefix>
-                                    <span>前向最大缓存</span>
-                                </template>
-                                <template #suffix>
-                                    <span>MiB</span>
-                                </template>
-                            </el-input-number>
-                        </div>
-                        <div style="flex: auto;">
-                            <el-input-number
-                                v-model="mpv_cache_back_seconds"
-                                @change="configValueChange('mpv_cache_back_seconds', mpv_cache_back_seconds + '', getMpvCacheBackSeconds, '后向缓存')"
-                                :min="0" :precision="0" :controls="false" style="width: 200px;">
-                                <template #prefix>
-                                    <span>后向缓存</span>
-                                </template>
-                                <template #suffix>
-                                    <span>秒</span>
-                                </template>
-                            </el-input-number>
-                            <el-input-number
-                                v-model="mpv_cache_back_min_bytes"
-                                @change="configValueChange('mpv_cache_back_min_bytes', mpv_cache_back_min_bytes + '', getMpvCacheBackMinBytes, '后向最小缓存')"
-                                :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
-                                <template #prefix>
-                                    <span>后向最小缓存</span>
-                                </template>
-                                <template #suffix>
-                                    <span>MiB</span>
-                                </template>
-                            </el-input-number>
-                            <el-input-number
-                                v-model="mpv_cache_back_max_bytes"
-                                @change="configValueChange('mpv_cache_back_max_bytes', mpv_cache_back_max_bytes + '', getMpvCacheBackMaxBytes, '后向最大缓存')"
-                                :min="0" :precision="0" :controls="false" style="width: 200px; margin-left: 10px;">
-                                <template #prefix>
-                                    <span>后向最大缓存</span>
-                                </template>
-                                <template #suffix>
-                                    <span>MiB</span>
-                                </template>
-                            </el-input-number>
-                        </div>
-                    </el-form-item>
-                    <el-form-item>
-                        <template #label>
-                            <div style="display: flex; align-items: center;" @click.stop="">
-                                <span>MPV参数</span>
-                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_url('https://mpv.io/manual/stable/')" style="margin-left: 10px;">官方文档</el-button>
-                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_url('https://hooke007.github.io/official_man/mpv.html')" style="margin-left: 10px;">中文文档</el-button>
-                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_folder('inner_mpv')" style="margin-left: 10px;">打开内置MPV目录</el-button>
-                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_file('keymap')" style="margin-left: 10px;">快捷键示意图</el-button>
+            <div class="setting-pane">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header"><span class="setting-card-title">应用信息</span></div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="应用更新">
+                            <div class="setting-inline">
+                                <span class="setting-plain-text">当前版本: {{ runtimeConfig?.version }}</span>
+                                <el-button plain type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
                             </div>
-                        </template>
-                        <el-input
-                            v-model="mpv_args"
-                            @change="configValueChange('mpv_args', mpv_args, getMpvArgs, 'MPV参数')"
-                            :rows="4" type="textarea" placeholder="每行一个，示例: 
+                        </el-form-item>
+                        <el-form-item label="日志等级">
+                            <div class="setting-inline">
+                                <span class="setting-plain-text">{{ runtimeConfig?.app_config.log_level }}</span>
+                                <el-button plain type="primary" size="small" @click="invokeApi.open_folder('config')">打开配置目录</el-button>
+                            </div>
+                        </el-form-item>
+                        <el-form-item label="数据库类型">
+                            <span class="setting-plain-text">{{ runtimeConfig?.app_config.database_type }}</span>
+                        </el-form-item>
+                        <el-form-item label="Web端口">
+                            <span class="setting-plain-text">{{ runtimeConfig?.axum_port }}</span>
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+            </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="播放" name="MPV">
+            <div class="setting-pane">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header"><span class="setting-card-title">播放策略</span></div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="播放版本自动选择策略">
+                            <el-select
+                                v-model="play_version_auto_select_policy"
+                                @change="configValueChange('play_version_auto_select_policy', play_version_auto_select_policy + '', getPlayVersionAutoSelectPolicy, '播放版本自动选择策略')"
+                                class="setting-select">
+                                <el-option key="high-resolution" label="高分辨率优先，后高码率优先" value="high-resolution"/>
+                                <el-option key="high-bitrate" label="高码率优先" value="high-bitrate"/>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="预加载下一集（当设定的缓存范围到达本集末尾时，提前获取下一集内容）">
+                            <el-switch
+                                v-model="prefetch_playlist"
+                                @change="configValueChange('prefetch_playlist', prefetch_playlist + '', getPrefetchPlaylist, '预加载下一集')"
+                                active-value="yes" inactive-value="no" />
+                        </el-form-item>
+                        <el-form-item label="播放参数IsPlayback">
+                            <el-switch
+                                v-model="play_param_IsPlayback"
+                                @change="configValueChange('play_param_IsPlayback', play_param_IsPlayback + '', getPlayParamIsPlayback, '播放参数IsPlayback开关')"
+                                active-value="true" inactive-value="false" />
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header"><span class="setting-card-title">网速显示</span></div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="网速显示">
+                            <el-switch
+                                v-model="cache_speed_enabled"
+                                @change="configValueChange('cache_speed_enabled', cache_speed_enabled + '', getCacheSpeedEnabled, '网速显示启用')"
+                                active-value="yes" inactive-value="no" />
+                        </el-form-item>
+                        <el-form-item label="网速显示ASS样式">
+                            <el-input
+                                v-model="cache_speed_ass_style"
+                                @change="configValueChange('cache_speed_ass_style', cache_speed_ass_style + '', getCacheSpeedAssStyle, '网速显示ASS样式')"
+                                class="setting-input-lg" placeholder="ASS样式：示例：{\an9\3c&HA066FD&}" />
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">MPV缓存</span>
+                            <span class="setting-card-desc">按秒计算缓存大小，平均码率除以8再乘以秒即为实际缓存大小，如果大于最大缓存大小，则按最大缓存大小</span>
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="前向缓存">
+                            <div class="setting-inline">
+                                <el-input-number
+                                    v-model="mpv_cache_seconds"
+                                    @change="configValueChange('mpv_cache_seconds', mpv_cache_seconds + '', getMpvCacheSeconds, '前向缓存')"
+                                    :min="0" :precision="0" :controls="false" class="setting-number-200">
+                                    <template #suffix>
+                                        <span>秒</span>
+                                    </template>
+                                </el-input-number>
+                                <el-input-number
+                                    v-model="mpv_cache_min_bytes"
+                                    @change="configValueChange('mpv_cache_min_bytes', mpv_cache_min_bytes + '', getMpvCacheMinBytes, '前向最小缓存')"
+                                    :min="0" :precision="0" :controls="false" class="setting-number-200">
+                                    <template #prefix>
+                                        <span>最小</span>
+                                    </template>
+                                    <template #suffix>
+                                        <span>MiB</span>
+                                    </template>
+                                </el-input-number>
+                                <el-input-number
+                                    v-model="mpv_cache_max_bytes"
+                                    @change="configValueChange('mpv_cache_max_bytes', mpv_cache_max_bytes + '', getMpvCacheMaxBytes, '前向最大缓存')"
+                                    :min="0" :precision="0" :controls="false" class="setting-number-200">
+                                    <template #prefix>
+                                        <span>最大</span>
+                                    </template>
+                                    <template #suffix>
+                                        <span>MiB</span>
+                                    </template>
+                                </el-input-number>
+                            </div>
+                        </el-form-item>
+                        <el-form-item label="后向缓存">
+                            <div class="setting-inline">
+                                <el-input-number
+                                    v-model="mpv_cache_back_seconds"
+                                    @change="configValueChange('mpv_cache_back_seconds', mpv_cache_back_seconds + '', getMpvCacheBackSeconds, '后向缓存')"
+                                    :min="0" :precision="0" :controls="false" class="setting-number-200">
+                                    <template #suffix>
+                                        <span>秒</span>
+                                    </template>
+                                </el-input-number>
+                                <el-input-number
+                                    v-model="mpv_cache_back_min_bytes"
+                                    @change="configValueChange('mpv_cache_back_min_bytes', mpv_cache_back_min_bytes + '', getMpvCacheBackMinBytes, '后向最小缓存')"
+                                    :min="0" :precision="0" :controls="false" class="setting-number-200">
+                                    <template #prefix>
+                                        <span>最小</span>
+                                    </template>
+                                    <template #suffix>
+                                        <span>MiB</span>
+                                    </template>
+                                </el-input-number>
+                                <el-input-number
+                                    v-model="mpv_cache_back_max_bytes"
+                                    @change="configValueChange('mpv_cache_back_max_bytes', mpv_cache_back_max_bytes + '', getMpvCacheBackMaxBytes, '后向最大缓存')"
+                                    :min="0" :precision="0" :controls="false" class="setting-number-200">
+                                    <template #prefix>
+                                        <span>最大</span>
+                                    </template>
+                                    <template #suffix>
+                                        <span>MiB</span>
+                                    </template>
+                                </el-input-number>
+                            </div>
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">MPV参数</span>
+                            <div class="setting-inline">
+                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_url('https://mpv.io/manual/stable/')">官方文档</el-button>
+                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_url('https://hooke007.github.io/official_man/mpv.html')">中文文档</el-button>
+                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_folder('inner_mpv')">打开内置MPV目录</el-button>
+                                <el-button plain type="primary" size="small" @click.stop.prevent="invokeApi.open_file('keymap')">快捷键示意图</el-button>
+                            </div>
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="MPV参数">
+                            <el-input
+                                v-model="mpv_args"
+                                @change="configValueChange('mpv_args', mpv_args, getMpvArgs, 'MPV参数')"
+                                :rows="4" type="textarea" placeholder="每行一个，示例: 
 ontop=no
 volume=130
 demuxer-max-bytes=512MiB
 demuxer-max-back-bytes=512MiB" />
-                    </el-form-item>
-                    <el-form-item label="使用外部MPV播放器">
-                        <el-switch
-                            v-model="external_mpv_switch"
-                            @change="configValueChange('external_mpv_switch', external_mpv_switch + '', getExternalMpvSwitch, '使用外部MPV播放器开关')"
-                            active-value="on" inactive-value="off" />
-                    </el-form-item>
-                    <el-form-item label="MPV文件路径和配置目录">
-                        <el-input
-                            v-model="mpv_path"
-                            @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径和启动目录')"
-                            :disabled="external_mpv_switch != 'on'"
-                            :rows="4" type="textarea" placeholder="每行一个mpv路径和配置目录，以英文分号;隔开，不写配置目录默认为mpv同级的portable_config目录或~/.config/mpv目录，示例: 
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">外部MPV播放器</span>
+                            <el-switch
+                                v-model="external_mpv_switch"
+                                @change="configValueChange('external_mpv_switch', external_mpv_switch + '', getExternalMpvSwitch, '使用外部MPV播放器开关')"
+                                active-value="on" inactive-value="off" />
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="MPV文件路径和配置目录">
+                            <el-input
+                                v-model="mpv_path"
+                                @change="configValueChange('mpv_path', mpv_path, getMpvPath, 'MPV文件路径和启动目录')"
+                                :disabled="external_mpv_switch != 'on'"
+                                :rows="4" type="textarea" placeholder="每行一个mpv路径和配置目录，以英文分号;隔开，不写配置目录默认为mpv同级的portable_config目录或~/.config/mpv目录，示例: 
 C:\App\mpv_config-2024.12.04\mpv.exe
 /usr/bin/mpv;/usr/local/mpv/portable_config" />
-                    </el-form-item>
-                </el-form>
-            </el-scrollbar>
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+            </div>
         </el-tab-pane>
-        
+
         <el-tab-pane label="追踪" name="Track">
-            <el-scrollbar style="height: calc(100vh - 120px);">
-                <el-card>
-                    <el-form label-position="top">
-                        <el-form-item label="Trakt （播放进度 >80% 才能在网页端看到记录）">
+            <div class="setting-pane">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">Trakt</span>
                             <el-switch
                                 v-model="trakt_sync_switch"
                                 @change="configValueChange('trakt_sync_switch', trakt_sync_switch + '', getTraktSyncSwitch, 'Trakt同步开关')"
                                 active-value="on" inactive-value="off" inline-prompt active-text="同步已开启" inactive-text="同步已关闭" />
-                        </el-form-item>
-                        <el-form-item label="Trakt 授权">
-                            <div v-if="trakt_username">
-                                <el-text>{{ trakt_username }}</el-text>
-                                <el-button plain type="danger" @click="delAuthTrakt()" size="small" style="margin: 0 10px;">删除授权</el-button>
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="Trakt 授权（播放进度 >80% 才能在网页端看到记录）">
+                            <div class="setting-inline">
+                                <span v-if="trakt_username" class="setting-plain-text">{{ trakt_username }}</span>
+                                <el-button v-if="trakt_username" plain type="danger" @click="delAuthTrakt()" size="small">删除授权</el-button>
+                                <el-button plain type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
                             </div>
-                            <el-button plain type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
                         </el-form-item>
                         <el-form-item label="Trakt代理">
                             <el-select
                                 v-model="trakt_proxy_id"
                                 @change="configValueChange('trakt_proxy_id', trakt_proxy_id + '', getTraktProxy, 'Trakt代理')"
-                                style="width: 220px;">
+                                class="setting-select-xl">
                                 <el-option key="no" label="不使用代理" value="no"/>
                                 <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
                                 <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
@@ -195,26 +244,29 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                         </el-form-item>
                     </el-form>
                 </el-card>
-                <el-card style="margin-top: 10px;">
-                    <el-form label-position="top">
-                        <el-form-item label="Simkl">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">Simkl</span>
                             <el-switch
                                 v-model="simkl_sync_switch"
                                 @change="configValueChange('simkl_sync_switch', simkl_sync_switch + '', getSimklSyncSwitch, 'Simkl同步开关')"
                                 active-value="on" inactive-value="off" inline-prompt active-text="同步已开启" inactive-text="同步已关闭" />
-                        </el-form-item>
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
                         <el-form-item label="Simkl 授权">
-                            <div v-if="simkl_username">
-                                <el-text>{{ simkl_username }}</el-text>
-                                <el-button plain type="danger" @click="delAuthSimkl()" size="small" style="margin: 0 10px;">删除授权</el-button>
+                            <div class="setting-inline">
+                                <span v-if="simkl_username" class="setting-plain-text">{{ simkl_username }}</span>
+                                <el-button v-if="simkl_username" plain type="danger" @click="delAuthSimkl()" size="small">删除授权</el-button>
+                                <el-button plain type="primary" :loading="simklAuthLoading" @click="goAuthSimkl()" size="small">{{ simklAuthStatus }}</el-button>
                             </div>
-                            <el-button plain type="primary" :loading="simklAuthLoading" @click="goAuthSimkl()" size="small">{{ simklAuthStatus }}</el-button>
                         </el-form-item>
                         <el-form-item label="Simkl代理">
                             <el-select
                                 v-model="simkl_proxy_id"
                                 @change="configValueChange('simkl_proxy_id', simkl_proxy_id + '', getSimklProxy, 'Simkl代理')"
-                                style="width: 220px;">
+                                class="setting-select-xl">
                                 <el-option key="no" label="不使用代理" value="no"/>
                                 <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
                                 <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
@@ -223,14 +275,17 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                         </el-form-item>
                     </el-form>
                 </el-card>
-                <el-card style="margin-top: 10px;">
-                    <el-form label-position="top">
-                        <el-form-item label="YamTrack">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">YamTrack</span>
                             <el-switch
                                 v-model="yamtrack_sync_switch"
                                 @change="configValueChange('yamtrack_sync_switch', yamtrack_sync_switch + '', getYamTrackSyncSwitch, 'YamTrack同步开关')"
                                 active-value="on" inactive-value="off" inline-prompt active-text="同步已开启" inactive-text="同步已关闭" />
-                        </el-form-item>
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
                         <el-form-item label="YamTrack 同步地址 (Emby Integrations)">
                             <el-input
                                 v-model="yamtrack_sync_url"
@@ -241,7 +296,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             <el-select
                                 v-model="yamtrack_proxy_id"
                                 @change="configValueChange('yamtrack_proxy_id', yamtrack_proxy_id + '', getYamTrackProxy, 'YamTrack代理')"
-                                style="width: 220px;">
+                                class="setting-select-xl">
                                 <el-option key="no" label="不使用代理" value="no"/>
                                 <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
                                 <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
@@ -250,224 +305,286 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                         </el-form-item>
                     </el-form>
                 </el-card>
-            </el-scrollbar>
+            </div>
         </el-tab-pane>
+
         <el-tab-pane label="代理服务器" name="ProxyServer">
-            <el-scrollbar style="height: calc(100vh - 120px);">
-                <h1>代理服务器</h1>
-                <p>推荐使用 http 代理，reqwest 库的 socks5 代理在某些服可能有问题</p>
-                <el-table :data="proxyServers" style="width: 100%">
-                    <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
-                    <el-table-column prop="proxy_type" label="Type" width="80" />
-                    <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
-                    <el-table-column prop="username" label="Username" width="140" />
-                    <el-table-column prop="location" label="Location" show-overflow-tooltip />
-                    <el-table-column fixed="right" label="Operations" width="210" align="center">
-                        <template #header>
+            <div class="setting-pane">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">代理服务器</span>
                             <el-button plain type="primary" size="small" @click.prevent="addProxy()">添加代理服务器</el-button>
-                        </template>
-                        <template #default="scope">
-                            <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkProxy(scope.row.id)">检测</el-button>
-                            <el-button plain type="primary" size="small" @click.prevent="editProxy(scope.$index)">编辑</el-button>
-                            <el-button plain type="danger" size="small" @click.prevent="delProxy(scope.$index)">删除</el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
-            </el-scrollbar>
+                        </div>
+                    </template>
+                    <p class="setting-tip">推荐使用 http 代理，reqwest 库的 socks5 代理在某些服可能有问题</p>
+                    <el-table :data="proxyServers" class="setting-table">
+                        <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
+                        <el-table-column prop="proxy_type" label="Type" width="80" />
+                        <el-table-column prop="addr" label="Address" width="160" show-overflow-tooltip />
+                        <el-table-column prop="username" label="Username" width="140" />
+                        <el-table-column prop="location" label="Location" show-overflow-tooltip />
+                        <el-table-column fixed="right" label="Operations" width="210" align="center">
+                            <template #default="scope">
+                                <el-button plain :loading="checkProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkProxy(scope.row.id)">检测</el-button>
+                                <el-button plain type="primary" size="small" @click.prevent="editProxy(scope.$index)">编辑</el-button>
+                                <el-button plain type="danger" size="small" @click.prevent="delProxy(scope.$index)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </div>
         </el-tab-pane>
+
         <el-tab-pane label="反代服务器" name="ReverseProxyServer">
-            <el-scrollbar style="height: calc(100vh - 120px);">
-                <h1>反代服务器</h1>
-                <p>反代服务器地址末尾会自动补充 /，请求地址将拼接为：反代服务器地址 + 原始地址</p>
-                <el-table :data="reverseProxyServers" style="width: 100%">
-                    <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
-                    <el-table-column prop="url" label="Url" show-overflow-tooltip />
-                    <el-table-column prop="location" label="Location" show-overflow-tooltip />
-                    <el-table-column fixed="right" label="Operations" width="210" align="center">
-                        <template #header>
+            <div class="setting-pane">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">反代服务器</span>
                             <el-button plain type="primary" size="small" @click.prevent="addReverseProxy()">添加反代服务器</el-button>
-                        </template>
-                        <template #default="scope">
-                            <el-button plain :loading="checkReverseProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkReverseProxy(scope.row.id)">检测</el-button>
-                            <el-button plain type="primary" size="small" @click.prevent="editReverseProxy(scope.$index)">编辑</el-button>
-                            <el-button plain type="danger" size="small" @click.prevent="delReverseProxy(scope.$index)">删除</el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
-            </el-scrollbar>
+                        </div>
+                    </template>
+                    <p class="setting-tip">反代服务器地址末尾会自动补充 /，请求地址将拼接为：反代服务器地址 + 原始地址</p>
+                    <el-table :data="reverseProxyServers" class="setting-table">
+                        <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
+                        <el-table-column prop="url" label="Url" show-overflow-tooltip />
+                        <el-table-column prop="location" label="Location" show-overflow-tooltip />
+                        <el-table-column fixed="right" label="Operations" width="210" align="center">
+                            <template #default="scope">
+                                <el-button plain :loading="checkReverseProxyLoading[scope.row.id]" type="success" size="small" @click.prevent="checkReverseProxy(scope.row.id)">检测</el-button>
+                                <el-button plain type="primary" size="small" @click.prevent="editReverseProxy(scope.$index)">编辑</el-button>
+                                <el-button plain type="danger" size="small" @click.prevent="delReverseProxy(scope.$index)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </div>
         </el-tab-pane>
+
         <el-tab-pane label="Emby线路代理" name="EmbyLineProxy">
-            <el-scrollbar style="height: calc(100vh - 120px);">
-                <h1>Emby线路代理配置</h1>
-                <el-form :inline="true">
-                    <el-form-item label="全局媒体库浏览">
-                        <el-select
-                            v-model="global_browse_proxy_id"
-                            @change="configValueChange('global_browse_proxy_id', global_browse_proxy_id + '', () => {getGlobalBrowseProxy(); useEventBus().emit('GlobalProxyChanged', {})}, '全局媒体库浏览代理')"
-                            style="width: 220px;">
-                            <template #label="{ label }">
-                                <span style="font-weight: bold">全局配置: </span>
-                                <span>{{ label }}</span>
-                            </template>
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                    <el-form-item label="全局媒体流播放">
-                        <el-select
-                            v-model="global_play_proxy_id"
-                            @change="configValueChange('global_play_proxy_id', global_play_proxy_id + '', () => {getGlobalPlayProxy(); useEventBus().emit('GlobalProxyChanged', {})}, '全局媒体流播放代理')"
-                            style="width: 220px;">
-                            <template #label="{ label }">
-                                <span style="font-weight: bold">全局配置: </span>
-                                <span>{{ label }}</span>
-                            </template>
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                </el-form>
-                <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod">
-                    <el-table-column prop="emby_server_name" label="Emby" show-overflow-tooltip />
-                    <el-table-column prop="name" label="线路" show-overflow-tooltip />
-                    <el-table-column label="反代服务器">
-                        <template #default="scope">
-                            <el-select v-model="scope.row.reverse_proxy_id" @change="proxyChange(scope.row)">
-                                <el-option key="no" label="不使用反代" value="no"/>
-                                <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
-                            </el-select>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="媒体库浏览">
-                        <template #default="scope">
-                            <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)">
+            <div class="setting-pane">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">全局代理配置</span>
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="全局媒体库浏览">
+                            <el-select
+                                v-model="global_browse_proxy_id"
+                                @change="configValueChange('global_browse_proxy_id', global_browse_proxy_id + '', () => {getGlobalBrowseProxy(); useEventBus().emit('GlobalProxyChanged', {})}, '全局媒体库浏览代理')"
+                                class="setting-select-xl">
+                                <template #label="{ label }">
+                                    <span style="font-weight: bold">全局配置: </span>
+                                    <span>{{ label }}</span>
+                                </template>
                                 <el-option key="no" label="不使用代理" value="no"/>
-                                <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
                                 <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                             </el-select>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="媒体流播放">
-                        <template #default="scope">
-                            <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)">
+                        </el-form-item>
+                        <el-form-item label="全局媒体流播放">
+                            <el-select
+                                v-model="global_play_proxy_id"
+                                @change="configValueChange('global_play_proxy_id', global_play_proxy_id + '', () => {getGlobalPlayProxy(); useEventBus().emit('GlobalProxyChanged', {})}, '全局媒体流播放代理')"
+                                class="setting-select-xl">
+                                <template #label="{ label }">
+                                    <span style="font-weight: bold">全局配置: </span>
+                                    <span>{{ label }}</span>
+                                </template>
                                 <el-option key="no" label="不使用代理" value="no"/>
-                                <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
                                 <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
                             </el-select>
-                        </template>
-                    </el-table-column>
-                </el-table>
-            </el-scrollbar>
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">线路代理</span>
+                            <span class="setting-card-desc">每一行代表一台 Emby 服务器的一条线路，可分别指定反代与代理</span>
+                        </div>
+                    </template>
+                    <el-table :data="embyLines" class="setting-table" :span-method="lineSpanMethod">
+                        <el-table-column prop="emby_server_name" label="Emby" show-overflow-tooltip />
+                        <el-table-column prop="name" label="线路" show-overflow-tooltip />
+                        <el-table-column label="反代服务器">
+                            <template #default="scope">
+                                <el-select v-model="scope.row.reverse_proxy_id" @change="proxyChange(scope.row)">
+                                    <el-option key="no" label="不使用反代" value="no"/>
+                                    <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+                                </el-select>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="媒体库浏览">
+                            <template #default="scope">
+                                <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)">
+                                    <el-option key="no" label="不使用代理" value="no"/>
+                                    <el-option key="follow" :label="'跟随全局代理(' + global_browse_proxy_name + ')'" value="follow"/>
+                                    <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                                </el-select>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="媒体流播放">
+                            <template #default="scope">
+                                <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)">
+                                    <el-option key="no" label="不使用代理" value="no"/>
+                                    <el-option key="follow" :label="'跟随全局代理(' + global_play_proxy_name + ')'" value="follow"/>
+                                    <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                                </el-select>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </div>
         </el-tab-pane>
+
         <el-tab-pane label="Emby图标库" name="EmbyIconLibrary">
-            <el-scrollbar style="height: calc(100vh - 120px);">
-                <h1>Emby图标库</h1>
-                <el-form :inline="true">
-                    <el-form-item label="应用数据代理（图标、自动更新等）">
-                        <el-select
-                            v-model="app_proxy_id"
-                            @change="configValueChange('app_proxy_id', app_proxy_id + '', getAppProxy, '应用数据代理')"
-                            style="width: 220px;">
-                            <el-option key="no" label="不使用代理" value="no"/>
-                            <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
-                            <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
-                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                        </el-select>
-                    </el-form-item>
-                </el-form>
-                <el-table :data="embyIconLibrary" style="width: 100%">
-                    <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
-                    <el-table-column prop="url" label="Url" show-overflow-tooltip />
-                    <el-table-column fixed="right" label="Operations" width="210" align="center">
-                        <template #header>
+            <div class="setting-pane">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">应用数据代理</span>
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="应用数据代理（图标、自动更新等）">
+                            <el-select
+                                v-model="app_proxy_id"
+                                @change="configValueChange('app_proxy_id', app_proxy_id + '', getAppProxy, '应用数据代理')"
+                                class="setting-select-xl">
+                                <el-option key="no" label="不使用代理" value="no"/>
+                                <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
+                                <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
+                                <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                            </el-select>
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">Emby图标库</span>
                             <el-button plain type="primary" size="small" @click.prevent="addEmbyIconLibrary()">添加图标库</el-button>
-                        </template>
-                        <template #default="scope">
-                            <el-button plain type="primary" size="small" @click.prevent="editEmbyIconLibrary(scope.$index)">编辑</el-button>
-                            <el-button plain type="danger" size="small" @click.prevent="delEmbyIconLibrary(scope.$index)">删除</el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
-            </el-scrollbar>
+                        </div>
+                    </template>
+                    <el-table :data="embyIconLibrary" class="setting-table">
+                        <el-table-column prop="name" label="Name" width="140" show-overflow-tooltip />
+                        <el-table-column prop="url" label="Url" show-overflow-tooltip />
+                        <el-table-column fixed="right" label="Operations" width="210" align="center">
+                            <template #default="scope">
+                                <el-button plain type="primary" size="small" @click.prevent="editEmbyIconLibrary(scope.$index)">编辑</el-button>
+                                <el-button plain type="danger" size="small" @click.prevent="delEmbyIconLibrary(scope.$index)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </div>
         </el-tab-pane>
+
         <el-tab-pane label="缓存与日志" name="CacheAndLog">
-            <el-scrollbar style="height: calc(100vh - 120px);width: 100%">
-                <el-form label-position="top">
-                    <el-form-item label="日志保存天数">
-                        <el-input-number
-                            v-model="logStoredDays"
-                            @change="configValueChange('logStoredDays', logStoredDays + '', getLogStoredDays, '日志保存天数')"
-                            :min="1" :precision="0">
-                            <template #suffix>
-                                <span>天</span>
-                            </template>
-                        </el-input-number>
-                        <el-button plain type="primary" @click="invokeApi.open_folder('log')" style="margin-left: 10px;">打开日志目录</el-button>
-                    </el-form-item>
-                    <el-form-item label="禁用图片缓存">
-                        <el-switch 
-                            v-model="disabled_image_cache"
-                            @change="configValueChange('disabled_image_cache', disabled_image_cache + '', getDisabledImageCache, '禁用图片缓存')"
-                            active-value="off" inactive-value="on"
-                            style="margin-left: 10px;"
-                            active-text="使用图片缓存" inactive-text="禁用图片缓存" />
-                    </el-form-item>
-                    <el-form-item label="禁用图片加载">
-                        <el-switch 
-                            v-model="disabledImage"
-                            @change="configValueChange('disabledImage', disabledImage + '', getDisabledImage, '禁用图片加载')"
-                            active-value="off" inactive-value="on"
-                            style="margin-left: 10px;"
-                            active-text="正常显示图片" inactive-text="不请求任何图片" />
-                    </el-form-item>
-                    <el-form-item label="封面图保存天数">
-                        <el-input-number v-model="coverImageStoredDays"
-                            @change="configValueChange('coverImageStoredDays', coverImageStoredDays + '', getCoverImageStoredDays, '封面图保存天数')"
-                            :min="1" :precision="0">
-                            <template #suffix>
-                                <span>天</span>
-                            </template>
-                        </el-input-number>
-                        <el-button plain type="primary" @click="invokeApi.open_folder('cache')" style="margin-left: 10px;">打开缓存目录</el-button>
-                    </el-form-item>
-                    <el-form-item label="图标保存天数">
-                        <el-input-number v-model="iconStoredDays"
-                            @change="configValueChange('iconStoredDays', iconStoredDays + '', getIconStoredDays, '图标保存天数')"
-                            :min="1" :precision="0">
-                            <template #suffix>
-                                <span>天</span>
-                            </template>
-                        </el-input-number>
-                        <el-button plain type="primary" :loading="cleanIconCacheLoading" @click="cleanIconCache()" style="margin-left: 10px;">清除所有图标缓存</el-button>
-                    </el-form-item>
-                </el-form>
-                <el-table :data="embyServers" style="width: calc(100% - 10px)">
-                    <el-table-column prop="server_name" label="服务名" />
-                    <el-table-column prop="username" label="用户名" />
-                    <el-table-column fixed="right" label="Operations" width="180" align="center">
-                        <template #header>
+            <div class="setting-pane">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">缓存与日志</span>
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form setting-form-masonry">
+                        <el-form-item label="日志保存天数">
+                            <div class="setting-inline">
+                                <el-input-number
+                                    v-model="logStoredDays"
+                                    @change="configValueChange('logStoredDays', logStoredDays + '', getLogStoredDays, '日志保存天数')"
+                                    :min="1" :precision="0">
+                                    <template #suffix>
+                                        <span>天</span>
+                                    </template>
+                                </el-input-number>
+                                <el-button plain type="primary" @click="invokeApi.open_folder('log')">打开日志目录</el-button>
+                            </div>
+                        </el-form-item>
+                        <el-form-item label="封面图保存天数">
+                            <div class="setting-inline">
+                                <el-input-number v-model="coverImageStoredDays"
+                                    @change="configValueChange('coverImageStoredDays', coverImageStoredDays + '', getCoverImageStoredDays, '封面图保存天数')"
+                                    :min="1" :precision="0">
+                                    <template #suffix>
+                                        <span>天</span>
+                                    </template>
+                                </el-input-number>
+                                <el-button plain type="primary" @click="invokeApi.open_folder('cache')">打开缓存目录</el-button>
+                            </div>
+                        </el-form-item>
+                        <el-form-item label="图标保存天数">
+                            <div class="setting-inline">
+                                <el-input-number v-model="iconStoredDays"
+                                    @change="configValueChange('iconStoredDays', iconStoredDays + '', getIconStoredDays, '图标保存天数')"
+                                    :min="1" :precision="0">
+                                    <template #suffix>
+                                        <span>天</span>
+                                    </template>
+                                </el-input-number>
+                                <el-button plain type="primary" :loading="cleanIconCacheLoading" @click="cleanIconCache()">清除所有图标缓存</el-button>
+                            </div>
+                        </el-form-item>
+                        <el-form-item label="图片缓存">
+                            <el-switch 
+                                v-model="disabled_image_cache"
+                                @change="configValueChange('disabled_image_cache', disabled_image_cache + '', getDisabledImageCache, '禁用图片缓存')"
+                                active-value="off" inactive-value="on"
+                                active-text="使用图片缓存" inactive-text="禁用图片缓存" />
+                        </el-form-item>
+                        <el-form-item label="图片加载">
+                            <el-switch 
+                                v-model="disabledImage"
+                                @change="configValueChange('disabledImage', disabledImage + '', getDisabledImage, '禁用图片加载')"
+                                active-value="off" inactive-value="on"
+                                active-text="正常显示图片" inactive-text="不请求任何图片" />
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">Emby服务器缓存</span>
                             <el-button plain type="primary" :loading="cleanAllEmbyCacheLoading" size="small" @click.prevent="cleanAllEmbyCache()">清除所有缓存</el-button>
-                        </template>
-                        <template #default="scope">
-                            <el-button plain type="primary" :loading="cleanEmbyCacheLoading" size="small" @click.prevent="cleanEmbyCache(scope.row)">清除缓存</el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
-            </el-scrollbar>
+                        </div>
+                    </template>
+                    <el-table :data="embyServers" class="setting-table">
+                        <el-table-column prop="server_name" label="服务名" />
+                        <el-table-column prop="username" label="用户名" />
+                        <el-table-column fixed="right" label="Operations" width="180" align="center">
+                            <template #default="scope">
+                                <el-button plain type="primary" :loading="cleanEmbyCacheLoading" size="small" @click.prevent="cleanEmbyCache(scope.row)">清除缓存</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </div>
         </el-tab-pane>
+
         <el-tab-pane label="其他" name="Other">
-            <el-scrollbar style="height: calc(100vh - 120px);width: 100%">
-                <el-form label-position="top">
-                    <el-form-item label="忽略SSL证书错误（重启应用生效）">
-                        <el-switch
-                            v-model="danger_accept_invalid_certs"
-                            @change="configValueChange('danger_accept_invalid_certs', danger_accept_invalid_certs + '', getDangerAcceptInvalidCerts, '忽略SSL证书错误')"
-                            active-value="true" inactive-value="false"
-                            style="--el-switch-on-color: #F56C6C; --el-switch-off-color: #67C23A"
-                            active-text="忽略（危险的）" inactive-text="不忽略（安全）" />
-                    </el-form-item>
-                </el-form>
-            </el-scrollbar>
+            <div class="setting-pane">
+                <el-card class="setting-card">
+                    <template #header>
+                        <div class="setting-card-header">
+                            <span class="setting-card-title">其他</span>
+                        </div>
+                    </template>
+                    <el-form label-position="top" class="setting-form">
+                        <el-form-item label="忽略SSL证书错误（重启应用生效）">
+                            <el-switch
+                                v-model="danger_accept_invalid_certs"
+                                @change="configValueChange('danger_accept_invalid_certs', danger_accept_invalid_certs + '', getDangerAcceptInvalidCerts, '忽略SSL证书错误')"
+                                active-value="true" inactive-value="false"
+                                style="--el-switch-on-color: #F56C6C; --el-switch-off-color: #67C23A"
+                                active-text="忽略（危险的）" inactive-text="不忽略（安全）" />
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+            </div>
         </el-tab-pane>
     </el-tabs>
 
@@ -477,12 +594,12 @@ C:\App\mpv_config-2024.12.04\mpv.exe
         width="800"
     >
         <el-scrollbar>
-            <el-form label-position="top">
+            <el-form label-position="top" class="setting-form">
                 <el-form-item label="代理名称">
                     <el-input v-model="dialogProxyServer.name" placeholder="代理名称" />
                 </el-form-item>
                 <el-form-item label="代理类型">
-                    <el-select v-model="dialogProxyServer.proxy_type">
+                    <el-select v-model="dialogProxyServer.proxy_type" class="setting-select">
                         <el-option key="socks5" label="socks5" value="socks5"/>
                         <el-option key="https" label="https" value="https"/>
                         <el-option key="http" label="http" value="http"/>
@@ -498,9 +615,9 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                     <el-input v-model="dialogProxyServer.password" placeholder="密码（可选）" />
                 </el-form-item>
                 <el-form-item>
-                    <div style="width: 100%; display: flex; justify-content: end;">
-                        <el-button @click="saveProxyServer" type="primary">保存</el-button>
+                    <div class="setting-dialog-actions">
                         <el-button @click="dialogProxyServerVisible = false">取消</el-button>
+                        <el-button @click="saveProxyServer" type="primary">保存</el-button>
                     </div>
                 </el-form-item>
             </el-form>
@@ -512,7 +629,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
         width="800"
     >
         <el-scrollbar>
-            <el-form label-position="top">
+            <el-form label-position="top" class="setting-form">
                 <el-form-item label="反代名称">
                     <el-input v-model="dialogReverseProxyServer.name" placeholder="反代名称" />
                 </el-form-item>
@@ -520,9 +637,9 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                     <el-input v-model="dialogReverseProxyServer.url" placeholder="反代服务器地址，例如 https://proxy.example.org/" />
                 </el-form-item>
                 <el-form-item>
-                    <div style="width: 100%; display: flex; justify-content: end;">
-                        <el-button @click="saveReverseProxyServer" type="primary">保存</el-button>
+                    <div class="setting-dialog-actions">
                         <el-button @click="dialogReverseProxyServerVisible = false">取消</el-button>
+                        <el-button @click="saveReverseProxyServer" type="primary">保存</el-button>
                     </div>
                 </el-form-item>
             </el-form>
@@ -534,7 +651,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
         width="800"
     >
         <el-scrollbar>
-            <el-form label-position="top">
+            <el-form label-position="top" class="setting-form">
                 <el-form-item label="名称">
                     <el-input v-model="dialogEmbyIconLibrary.name" placeholder="图标库名称" />
                 </el-form-item>
@@ -542,16 +659,15 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                     <el-input v-model="dialogEmbyIconLibrary.url" placeholder="图标库 http 地址" />
                 </el-form-item>
                 <el-form-item>
-                    <div style="width: 100%; display: flex; justify-content: end;">
-                        <el-button @click="saveEmbyIconLibrary" type="primary">保存</el-button>
+                    <div class="setting-dialog-actions">
                         <el-button @click="dialogEmbyIconLibraryVisible = false">取消</el-button>
+                        <el-button @click="saveEmbyIconLibrary" type="primary">保存</el-button>
                     </div>
                 </el-form-item>
             </el-form>
         </el-scrollbar>
     </el-dialog>
 </template>
-
 <script lang="ts" setup>
 import { computed, h, onMounted, onUnmounted, ref } from 'vue';
 import { ElButton, ElMessage, ElMessageBox, ElNotification, TableColumnCtx } from 'element-plus';
@@ -1262,4 +1378,131 @@ handlePaneChange()
 </script>
 
 <style scoped>
+/* 设置页统一布局：内容整体居中、卡片等宽、字段左对齐 */
+.setting-tabs {
+    height: calc(100vh - var(--title-bar-height, 40px));
+    padding: 10px 20px 0 20px;
+    box-sizing: border-box;
+}
+
+.setting-tabs :deep(.el-tabs__header) {
+    margin: 0 0 16px 0;
+}
+
+.setting-pane {
+    height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding: 0 10px 24px 0;
+    box-sizing: border-box;
+}
+
+.setting-pane > * + * {
+    margin-top: 14px;
+}
+
+.setting-card {
+    border-radius: 10px;
+}
+
+.setting-card :deep(.el-card__header) {
+    padding: 14px 18px;
+}
+
+.setting-card :deep(.el-card__body) {
+    padding: 18px;
+}
+
+.setting-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    min-height: 24px;
+}
+
+.setting-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 24px;
+}
+
+.setting-card-desc,
+.setting-tip {
+    color: var(--el-text-color-secondary);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.setting-tip {
+    margin: 0 0 14px 0;
+}
+
+.setting-form :deep(.el-form-item) {
+    margin-bottom: 18px;
+}
+
+.setting-form :deep(.el-form-item:last-child) {
+    margin-bottom: 0;
+}
+
+.setting-form :deep(.el-form-item__label) {
+    width: 100%;
+    padding: 0 0 6px 0;
+    line-height: 1.5;
+    color: var(--el-text-color-regular);
+}
+
+.setting-form :deep(.el-form-item__content) {
+    width: 100%;
+}
+
+.setting-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.setting-plain-text {
+    color: var(--el-text-color-primary);
+    line-height: 32px;
+}
+
+.setting-select {
+    width: 230px;
+}
+
+.setting-select-xl {
+    width: 320px;
+}
+
+.setting-input-lg {
+    width: 360px;
+}
+
+.setting-number-200 {
+    width: 200px;
+}
+
+.setting-table {
+    width: 100%;
+}
+
+.setting-form-masonry {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    column-gap: 24px;
+    align-items: start;
+}
+
+.setting-form-masonry :deep(.el-form-item) {
+    margin-bottom: 18px;
+}
+
+.setting-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    width: 100%;
+}
 </style>
