@@ -19,7 +19,7 @@
                 </template>
             </el-input>
         </div>
-        <el-table :data="list" :row-style="highlightRowFunction">
+        <el-table :data="list" :row-style="highlightRowFunction" class="custom-data-table history-table">
             <el-table-column prop="emby_server_name" label="服务器" show-overflow-tooltip />
             <el-table-column prop="series_name" label="剧" show-overflow-tooltip>
                 <template #default="scope">
@@ -121,4 +121,50 @@ function highlightRowFunction({row}: {row: PlayHistory}) {
 </script>
 
 <style scoped>
+/*
+ * 配色对齐 PR #10 设置页方案：
+ * 表格背景透明跟随页面底色，表头用 --el-fill-color-light(#262727) 做一级区分，
+ * 斑马纹用 --el-fill-color-lighter(#1d1d1d) 兜底，边框用 --el-border-color-extra-light(#2b2b2c)，
+ * 避免出现纯黑/亮灰色块。
+ */
+.custom-data-table {
+    --el-table-bg-color: transparent;
+    --el-table-tr-bg-color: transparent;
+    --el-table-header-bg-color: var(--el-fill-color-light, #262727);
+    --el-table-row-hover-bg-color: var(--el-fill-color-light, #262727);
+    --el-table-border-color: var(--el-border-color-extra-light, #2b2b2c);
+    --el-table-text-color: var(--el-text-color-regular, #cfd3dc);
+    --el-table-header-text-color: var(--el-text-color-primary, #dcdfe6);
+}
+
+:deep(.custom-data-table .el-table__header-wrapper th) {
+    background-color: var(--el-fill-color-light, #262727);
+    font-weight: 600;
+    color: var(--el-text-color-primary, #dcdfe6);
+    height: 44px;
+}
+
+:deep(.custom-data-table .el-table__body tr > td.el-table__cell) {
+    background-color: transparent;
+    height: 48px;
+    border-bottom-color: var(--el-border-color-extra-light, #2b2b2c);
+}
+
+/* 顶部筛选区：输入框/选择框贴合底色，去掉亮灰对比 */
+:deep(.el-input__wrapper),
+:deep(.el-select__wrapper) {
+    background-color: var(--el-fill-color-light, #262727);
+    box-shadow: 0 0 0 1px var(--el-border-color-extra-light, #2b2b2c) inset;
+    transition: box-shadow 0.2s ease;
+}
+
+:deep(.el-input__wrapper:hover),
+:deep(.el-select__wrapper:hover) {
+    box-shadow: 0 0 0 1px var(--el-border-color, #4c4d4f) inset;
+}
+
+:deep(.el-input__wrapper.is-focus),
+:deep(.el-select__wrapper.is-focused) {
+    box-shadow: 0 0 0 1px var(--el-color-primary, #409eff) inset;
+}
 </style>
