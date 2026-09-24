@@ -262,59 +262,14 @@
                     </div>
                 </div>
             </el-skeleton>
-
-            <!-- 接下来 -->
-            <div v-if="currentEpisodes?.Type !== 'Movie' && currentEpisodes?.SeriesId" class="eps-card eps-nextup-card">
-                <div class="table-card-header">
-                    <div class="card-title-group">
-                        <div class="card-title-row">
-                            <span class="eps-card-title-mark"></span>
-                            <span class="eps-section-title">接下来</span>
-                        </div>
-                        <span class="eps-section-desc">选择本季剧集，或直接跳到下一个</span>
-                    </div>
-                    <div class="eps-nextup-actions">
-                        <el-button size="small" @click="handleNextUpPageChange(1, true)">本季所有</el-button>
-                        <el-button size="small" @click="handleNextUpPageChange(1)">本季接下来</el-button>
-                        <el-button size="small" type="primary" plain @click="nextEpisode()">下一个</el-button>
-                    </div>
-                </div>
-                <el-skeleton :loading="nextUpLoading" animated v-if="nextUpShow">
-                    <template #template>
-                        <div class="eps-nextup-list">
-                            <el-card class="item-card-skeleton" v-for="i in 6" :key="i">
-                                <el-skeleton-item variant="text" style="width: 85%; height: 20px;" />
-                                <div style="margin: 10px 0;"><el-skeleton-item variant="text" style="width: 60%; height: 16px;" /></div>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <el-skeleton-item variant="circle" style="width: 24px; height: 24px;" />
-                                    <el-skeleton-item variant="button" style="width: 70px; height: 32px;" />
-                                </div>
-                            </el-card>
-                        </div>
-                    </template>
-                    <div class="eps-nextup-list">
-                        <ItemCard v-for="nextUpItem in nextUpList" :key="nextUpItem.Id" :item="nextUpItem" :embyServerId="embyServerId" />
-                    </div>
-                </el-skeleton>
-                <el-pagination
-                    class="eps-nextup-pagination"
-                    v-model:current-page="nextUpCurrentPage"
-                    v-model:page-size="nextUpPageSize"
-                    layout="total, prev, pager, next, jumper"
-                    :total="nextUpTotal"
-                    @current-change="handleNextUpPageChange(nextUpCurrentPage, episodesQueryAll)"
-                    hide-on-single-page
-                />
-            </div>
         </div>
     </el-scrollbar>
 </template>
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref } from 'vue';
-import embyApi, { EmbyPageList, EpisodeItem, MediaSource, UserData } from '../../api/embyApi';
+import embyApi, { EpisodeItem, MediaSource, UserData } from '../../api/embyApi';
 import { formatBytes, formatMbps, secondsToHMS, isInternalUrl, secondsToHMS2 } from '../../util/str_util'
 import { getResolutionFromMediaSources, getResolutionLevelFromMediaSources } from '../../util/play_info_util'
-import ItemCard from '../../components/ItemCard.vue';
 import invokeApi from '../../api/invokeApi';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -343,13 +298,6 @@ const rememberSelect = ref(route.query.rememberSelect === 'true' ? true : false)
 const playbackInfoLoading = ref(false)
 const play_loading = ref(false)
 
-const nextUpShow = ref(false)
-const nextUpLoading = ref(false)
-const nextUpList = ref<EpisodeItem[]>([])
-const nextUpCurrentPage = ref(1)
-const nextUpPageSize = ref(6)
-const nextUpTotal = ref(0)
-
 const currentEpisodes = ref<EpisodeItem>()
 function updateCurrentEpisodes(silent: boolean = false) {
     if (!silent) {
@@ -365,48 +313,6 @@ function updateCurrentEpisodes(silent: boolean = false) {
             useImage().loadLogo(embyServerId, json)
         }
     }).catch(e => ElMessage.error(e)).finally(() => playbackInfoLoading.value = false)
-}
-
-const episodesQueryAll = ref(false)
-const handleNextUpPageChange = (val: number, query_all: boolean = false) => {
-    episodesQueryAll.value = query_all
-    const start_item_id = query_all ? undefined : currentEpisodes.value?.Id
-    nextUpCurrentPage.value = val
-    nextUpShow.value = true
-    nextUpLoading.value = true
-    episodes((val - 1) * nextUpPageSize.value, nextUpPageSize.value, start_item_id).then(json => {
-        nextUpList.value = json.Items
-        nextUpTotal.value = json.TotalRecordCount
-    }).finally(() => nextUpLoading.value = false)
-}
-
-function episodes(start_index: number, limit: number, start_item_id?: string) {
-    return embyApi.episodes(embyServerId, currentEpisodes.value?.SeriesId!, currentEpisodes.value?.SeasonId!, start_index, limit, start_item_id).then(async response => {
-        let json: EmbyPageList<EpisodeItem> = JSON.parse(response);
-        return Promise.resolve(json)
-    }).catch(e => {
-        ElMessage.error(e)
-        return Promise.reject(e)
-    })
-}
-function nextEpisode() {
-    episodes(1, 1, currentEpisodes.value?.Id).then(json => {
-        if (json.Items.length < 1) {
-            ElMessage.warning('已经是最后一集了')
-            return
-        }
-        jumpToNextEpisode(json.Items[0].Id)
-    })
-}
-function jumpToNextEpisode(id: string) {
-    router.replace({path: '/nav/emby/' + embyServerId + '/episodes/' + id, query: {
-        useDirectLink: useDirectLink.value.toString(),
-        rememberSelect: rememberSelect.value.toString(),
-        videoSelect: videoSelect.value,
-        audioSelect: audioSelect.value,
-        subtitleSelect: subtitleSelect.value,
-        versionSelect: versionSelect.value,
-    }})
 }
 
 const mediaSourceSizeTag = ref('')
@@ -613,7 +519,14 @@ async function playingNotify(payload: PlaybackNotifyParam) {
         if (payload.item_id === currentEpisodes.value?.Id && payload.event === 'stop') {
             updateCurrentEpisodes(true)
         } else if (payload.series_id && payload.series_id === currentEpisodes.value?.SeriesId && payload.item_id !== currentEpisodes.value?.Id && payload.event === 'start') {
-            jumpToNextEpisode(payload.item_id)
+            router.replace({path: '/nav/emby/' + embyServerId + '/episodes/' + payload.item_id, query: {
+                useDirectLink: useDirectLink.value.toString(),
+                rememberSelect: rememberSelect.value.toString(),
+                videoSelect: videoSelect.value,
+                audioSelect: audioSelect.value,
+                subtitleSelect: subtitleSelect.value,
+                versionSelect: versionSelect.value,
+            }})
         }
     }
 }
