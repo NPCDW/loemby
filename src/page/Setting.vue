@@ -1627,9 +1627,11 @@ handlePaneChange()
 }
 
 .setting-pane-inner {
-    max-width: 920px;
+    /* 卡片内容宽 920 + 卡片左右内边距 24*2 + 边框 2 = 970，
+       与默认状态下 el-tabs 下划线宽度（920px）视觉对齐 */
+    max-width: 970px;
     margin: 0 auto;
-    padding: 6px 4px 40px 4px;
+    padding: 6px 0 40px 0;
 }
 
 .setting-pane-inner.wide {
@@ -1783,8 +1785,9 @@ handlePaneChange()
 }
 
 .cache-box {
-    background-color: var(--el-fill-color-darker, #151617);
-    border: 1px solid var(--el-border-color-lighter, #2a2c30);
+    /* 与卡片同级：仅用极浅填充 + 细边框区分分组，避免灰色块破坏整体布局 */
+    background-color: transparent;
+    border: 1px solid var(--el-border-color-extra-light, #2b2b2c);
     border-radius: 8px;
     padding: 16px;
 }
@@ -1893,8 +1896,17 @@ handlePaneChange()
     overflow: hidden;
 }
 
+/* 表格沿用卡片背景，避免出现纯黑/透明区域 */
+.custom-data-table {
+    --el-table-bg-color: transparent;
+    --el-table-tr-bg-color: transparent;
+    --el-table-header-bg-color: var(--el-fill-color-light, #262727);
+    --el-table-row-hover-bg-color: var(--el-fill-color-light, #262727);
+    --el-table-border-color: var(--el-border-color-extra-light, #2b2b2c);
+}
+
 :deep(.custom-data-table .el-table__header-wrapper th) {
-    background-color: var(--el-fill-color-darker, #18191b);
+    background-color: var(--el-fill-color-light, #262727);
     font-weight: 600;
     color: var(--el-text-color-primary, #dcdfe6);
     height: 44px;
@@ -1902,6 +1914,15 @@ handlePaneChange()
 
 :deep(.custom-data-table .el-table__row) {
     height: 48px;
+}
+
+/* 行背景透明后补齐单元格与斑马纹底色 */
+:deep(.custom-data-table .el-table__body tr > td.el-table__cell) {
+    background-color: transparent;
+}
+
+:deep(.custom-data-table.el-table--striped .el-table__body tr.el-table__row--striped > td.el-table__cell) {
+    background-color: var(--el-fill-color-lighter, #1d1d1d);
 }
 
 /* 全局代理网格 */
