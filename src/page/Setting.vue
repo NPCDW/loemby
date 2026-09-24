@@ -29,7 +29,7 @@
                                         <div class="setting-desc">当前运行时的系统日志记录级别</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="warning" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.log_level || 'INFO' }}</el-tag>
+                                        <el-tag type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.log_level || 'INFO' }}</el-tag>
                                         <el-button plain type="primary" size="small" @click="invokeApi.open_folder('config')">打开配置目录</el-button>
                                     </div>
                                 </div>
@@ -39,7 +39,7 @@
                                         <div class="setting-desc">应用本地数据存储驱动模式</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="success" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.database_type || 'SQLite' }}</el-tag>
+                                        <el-tag type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.database_type || 'SQLite' }}</el-tag>
                                     </div>
                                 </div>
                                 <div class="setting-row">
@@ -48,7 +48,7 @@
                                         <div class="setting-desc">内置 Axum HTTP Web 服务监听端口</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="primary" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.axum_port }}</el-tag>
+                                        <el-tag type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.axum_port }}</el-tag>
                                     </div>
                                 </div>
                             </div>
@@ -100,7 +100,7 @@
                                 <div class="setting-row">
                                     <div class="setting-info">
                                         <div class="setting-label">播放参数 IsPlayback</div>
-                                        <div class="setting-desc">向 Emby 服务器上报实时的播放进度与就绪状态标记</div>
+                                        <div class="setting-desc">向 Emby 服务器上报播放就绪状态标记</div>
                                     </div>
                                     <div class="setting-controls">
                                         <el-switch
@@ -112,7 +112,7 @@
                                 <div class="setting-row align-start">
                                     <div class="setting-info">
                                         <div class="setting-label">网速显示</div>
-                                        <div class="setting-desc">在播放器画面显示实时网络缓冲速率，支持自定义 ASS 字幕样式</div>
+                                        <div class="setting-desc">在播放器中显示实时网络缓冲速率，支持自定义 ASS 字幕样式</div>
                                     </div>
                                     <div class="setting-controls-column">
                                         <div class="controls-line">
@@ -144,7 +144,7 @@
                                 <div class="cache-box forward-box">
                                     <div class="cache-box-header">
                                         <span class="cache-badge forward-badge">前向缓存</span>
-                                        <span class="cache-box-desc">控制当前播放点之后的提前缓冲量</span>
+                                        <span class="cache-box-desc">未播放的内容缓存大小</span>
                                     </div>
                                     <div class="cache-inputs-list">
                                         <div class="cache-input-row">
@@ -181,7 +181,7 @@
                                 <div class="cache-box backward-box">
                                     <div class="cache-box-header">
                                         <span class="cache-badge backward-badge">后向缓存</span>
-                                        <span class="cache-box-desc">控制已播放内容保留在内存中的回退大小</span>
+                                        <span class="cache-box-desc">已播放的内容缓存大小</span>
                                     </div>
                                     <div class="cache-inputs-list">
                                         <div class="cache-input-row">
