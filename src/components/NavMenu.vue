@@ -1038,11 +1038,20 @@ function notifyScrollBottom() {
     font-size: 12px;
 }
 
-/* 状态栏内的选择器：贴合状态栏底色，避免亮灰块 */
+/*
+ * 状态栏内的选择器：背景透明跟随状态栏底色，只保留可见边框。
+ * 与设置页 / 播放历史页的卡片式输入框保持一致，
+ * 避免在状态栏里出现一块比底色更亮的灰块。
+ */
 .nav-status-bar :deep(.el-select__wrapper) {
-    background-color: var(--el-fill-color-light, #262727);
+    background-color: transparent;
     box-shadow: 0 0 0 1px var(--el-border-color-extra-light, #2b2b2c) inset;
     transition: box-shadow 0.2s ease;
+}
+
+/* 下拉浮层仍用不透明底色，保证选项文字可读 */
+.nav-status-bar :deep(.el-select__popper) {
+    background-color: var(--el-bg-color-overlay, #1c1d1f);
 }
 
 .nav-status-bar :deep(.el-select__wrapper:hover) {

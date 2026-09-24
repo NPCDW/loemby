@@ -3,9 +3,43 @@
         <div style="padding: 20px 32px;">
             <el-skeleton :loading="playbackInfoLoading" animated>
                 <template #template>
-                    <div style="width: 100%;padding: 10px;">
-                        <h2><el-skeleton-item variant="h1" style="width: 50%;" /></h2>
-                        <p v-for="_i in 15"><el-skeleton-item variant="text" style="width: 97%;" /></p>
+                    <!-- 骨架与真实渲染保持同一结构：左信息 + 右侧 logo，避免加载完成时跳动 -->
+                    <div class="episodes-skeleton">
+                        <div class="eps-head">
+                            <div class="eps-main">
+                                <el-skeleton-item variant="h1" class="eps-title" />
+                                <el-skeleton-item variant="text" class="eps-subtitle" />
+                                <div class="eps-time-row">
+                                    <el-skeleton-item variant="text" class="eps-time" />
+                                    <el-skeleton-item variant="text" class="eps-progress" />
+                                </div>
+                                <div class="eps-tags-row">
+                                    <el-skeleton-item variant="text" class="eps-tag" />
+                                    <el-skeleton-item variant="text" class="eps-tag" />
+                                    <el-skeleton-item variant="text" class="eps-tag" />
+                                </div>
+                            </div>
+                            <el-skeleton-item variant="image" class="eps-logo" />
+                        </div>
+                        <div class="eps-field">
+                            <el-skeleton-item variant="text" class="eps-label" />
+                            <el-skeleton-item variant="text" class="eps-select-wide" />
+                        </div>
+                        <div class="eps-field">
+                            <el-skeleton-item variant="text" class="eps-label" />
+                            <el-skeleton-item variant="text" class="eps-select" />
+                            <el-skeleton-item variant="text" class="eps-label" />
+                            <el-skeleton-item variant="text" class="eps-select" />
+                            <el-skeleton-item variant="text" class="eps-label" />
+                            <el-skeleton-item variant="text" class="eps-select" />
+                        </div>
+                        <div class="eps-actions">
+                            <el-skeleton-item variant="button" v-for="i in 4" :key="i" class="eps-action" />
+                        </div>
+                        <div class="eps-lines">
+                            <el-skeleton-item variant="text" class="eps-line" />
+                            <el-skeleton-item variant="text" class="eps-line" />
+                        </div>
                     </div>
                 </template>
                 <div v-if="currentEpisodes">
@@ -144,7 +178,7 @@
             <el-skeleton :loading="nextUpLoading" animated v-if="nextUpShow">
                 <template #template>
                     <div style="display: flex; flex-wrap: wrap; flex-direction: row;">
-                        <el-card class="item-card-skeleton" v-for="i in 5" :key="i">
+                        <el-card class="item-card-skeleton" v-for="i in 6" :key="i">
                             <el-skeleton-item variant="text" style="width: 85%; height: 20px;" />
                             <div style="margin: 10px 0;"><el-skeleton-item variant="text" style="width: 60%; height: 16px;" /></div>
                             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -538,5 +572,121 @@ updateCurrentEpisodes().then(() => {
     margin: 5px;
     border-radius: 10px;
     overflow: hidden;
+}
+
+/* ===== 播放详情页骨架：结构与真实渲染对齐 ===== */
+.episodes-skeleton {
+    padding: 10px;
+}
+
+.eps-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.eps-main {
+    flex: 1;
+    min-width: 0;
+    padding-right: 20px;
+}
+
+.eps-title {
+    width: 50%;
+    height: 32px;
+}
+
+.eps-subtitle {
+    width: 30%;
+    height: 18px;
+    margin-top: 10px;
+}
+
+.eps-time-row {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.eps-time {
+    width: 90px;
+    height: 16px;
+}
+
+.eps-progress {
+    width: 240px;
+    height: 16px;
+    margin-left: 5px;
+}
+
+.eps-tags-row {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+    gap: 15px;
+}
+
+.eps-tag {
+    width: 120px;
+    height: 24px;
+    border-radius: 4px;
+}
+
+/* 右侧 logo 占位：与真实 logo 的最大尺寸（400x170）对齐，避免布局跳动 */
+.eps-logo {
+    width: 400px;
+    max-width: 40%;
+    height: 170px;
+    border-radius: 8px;
+    flex: none;
+}
+
+.eps-field {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+    gap: 10px;
+}
+
+.eps-label {
+    width: 48px;
+    height: 16px;
+    flex: none;
+}
+
+.eps-select-wide {
+    width: 840px;
+    max-width: 100%;
+    height: 40px;
+    border-radius: 4px;
+}
+
+.eps-select {
+    width: 235px;
+    height: 40px;
+    border-radius: 4px;
+}
+
+/* 底部按钮组：真实渲染为居中布局 */
+.eps-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 15px 0;
+}
+
+.eps-action {
+    width: 100px;
+    height: 32px;
+}
+
+.eps-lines {
+    margin: 15px 0;
+}
+
+.eps-line {
+    width: 60%;
+    height: 24px;
+    margin-bottom: 12px;
 }
 </style>
