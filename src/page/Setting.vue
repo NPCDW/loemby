@@ -29,7 +29,7 @@
                                         <div class="setting-desc">当前运行时的系统日志记录级别</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="warning" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.log_level || 'INFO' }}</el-tag>
+                                        <el-tag type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.log_level || 'INFO' }}</el-tag>
                                         <el-button plain type="primary" size="small" @click="invokeApi.open_folder('config')">打开配置目录</el-button>
                                     </div>
                                 </div>
@@ -39,7 +39,7 @@
                                         <div class="setting-desc">应用本地数据存储驱动模式</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="success" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.database_type || 'SQLite' }}</el-tag>
+                                        <el-tag type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.database_type || 'SQLite' }}</el-tag>
                                     </div>
                                 </div>
                                 <div class="setting-row">
@@ -48,7 +48,7 @@
                                         <div class="setting-desc">内置 Axum HTTP Web 服务监听端口</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="primary" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.axum_port }}</el-tag>
+                                        <el-tag type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.axum_port }}</el-tag>
                                     </div>
                                 </div>
                             </div>
@@ -100,7 +100,7 @@
                                 <div class="setting-row">
                                     <div class="setting-info">
                                         <div class="setting-label">播放参数 IsPlayback</div>
-                                        <div class="setting-desc">向 Emby 服务器上报实时的播放进度与就绪状态标记</div>
+                                        <div class="setting-desc">向 Emby 服务器上报播放就绪状态标记</div>
                                     </div>
                                     <div class="setting-controls">
                                         <el-switch
@@ -112,7 +112,7 @@
                                 <div class="setting-row align-start">
                                     <div class="setting-info">
                                         <div class="setting-label">网速显示</div>
-                                        <div class="setting-desc">在播放器画面显示实时网络缓冲速率，支持自定义 ASS 字幕样式</div>
+                                        <div class="setting-desc">在播放器中显示实时网络缓冲速率，支持自定义 ASS 字幕样式</div>
                                     </div>
                                     <div class="setting-controls-column">
                                         <div class="controls-line">
@@ -144,7 +144,7 @@
                                 <div class="cache-box forward-box">
                                     <div class="cache-box-header">
                                         <span class="cache-badge forward-badge">前向缓存</span>
-                                        <span class="cache-box-desc">控制当前播放点之后的提前缓冲量</span>
+                                        <span class="cache-box-desc">未播放的内容缓存大小</span>
                                     </div>
                                     <div class="cache-inputs-list">
                                         <div class="cache-input-row">
@@ -181,7 +181,7 @@
                                 <div class="cache-box backward-box">
                                     <div class="cache-box-header">
                                         <span class="cache-badge backward-badge">后向缓存</span>
-                                        <span class="cache-box-desc">控制已播放内容保留在内存中的回退大小</span>
+                                        <span class="cache-box-desc">已播放的内容缓存大小</span>
                                     </div>
                                     <div class="cache-inputs-list">
                                         <div class="cache-input-row">
@@ -554,10 +554,10 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 </div>
                             </div>
                             <div class="table-card-body">
-                                <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod" class="custom-data-table">
-                                    <el-table-column prop="emby_server_name" label="Emby 服务器" min-width="160" show-overflow-tooltip />
-                                    <el-table-column prop="name" label="线路" min-width="140" show-overflow-tooltip />
-                                    <el-table-column label="反代服务器" min-width="210">
+                                <el-table :data="embyLines" style="width: 100%" :span-method="lineSpanMethod" class="custom-data-table line-proxy-table">
+                                    <el-table-column prop="emby_server_name" label="Emby 服务器" min-width="130" show-overflow-tooltip />
+                                    <el-table-column prop="name" label="线路" min-width="110" show-overflow-tooltip />
+                                    <el-table-column label="反代服务器" min-width="170">
                                         <template #default="scope">
                                             <el-select v-model="scope.row.reverse_proxy_id" @change="proxyChange(scope.row)" style="width: 100%;">
                                                 <el-option key="no" label="不使用反代" value="no"/>
@@ -565,7 +565,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                             </el-select>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column label="媒体库浏览" min-width="230">
+                                    <el-table-column label="媒体库浏览" min-width="190">
                                         <template #default="scope">
                                             <el-select v-model="scope.row.browse_proxy_id" @change="proxyChange(scope.row)" style="width: 100%;">
                                                 <el-option key="no" label="不使用代理" value="no"/>
@@ -574,7 +574,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                             </el-select>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column label="媒体流播放" min-width="230">
+                                    <el-table-column label="媒体流播放" min-width="190">
                                         <template #default="scope">
                                             <el-select v-model="scope.row.play_proxy_id" @change="proxyChange(scope.row)" style="width: 100%;">
                                                 <el-option key="no" label="不使用代理" value="no"/>
@@ -1627,9 +1627,11 @@ handlePaneChange()
 }
 
 .setting-pane-inner {
-    max-width: 920px;
+    /* 卡片内容宽 920 + 卡片左右内边距 24*2 + 边框 2 = 970，
+       与默认状态下 el-tabs 下划线宽度（920px）视觉对齐 */
+    max-width: 970px;
     margin: 0 auto;
-    padding: 6px 4px 40px 4px;
+    padding: 6px 0 40px 0;
 }
 
 .setting-pane-inner.wide {
@@ -1783,8 +1785,9 @@ handlePaneChange()
 }
 
 .cache-box {
-    background-color: var(--el-fill-color-darker, #151617);
-    border: 1px solid var(--el-border-color-lighter, #2a2c30);
+    /* 与卡片同级：仅用极浅填充 + 细边框区分分组，避免灰色块破坏整体布局 */
+    background-color: transparent;
+    border: 1px solid var(--el-border-color-extra-light, #2b2b2c);
     border-radius: 8px;
     padding: 16px;
 }
@@ -1857,14 +1860,38 @@ handlePaneChange()
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 13px;
     line-height: 1.5;
-    background-color: var(--el-fill-color-darker, #151617);
-    border-color: var(--el-border-color-lighter, #2e3034);
+    background-color: var(--el-fill-color-light, #262727);
+    border-color: var(--el-border-color-lighter, #363637);
+    color: var(--el-text-color-regular, #cfd3dc);
     border-radius: 6px;
     padding: 10px 12px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.mono-textarea :deep(.el-textarea__inner::placeholder) {
+    color: var(--el-text-color-placeholder, #8d9095);
+}
+
+.mono-textarea :deep(.el-textarea__inner:hover) {
+    border-color: var(--el-border-color, #4c4d4f);
 }
 
 .mono-textarea :deep(.el-textarea__inner:focus) {
     border-color: var(--el-color-primary, #409eff);
+    background-color: var(--el-fill-color, #303030);
+}
+
+/* 禁用态：贴合卡片底色，避免大块亮灰突兀 */
+.mono-textarea :deep(.el-textarea.is-disabled .el-textarea__inner),
+.mono-textarea :deep(.el-textarea__inner:disabled) {
+    background-color: var(--el-fill-color-lighter, #1d1d1d);
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+    color: var(--el-text-color-disabled, #6c6e72);
+}
+
+.mono-textarea :deep(.el-textarea.is-disabled .el-textarea__inner::placeholder),
+.mono-textarea :deep(.el-textarea__inner:disabled::placeholder) {
+    color: var(--el-text-color-disabled, #6c6e72);
 }
 
 /* 表格卡片容器 */
@@ -1893,8 +1920,17 @@ handlePaneChange()
     overflow: hidden;
 }
 
+/* 表格沿用卡片背景，避免出现纯黑/透明区域 */
+.custom-data-table {
+    --el-table-bg-color: transparent;
+    --el-table-tr-bg-color: transparent;
+    --el-table-header-bg-color: var(--el-fill-color-light, #262727);
+    --el-table-row-hover-bg-color: var(--el-fill-color-light, #262727);
+    --el-table-border-color: var(--el-border-color-extra-light, #2b2b2c);
+}
+
 :deep(.custom-data-table .el-table__header-wrapper th) {
-    background-color: var(--el-fill-color-darker, #18191b);
+    background-color: var(--el-fill-color-light, #262727);
     font-weight: 600;
     color: var(--el-text-color-primary, #dcdfe6);
     height: 44px;
@@ -1902,6 +1938,35 @@ handlePaneChange()
 
 :deep(.custom-data-table .el-table__row) {
     height: 48px;
+}
+
+/* 行背景透明后补齐单元格与斑马纹底色 */
+:deep(.custom-data-table .el-table__body tr > td.el-table__cell) {
+    background-color: transparent;
+}
+
+:deep(.custom-data-table.el-table--striped .el-table__body tr.el-table__row--striped > td.el-table__cell) {
+    background-color: var(--el-fill-color-lighter, #1d1d1d);
+}
+
+/* 线路分流表格：避免列内下拉框撑破卡片 */
+:deep(.line-proxy-table .el-table__cell) {
+    padding: 8px 8px;
+}
+
+:deep(.line-proxy-table .el-select) {
+    width: 100%;
+}
+
+:deep(.line-proxy-table .el-select__wrapper),
+:deep(.line-proxy-table .el-select__selection) {
+    min-width: 0;
+}
+
+:deep(.line-proxy-table .el-select__selected-item) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 全局代理网格 */

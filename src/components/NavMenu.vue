@@ -1,7 +1,7 @@
 <template>
     <div>
         <div style="display: flex; flex-direction: row; height: calc(100vh - 30px);">
-            <el-menu style="height: 100%; width: 200px; min-height: calc(100vh - 30px); background-color: var(--dark-background-color)" :collapse="false" :default-active="active">
+            <el-menu class="nav-side-menu" style="height: 100%; width: 200px; min-height: calc(100vh - 30px)" :collapse="false" :default-active="active">
                 <el-menu-item index="/nav/history" @click="jumpRoute('/nav/history')">
                     <el-icon><i-ep-Clock /></el-icon>播放历史
                 </el-menu-item>
@@ -82,7 +82,7 @@
                 </router-view>
             </el-scrollbar>
         </div>
-        <div style="height: 29px; border-top: 1px solid #4c4d4f; display: flex; justify-content: space-between; align-items: center;">
+        <div class="nav-status-bar" style="height: 29px; display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; margin-left: 3px;">
                 <el-popover
                     :visible="dialogNotifyCenterVisible"
@@ -957,10 +957,79 @@ function notifyScrollBottom() {
 </script>
 
 <style scoped>
+/*
+ * 配色对齐 PR #10 设置页方案：
+ * 底层沿用 --el-fill-color-lighter(#1d1d1d) 贴近卡片，
+ * 分组/表头用 --el-fill-color-light(#262727)，
+ * 分界线用 --el-border-color-extra-light(#2b2b2c)，
+ * 不再出现纯黑 #000 或亮灰 #4c4d4f 等突兀色块。
+ */
+
+/* ===== 侧边栏 ===== */
+/*
+ * 内联样式里的 background-color: var(--dark-background-color) 指向 #121212，
+ * 优先级高于这里的 CSS 变量，会把侧边栏整块刷成纯黑（比页面底 #141414 还暗）。
+ * 已从模板内联样式中移除该色值，改由 CSS 统一指定。
+ */
+.nav-side-menu {
+    --el-menu-bg-color: var(--el-fill-color-lighter, #1d1d1d);
+    --el-menu-text-color: var(--el-text-color-regular, #cfd3dc);
+    --el-menu-active-color: var(--el-color-primary, #409eff);
+    --el-menu-hover-bg-color: var(--el-fill-color-light, #262727);
+    --el-menu-item-height: 48px;
+    background-color: var(--el-fill-color-lighter, #1d1d1d);
+    border-right: 1px solid var(--el-border-color-extra-light, #2b2b2c);
+}
+
+/* 选中项：浅底色 + 左侧主色指示条，与卡片层次一致 */
+.nav-side-menu :deep(.el-menu-item.is-active) {
+    background-color: var(--el-fill-color-light, #262727);
+    color: var(--el-color-primary, #409eff);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 0 var(--el-color-primary, #409eff);
+}
+
+.nav-side-menu :deep(.el-menu-item:hover) {
+    background-color: var(--el-fill-color-light, #262727);
+}
+
+/* 内嵌服务器列表滚动区：去掉纯黑底 */
+.nav-side-menu :deep(.el-scrollbar__view) {
+    background-color: transparent;
+}
+
+/* ===== 底部状态栏 ===== */
+.nav-status-bar {
+    background-color: var(--el-fill-color-lighter, #1d1d1d);
+    border-top: 1px solid var(--el-border-color-extra-light, #2b2b2c);
+    color: var(--el-text-color-regular, #cfd3dc);
+}
+
+.nav-status-bar :deep(.el-text) {
+    color: var(--el-text-color-regular, #cfd3dc);
+    font-size: 12px;
+}
+
+/* 状态栏内的选择器：贴合状态栏底色，避免亮灰块 */
+.nav-status-bar :deep(.el-select__wrapper) {
+    background-color: var(--el-fill-color-light, #262727);
+    box-shadow: 0 0 0 1px var(--el-border-color-extra-light, #2b2b2c) inset;
+    transition: box-shadow 0.2s ease;
+}
+
+.nav-status-bar :deep(.el-select__wrapper:hover) {
+    box-shadow: 0 0 0 1px var(--el-border-color, #4c4d4f) inset;
+}
+
+.nav-status-bar :deep(.el-select__wrapper.is-focused) {
+    box-shadow: 0 0 0 1px var(--el-color-primary, #409eff) inset;
+}
+
+/* ===== 消息中心 ===== */
 .message-content {
     margin: 0;
     padding: 5px;
-    background-color: #303030;
+    background-color: var(--el-fill-color-light, #262727);
     word-break: break-all;
     border-radius: 5px;
 }
