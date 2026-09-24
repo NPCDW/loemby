@@ -11,7 +11,24 @@ body {
 :root {
     --title-bar-height: 40px;
     --nav-menu-width: 63px;
-    --dark-background-color: #121212
+    /* 统一背景色：侧边栏、状态栏、内容区与窗口底色保持一致 */
+    --loemby-surface-color: #1d1d1d;
+    /* 兼容旧变量名 */
+    --dark-background-color: var(--loemby-surface-color);
+}
+
+/* 全局页面底色：窗口内不出现纯黑区域 */
+html,
+body,
+#app {
+    background-color: var(--loemby-surface-color);
+    min-height: 100vh;
+}
+
+/* Element Plus 弹层/下拉与页面底色对齐，避免纯黑块 */
+html.dark {
+    --el-bg-color-page: var(--loemby-surface-color);
+    --el-bg-color: var(--loemby-surface-color);
 }
 
 img[lazy=error] {

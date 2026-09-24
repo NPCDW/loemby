@@ -1631,7 +1631,8 @@ handlePaneChange()
        与默认状态下 el-tabs 下划线宽度（920px）视觉对齐 */
     max-width: 970px;
     margin: 0 auto;
-    padding: 6px 0 40px 0;
+    /* 底部留白收窄：仅保留卡片间距量级的呼吸空间，不再出现大块空白 */
+    padding: 6px 0 16px 0;
 }
 
 .setting-pane-inner.wide {
