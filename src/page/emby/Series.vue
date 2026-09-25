@@ -612,7 +612,13 @@ function handleDialogEpisodesPageChange(page: number) {
  * ============================================================ */
 .series-info {
     padding: 20px;
+    /* 固定为「除封面外的整块空间」：flex-basis 0 + grow 吃掉剩余宽度，
+       宽度由容器决定，不受简介 / 标签 / 链接等内容宽度影响；
+       min-width 必须显式回到 0，否则 flex 项的自动最小尺寸会被长内容撑破。 */
+    flex: 1 1 0;
     min-width: 0;
+    width: 0;
+    box-sizing: border-box;
 }
 
 .eps-provider-tag {
@@ -840,6 +846,24 @@ function handleDialogEpisodesPageChange(page: number) {
 .eps-tags-wrap,
 .eps-external-list {
     position: relative;
+}
+
+/* 信息区的宽度基准：
+ * .hover-card-host 只负责占位高度，宽度由 .series-info 决定；
+ * 折叠行（.hover-card）绝对定位且 left/right 为 0，宽度取 host 的宽度，
+ * 因此只要 host 不被内容撑破，卡片就恒等于「封面外的整块空间」。 */
+.series-info .hover-card-host {
+    width: 100%;
+    min-width: 0;
+}
+
+/* 宽子元素（多标签 / 长链接 / 长 token）不再参与父级宽度计算 */
+.series-info .hover-card-host,
+.series-info .hover-card,
+.series-info .eps-tags-wrap,
+.series-info .eps-external-list {
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* ---------------- 折叠态的行内容器 ---------------- */
