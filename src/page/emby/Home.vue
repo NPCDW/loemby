@@ -366,14 +366,7 @@ handlePaneChange()
     gap: 10px;
 }
 
-/* 收藏骨架：对齐 ItemCard 的 el-card（宽度 300px、margin 5px、10px 圆角） */
-.favorite-skeleton-card {
-    width: 300px;
-    margin: 5px;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
+/* 收藏骨架卡片：尺寸与配色已由 style.css 的 .favorite-skeleton-card 统一提供 */
 .favorite-skeleton-card h2 {
     margin-top: 0;
     margin-bottom: 0;

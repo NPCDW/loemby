@@ -178,10 +178,20 @@ img[lazy=loading]::before {
     border-radius: 6px;
 }
 
-/* el-card 内骨架：跟随卡片圆角，避免溢出方角 */
-.el-skeleton .el-card {
+/* 骨架用的 el-card：与 ItemCard 的 .item-card 同尺寸同配色，
+ * 否则占位卡片比真实卡片更暗（深色主题 --el-fill-color-blank 为透明，会露出页面底色）。
+ * 各页面仍可自行加 .item-card-skeleton / .favorite-skeleton-card 等类，
+ * 这里用并列选择器兜住，不依赖加载顺序。 */
+.el-skeleton .el-card,
+.item-card-skeleton,
+.favorite-skeleton-card {
+    width: 300px;
+    margin: 5px;
     border-radius: 10px;
     overflow: hidden;
+    background-color: var(--el-bg-color-overlay, #1d1e1f);
+    border: 1px solid var(--el-border-color-lighter, #2e3034);
+    box-shadow: none;
 }
 
 /* 竖版封面占位（115x160）：与真实竖版封面比例一致 */

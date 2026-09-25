@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-const VERSION: &'static str = "0.43.3";
+const VERSION: &'static str = "0.43.4";
 
 fn main() {
     modify_version();
