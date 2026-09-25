@@ -29,77 +29,39 @@
                 <div class="series-info">
                     <h1>{{ currentSeries.Name }}</h1>
                     <p>{{ currentSeries.ProductionYear }}</p>
-                    <!-- 剧集简介：默认只占 4 行，悬停弹出卡片展示完整内容 -->
-                    <el-popover
-                        placement="right"
-                        trigger="hover"
-                        :width="460"
-                        :disabled="!overviewOverflow"
-                        popper-class="series-detail-popover"
-                    >
-                        <template #reference>
-                            <p ref="overviewRef" class="series-overview is-clamp">{{ currentSeries.Overview }}</p>
-                        </template>
-                        <div class="popover-title">剧集简介</div>
-                        <div class="popover-body series-overview-full">{{ currentSeries.Overview }}</div>
-                    </el-popover>
-                    <!-- 外部标签：默认只占一行，悬停弹出卡片展示全部 -->
-                    <el-popover
-                        v-if="currentSeries.ProviderIds && Object.keys(currentSeries.ProviderIds).length > 0"
-                        placement="right"
-                        trigger="hover"
-                        :width="360"
-                        :disabled="!tagsOverflow"
-                        popper-class="series-detail-popover"
-                    >
-                        <template #reference>
-                            <div ref="tagsWrapRef" class="eps-tags-wrap is-single-line">
-                                <el-tag v-for="(value, key) in currentSeries.ProviderIds" class="eps-provider-tag" disable-transitions>
-                                    <span class="eps-provider-key">{{ key }}</span>
-                                    <span class="eps-provider-sep">:</span>
-                                    <span class="eps-provider-value">{{ value }}</span>
-                                </el-tag>
-                                <span class="ellipsis-tail" v-if="tagsOverflow">···</span>
-                            </div>
-                        </template>
-                        <div class="popover-title">外部标签</div>
-                        <div class="popover-body eps-tags-wrap">
-                            <el-tag v-for="(value, key) in currentSeries.ProviderIds" class="eps-provider-tag" disable-transitions>
+                    <!-- 剧集简介：默认只占 4 行，悬停以浮层卡片展示完整内容（浮层绝对定位，不占流、不移动任何元素） -->
+                    <div class="hover-card-host" v-if="currentSeries.Overview">
+                        <p class="series-overview is-clamp">{{ currentSeries.Overview }}</p>
+                        <div class="hover-card hover-card--overview">
+                            <div class="hover-card__title">剧集简介</div>
+                            <div class="hover-card__body">{{ currentSeries.Overview }}</div>
+                        </div>
+                    </div>
+                    <!-- 外部标签：默认只占一行，悬停以浮层卡片展示全部 -->
+                    <div class="hover-card-host" v-if="currentSeries.ProviderIds && Object.keys(currentSeries.ProviderIds).length > 0">
+                        <div ref="tagsWrapRef" class="eps-tags-wrap is-single-line">
+                            <el-tag v-for="(value, key) in currentSeries.ProviderIds" :key="key" class="eps-provider-tag" disable-transitions>
                                 <span class="eps-provider-key">{{ key }}</span>
                                 <span class="eps-provider-sep">:</span>
                                 <span class="eps-provider-value">{{ value }}</span>
                             </el-tag>
+                            <span class="ellipsis-tail" v-if="tagsOverflow">···</span>
                         </div>
-                    </el-popover>
-                    <!-- 外部链接：默认只占一行，悬停弹出卡片展示全部 -->
-                    <el-popover
-                        v-if="currentSeries.ExternalUrls && currentSeries.ExternalUrls.length > 0"
-                        placement="right"
-                        trigger="hover"
-                        :width="480"
-                        :disabled="!linksOverflow"
-                        popper-class="series-detail-popover"
-                    >
-                        <template #reference>
-                            <div ref="linksWrapRef" class="eps-external-list is-single-line">
-                                <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
-                                    <button class="eps-external-btn" @click="invokeApi.open_url(externalUrl.Url)">
-                                        <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" class="eps-external-icon" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" class="eps-external-icon" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" class="eps-external-icon" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" class="eps-external-icon" />
-                                        <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" class="eps-external-icon" />
-                                        <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" class="eps-external-icon" />
-                                        <i-ep-Link v-else class="eps-external-icon" />
-                                        <span class="eps-external-name">{{ externalUrl.Name }}</span>
-                                    </button>
-                                </el-tooltip>
-                                <div class="ellipsis-tail" v-if="linksOverflow">···</div>
+                        <div class="hover-card hover-card--tags">
+                            <div class="hover-card__title">外部标签</div>
+                            <div class="hover-card__body eps-tags-wrap">
+                                <el-tag v-for="(value, key) in currentSeries.ProviderIds" :key="key" class="eps-provider-tag" disable-transitions>
+                                    <span class="eps-provider-key">{{ key }}</span>
+                                    <span class="eps-provider-sep">:</span>
+                                    <span class="eps-provider-value">{{ value }}</span>
+                                </el-tag>
                             </div>
-                        </template>
-                        <div class="popover-title">外部链接</div>
-                        <div class="popover-body eps-external-list">
-                            <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
+                        </div>
+                    </div>
+                    <!-- 外部链接：默认只占一行，悬停以浮层卡片展示全部 -->
+                    <div class="hover-card-host" v-if="currentSeries.ExternalUrls && currentSeries.ExternalUrls.length > 0">
+                        <div ref="linksWrapRef" class="eps-external-list is-single-line">
+                            <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :key="externalUrl.Url" :content="externalUrl.Url" placement="bottom" effect="light">
                                 <button class="eps-external-btn" @click="invokeApi.open_url(externalUrl.Url)">
                                     <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" class="eps-external-icon" />
                                     <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" class="eps-external-icon" />
@@ -111,8 +73,26 @@
                                     <span class="eps-external-name">{{ externalUrl.Name }}</span>
                                 </button>
                             </el-tooltip>
+                            <div class="ellipsis-tail" v-if="linksOverflow">···</div>
                         </div>
-                    </el-popover>
+                        <div class="hover-card hover-card--links">
+                            <div class="hover-card__title">外部链接</div>
+                            <div class="hover-card__body eps-external-list">
+                                <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :key="externalUrl.Url" :content="externalUrl.Url" placement="bottom" effect="light">
+                                    <button class="eps-external-btn" @click="invokeApi.open_url(externalUrl.Url)">
+                                        <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" class="eps-external-icon" />
+                                        <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" class="eps-external-icon" />
+                                        <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" class="eps-external-icon" />
+                                        <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" class="eps-external-icon" />
+                                        <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" class="eps-external-icon" />
+                                        <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" class="eps-external-icon" />
+                                        <i-ep-Link v-else class="eps-external-icon" />
+                                        <span class="eps-external-name">{{ externalUrl.Name }}</span>
+                                    </button>
+                                </el-tooltip>
+                            </div>
+                        </div>
+                    </div>
                     <!-- 已播放 / 收藏：复用剧集详情页的次要按钮样式 -->
                     <el-button class="eps-secondary-btn" :disabled="playedLoading[currentSeries.Id]" @click="played(currentSeries)">
                         <el-icon color="#67C23A" :size="18" :class="playedLoading[currentSeries.Id] ? 'is-loading' : ''" v-if="currentSeries.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
@@ -288,38 +268,42 @@ function updateCurrentSerie() {
 updateCurrentSerie()
 
 /* ============================================================
- * 简介 / 外部标签 / 外部链接的一行折叠与悬停展开
- * 三者都只占一行（简介 4 行），真实溢出时才启用 hover 卡片，
- * 未溢出时 popover 置为 disabled，避免无意义的浮层。
+ * 简介 / 外部标签 / 外部链接的折叠与悬停浮层
+ *
+ * 折叠：简介 4 行，标签 / 链接各一行；浮层一律用绝对定位的
+ * `.hover-card`，脱离文档流，悬停时只显示浮层，触发元素本身
+ * 与其它元素的位置都不会发生变化。
+ * 这里的 JS 只负责「是否溢出」这一个判断，用来决定折叠行末尾
+ * 的「···」要不要出现；浮层显隐完全交给 CSS 的 :hover，不依赖
+ * 任何测量结果，因此不会出现「溢出没测到 → 悬停失效」的问题。
  * ============================================================ */
-const overviewRef = ref<HTMLElement>()
 const tagsWrapRef = ref<HTMLElement>()
 const linksWrapRef = ref<HTMLElement>()
-const overviewOverflow = ref(false)
 const tagsOverflow = ref(false)
 const linksOverflow = ref(false)
 
-/** 简介：比较 scrollHeight 与 clientHeight，判断是否超过 4 行 */
-function measureOverview() {
-    const el = overviewRef.value
-    if (!el) {
-        return
-    }
-    // line-clamp 生效时 scrollHeight 会大于 clientHeight
-    overviewOverflow.value = el.scrollHeight - el.clientHeight > 1
-}
-
-/** 标签 / 链接：单行不换行，用 scrollWidth 与 clientWidth 比较判断溢出 */
+/** 单行不换行时，用「内容总宽 > 可见宽」判断是否被裁掉 */
 function measureLine(el?: HTMLElement) {
     if (!el) {
         return false
     }
-    return el.scrollWidth - el.clientWidth > 1
+    // scrollWidth 在 flex + overflow:hidden 下可能等于 clientWidth，
+    // 这里同时用最后可见子项的实际右边界兜底，避免漏判。
+    if (el.scrollWidth - el.clientWidth > 1) {
+        return true
+    }
+    const box = el.getBoundingClientRect()
+    const children = Array.from(el.children).filter((c) => !c.classList.contains('ellipsis-tail'))
+    const last = children[children.length - 1] as HTMLElement | undefined
+    if (!last) {
+        return false
+    }
+    const lastRight = last.getBoundingClientRect().right
+    // 右侧留了 30px 的省略号空隙，超出即视为溢出
+    return lastRight - (box.right - 30) > 1
 }
 
 function measureAll() {
-    // 简介的溢出判断需要真实换行后的高度，先等折叠态渲染完成
-    measureOverview()
     tagsOverflow.value = measureLine(tagsWrapRef.value)
     linksOverflow.value = measureLine(linksWrapRef.value)
 }
@@ -333,15 +317,14 @@ watch(currentSeries, () => {
             infoResizeObserver = new ResizeObserver(() => measureAll())
         }
         infoResizeObserver.disconnect()
-        if (overviewRef.value) {
-            infoResizeObserver.observe(overviewRef.value)
-        }
         if (tagsWrapRef.value) {
             infoResizeObserver.observe(tagsWrapRef.value)
         }
         if (linksWrapRef.value) {
             infoResizeObserver.observe(linksWrapRef.value)
         }
+        // 链接图标是异步图片，加载完成后宽度会变化，稍后再补测一次
+        window.setTimeout(measureAll, 300)
     })
 }, { immediate: true })
 
@@ -518,13 +501,15 @@ function handleDialogEpisodesPageChange(page: number) {
     font-size: 14px;
 }
 
-/* 默认折叠为 4 行；未溢出时 clamp 不产生视觉影响，溢出时由 popover 展示全文 */
+/* 默认折叠为 4 行；悬停由外层 .hover-card 展示全文 */
 .series-overview.is-clamp {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;
     line-clamp: 4;
     overflow: hidden;
+    /* 行高 1.6 时 4 行约为 6.4em，加一点余量做兜底裁剪 */
+    max-height: 6.6em;
 }
 
 /* 折叠态的行内容器：单行不换行 + 溢出裁掉，右端留出省略号的空隙 */
@@ -535,13 +520,25 @@ function handleDialogEpisodesPageChange(page: number) {
     padding-right: 30px;
 }
 
-/* 收起时结尾的省略号，跟随裁剪边界显示 */
+/* 折叠行是浮层的悬停热区，高度固定为一行，避免影响其它元素 */
+.eps-tags-wrap.is-single-line {
+    height: 28px;
+    align-items: center;
+}
+
+.eps-external-list.is-single-line {
+    height: 92px;
+    align-items: center;
+}
+
+/* 收起时结尾的省略号，绝对定位在折叠行右端，不参与布局 */
 .ellipsis-tail {
     position: absolute;
     top: 0;
     right: 0;
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     height: 100%;
     color: var(--el-text-color-secondary, #909399);
     font-weight: 600;
@@ -551,14 +548,9 @@ function handleDialogEpisodesPageChange(page: number) {
     pointer-events: none;
 }
 
-/* 标签行高 28px，链接行高 92px，省略号各自在行内垂直居中 */
-.eps-tags-wrap.is-single-line .ellipsis-tail {
-    height: 28px;
-}
-
-/* 标签 / 链接的折叠行作为省略号的定位容器 */
-.eps-tags-wrap,
-.eps-external-list {
+/* 折叠行作为省略号的定位容器 */
+.eps-tags-wrap.is-single-line,
+.eps-external-list.is-single-line {
     position: relative;
 }
 
@@ -652,41 +644,76 @@ function handleDialogEpisodesPageChange(page: number) {
     color: var(--el-color-primary, #409eff);
     background-color: var(--el-color-primary-light-9, #18222c);
 }
-</style>
-<!-- popover 内容通过 teleport 渲染到 body，scoped 样式覆盖不到，这里用非 scoped 块 -->
-<style>
-.series-detail-popover {
-    max-width: 70vw;
+
+/* ============================================================
+ * 悬停浮层卡片：绝对定位，脱离文档流。
+ * 触发元素折叠态照常占位，悬停只是在其旁边多出一个浮层，
+ * 因此触发元素与其它元素的位置都不会移动。
+ * ============================================================ */
+.hover-card-host {
+    position: relative;
 }
 
-.series-detail-popover .popover-title {
+/* 折叠行本身作为「悬停热区」，浮层从它的右侧展开 */
+.hover-card {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 0;
+    z-index: 2000;
+    display: none;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background-color: var(--el-bg-color-overlay, #1d1e1f);
+    border: 1px solid var(--el-border-color-lighter, #363637);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    pointer-events: auto;
+}
+
+/* 悬停触发元素或浮层自身时保持显示，便于在浮层内滚动 / 点击 */
+.hover-card-host:hover > .hover-card,
+.hover-card-host:focus-within > .hover-card,
+.hover-card:hover {
+    display: block;
+}
+
+/* 简介浮层：正文较长，给一个舒适的阅读宽度并限制最大高度 */
+.hover-card--overview {
+    width: min(520px, 42vw);
+}
+
+.hover-card--tags {
+    width: min(420px, 36vw);
+}
+
+.hover-card--links {
+    width: min(560px, 46vw);
+}
+
+.hover-card__title {
+    margin-bottom: 8px;
     font-size: 12px;
     font-weight: 600;
     color: var(--el-text-color-secondary, #909399);
-    margin-bottom: 8px;
 }
 
-.series-detail-popover .popover-body {
+.hover-card__body {
+    max-height: 50vh;
+    overflow-y: auto;
     font-size: 13px;
     line-height: 1.7;
     color: var(--el-text-color-regular, #cfd3dc);
-    max-height: 50vh;
-    overflow-y: auto;
     white-space: pre-line;
+    overflow-wrap: anywhere;
 }
 
-/* 弹层里的标签 / 链接恢复换行排布 */
-.series-detail-popover .eps-tags-wrap {
-    display: flex;
+/* 浮层里的标签 / 链接恢复多行排布 */
+.hover-card__body.eps-tags-wrap,
+.hover-card__body.eps-external-list {
+    margin: 0;
     flex-wrap: wrap;
-    gap: 8px;
-    white-space: normal;
-}
-
-.series-detail-popover .eps-external-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
+    overflow: visible;
+    padding-right: 0;
     white-space: normal;
 }
 </style>
