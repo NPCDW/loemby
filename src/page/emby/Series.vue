@@ -26,38 +26,46 @@
                 <div style="min-height: 416px; min-width: 300px;" class="loe-cover-img">
                     <img v-lazy="useImage().images[embyServerId + ':cover:' + currentSeries.Id]" style="max-height: 416px; max-width: 300px;" />
                 </div>
-                <div style="padding: 20px;">
+                <div class="series-info">
                     <h1>{{ currentSeries.Name }}</h1>
                     <p>{{ currentSeries.ProductionYear }}</p>
                     <p><el-scrollbar style="height: 170px;">{{ currentSeries.Overview }}</el-scrollbar></p>
-                    <p>
+                    <!-- 外部标签：与剧集详情页展示方式一致 -->
+                    <div class="eps-tags-wrap" v-if="currentSeries.ProviderIds && Object.keys(currentSeries.ProviderIds).length > 0">
+                        <el-tag v-for="(value, key) in currentSeries.ProviderIds" class="eps-provider-tag" disable-transitions>
+                            <span class="eps-provider-key">{{ key }}</span>
+                            <span class="eps-provider-sep">:</span>
+                            <span class="eps-provider-value">{{ value }}</span>
+                        </el-tag>
+                    </div>
+                    <!-- 外部链接：复用剧集详情页子项样式 -->
+                    <div class="eps-external-list" v-if="currentSeries.ExternalUrls && currentSeries.ExternalUrls.length > 0">
                         <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
-                            <el-button round @click="invokeApi.open_url(externalUrl.Url)" style="height: 92px; width: 92px;">
-                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                                    <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" style="width: 48px; height: 48px;" />
-                                    <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" style="width: 48px; height: 48px;" />
-                                    <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" style="width: 48px; height: 48px;" />
-                                    <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" style="width: 48px; height: 48px;" />
-                                    <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" style="width: 48px; height: 48px;" />
-                                    <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" style="width: 48px; height: 48px;" />
-                                    <i-ep-Link v-else />
-                                    <span style="margin-top: 5px;">{{ externalUrl.Name }}</span>
-                                </div>
-                            </el-button>
+                            <button class="eps-external-btn" @click="invokeApi.open_url(externalUrl.Url)">
+                                <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" class="eps-external-icon" />
+                                <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" class="eps-external-icon" />
+                                <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" class="eps-external-icon" />
+                                <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" class="eps-external-icon" />
+                                <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" class="eps-external-icon" />
+                                <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" class="eps-external-icon" />
+                                <i-ep-Link v-else class="eps-external-icon" />
+                                <span class="eps-external-name">{{ externalUrl.Name }}</span>
+                            </button>
                         </el-tooltip>
-                    </p>
-                    <el-button plain :disabled="playedLoading[currentSeries.Id]" @click="played(currentSeries)">
-                        <el-icon color="#67C23A" :size="20" :class="playedLoading[currentSeries.Id] ? 'is-loading' : ''" v-if="currentSeries.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
-                        <el-icon :size="20" :class="playedLoading[currentSeries.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
+                    </div>
+                    <!-- 已播放 / 收藏：复用剧集详情页的次要按钮样式 -->
+                    <el-button class="eps-secondary-btn" :disabled="playedLoading[currentSeries.Id]" @click="played(currentSeries)">
+                        <el-icon color="#67C23A" :size="18" :class="playedLoading[currentSeries.Id] ? 'is-loading' : ''" v-if="currentSeries.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
+                        <el-icon :size="18" :class="playedLoading[currentSeries.Id] ? 'is-loading' : ''" v-else><i-ep-CircleCheck /></el-icon>
                         <span>已播放</span>
                     </el-button>
-                    <el-button plain :disabled="starLoading[currentSeries.Id]" @click="star(currentSeries)">
+                    <el-button class="eps-secondary-btn" :disabled="starLoading[currentSeries.Id]" @click="star(currentSeries)">
                         <template v-if="currentSeries.UserData?.IsFavorite">
-                            <el-icon color="#E6A23C" :size="20" :class="starLoading[currentSeries.Id] ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
+                            <el-icon color="#E6A23C" :size="18" :class="starLoading[currentSeries.Id] ? 'is-loading' : ''"><i-ep-StarFilled /></el-icon>
                             <span>取消收藏</span>
                         </template>
                         <template v-else>
-                            <el-icon :size="20" :class="starLoading[currentSeries.Id] ? 'is-loading' : ''"><i-ep-Star /></el-icon>
+                            <el-icon :size="18" :class="starLoading[currentSeries.Id] ? 'is-loading' : ''"><i-ep-Star /></el-icon>
                             <span>收藏</span>
                         </template>
                     </el-button>
@@ -368,11 +376,104 @@ function handleDialogEpisodesPageChange(page: number) {
     border-radius: 8px;
 }
 
-/* 剧集卡片骨架：对齐 ItemCard 使用的 el-card（宽 300px、margin 5px、10px 圆角） */
-.item-card-skeleton {
-    width: 300px;
-    margin: 5px;
+/* 剧集卡片骨架：尺寸与配色已由 style.css 的 .item-card-skeleton 统一提供 */
+
+/* ============================================================
+ * 信息区：外部链接 / 外部标签 / 已播放收藏 复用剧集详情页（Episodes.vue）的样式。
+ * 两页的 scoped 样式互相隔离，这里复制同名类，改一处时记得同步另一处。
+ * ============================================================ */
+.series-info {
+    min-width: 0;
+}
+
+/* 外部标签：同 .eps-provider-tag，key 大写、冒号后留一个空格 */
+.eps-tags-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.eps-provider-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    background-color: var(--el-fill-color-light, #262727);
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+}
+
+.eps-provider-key {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-provider-sep {
+    font-size: 11px;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+.eps-provider-sep + .eps-provider-value {
+    margin-left: 4px;
+}
+
+.eps-provider-value {
+    font-size: 12px;
+    color: var(--el-text-color-regular, #cfd3dc);
+}
+
+/* 外部链接子项：同 .eps-external-btn，图标在上、名称在下 */
+.eps-external-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.eps-external-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 92px;
+    height: 92px;
     border-radius: 10px;
-    overflow: hidden;
+    cursor: pointer;
+    background-color: var(--el-fill-color-light, #262727);
+    border: 1px solid var(--el-border-color-extra-light, #2b2b2c);
+    transition: all 0.2s ease;
+}
+
+.eps-external-btn:hover {
+    border-color: var(--el-color-primary-light-5, #3375b9);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.eps-external-icon {
+    width: 42px;
+    height: 42px;
+    color: var(--el-text-color-regular, #cfd3dc);
+}
+
+.eps-external-name {
+    font-size: 11px;
+    color: var(--el-text-color-secondary, #909399);
+}
+
+/* 已播放 / 收藏按钮：同 .eps-secondary-btn */
+.eps-secondary-btn {
+    background-color: transparent;
+    border-color: var(--el-border-color-extra-light, #2b2b2c);
+    color: var(--el-text-color-regular, #cfd3dc);
+    transition: all 0.2s ease;
+}
+
+.eps-secondary-btn:hover {
+    border-color: var(--el-color-primary-light-5, #3375b9);
+    color: var(--el-color-primary, #409eff);
+    background-color: var(--el-color-primary-light-9, #18222c);
 }
 </style>

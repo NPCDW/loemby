@@ -1,5 +1,5 @@
 <template>
-    <el-card style="width: 300px; margin: 5px;">
+    <el-card class="item-card">
         <div v-if="showSeriesName">
             <el-link v-if="item.Type == 'Episode' || item.Type == 'Season'" :underline="false" @click="gotoSeries((item as EpisodeItem).SeriesId)" style="display: block;">
                 <h2>{{ (item as EpisodeItem).SeriesName }}</h2>
@@ -358,6 +358,17 @@ async function showSeason(season: SeasonItem) {
 </script>
 
 <style scoped>
+/* 卡片配色与剧集详情页的 .eps-card 保持一致：
+ * 底色跟随浮层色而非纯黑，去掉 el-card 默认阴影，只保留 1px 边框，
+ * 避免出现「比背景更暗的方块 + 一圈灰色阴影」的割裂感。 */
+.item-card {
+    width: 300px;
+    margin: 5px;
+    background-color: var(--el-bg-color-overlay, #1d1e1f);
+    border: 1px solid var(--el-border-color-lighter, #2e3034);
+    box-shadow: none;
+}
+
 .note-container {
   display: flex;
   height: 500px;

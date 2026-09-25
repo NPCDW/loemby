@@ -5,18 +5,38 @@
                 <template #template>
                     <!-- 骨架与真实渲染保持同一结构：左信息 + 右侧 logo，避免加载完成时跳动 -->
                     <div class="episodes-skeleton">
-                        <div class="eps-hero">
+                        <div class="eps-hero eps-skel-hero">
                             <div class="eps-main">
-                                <el-skeleton-item variant="h1" class="eps-title" />
-                                <el-skeleton-item variant="text" class="eps-subtitle" />
+                                <div class="eps-title-row">
+                                    <el-skeleton-item variant="h1" class="eps-title" />
+                                    <div class="eps-episode-no">
+                                        <el-skeleton-item variant="text" class="eps-chip-skel" />
+                                        <el-skeleton-item variant="text" class="eps-episode-name-skel" />
+                                    </div>
+                                </div>
                                 <div class="eps-meta-row">
-                                    <el-skeleton-item variant="text" class="eps-time" />
-                                    <el-skeleton-item variant="text" class="eps-progress" />
+                                    <div class="eps-meta-item">
+                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                        <el-skeleton-item variant="text" class="eps-time" />
+                                    </div>
+                                    <div class="eps-meta-item">
+                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                        <el-skeleton-item variant="text" class="eps-progress" />
+                                    </div>
                                 </div>
                                 <div class="eps-tag-row">
-                                    <el-skeleton-item variant="text" class="eps-tag" />
-                                    <el-skeleton-item variant="text" class="eps-tag" />
-                                    <el-skeleton-item variant="text" class="eps-tag" />
+                                    <div class="eps-tag-item">
+                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                        <el-skeleton-item variant="text" class="eps-tag" />
+                                    </div>
+                                    <div class="eps-tag-item">
+                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                        <el-skeleton-item variant="text" class="eps-tag" />
+                                    </div>
+                                    <div class="eps-tag-item">
+                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                        <el-skeleton-item variant="text" class="eps-tag" />
+                                    </div>
                                 </div>
                             </div>
                             <div class="eps-logo-wrap">
@@ -63,6 +83,14 @@
                             <div class="eps-tags-wrap">
                                 <el-skeleton-item variant="text" class="eps-provider-skel" />
                                 <el-skeleton-item variant="text" class="eps-provider-skel" />
+                            </div>
+                        </div>
+                        <!-- 外部链接卡片：真实渲染存在该卡片，骨架缺失会导致加载完成时整页下移 -->
+                        <div class="eps-card eps-tags-card eps-skel-card">
+                            <el-skeleton-item variant="text" class="eps-card-title-skel" />
+                            <div class="eps-external-list">
+                                <el-skeleton-item variant="image" class="eps-external-skel" />
+                                <el-skeleton-item variant="image" class="eps-external-skel" />
                             </div>
                         </div>
                     </div>
@@ -1082,45 +1110,49 @@ updateCurrentEpisodes().then(() => {
     justify-content: flex-end;
 }
 
-/* 骨架卡片：对齐 ItemCard 使用的 el-card（宽 300px、margin 5px、10px 圆角） */
-.item-card-skeleton {
-    width: 300px;
-    margin: 5px;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-/* ===== 骨架屏：与真实结构 1:1 对齐，加载完成只替换内容不位移 ===== */
+/* ===== 骨架屏：与真实结构 1:1 对齐，加载完成只替换内容不位移 =====
+ * 关键点：骨架行不额外加 margin/height 去「凑」真实间距，
+ * 而是复用真实渲染的 .eps-title-row / .eps-meta-row / .eps-tag-row / .eps-hero
+ * （后者只补 min-height），让内部 gap 自然对上。
+ * 另外骨架行本身不写死 min-height，否则会撑得比内容还高（例如集号行）。 */
 .episodes-skeleton {
     display: flex;
     flex-direction: column;
     gap: 18px;
 }
 
-/* hero 与真实一致：高 170，主信息纵向排布 */
-.eps-hero {
+.eps-skel-hero {
     min-height: 170px;
 }
 
+/* 标题：对齐 .eps-title-text 的 24px/1.3 ≈ 31px 行高 */
 .eps-title {
     width: 50%;
-    height: 32px;
+    height: 31px;
     max-width: 420px;
 }
 
-.eps-subtitle {
-    width: 30%;
-    max-width: 260px;
-    height: 18px;
-    margin-top: 8px;
+/* 集号行：对齐 .eps-chip 的 2px 内边距 + 13px 行高 ≈ 21px */
+.eps-chip-skel {
+    width: 74px;
+    height: 21px;
+    border-radius: 6px;
 }
 
-.eps-meta-row {
-    margin-top: 14px;
+.eps-episode-name-skel {
+    width: 220px;
+    height: 20px;
+}
+
+/* meta / tag 行的 key 占位：与 .eps-meta-key 的 12px 文字同宽同高 */
+.eps-meta-key-skel {
+    width: 30px;
+    height: 16px;
+    flex: none;
 }
 
 .eps-time {
-    width: 90px;
+    width: 60px;
     height: 16px;
 }
 
@@ -1129,10 +1161,7 @@ updateCurrentEpisodes().then(() => {
     height: 16px;
 }
 
-.eps-tag-row {
-    margin-top: 14px;
-}
-
+/* 与 .eps-tag-item :deep(.el-tag) 的 24px 高度 + 4px 圆角一致 */
 .eps-tag {
     width: 120px;
     height: 24px;
@@ -1222,5 +1251,12 @@ updateCurrentEpisodes().then(() => {
     width: 110px;
     height: 28px;
     border-radius: 6px;
+}
+
+/* 占位与 .eps-external-btn 同为 92x92、10px 圆角 */
+.eps-external-skel {
+    width: 92px;
+    height: 92px;
+    border-radius: 10px;
 }
 </style>
