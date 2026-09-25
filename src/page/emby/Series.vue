@@ -2,18 +2,19 @@
     <el-scrollbar>
         <el-skeleton :loading="serieInfoLoading" animated>
             <template #template>
-                <div class="series-hero">
+                <div style="display: flex; padding: 20px;">
                     <div class="series-cover-skeleton">
                         <el-skeleton-item variant="image" style="height: 416px; width: 300px;" />
                     </div>
-                    <div class="series-info">
+                    <div style="flex: 1;padding: 20px;">
                         <h1><el-skeleton-item variant="h1" style="width: 50%; margin-top: 10px;" /></h1>
                         <p><el-skeleton-item variant="text" style="width: 100%" /></p>
-                        <!-- 简介占位：与真实渲染一致，只占 4 行（可展开查看全部） -->
                         <p><el-skeleton-item variant="text" style="width: 100%" /></p>
                         <p><el-skeleton-item variant="text" style="width: 100%" /></p>
                         <p><el-skeleton-item variant="text" style="width: 100%" /></p>
                         <p><el-skeleton-item variant="text" style="width: 100%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 100%" /></p>
+                        <p><el-skeleton-item variant="text" style="width: 30%" /></p>
                         <p>
                             <el-skeleton-item variant="button" style="width: 15%;margin: 5px;margin-left: 0;" />
                             <el-skeleton-item variant="button" style="width: 15%;margin: 5px;margin-left: 0;" />
@@ -21,55 +22,97 @@
                     </div>
                 </div>
             </template>
-            <div class="series-hero" ref="seriesMoreRef" v-if="currentSeries">
+            <div style="display: flex; padding: 20px;" v-if="currentSeries">
                 <div style="min-height: 416px; min-width: 300px;" class="loe-cover-img">
                     <img v-lazy="useImage().images[embyServerId + ':cover:' + currentSeries.Id]" style="max-height: 416px; max-width: 300px;" />
                 </div>
                 <div class="series-info">
                     <h1>{{ currentSeries.Name }}</h1>
                     <p>{{ currentSeries.ProductionYear }}</p>
-                    <!-- 简介：默认只占 4 行，超出部分折叠，点击展开查看全部（不用滚动条） -->
-                    <div class="series-overview" :class="{ 'is-expanded': overviewExpanded }" v-if="currentSeries.Overview">
-                        <p class="series-overview-text">{{ currentSeries.Overview }}</p>
-                        <button class="series-overview-toggle" @click="overviewExpanded = !overviewExpanded">
-                            <span>{{ overviewExpanded ? '收起' : '展开' }}</span>
-                            <el-icon><i-ep-ArrowDown v-if="!overviewExpanded" /><i-ep-ArrowUp v-else /></el-icon>
-                        </button>
-                    </div>
-                    <!-- 外部标签：与剧集详情页展示方式一致 -->
-                    <div class="eps-tags-wrap collapsible" :class="{ 'is-expanded': providerIdsExpanded }" v-if="currentSeries.ProviderIds && Object.keys(currentSeries.ProviderIds).length > 0">
-                        <el-tag v-for="(value, key) in currentSeries.ProviderIds" class="eps-provider-tag" disable-transitions>
-                            <span class="eps-provider-key">{{ key }}</span>
-                            <span class="eps-provider-sep">:</span>
-                            <span class="eps-provider-value">{{ value }}</span>
-                        </el-tag>
-                    </div>
-                    <!-- 外部链接：复用剧集详情页子项样式 -->
-                    <div class="eps-external-list collapsible" :class="{ 'is-expanded': externalUrlsExpanded }" v-if="currentSeries.ExternalUrls && currentSeries.ExternalUrls.length > 0">
-                        <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
-                            <button class="eps-external-btn" @click="invokeApi.open_url(externalUrl.Url)">
-                                <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" class="eps-external-icon" />
-                                <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" class="eps-external-icon" />
-                                <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" class="eps-external-icon" />
-                                <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" class="eps-external-icon" />
-                                <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" class="eps-external-icon" />
-                                <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" class="eps-external-icon" />
-                                <i-ep-Link v-else class="eps-external-icon" />
-                                <span class="eps-external-name">{{ externalUrl.Name }}</span>
-                            </button>
-                        </el-tooltip>
-                    </div>
-                    <!-- 折叠展开：外部标签 / 外部链接默认各占一行，超出部分点按钮查看全部 -->
-                    <div class="series-more">
-                        <button class="series-overview-toggle" v-if="hasMoreProviderIds" @click="providerIdsExpanded = !providerIdsExpanded">
-                            <span>{{ providerIdsExpanded ? '收起外部标签' : '展开全部外部标签' }}</span>
-                            <el-icon><i-ep-ArrowDown v-if="!providerIdsExpanded" /><i-ep-ArrowUp v-else /></el-icon>
-                        </button>
-                        <button class="series-overview-toggle" v-if="hasMoreExternalUrls" @click="externalUrlsExpanded = !externalUrlsExpanded">
-                            <span>{{ externalUrlsExpanded ? '收起外部链接' : '展开全部外部链接' }}</span>
-                            <el-icon><i-ep-ArrowDown v-if="!externalUrlsExpanded" /><i-ep-ArrowUp v-else /></el-icon>
-                        </button>
-                    </div>
+                    <!-- 剧集简介：默认只占 4 行，悬停弹出卡片展示完整内容 -->
+                    <el-popover
+                        placement="right"
+                        trigger="hover"
+                        :width="460"
+                        :disabled="!overviewOverflow"
+                        popper-class="series-detail-popover"
+                    >
+                        <template #reference>
+                            <p ref="overviewRef" class="series-overview is-clamp">{{ currentSeries.Overview }}</p>
+                        </template>
+                        <div class="popover-title">剧集简介</div>
+                        <div class="popover-body series-overview-full">{{ currentSeries.Overview }}</div>
+                    </el-popover>
+                    <!-- 外部标签：默认只占一行，悬停弹出卡片展示全部 -->
+                    <el-popover
+                        v-if="currentSeries.ProviderIds && Object.keys(currentSeries.ProviderIds).length > 0"
+                        placement="right"
+                        trigger="hover"
+                        :width="360"
+                        :disabled="!tagsOverflow"
+                        popper-class="series-detail-popover"
+                    >
+                        <template #reference>
+                            <div ref="tagsWrapRef" class="eps-tags-wrap is-single-line">
+                                <el-tag v-for="(value, key) in currentSeries.ProviderIds" class="eps-provider-tag" disable-transitions>
+                                    <span class="eps-provider-key">{{ key }}</span>
+                                    <span class="eps-provider-sep">:</span>
+                                    <span class="eps-provider-value">{{ value }}</span>
+                                </el-tag>
+                                <span class="ellipsis-tail" v-if="tagsOverflow">···</span>
+                            </div>
+                        </template>
+                        <div class="popover-title">外部标签</div>
+                        <div class="popover-body eps-tags-wrap">
+                            <el-tag v-for="(value, key) in currentSeries.ProviderIds" class="eps-provider-tag" disable-transitions>
+                                <span class="eps-provider-key">{{ key }}</span>
+                                <span class="eps-provider-sep">:</span>
+                                <span class="eps-provider-value">{{ value }}</span>
+                            </el-tag>
+                        </div>
+                    </el-popover>
+                    <!-- 外部链接：默认只占一行，悬停弹出卡片展示全部 -->
+                    <el-popover
+                        v-if="currentSeries.ExternalUrls && currentSeries.ExternalUrls.length > 0"
+                        placement="right"
+                        trigger="hover"
+                        :width="480"
+                        :disabled="!linksOverflow"
+                        popper-class="series-detail-popover"
+                    >
+                        <template #reference>
+                            <div ref="linksWrapRef" class="eps-external-list is-single-line">
+                                <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
+                                    <button class="eps-external-btn" @click="invokeApi.open_url(externalUrl.Url)">
+                                        <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" class="eps-external-icon" />
+                                        <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" class="eps-external-icon" />
+                                        <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" class="eps-external-icon" />
+                                        <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" class="eps-external-icon" />
+                                        <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" class="eps-external-icon" />
+                                        <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" class="eps-external-icon" />
+                                        <i-ep-Link v-else class="eps-external-icon" />
+                                        <span class="eps-external-name">{{ externalUrl.Name }}</span>
+                                    </button>
+                                </el-tooltip>
+                                <div class="ellipsis-tail" v-if="linksOverflow">···</div>
+                            </div>
+                        </template>
+                        <div class="popover-title">外部链接</div>
+                        <div class="popover-body eps-external-list">
+                            <el-tooltip v-for="externalUrl in currentSeries.ExternalUrls" :content="externalUrl.Url" placement="bottom" effect="light">
+                                <button class="eps-external-btn" @click="invokeApi.open_url(externalUrl.Url)">
+                                    <svg-icon v-if="externalUrl.Url.indexOf('imdb.com') !== -1" name="imdb" class="eps-external-icon" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('themoviedb.org') !== -1" name="tmdb" class="eps-external-icon" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('thetvdb.com') !== -1" name="tvdb" class="eps-external-icon" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('trakt.tv') !== -1" name="trakt" class="eps-external-icon" />
+                                    <svg-icon v-else-if="externalUrl.Url.indexOf('myanimelist.net') !== -1" name="myanimelist" class="eps-external-icon" />
+                                    <img v-else-if="externalUrl.Url.indexOf('anidb.net') !== -1" src="../../icons/anidb.png" class="eps-external-icon" />
+                                    <i-ep-Link v-else class="eps-external-icon" />
+                                    <span class="eps-external-name">{{ externalUrl.Name }}</span>
+                                </button>
+                            </el-tooltip>
+                        </div>
+                    </el-popover>
                     <!-- 已播放 / 收藏：复用剧集详情页的次要按钮样式 -->
                     <el-button class="eps-secondary-btn" :disabled="playedLoading[currentSeries.Id]" @click="played(currentSeries)">
                         <el-icon color="#67C23A" :size="18" :class="playedLoading[currentSeries.Id] ? 'is-loading' : ''" v-if="currentSeries.UserData?.Played"><i-ep-CircleCheckFilled /></el-icon>
@@ -205,7 +248,7 @@
 
 <script lang="ts" setup>
 import { useRoute, useRouter } from 'vue-router';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import embyApi, { EmbyPageList, EpisodeItem, MediaSource, SeasonItem, SeriesItem, UserData } from '../../api/embyApi';
 import ItemCard from '../../components/ItemCard.vue';
 import { ElMessage } from 'element-plus';
@@ -234,58 +277,6 @@ function getTag(itemId: string, mediaSources?: MediaSource[]) {
 
 const serieInfoLoading = ref(false)
 const currentSeries = ref<SeriesItem>()
-
-/* 简介 / 外部标签 / 外部链接的折叠展开状态。
- * 三者默认各占固定行数（简介 4 行、外部标签与外部链接各 1 行），
- * 超出部分由「展开」按钮查看，不再使用滚动条。 */
-const overviewExpanded = ref(false)
-const providerIdsExpanded = ref(false)
-const externalUrlsExpanded = ref(false)
-
-/* 外部标签 / 外部链接的展开按钮只在「确实超出默认行数」时出现：
- * 标签按 28px 高 + 8px 间距估算总宽，链接按 92px 宽 + 12px 间距估算，
- * 与实际容器可用宽度（信息区宽度 - 左右 padding）比较。 */
-const seriesMoreWidth = ref(960)
-function estimateTagsWidth(count: number) {
-    return count * (110 + 8)
-}
-function estimateExternalWidth(count: number) {
-    return count * (92 + 12)
-}
-const hasMoreProviderIds = computed(() => {
-    const ids = currentSeries.value?.ProviderIds
-    if (!ids) {
-        return false
-    }
-    return estimateTagsWidth(Object.keys(ids).length) > seriesMoreWidth.value
-})
-const hasMoreExternalUrls = computed(() => {
-    const urls = currentSeries.value?.ExternalUrls
-    if (!urls) {
-        return false
-    }
-    return estimateExternalWidth(urls.length) > seriesMoreWidth.value
-})
-
-/* 用 ResizeObserver 跟踪容器宽度，避免写死阈值在多分辨率下判断错误 */
-const seriesMoreRef = ref<HTMLElement>()
-let seriesMoreObserver: ResizeObserver | undefined
-onMounted(() => {
-    if (!seriesMoreRef.value) {
-        return
-    }
-    seriesMoreObserver = new ResizeObserver(entries => {
-        const width = entries[0]?.contentRect.width
-        if (width) {
-            seriesMoreWidth.value = Math.max(width - 136, 0)
-        }
-    })
-    seriesMoreObserver.observe(seriesMoreRef.value)
-})
-onUnmounted(() => {
-    seriesMoreObserver?.disconnect()
-    seriesMoreObserver = undefined
-})
 function updateCurrentSerie() {
     serieInfoLoading.value = true
     return embyApi.items(embyServerId, <string>route.params.serieId).then(async response => {
@@ -295,6 +286,69 @@ function updateCurrentSerie() {
     }).catch(e => ElMessage.error('更新当前剧集信息失败' + e)).finally(() => serieInfoLoading.value = false)
 }
 updateCurrentSerie()
+
+/* ============================================================
+ * 简介 / 外部标签 / 外部链接的一行折叠与悬停展开
+ * 三者都只占一行（简介 4 行），真实溢出时才启用 hover 卡片，
+ * 未溢出时 popover 置为 disabled，避免无意义的浮层。
+ * ============================================================ */
+const overviewRef = ref<HTMLElement>()
+const tagsWrapRef = ref<HTMLElement>()
+const linksWrapRef = ref<HTMLElement>()
+const overviewOverflow = ref(false)
+const tagsOverflow = ref(false)
+const linksOverflow = ref(false)
+
+/** 简介：比较 scrollHeight 与 clientHeight，判断是否超过 4 行 */
+function measureOverview() {
+    const el = overviewRef.value
+    if (!el) {
+        return
+    }
+    // line-clamp 生效时 scrollHeight 会大于 clientHeight
+    overviewOverflow.value = el.scrollHeight - el.clientHeight > 1
+}
+
+/** 标签 / 链接：单行不换行，用 scrollWidth 与 clientWidth 比较判断溢出 */
+function measureLine(el?: HTMLElement) {
+    if (!el) {
+        return false
+    }
+    return el.scrollWidth - el.clientWidth > 1
+}
+
+function measureAll() {
+    // 简介的溢出判断需要真实换行后的高度，先等折叠态渲染完成
+    measureOverview()
+    tagsOverflow.value = measureLine(tagsWrapRef.value)
+    linksOverflow.value = measureLine(linksWrapRef.value)
+}
+
+let infoResizeObserver: ResizeObserver | undefined
+watch(currentSeries, () => {
+    nextTick(() => {
+        measureAll()
+        // 信息区宽度随窗口变化，宽度变了要重新判断是否溢出
+        if (!infoResizeObserver) {
+            infoResizeObserver = new ResizeObserver(() => measureAll())
+        }
+        infoResizeObserver.disconnect()
+        if (overviewRef.value) {
+            infoResizeObserver.observe(overviewRef.value)
+        }
+        if (tagsWrapRef.value) {
+            infoResizeObserver.observe(tagsWrapRef.value)
+        }
+        if (linksWrapRef.value) {
+            infoResizeObserver.observe(linksWrapRef.value)
+        }
+    })
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+    infoResizeObserver?.disconnect()
+    infoResizeObserver = undefined
+})
 
 const starLoading = ref<{[key: string]: boolean}>({})
 function star(item: SeriesItem | SeasonItem | EpisodeItem) {
@@ -415,14 +469,6 @@ function handleDialogEpisodesPageChange(page: number) {
   color: #409EFF;
 }
 
-/* 信息区容器：真实渲染与骨架共用同一类，左右 padding 对齐剧集详情页
- * （.episodes-page 的 32px），避免加载完成时横向跳动。
- * 骨架行与外层 .el-skeleton 相等，这里不额外写 min-height。 */
-.series-hero {
-    display: flex;
-    padding: 20px 32px;
-}
-
 /* 剧集信息封面骨架：对齐真实 .loe-cover-img 的 8px 圆角与 300x416 尺寸 */
 .series-cover-skeleton {
     border-radius: 8px;
@@ -455,105 +501,65 @@ function handleDialogEpisodesPageChange(page: number) {
 
 /* 剧集卡片骨架：尺寸与配色已由 style.css 的 .item-card-skeleton 统一提供 */
 
-/* 骨架信息区：复用真实 .series-info 的内边距（20px），
- * 纵向间距与真实渲染的「标题 / 年份 / 简介 / 标签 / 链接 / 按钮」逐行对齐。 */
-.series-info .el-skeleton__item {
-    border-radius: 6px;
-}
-
-.series-info h1,
-.series-info p {
-    margin: 0;
-}
-
-.series-info h1 {
-    margin-bottom: 10px;
-}
-
-.series-info p {
-    margin-bottom: 8px;
-}
-
 /* ============================================================
  * 信息区：外部链接 / 外部标签 / 已播放收藏 复用剧集详情页（Episodes.vue）的样式。
  * 两页的 scoped 样式互相隔离，这里复制同名类，改一处时记得同步另一处。
  * ============================================================ */
 .series-info {
-    padding: 20px 24px;
+    padding: 20px;
     min-width: 0;
 }
 
-.series-info > *:last-child {
-    margin-bottom: 0;
-}
-
-/* ===== 简介：默认 4 行，超出折叠，点「展开」查看全部（不用滚动条） ===== */
+/* 剧集简介：默认折叠为 4 行，超出部分以省略号结尾，悬停依赖外层 popover 展示全文 */
 .series-overview {
-    margin: 4px 0 14px;
+    margin: 12px 0;
+    line-height: 1.6;
+    color: var(--el-text-color-regular, #cfd3dc);
+    font-size: 14px;
 }
 
-.series-overview-text {
+/* 默认折叠为 4 行；未溢出时 clamp 不产生视觉影响，溢出时由 popover 展示全文 */
+.series-overview.is-clamp {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    /* 默认只占 4 行 */
     -webkit-line-clamp: 4;
     line-clamp: 4;
     overflow: hidden;
-    margin: 0;
-    line-height: 1.6;
-    color: var(--el-text-color-regular, #cfd3dc);
-    word-break: break-word;
 }
 
-.series-overview.is-expanded .series-overview-text {
-    -webkit-line-clamp: unset;
-    line-clamp: unset;
-    overflow: visible;
-}
-
-/* ===== 展开 / 收起按钮（简介、外部标签、外部链接共用） ===== */
-.series-overview-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 6px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    font-size: 12px;
-    line-height: 1;
-    color: var(--el-color-primary, #409eff);
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
-
-.series-overview-toggle:hover {
-    color: var(--el-color-primary-light-3, #79bbff);
-}
-
-.series-more {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 16px;
-    margin: 2px 0 16px;
-}
-
-/* ===== 外部标签 / 外部链接默认各只占一行，点「展开」查看全部 ===== */
-.eps-tags-wrap.collapsible,
-.eps-external-list.collapsible {
-    max-height: 28px;
+/* 折叠态的行内容器：单行不换行 + 溢出裁掉，右端留出省略号的空隙 */
+.eps-tags-wrap.is-single-line,
+.eps-external-list.is-single-line {
+    flex-wrap: nowrap;
     overflow: hidden;
+    padding-right: 30px;
 }
 
-.eps-external-list.collapsible {
-    max-height: 92px;
+/* 收起时结尾的省略号，跟随裁剪边界显示 */
+.ellipsis-tail {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    color: var(--el-text-color-secondary, #909399);
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding-left: 24px;
+    background: linear-gradient(90deg, transparent, var(--el-bg-color, #141414) 60%);
+    pointer-events: none;
 }
 
-.eps-tags-wrap.collapsible.is-expanded,
-.eps-external-list.collapsible.is-expanded {
-    max-height: none;
-    overflow: visible;
+/* 标签行高 28px，链接行高 92px，省略号各自在行内垂直居中 */
+.eps-tags-wrap.is-single-line .ellipsis-tail {
+    height: 28px;
+}
+
+/* 标签 / 链接的折叠行作为省略号的定位容器 */
+.eps-tags-wrap,
+.eps-external-list {
+    position: relative;
 }
 
 /* 外部标签：同 .eps-provider-tag，key 大写、冒号后留一个空格 */
@@ -598,7 +604,7 @@ function handleDialogEpisodesPageChange(page: number) {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    margin: 4px 0 12px;
+    margin: 16px 0;
 }
 
 .eps-external-btn {
@@ -647,12 +653,40 @@ function handleDialogEpisodesPageChange(page: number) {
     background-color: var(--el-color-primary-light-9, #18222c);
 }
 </style>
-/* ===== 折叠展开状态下的间距收尾 ===== */
-/* 外部标签 / 外部链接收起时同样保留行下间距，避免展开按钮紧贴内容 */
-.eps-tags-wrap.collapsible {
-    margin-bottom: 12px;
+<!-- popover 内容通过 teleport 渲染到 body，scoped 样式覆盖不到，这里用非 scoped 块 -->
+<style>
+.series-detail-popover {
+    max-width: 70vw;
 }
 
-.eps-external-list.collapsible {
-    margin-bottom: 12px;
+.series-detail-popover .popover-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--el-text-color-secondary, #909399);
+    margin-bottom: 8px;
 }
+
+.series-detail-popover .popover-body {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--el-text-color-regular, #cfd3dc);
+    max-height: 50vh;
+    overflow-y: auto;
+    white-space: pre-line;
+}
+
+/* 弹层里的标签 / 链接恢复换行排布 */
+.series-detail-popover .eps-tags-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    white-space: normal;
+}
+
+.series-detail-popover .eps-external-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    white-space: normal;
+}
+</style>
