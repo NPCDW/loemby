@@ -383,6 +383,7 @@ function handleDialogEpisodesPageChange(page: number) {
  * 两页的 scoped 样式互相隔离，这里复制同名类，改一处时记得同步另一处。
  * ============================================================ */
 .series-info {
+    padding: 20px;
     min-width: 0;
 }
 

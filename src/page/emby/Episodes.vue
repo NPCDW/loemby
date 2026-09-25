@@ -50,8 +50,11 @@
                                 <el-skeleton-item variant="text" class="eps-select-wide" />
                             </div>
                             <div class="eps-field eps-field-streams">
+                                <el-skeleton-item variant="text" class="eps-label" />
                                 <el-skeleton-item variant="text" class="eps-select" />
+                                <el-skeleton-item variant="text" class="eps-label" />
                                 <el-skeleton-item variant="text" class="eps-select" />
+                                <el-skeleton-item variant="text" class="eps-label" />
                                 <el-skeleton-item variant="text" class="eps-select" />
                             </div>
                         </div>
@@ -1127,21 +1130,22 @@ updateCurrentEpisodes().then(() => {
 
 /* 标题：对齐 .eps-title-text 的 24px/1.3 ≈ 31px 行高 */
 .eps-title {
-    width: 50%;
+    width: 80%;
     height: 31px;
     max-width: 420px;
 }
 
 /* 集号行：对齐 .eps-chip 的 2px 内边距 + 13px 行高 ≈ 21px */
 .eps-chip-skel {
-    width: 74px;
+    width: 44px;
     height: 21px;
     border-radius: 6px;
 }
 
 .eps-episode-name-skel {
-    width: 220px;
+    width: calc(80% - 64px);
     height: 20px;
+    max-width: 366px;
 }
 
 /* meta / tag 行的 key 占位：与 .eps-meta-key 的 12px 文字同宽同高 */
@@ -1157,7 +1161,7 @@ updateCurrentEpisodes().then(() => {
 }
 
 .eps-progress {
-    width: 240px;
+    width: 250px;
     height: 16px;
 }
 
