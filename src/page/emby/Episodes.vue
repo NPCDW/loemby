@@ -160,7 +160,7 @@
                                     {{ label }}
                                 </template>
                                 <el-option v-for="item in versionOptions" :key="item.value" :label="item.label" :value="item.value">
-                                    {{ item.name }} <el-tag disable-transitions>{{ item.size || "0 KB" }}</el-tag> <el-tag disable-transitions>{{ item.bitrate || "0 Kbps" }}</el-tag> <el-tag disable-transitions>{{ item.resolution || "Unknown" }}</el-tag>
+                                    {{ item.name }} <el-tag disable-transitions round type="info">{{ item.size || "0 KB" }}</el-tag> <el-tag disable-transitions round type="info">{{ item.bitrate || "0 Kbps" }}</el-tag> <el-tag disable-transitions round type="info">{{ item.resolution || "Unknown" }}</el-tag>
                                 </el-option>
                             </el-select>
                         </div>

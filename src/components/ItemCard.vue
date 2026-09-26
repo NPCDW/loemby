@@ -22,13 +22,13 @@
             <span v-else-if="item.Type == 'Episode'" style="display: flex;justify-content: space-between;align-items: center;">
                 <span>{{ (item as EpisodeItem).PremiereDate ? (item as EpisodeItem).PremiereDate.substring(0, 10) : '' }}</span>
                 <span style="display: flex; flex-direction: column;">
-                    <el-tag disable-transitions v-for="value in mediaSourceTag[item.Id]">{{ value }}</el-tag>
+                    <el-tag disable-transitions round type="info" v-for="value in mediaSourceTag[item.Id]">{{ value }}</el-tag>
                 </span>
             </span>
             <span v-else-if="item.Type == 'Movie'" style="display: flex;justify-content: space-between;align-items: center;">
                 <span>{{ item.ProductionYear }}</span>
                 <span style="display: flex; flex-direction: column;">
-                    <el-tag disable-transitions v-for="value in mediaSourceTag[item.Id]">{{ value }}</el-tag>
+                    <el-tag disable-transitions round type="info" v-for="value in mediaSourceTag[item.Id]">{{ value }}</el-tag>
                 </span>
             </span>
         </div>
@@ -116,7 +116,7 @@
                             </p>
                             <div style="display: flex;justify-content: space-between;align-items: end;">
                                 <span style="display: flex; flex-direction: column;">
-                                    <el-tag disable-transitions style="margin-left: 10px;" v-for="value in mediaSourceTag[episodeItem.Id]">{{ value }}</el-tag>
+                                    <el-tag disable-transitions round type="info" style="margin-left: 10px;" v-for="value in mediaSourceTag[episodeItem.Id]">{{ value }}</el-tag>
                                 </span>
                                 <span style="display: flex; justify-content: center; align-items: center;">
                                     <span>{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>
@@ -184,7 +184,7 @@
                     </p>
                     <div style="display: flex;justify-content: space-between;align-items: end;">
                         <span style="display: flex; flex-direction: column;">
-                            <el-tag disable-transitions style="margin-left: 10px;" v-for="value in mediaSourceTag[episodeItem.Id]">{{ value }}</el-tag>
+                            <el-tag disable-transitions round type="info" style="margin-left: 10px;" v-for="value in mediaSourceTag[episodeItem.Id]">{{ value }}</el-tag>
                         </span>
                         <span style="display: flex; justify-content: center; align-items: center;">
                             <span>{{ episodeItem.PremiereDate ? episodeItem.PremiereDate.substring(0, 10) : '' }}</span>

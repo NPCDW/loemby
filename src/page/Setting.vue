@@ -19,7 +19,7 @@
                                         <div class="setting-desc">检查最新客户端版本与更新补丁</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="info" size="default" effect="plain" class="info-tag">当前版本: {{ runtimeConfig?.version || '未知' }}</el-tag>
+                                        <el-tag disable-transitions type="info" size="default" effect="plain" class="info-tag">当前版本: {{ runtimeConfig?.version || '未知' }}</el-tag>
                                         <el-button plain type="primary" size="small" :loading="checkUpdateLoading" @click="checkUpdate()">检查更新</el-button>
                                     </div>
                                 </div>
@@ -29,7 +29,7 @@
                                         <div class="setting-desc">当前运行时的系统日志记录级别</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.log_level || 'INFO' }}</el-tag>
+                                        <el-tag disable-transitions type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.log_level || 'INFO' }}</el-tag>
                                         <el-button plain type="primary" size="small" @click="invokeApi.open_folder('config')">打开配置目录</el-button>
                                     </div>
                                 </div>
@@ -39,7 +39,7 @@
                                         <div class="setting-desc">应用本地数据存储驱动模式</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.database_type || 'SQLite' }}</el-tag>
+                                        <el-tag disable-transitions type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.app_config.database_type || 'SQLite' }}</el-tag>
                                     </div>
                                 </div>
                                 <div class="setting-row">
@@ -48,7 +48,7 @@
                                         <div class="setting-desc">内置 Axum HTTP Web 服务监听端口</div>
                                     </div>
                                     <div class="setting-controls">
-                                        <el-tag type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.axum_port }}</el-tag>
+                                        <el-tag disable-transitions type="info" size="default" effect="plain" class="info-tag">{{ runtimeConfig?.axum_port }}</el-tag>
                                     </div>
                                 </div>
                             </div>
@@ -297,7 +297,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                     </div>
                                     <div class="setting-controls">
                                         <div v-if="trakt_username" class="user-auth-badge">
-                                            <el-tag type="success" size="default" effect="plain">{{ trakt_username }}</el-tag>
+                                            <el-tag disable-transitions type="info" size="default" effect="plain">{{ trakt_username }}</el-tag>
                                             <el-button plain type="danger" @click="delAuthTrakt()" size="small">删除授权</el-button>
                                         </div>
                                         <el-button plain type="primary" :loading="traktAuthLoading" @click="goAuthTrakt()" size="small">{{ traktAuthStatus }}</el-button>
@@ -343,7 +343,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                     </div>
                                     <div class="setting-controls">
                                         <div v-if="simkl_username" class="user-auth-badge">
-                                            <el-tag type="success" size="default" effect="plain">{{ simkl_username }}</el-tag>
+                                            <el-tag disable-transitions type="info" size="default" effect="plain">{{ simkl_username }}</el-tag>
                                             <el-button plain type="danger" @click="delAuthSimkl()" size="small">删除授权</el-button>
                                         </div>
                                         <el-button plain type="primary" :loading="simklAuthLoading" @click="goAuthSimkl()" size="small">{{ simklAuthStatus }}</el-button>
@@ -434,7 +434,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                     <el-table-column prop="name" label="名称" width="160" show-overflow-tooltip />
                                     <el-table-column prop="proxy_type" label="类型" width="100" align="center">
                                         <template #default="scope">
-                                            <el-tag size="small" :type="scope.row.proxy_type === 'https' ? 'success' : scope.row.proxy_type === 'http' ? 'primary' : 'warning'">
+                                            <el-tag disable-transitions size="small" :type="scope.row.proxy_type === 'https' ? 'success' : scope.row.proxy_type === 'http' ? 'primary' : 'warning'">
                                                 {{ scope.row.proxy_type }}
                                             </el-tag>
                                         </template>
