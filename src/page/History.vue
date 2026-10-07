@@ -306,17 +306,13 @@ function rowClassName({row}: {row: PlayHistory}) {
     background-color: var(--el-fill-color-light, #262727);
 }
 
-/* 悬浮时链接提亮，给可点击内容明确反馈 */
+/* 链接保持自身语义色，行悬浮时不再变蓝 */
 .cell-link {
     font-weight: 500;
 }
 
 .cell-link :deep(.el-link__inner) {
     transition: color 0.18s ease;
-}
-
-:deep(.custom-data-table .el-table__body tr:hover .cell-link .el-link__inner) {
-    color: var(--el-color-primary, #409eff);
 }
 
 /* Pin 列：固定列背景跟随卡片，避免出现错位的实色块 */
