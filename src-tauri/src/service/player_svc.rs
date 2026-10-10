@@ -592,10 +592,10 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
     };
     let mut pinned = 0;
     if let Some(series_id) = episode.series_id.clone() {
-        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, &app_state.db_pool).await?;
+        let pinned_update = play_history_mapper::cancel_pinned(params.emby_server_id.clone(), series_id, app_state.db().map_err(anyhow::Error::msg)?).await?;
         if pinned_update.rows_affected() > 0 { pinned = 1 }
     }
-    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &app_state.db_pool).await? {
+    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), app_state.db().map_err(anyhow::Error::msg)?).await? {
         Some(response) => {
             if episode.series_id.is_none() {
                 pinned = response.pinned.unwrap();
@@ -609,7 +609,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
                 series_name: episode.series_name.clone(),
                 pinned: Some(pinned),
                 ..Default::default()
-            }, &app_state.db_pool).await?;
+            }, app_state.db().map_err(anyhow::Error::msg)?).await?;
         },
         None => {
             play_history_mapper::create(PlayHistory {
@@ -624,7 +624,7 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
                 played_duration: Some(0),
                 pinned: Some(pinned),
                 ..Default::default()
-            }, &app_state.db_pool).await?;
+            }, app_state.db().map_err(anyhow::Error::msg)?).await?;
         },
     }
 
@@ -1035,7 +1035,7 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
         })?;
     }
     
-    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), &state.db_pool).await? {
+    match play_history_mapper::get(params.emby_server_id.clone(), params.item_id.clone(), state.db().map_err(anyhow::Error::msg)?).await? {
         Some(response) => {
             play_history_mapper::update_by_id(PlayHistory {
                 id: response.id,
@@ -1046,7 +1046,7 @@ async fn save_playback_progress(playback_process_param: &PlaybackProcessParam, l
                 series_name: episode.series_name.clone(),
                 played_duration: Some((played_duration as i32) + response.played_duration.unwrap()),
                 ..Default::default()
-            }, &state.db_pool).await?;
+            }, state.db().map_err(anyhow::Error::msg)?).await?;
         },
         None => tracing::error!("播放记录不存在，无法更新播放记录"),
     }

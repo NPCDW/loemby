@@ -98,6 +98,7 @@
 <script lang="ts" setup>
 import { useRouter } from 'vue-router';
 import { onMounted, ref } from 'vue';
+import { notifyRequestError } from '../util/notify_util';
 import { ElMessage, ScrollbarInstance } from 'element-plus';
 import { PagePlayHistoryParam, PlayHistory, usePlayHistory } from '../store/db/playHistory';
 import { secondsToHMS } from '../util/str_util'
@@ -139,7 +140,7 @@ async function getPlayHistory() {
         list.value = response[1]
         total.value = response[0]
         scrollbarRef.value?.setScrollTop(0)
-    }).catch(e => ElMessage.error('获取播放历史失败' + e)).finally(() => loading.value = false)
+    }).catch(e => notifyRequestError('获取播放历史失败', e)).finally(() => loading.value = false)
 }
 function handlePageChange(pageNumber: number) {
     query.value.page_number = pageNumber

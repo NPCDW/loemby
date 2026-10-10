@@ -4,7 +4,7 @@ use crate::mapper::proxy_server_mapper::ProxyServer;
 
 #[tauri::command]
 pub async fn get_proxy_server(id: String, state: tauri::State<'_, AppState>) -> Result<Option<ProxyServer>, String> {
-    let res = proxy_server_mapper::get_by_id(id, &state.db_pool).await;
+    let res = proxy_server_mapper::get_by_id(id, state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -13,7 +13,7 @@ pub async fn get_proxy_server(id: String, state: tauri::State<'_, AppState>) -> 
 
 #[tauri::command]
 pub async fn list_all_proxy_server(state: tauri::State<'_, AppState>) -> Result<Vec<ProxyServer>, String> {
-    let res = proxy_server_mapper::list_all(&state.db_pool).await;
+    let res = proxy_server_mapper::list_all(state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }

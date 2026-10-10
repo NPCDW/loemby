@@ -1,4 +1,5 @@
 import * as VueRouter from 'vue-router'
+import { useDbStatus } from '../store/dbStatus'
 import NavMenu from '../components/NavMenu.vue'
 import Search from '../page/Search.vue'
 import Setting from '../page/Setting.vue'
@@ -9,8 +10,14 @@ import EmbySeries from '../page/emby/Series.vue'
 import EmbyMediaLibrary from '../page/emby/MediaLibrary.vue'
 import EmbyMediaLibraryItems from '../page/emby/MediaLibraryItems.vue'
 import EmbySearch from '../page/emby/Search.vue'
+import FatalError from '../page/FatalError.vue'
 
 const routes = [
+    {
+        path: '/fatal-error',
+        name: 'fatalError',
+        component: FatalError,
+    },
     { path: '/', redirect: '/nav/history' },
     {
         path: '/nav',
@@ -75,6 +82,15 @@ const routes = [
 const router = VueRouter.createRouter({
     history: VueRouter.createWebHistory(import.meta.env.BASE_URL),
     routes,
+})
+
+// 数据库不可用时把用户留在提示页，而不是进到满屏报错的业务页面
+router.beforeEach((to) => {
+    const reason = useDbStatus().fatalReason
+    if (reason && to.name !== 'fatalError') {
+        return { name: 'fatalError' }
+    }
+    return true
 })
 
 export default router

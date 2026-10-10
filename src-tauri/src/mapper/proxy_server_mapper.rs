@@ -101,7 +101,7 @@ pub async fn get_app_proxy_url(
 }
 
 pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
-    let list = list_all(&state.db_pool).await?;
+    let list = list_all(state.db().map_err(anyhow::Error::msg)?).await?;
     let mut cache_map_write = state.proxy_server_cache.write().await;
     cache_map_write.clear();
     for proxy in list {
@@ -113,7 +113,7 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
 }
 
 pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
-    let proxy_server = get_by_id(id.to_string(), &state.db_pool).await?;
+    let proxy_server = get_by_id(id.to_string(), state.db().map_err(anyhow::Error::msg)?).await?;
     let mut cache_map_write = state.proxy_server_cache.write().await;
     match proxy_server {
         Some(proxy_server) => {
@@ -173,7 +173,7 @@ pub async fn create(
     let username = entity.username.clone();
     let password = entity.password.clone();
 
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("insert into proxy_server(");
         let mut separated = qb.separated(", ");
         separated.push("id");
@@ -234,7 +234,7 @@ pub async fn update_by_id(
     let password = entity.password.clone();
     let entity_id = entity.id.clone();
 
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("update proxy_server set ");
         let mut separated = qb.separated(", ");
         if name.is_some() {
@@ -272,7 +272,7 @@ pub async fn delete_by_id(
     id: String,
     state: &tauri::State<'_, AppState>,
 ) -> anyhow::Result<crate::config::db_pool::DbQueryResult> {
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("delete from proxy_server where id = ");
         qb.push_bind(&id);
     });

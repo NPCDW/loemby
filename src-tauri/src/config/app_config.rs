@@ -6,6 +6,7 @@ use tauri::Manager;
 
 #[serde_inline_default]
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct Config {
     #[serde_inline_default("info".to_string())]
     pub log_level: String,
@@ -13,6 +14,16 @@ pub struct Config {
     pub database_type: String,
     #[serde_inline_default("".to_string())]
     pub database_url: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            log_level: "info".to_string(),
+            database_type: "sqlite".to_string(),
+            database_url: "".to_string(),
+        }
+    }
 }
 
 const APP_CONFIG_PATH: &'static str = "config/app-config.json";

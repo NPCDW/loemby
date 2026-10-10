@@ -91,7 +91,7 @@ pub async fn get_cache(id: &str, state: &tauri::State<'_, AppState>) -> Option<E
 
 pub async fn get_by_id(id: String, state: &tauri::State<'_, AppState>) -> anyhow::Result<Option<EmbyServer>> {
     let res = db_fetch_optional!(
-        &state.db_pool,
+        state.db().map_err(anyhow::Error::msg)?,
         |qb| {
             qb.push("select * from emby_server where id = ");
             qb.push_bind(id);
@@ -104,7 +104,7 @@ pub async fn get_by_id(id: String, state: &tauri::State<'_, AppState>) -> anyhow
 
 pub async fn list_all(state: &tauri::State<'_, AppState>) -> anyhow::Result<Vec<EmbyServer>> {
     let res = db_fetch_all!(
-        &state.db_pool,
+        state.db().map_err(anyhow::Error::msg)?,
         |qb| {
             qb.push("select * from emby_server");
         },
@@ -146,7 +146,7 @@ pub async fn create(
     let keep_alive_days = entity.keep_alive_days.clone();
     let disabled = entity.disabled.clone();
 
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("insert into emby_server(");
         let mut separated = qb.separated(", ");
         separated.push("id");
@@ -319,7 +319,7 @@ pub async fn update_by_id(
     let disabled = entity.disabled.clone();
     let entity_id = entity.id.clone();
 
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("update emby_server set ");
         let mut separated = qb.separated(", ");
         if base_url.is_some() {
@@ -424,14 +424,14 @@ pub async fn update_order(
     state: &tauri::State<'_, AppState>,
 ) -> anyhow::Result<crate::config::db_pool::DbQueryResult> {
     let res = if removed_index > added_index {
-        db_execute!(&state.db_pool, |qb| {
+        db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
             qb.push("update emby_server set order_by = order_by + 1 where order_by >= ");
             qb.push_bind(added_index);
             qb.push(" and order_by < ");
             qb.push_bind(removed_index);
         })
     } else {
-        db_execute!(&state.db_pool, |qb| {
+        db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
             qb.push("update emby_server set order_by = order_by - 1 where order_by > ");
             qb.push_bind(removed_index);
             qb.push(" and order_by <= ");
@@ -457,7 +457,7 @@ pub async fn update_order(
 pub async fn defer_order(
     state: &tauri::State<'_, AppState>,
 ) -> anyhow::Result<crate::config::db_pool::DbQueryResult> {
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("update emby_server set order_by = order_by + 1");
     });
 
@@ -469,7 +469,7 @@ pub async fn delete_by_id(
     id: String,
     state: &tauri::State<'_, AppState>,
 ) -> anyhow::Result<crate::config::db_pool::DbQueryResult> {
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("delete from emby_server where id = ");
         qb.push_bind(&id);
     });

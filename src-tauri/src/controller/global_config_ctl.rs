@@ -4,7 +4,7 @@ use crate::mapper::global_config_mapper::GlobalConfig;
 
 #[tauri::command]
 pub async fn get_global_config(config_key: String, state: tauri::State<'_, AppState>) -> Result<Option<GlobalConfig>, String> {
-    let res = global_config_mapper::get_by_key(config_key, &state.db_pool).await;
+    let res = global_config_mapper::get_by_key(config_key, state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -13,7 +13,7 @@ pub async fn get_global_config(config_key: String, state: tauri::State<'_, AppSt
 
 #[tauri::command]
 pub async fn list_all_global_config(state: tauri::State<'_, AppState>) -> Result<Vec<GlobalConfig>, String> {
-    let res = global_config_mapper::list_all(&state.db_pool).await;
+    let res = global_config_mapper::list_all(state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use service::axum_svc;
-use tauri::{async_runtime::RwLock, Manager};
+use tauri::{async_runtime::RwLock, Emitter, Manager};
 
 mod controller;
 mod config;
@@ -19,7 +19,7 @@ use controller::emby_server_ctl::{get_emby_server, list_all_emby_server, add_emb
 use controller::emby_line_ctl::{get_emby_line, list_emby_server_line, list_all_emby_line, add_emby_line, update_emby_line, update_line_emby_server_name, delete_line_by_emby_server_id, delete_emby_line};
 use controller::emby_icon_library_ctl::{get_emby_icon_library, list_all_emby_icon_library, add_emby_icon_library, update_emby_icon_library, delete_emby_icon_library};
 use controller::invoke_ctl::{get_sys_info, call_player, go_trakt_auth, go_simkl_auth, open_url, updater, restart_app, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file};
-use config::app_state::AppState;
+use config::app_state::{AppState, DbFatalNotify};
 
 use crate::service::{cache_svc, updater_svc};
 
@@ -39,17 +39,35 @@ pub fn run() {
             get_sys_info, call_player, go_trakt_auth, go_simkl_auth, open_url, updater, restart_app, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file
         ])
         .setup(|app| {
-            let config = config::app_config::get_config(app);
-            if config.is_err() {
-                panic!("Read Config error: {}", config.unwrap_err())
-            }
-            let config = config.unwrap();
+            // 配置读取失败不再 panic（直接闪退），而是用默认值兜底继续启动，保证用户能看到提示
+            let config = match config::app_config::get_config(app) {
+                Ok(config) => config,
+                Err(err) => {
+                    eprintln!("Read Config error: {:#}", err);
+                    config::app_config::Config::default()
+                }
+            };
             println!("Read Config: {:?}", &config);
 
             config::log::init(app, &config.log_level);
 
-            let db_pool = tauri::async_runtime::block_on(config::db::init(app, &config))?;
-            
+            // 数据库连不上时不退出程序：记录原因并继续启动，前端会弹出提示
+            let db_pool = match tauri::async_runtime::block_on(config::db::init(app, &config)) {
+                Ok(pool) => {
+                    config::db_pool::set_db_state(config::db_pool::DbState::Ready);
+                    Some(pool)
+                }
+                Err(err) => {
+                    let reason = config::db::humanize_init_error(&config, &err);
+                    tracing::error!("数据库初始化失败，应用将以无数据库模式启动: {:#}", err);
+                    config::db_pool::set_db_state(config::db_pool::DbState::Failed(format!(
+                        "数据库连接失败，相关数据功能不可用。\n\n{}",
+                        reason
+                    )));
+                    None
+                }
+            };
+
             let axum_app_state = Arc::new(RwLock::new(None));
             let axum_app_state_clone = axum_app_state.clone();
             let app_handle = app.app_handle().clone();
@@ -75,11 +93,39 @@ pub fn run() {
                 db_pool,
             });
 
-            tauri::async_runtime::block_on(mapper::global_config_mapper::load_cache(&app.state()))?;
-            tauri::async_runtime::block_on(mapper::proxy_server_mapper::load_cache(&app.state()))?;
-            // 反代服务器缓存需在 emby_server 缓存之前加载，因为 emby_server 的 base_url 需要拼接反代地址
-            tauri::async_runtime::block_on(mapper::reverse_proxy_server_mapper::load_cache(&app.state()))?;
-            tauri::async_runtime::block_on(mapper::emby_server_mapper::load_cache(&app.state()))?;
+            // 缓存加载依赖数据库，失败时同样只提示不退出
+            let cache_load = (|| -> anyhow::Result<()> {
+                tauri::async_runtime::block_on(mapper::global_config_mapper::load_cache(&app.state()))?;
+                tauri::async_runtime::block_on(mapper::proxy_server_mapper::load_cache(&app.state()))?;
+                // 反代服务器缓存需在 emby_server 缓存之前加载，因为 emby_server 的 base_url 需要拼接反代地址
+                tauri::async_runtime::block_on(mapper::reverse_proxy_server_mapper::load_cache(&app.state()))?;
+                tauri::async_runtime::block_on(mapper::emby_server_mapper::load_cache(&app.state()))?;
+                anyhow::Ok(())
+            })();
+            if let Err(err) = cache_load {
+                tracing::error!("缓存加载失败: {:#}", err);
+            }
+
+            // 数据库不可用时把原因推给前端，让前端弹出明确的错误提示
+            if let Some(reason) = app
+                .state::<AppState>()
+                .db_pool
+                .is_none()
+                .then(|| app.state::<AppState>().db_unavailable_reason())
+            {
+                let app_handle = app.app_handle().clone();
+                // 前端监听器是在 app.mount 之后才注册的，延迟一会儿再发，避免事件丢失
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+                    let _ = app_handle.emit("db_fatal_error", DbFatalNotify { reason });
+                    let _ = app_handle.emit("tauri_notify", config::app_state::TauriNotify {
+                        event_type: "ElMessage".to_string(),
+                        message_type: "error".to_string(),
+                        title: Some("数据库连接失败".to_string()),
+                        message: "数据库连接失败，服务器、播放历史、设置等数据功能不可用，请检查数据库配置后重启应用".to_string(),
+                    });
+                });
+            }
             
             let app_handle = app.app_handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -116,8 +162,10 @@ pub fn run() {
                 tauri::RunEvent::Exit => {
                     tracing::debug!("Application exiting, closing database connections...");
                     if let Some(state) = app_handle.try_state::<AppState>() {
-                        tauri::async_runtime::block_on(state.db_pool.close());
-                        tracing::debug!("Database connection closed successfully");
+                        if let Some(db_pool) = state.db_pool.as_ref() {
+                            tauri::async_runtime::block_on(db_pool.close());
+                            tracing::debug!("Database connection closed successfully");
+                        }
                     }
                 }
                 _ => {}

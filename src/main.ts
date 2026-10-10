@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import { ElMessage } from 'element-plus'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import './style.css'
@@ -15,6 +16,7 @@ import { useGlobalConfig } from './store/db/globalConfig.ts'
 import { useProxyServer } from './store/db/proxyServer.ts'
 import { useReverseProxyServer } from './store/db/reverseProxyServer.ts'
 import { useEmbyServer } from './store/db/embyServer.ts'
+import { useDbStatus } from './store/dbStatus.ts'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -24,9 +26,22 @@ app.use(router)
 app.component('svg-icon', svgIcon)
 app.use(VueLazyLoad, {})
 
-await useRuntimeConfig().getRuntimeConfig()
+// 数据库连不上时后端不会退出，这里先把状态监听挂上，避免错过启动阶段的事件
+const dbStatus = useDbStatus()
+dbStatus.listenDbFatalError()
+
+// 运行时配置读取失败通常是后端启动异常，提示用户而不是留个白屏
+let runtimeConfigReady = true
+await useRuntimeConfig().getRuntimeConfig().catch((e) => {
+    runtimeConfigReady = false
+    console.error('获取运行时配置失败', e)
+})
 
 app.mount('#app')
+
+if (!runtimeConfigReady) {
+    ElMessage.error('应用初始化失败，部分功能不可用，请查看日志或重启应用')
+}
 
 useGlobalConfig().initCache()
 useProxyServer().initCache()

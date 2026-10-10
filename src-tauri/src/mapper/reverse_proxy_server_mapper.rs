@@ -27,7 +27,7 @@ pub fn normalize_url(url: &str) -> String {
 }
 
 pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
-    let list = list_all(&state.db_pool).await?;
+    let list = list_all(state.db().map_err(anyhow::Error::msg)?).await?;
     let mut cache_map_write = state.reverse_proxy_server_cache.write().await;
     cache_map_write.clear();
     for reverse_proxy in list {
@@ -41,7 +41,7 @@ pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()
 }
 
 pub async fn refresh_cache(id: &str, state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
-    let reverse_proxy = get_by_id(id.to_string(), &state.db_pool).await?;
+    let reverse_proxy = get_by_id(id.to_string(), state.db().map_err(anyhow::Error::msg)?).await?;
     let mut cache_map_write = state.reverse_proxy_server_cache.write().await;
     match reverse_proxy {
         Some(reverse_proxy) => {
@@ -115,7 +115,7 @@ pub async fn create(
     let name = entity.name.clone();
     let url = entity.url.as_ref().map(|url| normalize_url(url));
 
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("insert into reverse_proxy_server(");
         let mut separated = qb.separated(", ");
         separated.push("id");
@@ -155,7 +155,7 @@ pub async fn update_by_id(
     let url = entity.url.as_ref().map(|url| normalize_url(url));
     let entity_id = entity.id.clone();
 
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("update reverse_proxy_server set ");
         let mut separated = qb.separated(", ");
         if name.is_some() {
@@ -181,7 +181,7 @@ pub async fn delete_by_id(
     id: String,
     state: &tauri::State<'_, AppState>,
 ) -> anyhow::Result<crate::config::db_pool::DbQueryResult> {
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("delete from reverse_proxy_server where id = ");
         qb.push_bind(&id);
     });

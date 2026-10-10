@@ -10,7 +10,7 @@ async fn reload_emby_server_cache(state: &tauri::State<'_, AppState>) -> anyhow:
 
 #[tauri::command]
 pub async fn get_reverse_proxy_server(id: String, state: tauri::State<'_, AppState>) -> Result<Option<ReverseProxyServer>, String> {
-    let res = reverse_proxy_server_mapper::get_by_id(id, &state.db_pool).await;
+    let res = reverse_proxy_server_mapper::get_by_id(id, state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -19,7 +19,7 @@ pub async fn get_reverse_proxy_server(id: String, state: tauri::State<'_, AppSta
 
 #[tauri::command]
 pub async fn list_all_reverse_proxy_server(state: tauri::State<'_, AppState>) -> Result<Vec<ReverseProxyServer>, String> {
-    let res = reverse_proxy_server_mapper::list_all(&state.db_pool).await;
+    let res = reverse_proxy_server_mapper::list_all(state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }

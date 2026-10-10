@@ -14,7 +14,7 @@ pub struct GlobalConfig {
 }
 
 pub async fn load_cache(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {
-    let list = list_all(&state.db_pool).await?;
+    let list = list_all(state.db().map_err(anyhow::Error::msg)?).await?;
     let mut cache_map_write = state.global_config_cache.write().await;
     cache_map_write.clear();
     for config in list {
@@ -27,7 +27,7 @@ pub async fn refresh_cache(
     config_key: &str,
     state: &tauri::State<'_, AppState>,
 ) -> anyhow::Result<()> {
-    let global_config = get_by_key(config_key.to_string(), &state.db_pool).await?;
+    let global_config = get_by_key(config_key.to_string(), state.db().map_err(anyhow::Error::msg)?).await?;
     let mut cache_map_write = state.global_config_cache.write().await;
     match global_config {
         Some(global_config) => {
@@ -95,7 +95,7 @@ pub async fn create(
     let config_key = entity.config_key.clone();
     let config_value = entity.config_value.clone();
 
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("insert into global_config(");
         let mut separated = qb.separated(", ");
         separated.push("id");
@@ -133,7 +133,7 @@ pub async fn update_by_key(
     let config_key = entity.config_key.clone();
     let config_value = entity.config_value.clone();
 
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("update global_config set ");
         let mut separated = qb.separated(", ");
         if config_value.is_some() {
@@ -155,7 +155,7 @@ pub async fn delete_by_key(
     config_key: String,
     state: &tauri::State<'_, AppState>,
 ) -> anyhow::Result<crate::config::db_pool::DbQueryResult> {
-    let res = db_execute!(&state.db_pool, |qb| {
+    let res = db_execute!(state.db().map_err(anyhow::Error::msg)?, |qb| {
         qb.push("delete from global_config where config_key = ");
         qb.push_bind(&config_key);
     });

@@ -12,7 +12,7 @@ pub struct GetPlayHistoryParam {
 
 #[tauri::command]
 pub async fn get_play_history(body: GetPlayHistoryParam, state: tauri::State<'_, AppState>) -> Result<Option<PlayHistory>, String> {
-    let res = play_history_mapper::get(body.emby_server_id, body.item_id, &state.db_pool).await;
+    let res = play_history_mapper::get(body.emby_server_id, body.item_id, state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -30,7 +30,7 @@ pub struct PagePlayHistoryParam {
 
 #[tauri::command]
 pub async fn page_play_history(body: PagePlayHistoryParam, state: tauri::State<'_, AppState>) -> Result<(u32, Vec<PlayHistory>), String> {
-    let res = play_history_mapper::page(body, &state.db_pool).await;
+    let res = play_history_mapper::page(body, state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -39,7 +39,7 @@ pub async fn page_play_history(body: PagePlayHistoryParam, state: tauri::State<'
 
 #[tauri::command]
 pub async fn add_play_history(body: PlayHistory, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = play_history_mapper::create(body, &state.db_pool).await;
+    let res = play_history_mapper::create(body, state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -48,7 +48,7 @@ pub async fn add_play_history(body: PlayHistory, state: tauri::State<'_, AppStat
 
 #[tauri::command]
 pub async fn update_play_history(body: PlayHistory, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = play_history_mapper::update_by_id(body, &state.db_pool).await;
+    let res = play_history_mapper::update_by_id(body, state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
@@ -63,7 +63,7 @@ pub struct CancelPinnedHistoryParam {
 
 #[tauri::command]
 pub async fn cancel_pinned_play_history(body: CancelPinnedHistoryParam, state: tauri::State<'_, AppState>) -> Result<u64, String> {
-    let res = play_history_mapper::cancel_pinned(body.emby_server_id, body.series_id, &state.db_pool).await;
+    let res = play_history_mapper::cancel_pinned(body.emby_server_id, body.series_id, state.db()?).await;
     if res.is_err() {
         return Err(res.err().unwrap().to_string());
     }
