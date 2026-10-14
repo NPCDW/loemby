@@ -95,7 +95,7 @@ server {
     proxy_buffering off;
     proxy_request_buffering off;
     # 开启 DNS 解析器以支持动态域名转发（使用 Google 和 Cloudflare Public DNS）
-    # valid=30s 表示 DNS 缓存时间，避免频繁请求
+    # valid=30s 表示 DNS 缓存时间，避免频繁请求，为防止 v4 和 v6 去向漂移，可以设置 ipv6=off 以及只设置一个 DNS
     resolver 8.8.8.8 1.1.1.1 valid=30s;
     resolver_timeout 5s;
     
@@ -146,6 +146,9 @@ server {
         proxy_ssl_server_name on;
         proxy_ssl_name $target_host;
         
+        proxy_ssl_session_reuse on;
+        # proxy_bind 网卡真实的地址; # 出口IP
+
         # 注意：这里 proxy_pass 不带 URI，URI 由 rewrite 后的 $uri 决定
         proxy_pass $target_scheme://$target_host;
     }
