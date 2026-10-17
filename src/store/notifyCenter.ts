@@ -8,6 +8,7 @@ import 'dayjs/locale/zh-cn'
 import { useEventBus } from './eventBus';
 import { generateGuid } from '../util/uuid_util';
 import invokeApi from '../api/invokeApi';
+import { useGlobalConfig } from './db/globalConfig';
 import { useRouter } from 'vue-router';
 
 export const useNotifyCenter = defineStore('notifyCenter', () => {
@@ -76,8 +77,21 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
         });
     }
     
+    // 获取 YamTrack 服务地址（取设置中 yamtrack_sync_url 的 origin）
+    async function getYamTrackBaseUrl() {
+        const yamtrackSyncUrl = await useGlobalConfig().getGlobalConfigValue("yamtrack_sync_url");
+        if (!yamtrackSyncUrl) {
+            return "";
+        }
+        try {
+            return new URL(yamtrackSyncUrl).origin;
+        } catch (e) {
+            return yamtrackSyncUrl.replace(/\/+$/, "");
+        }
+    }
+
     // 处理 Tauri 通知消息
-    function processTauriNotify(payload: TauriNotify, isPageRefresh: boolean = false) {
+    async function processTauriNotify(payload: TauriNotify, isPageRefresh: boolean = false) {
         if (payload.event_type === 'ElMessage' && !isPageRefresh) {
             ElMessage({
                 type: payload.message_type as "success" | "info" | "warning" | "error",
@@ -191,11 +205,12 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
             } else {
                 message.push(h('div', null, '停止播放'));
             }
+            const yamtrack_base_url = await getYamTrackBaseUrl();
             if (json.movie) {
-                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.movie?.title} (${json.movie?.date.substring(0, 4)})`)))
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${yamtrack_base_url}/tmdb/movie/${json.movie?.id}`)}, () => `${json.movie?.title} (${json.movie?.date.substring(0, 4)})`)))
             } else if (json.episode) {
-                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${json.source_url}`)}, () => `${json.show?.title} (${json.show?.date.substring(0, 4)})`)))
-                message.push(h('div', null, `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`))
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${yamtrack_base_url}/tmdb/tv/${json.show?.id}`)}, () => `${json.show?.title} (${json.show?.date.substring(0, 4)})`)))
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${yamtrack_base_url}/tmdb/tv/${json.show?.id}/season/${json.episode?.season}/episode/${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
             }
             push({
                 id: "YamTrack-" + json.source_url + "-" + json.episode?.season + "-" + json.episode?.number ,
@@ -342,6 +357,7 @@ interface YamTrackResponse {
     source_url: string,
     media_type: string,
     show?: {
+        id: string,
         title: string,
         date: string,
     },
@@ -351,6 +367,7 @@ interface YamTrackResponse {
         number: number,
     },
     movie?: {
+        id: string,
         title: string,
         date: string,
     }

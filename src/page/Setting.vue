@@ -374,7 +374,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             <div class="setting-card-header">
                                 <div class="card-title-group">
                                     <span class="card-title">YamTrack 同步</span>
-                                    <span class="card-desc">基于 Emby Integrations Webhook 协议与 YamTrack 同步</span>
+                                    <span class="card-desc">基于 Custom Integrations Webhook 协议与 YamTrack 同步（仅支持分支版本）</span>
                                 </div>
                                 <el-switch
                                     v-model="yamtrack_sync_switch"
@@ -384,7 +384,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                             <div class="setting-card-body">
                                 <div class="setting-row align-start">
                                     <div class="setting-info">
-                                        <div class="setting-label">YamTrack 同步地址 (Emby Integrations)</div>
+                                        <div class="setting-label">YamTrack 同步地址 (Custom Integrations)</div>
                                         <div class="setting-desc">YamTrack 服务端生成的专属 Webhook 接收地址</div>
                                     </div>
                                     <div class="setting-controls flex-grow-control">
