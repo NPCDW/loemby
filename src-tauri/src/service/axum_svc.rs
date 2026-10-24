@@ -192,12 +192,13 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     };
     let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id, &app_state).await;
     let client = http_pool::get_stream_http_client(proxy_url, &app_state).await.unwrap();
-    let mut request_headers = headers.clone();
-    request_headers.remove(axum::http::header::HOST);
-    request_headers.remove(axum::http::header::REFERER);
-    request_headers.remove(axum::http::header::USER_AGENT);
-    // 播放器到本代理的连接语义不应该被带去请求上游，否则上游会跟着关闭连接，ts 之间无法复用连接
-    remove_hop_by_hop_headers(&mut request_headers);
+    let mut request_headers = axum::http::HeaderMap::new();
+    if let Some(range) = headers.get(axum::http::header::RANGE) {
+        request_headers.insert(axum::http::header::RANGE, range.clone());
+    }
+    request_headers.insert("icy-metadata", HeaderValue::from_str("1").unwrap());
+    request_headers.insert(axum::http::header::ACCEPT, HeaderValue::from_str("*/*").unwrap());
+    request_headers.insert(axum::http::header::ACCEPT_ENCODING, HeaderValue::from_str("deflate, gzip, br, zstd").unwrap());
     request_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
     request_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.as_ref().unwrap()).unwrap());
     request_headers.insert("X-Emby-Client", HeaderValue::from_str(emby_server.client.as_ref().unwrap()).unwrap());
@@ -359,7 +360,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
 }
 
 async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>>>>, Path(id): Path<String>) -> axum::response::Response {
-    tracing::debug!("subtitle: {}", id);
+    tracing::debug!("subtitle: {} {:?}", id, headers);
     let axum_app_state = axum_app_state.read().await.clone().unwrap();
     let request = axum_app_state.request.read().await;
     let request = match request.get(&id).clone() {
@@ -416,11 +417,7 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
             axum::body::Body::new(format!("http连接池获取失败 {}", err))
         ).into_response(),
     };
-    let mut request_headers = headers.clone();
-    request_headers.remove(axum::http::header::HOST);
-    request_headers.remove(axum::http::header::REFERER);
-    request_headers.remove(axum::http::header::USER_AGENT);
-    remove_hop_by_hop_headers(&mut request_headers);
+    let mut request_headers = axum::http::HeaderMap::new();
     request_headers.insert(axum::http::header::USER_AGENT, emby_server.user_agent.as_ref().unwrap().parse().unwrap());
     // request_headers.insert(axum::http::header::REFERER, url.clone().parse().unwrap());
     request_headers.insert(axum::http::HeaderName::from_str("X-Emby-Token").unwrap(), HeaderValue::from_str(&emby_server.auth_token.clone().unwrap()).unwrap());
@@ -569,10 +566,6 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
         ).into_response(),
     };
     let mut request_headers = axum::http::HeaderMap::new();
-    request_headers.remove(axum::http::header::HOST);
-    request_headers.remove(axum::http::header::REFERER);
-    request_headers.remove(axum::http::header::USER_AGENT);
-    remove_hop_by_hop_headers(&mut request_headers);
     request_headers.insert(axum::http::header::USER_AGENT, param.user_agent.clone().parse().unwrap());
     // request_headers.insert(axum::http::header::REFERER, param.image_url.clone().parse().unwrap());
     if let Some(token) = param.token.as_ref() {
