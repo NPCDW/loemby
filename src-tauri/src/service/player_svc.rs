@@ -1224,12 +1224,12 @@ struct PlaybackProcessParam {
     #[cfg(windows)]
     sender: Option<Arc<RwLock<interprocess::os::windows::named_pipe::tokio::SendPipeStream<interprocess::os::windows::named_pipe::pipe_mode::Bytes>>>>,
     #[cfg(unix)]
-    sender: Option<Arc<RwLock<interprocess::local_socket::tokio::SendHalf>>>,
+    sender: Option<Arc<RwLock<tokio::io::WriteHalf<interprocess::local_socket::tokio::Stream>>>>,
     play_info_init_finished: bool,
 }
 
 #[cfg(not(windows))]
-async fn get_pipe_rw(pipe_name: &str) -> anyhow::Result<(interprocess::local_socket::tokio::RecvHalf, interprocess::local_socket::tokio::SendHalf)> {
+async fn get_pipe_rw(pipe_name: &str) -> anyhow::Result<(tokio::io::ReadHalf<interprocess::local_socket::tokio::Stream>, tokio::io::WriteHalf<interprocess::local_socket::tokio::Stream>)> {
     use interprocess::local_socket::{tokio::{prelude::*, Stream}, GenericFilePath};
 
     let mut retry_count = 0;
@@ -1259,7 +1259,7 @@ async fn get_pipe_rw(pipe_name: &str) -> anyhow::Result<(interprocess::local_soc
             return Err(anyhow::anyhow!("MPV IPC Failed to connect to mpv IPC"));
         }
     };
-    Ok(conn.split())
+    Ok(tokio::io::split(conn))
 }
 
 #[cfg(windows)]
