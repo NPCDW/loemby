@@ -14,28 +14,30 @@
                                         <el-skeleton-item variant="text" class="eps-episode-name-skel" />
                                     </div>
                                 </div>
-                                <div class="eps-meta-row">
-                                    <div class="eps-meta-item">
-                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
-                                        <el-skeleton-item variant="text" class="eps-time" />
+                                <div class="eps-version-detail">
+                                    <div class="eps-meta-row">
+                                        <div class="eps-meta-item">
+                                            <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                            <el-skeleton-item variant="text" class="eps-time" />
+                                        </div>
+                                        <div class="eps-meta-item">
+                                            <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                            <el-skeleton-item variant="text" class="eps-progress" />
+                                        </div>
                                     </div>
-                                    <div class="eps-meta-item">
-                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
-                                        <el-skeleton-item variant="text" class="eps-progress" />
-                                    </div>
-                                </div>
-                                <div class="eps-tag-row">
-                                    <div class="eps-tag-item">
-                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
-                                        <el-skeleton-item variant="text" class="eps-tag" />
-                                    </div>
-                                    <div class="eps-tag-item">
-                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
-                                        <el-skeleton-item variant="text" class="eps-tag" />
-                                    </div>
-                                    <div class="eps-tag-item">
-                                        <el-skeleton-item variant="text" class="eps-meta-key-skel" />
-                                        <el-skeleton-item variant="text" class="eps-tag" />
+                                    <div class="eps-tag-row">
+                                        <div class="eps-tag-item">
+                                            <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                            <el-skeleton-item variant="text" class="eps-tag" />
+                                        </div>
+                                        <div class="eps-tag-item">
+                                            <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                            <el-skeleton-item variant="text" class="eps-tag" />
+                                        </div>
+                                        <div class="eps-tag-item">
+                                            <el-skeleton-item variant="text" class="eps-meta-key-skel" />
+                                            <el-skeleton-item variant="text" class="eps-tag" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -115,33 +117,35 @@
                                 </template>
                             </div>
 
-                            <div class="eps-meta-row">
-                                <div class="eps-meta-item">
-                                    <span class="eps-meta-key">时长</span>
-                                    <span class="eps-meta-value">{{ displayTimeLength }}</span>
+                            <div class="eps-version-detail">
+                                <div class="eps-meta-row">
+                                    <div class="eps-meta-item">
+                                        <span class="eps-meta-key">时长</span>
+                                        <span class="eps-meta-value">{{ displayTimeLength }}</span>
+                                    </div>
+                                    <div class="eps-meta-item eps-meta-progress">
+                                        <span class="eps-meta-key">进度</span>
+                                        <el-progress
+                                            class="eps-progress-bar"
+                                            :percentage="currentEpisodes.UserData?.Played ? 100 : (currentEpisodes.UserData?.PlayedPercentage || 0)"
+                                            :stroke-width="8"
+                                            :format="(percentage: number) => Math.trunc(percentage) + '%'" />
+                                    </div>
                                 </div>
-                                <div class="eps-meta-item eps-meta-progress">
-                                    <span class="eps-meta-key">进度</span>
-                                    <el-progress
-                                        class="eps-progress-bar"
-                                        :percentage="currentEpisodes.UserData?.Played ? 100 : (currentEpisodes.UserData?.PlayedPercentage || 0)"
-                                        :stroke-width="8"
-                                        :format="(percentage: number) => Math.trunc(percentage) + '%'" />
-                                </div>
-                            </div>
 
-                            <div class="eps-tag-row">
-                                <div class="eps-tag-item">
-                                    <span class="eps-meta-key">大小</span>
-                                    <el-tag disable-transitions round>{{ mediaSourceSizeTag }}</el-tag>
-                                </div>
-                                <div class="eps-tag-item">
-                                    <span class="eps-meta-key">码率</span>
-                                    <el-tag disable-transitions round>{{ mediaSourceBitrateTag }}</el-tag>
-                                </div>
-                                <div class="eps-tag-item">
-                                    <span class="eps-meta-key">分辨率</span>
-                                    <el-tag disable-transitions round>{{ mediaStreamResolutionTag }}</el-tag>
+                                <div class="eps-tag-row">
+                                    <div class="eps-tag-item">
+                                        <span class="eps-meta-key">大小</span>
+                                        <el-tag disable-transitions round>{{ mediaSourceSizeTag }}</el-tag>
+                                    </div>
+                                    <div class="eps-tag-item">
+                                        <span class="eps-meta-key">码率</span>
+                                        <el-tag disable-transitions round>{{ mediaSourceBitrateTag }}</el-tag>
+                                    </div>
+                                    <div class="eps-tag-item">
+                                        <span class="eps-meta-key">分辨率</span>
+                                        <el-tag disable-transitions round>{{ mediaStreamResolutionTag }}</el-tag>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -650,6 +654,8 @@ updateCurrentEpisodes().then(() => {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    height: 170px;
+    justify-content: space-between;
 }
 
 .eps-title-row {
@@ -657,6 +663,12 @@ updateCurrentEpisodes().then(() => {
     flex-direction: column;
     gap: 8px;
     min-width: 0;
+}
+
+.eps-version-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
 .eps-title-text {
