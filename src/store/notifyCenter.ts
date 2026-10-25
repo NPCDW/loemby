@@ -207,10 +207,10 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
             }
             const yamtrack_base_url = await getYamTrackBaseUrl();
             if (json.movie) {
-                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${yamtrack_base_url}/tmdb/movie/${json.movie?.id}`)}, () => `${json.movie?.title} (${json.movie?.date.substring(0, 4)})`)))
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${yamtrack_base_url}/goto/tmdb/movie/${json.movie?.id}`)}, () => `${json.movie?.title} (${json.movie?.date.substring(0, 4)})`)))
             } else if (json.episode) {
-                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${yamtrack_base_url}/tmdb/tv/${json.show?.id}`)}, () => `${json.show?.title} (${json.show?.date.substring(0, 4)})`)))
-                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${yamtrack_base_url}/tmdb/tv/${json.show?.id}/season/${json.episode?.season}/episode/${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${yamtrack_base_url}/goto/tmdb/tv/${json.show?.id}`)}, () => `${json.show?.title} (${json.show?.date.substring(0, 4)})`)))
+                message.push(h('div', null, h(ElLink, {underline: false, onClick: () => invokeApi.open_url(`${yamtrack_base_url}/goto/tmdb/tv/${json.show?.id}/season/${json.episode?.season}/episode/${json.episode?.number}`)}, () => `S${json.episode?.season}E${json.episode?.number}. ${json.episode?.title}`)))
             }
             push({
                 id: "YamTrack-" + json.source_url + "-" + json.episode?.season + "-" + json.episode?.number ,
