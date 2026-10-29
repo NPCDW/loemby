@@ -90,12 +90,19 @@
                     transition="el-zoom-in-bottom"
                     placement="top-start">
                     <template #reference>
-                        <el-icon @click="() => {dialogNotifyCenterVisible = !dialogNotifyCenterVisible;notifyScrollBottom()}" style="margin: 0 7px;"><i-ep-BellFilled /></el-icon>
+                        <span ref="notifyTriggerRef" @click="toggleNotifyCenter" style="display: inline-flex; margin: 0 7px; cursor: pointer;">
+                            <el-icon><i-ep-BellFilled /></el-icon>
+                        </span>
                     </template>
-                    <div>
-                        <div @click="dialogNotifyCenterVisible = false" style="display: flex; justify-content: space-between;">
+                    <div
+                        ref="notifyCenterRef"
+                        @mouseenter="handleNotifyCenterMouseEnter"
+                        @mouseleave="handleNotifyCenterMouseLeave">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
                             <el-text>消息中心</el-text>
-                            <el-icon><i-ep-ArrowDownBold /></el-icon>
+                            <button type="button" class="notify-center-close" aria-label="关闭消息中心" @click="closeNotifyCenter">
+                                <el-icon><i-ep-ArrowDownBold /></el-icon>
+                            </button>
                         </div>
                         <el-scrollbar max-height="500px" ref="notifyScrollbarRef">
                             <div v-if="!notifyMessages || notifyMessages.length <= 0" style="text-align: center;">
@@ -924,7 +931,53 @@ onUnmounted(() => useEventBus().remove('GlobalProxyChanged', getGlobalProxy))
 
 const dialogNotifyCenterVisible = ref(false)
 const notifyScrollbarRef = ref<ScrollbarInstance>()
-const notifyMessages = computed(() => useNotifyCenter().notifyMessages);
+const notifyCenterRef = ref<HTMLElement>()
+const notifyTriggerRef = ref<HTMLElement>()
+const notifyMessages = computed(() => [...useNotifyCenter().notifyMessages].sort((a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0)));
+let notifyAutoCloseTimer: ReturnType<typeof setTimeout> | undefined
+let notifyCenterAutoCloseEnabled = false
+let notifyCenterHovered = false
+
+function clearNotifyAutoCloseTimer() {
+    if (notifyAutoCloseTimer !== undefined) {
+        clearTimeout(notifyAutoCloseTimer)
+        notifyAutoCloseTimer = undefined
+    }
+}
+function startNotifyAutoCloseTimer() {
+    clearNotifyAutoCloseTimer()
+    if (!notifyCenterAutoCloseEnabled || notifyCenterHovered || !dialogNotifyCenterVisible.value) return
+    notifyAutoCloseTimer = setTimeout(closeNotifyCenter, 10000)
+}
+function handleNotifyCenterMouseEnter() {
+    notifyCenterHovered = true
+    clearNotifyAutoCloseTimer()
+}
+function handleNotifyCenterMouseLeave() {
+    notifyCenterHovered = false
+    startNotifyAutoCloseTimer()
+}
+function closeNotifyCenter() {
+    clearNotifyAutoCloseTimer()
+    notifyCenterAutoCloseEnabled = false
+    notifyCenterHovered = false
+    dialogNotifyCenterVisible.value = false
+}
+function toggleNotifyCenter() {
+    if (dialogNotifyCenterVisible.value) {
+        closeNotifyCenter()
+        return
+    }
+    clearNotifyAutoCloseTimer()
+    notifyCenterAutoCloseEnabled = false
+    dialogNotifyCenterVisible.value = true
+    notifyScrollBottom()
+}
+function openNotifyCenterAutomatically() {
+    dialogNotifyCenterVisible.value = true
+    notifyCenterAutoCloseEnabled = true
+    startNotifyAutoCloseTimer()
+}
 function messageContentBg(level?: string): string {
     switch (level) {
         case "primary": return "rgb(33, 61, 91)";
@@ -935,20 +988,33 @@ function messageContentBg(level?: string): string {
         default: return "rgb(57, 58, 60)";
     }
 }
-onMounted(() => useEventBus().on('notifyMessageChange', notifyMessageChange))
-onUnmounted(() => useEventBus().remove('notifyMessageChange', notifyMessageChange))
+onMounted(() => {
+    useEventBus().on('notifyMessageChange', notifyMessageChange)
+    document.addEventListener('pointerdown', handleNotifyCenterOutsideClick)
+})
+onUnmounted(() => {
+    useEventBus().remove('notifyMessageChange', notifyMessageChange)
+    document.removeEventListener('pointerdown', handleNotifyCenterOutsideClick)
+    clearNotifyAutoCloseTimer()
+})
 interface NotifyMessageChangeParam {
     force_open: boolean
 }
 function notifyMessageChange(param: NotifyMessageChangeParam) {
     if (param.force_open) {
-        dialogNotifyCenterVisible.value = true;
+        openNotifyCenterAutomatically()
     }
     notifyScrollBottom()
 }
+function handleNotifyCenterOutsideClick(event: PointerEvent) {
+    if (!dialogNotifyCenterVisible.value || !(event.target instanceof Node)) return
+    if (!notifyCenterRef.value?.contains(event.target) && !notifyTriggerRef.value?.contains(event.target)) {
+        closeNotifyCenter()
+    }
+}
 function notifyScrollBottom() {
     nextTick(() => {
-        if (dialogNotifyCenterVisible.value && notifyScrollbarRef.value && notifyScrollbarRef.value.wrapRef && notifyScrollbarRef.value.wrapRef.scrollHeight) {
+        if (dialogNotifyCenterVisible.value && notifyScrollbarRef.value?.wrapRef) {
             notifyScrollbarRef.value.setScrollTop(notifyScrollbarRef.value.wrapRef.scrollHeight)
             notifyScrollbarRef.value.update()
         }
@@ -1063,6 +1129,24 @@ function notifyScrollBottom() {
 }
 
 /* ===== 消息中心 ===== */
+.notify-center-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.notify-center-close:hover {
+    background-color: var(--el-fill-color-light, #262727);
+}
+
 .message-content {
     margin: 0;
     padding: 5px;

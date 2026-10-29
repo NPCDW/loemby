@@ -54,13 +54,15 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
     const rawMessages = ref<TauriNotify[]>(loadRawMessagesFromStorage());
     
     function push(message: NotifyMessage) {
+        const updatedMessage = { ...message, updatedAt: Date.now() }
         for (let i = notifyMessages.value.length - 1; i >= 0; i--) {
             if (notifyMessages.value[i].id === message.id) {
-                notifyMessages.value[i] = message
+                notifyMessages.value[i] = updatedMessage
+                useEventBus().emit('notifyMessageChange', {force_open: true})
                 return
             }
         }
-        notifyMessages.value.push(message)
+        notifyMessages.value.push(updatedMessage)
         useEventBus().emit('notifyMessageChange', {force_open: true})
     }
     
@@ -275,6 +277,7 @@ export interface NotifyMessage {
     id: string,
     username: string,
     datetime: string,
+    updatedAt?: number,
     icon?: string,
     embyServerId?: string,
     level?: "primary" | "success" | "warning" | "danger" | "info",
