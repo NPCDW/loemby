@@ -882,8 +882,8 @@ C:\App\mpv_config-2024.12.04\mpv.exe
 </template>
 
 <script lang="ts" setup>
-import { computed, h, onMounted, onUnmounted, ref } from 'vue';
-import { ElButton, ElMessage, ElMessageBox, ElNotification, TableColumnCtx } from 'element-plus';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { ElMessage, ElMessageBox, TableColumnCtx } from 'element-plus';
 import { ProxyServer, useProxyServer } from '../store/db/proxyServer';
 import { ReverseProxyServer, useReverseProxyServer } from '../store/db/reverseProxyServer';
 import _ from 'lodash';
@@ -894,6 +894,7 @@ import { EmbyLine, useEmbyLine } from '../store/db/embyLine';
 import { useGlobalConfig } from '../store/db/globalConfig';
 import { useEventBus } from '../store/eventBus';
 import invokeApi from '../api/invokeApi';
+import updater_util from '../util/updater_util';
 import { listen } from '@tauri-apps/api/event';
 import {useRuntimeConfig} from "../store/runtimeConfig.ts";
 import { EmbyIconLibrary, useEmbyIconLibrary } from '../store/db/embyIconLibrary.ts';
@@ -1085,28 +1086,13 @@ function checkReverseProxy(id: string) {
 }
 
 const checkUpdateLoading = ref<boolean>(false);
-function checkUpdate() {
+async function checkUpdate() {
     checkUpdateLoading.value = true;
-    invokeApi.updater().then(res => {
-        if (res) {
-            ElNotification.success({
-                title: '新版本准备就绪',
-                message: h('p', {'style': "display: flex; justify-content: space-between; align-items: center;"}, [
-                  h('span', null, '重启应用生效'),
-                  h(ElButton, {
-                    'size': 'small',
-                    'type': 'success',
-                    onClick: () => {
-                      invokeApi.restartApp()
-                    },
-                  }, "现在重启"),
-                ]),
-                position: 'bottom-right',
-            })
-        } else {
-            ElMessage.success('已经是最新版本')
-        }
-    }).finally(() => checkUpdateLoading.value = false);
+    try {
+        await updater_util.checkUpdate(true);
+    } finally {
+        checkUpdateLoading.value = false;
+    }
 }
 
 const embyServers = ref<EmbyServer[]>([])

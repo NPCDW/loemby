@@ -8,7 +8,7 @@ import { createPinia } from 'pinia'
 import svgIcon from "./components/SvgIcon/index.vue";
 import 'virtual:svg-icons-register'
 import VueLazyLoad from 'vue3-lazyload'
-// import updaer_util from './util/updater_util'
+import updater_util from './util/updater_util'
 import {useRuntimeConfig} from "./store/runtimeConfig.ts";
 import { useNotifyCenter } from './store/notifyCenter.ts'
 import { useGlobalConfig } from './store/db/globalConfig.ts'
@@ -33,4 +33,4 @@ useProxyServer().initCache()
 useReverseProxyServer().initCache()
 useNotifyCenter().listen_tauri_notify()
 useEmbyServer().listenEmbyServerChange()
-// updaer_util.getUpdate()
+void updater_util.checkUpdate()

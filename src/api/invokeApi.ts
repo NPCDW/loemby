@@ -35,11 +35,19 @@ async function open_url(url: string): Promise<string> {
     return invoke('open_url', {url: url});
 }
 
-async function updater(): Promise<boolean> {
-    return invoke('updater');
+export interface UpdateInfo {
+    version: string,
 }
 
-async function restartApp(): Promise<boolean> {
+async function checkUpdate(): Promise<UpdateInfo | null> {
+    return invoke('check_update');
+}
+
+async function installUpdate(version: string): Promise<void> {
+    return invoke('install_update', {version});
+}
+
+async function restartApp(): Promise<void> {
     return invoke('restart_app', {});
 }
 
@@ -64,5 +72,5 @@ async function open_file(path_type: string): Promise<void> {
 }
 
 export default {
-    getSysInfo, call_player, go_trakt_auth, go_simkl_auth, open_url, updater, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file
+    getSysInfo, call_player, go_trakt_auth, go_simkl_auth, open_url, checkUpdate, installUpdate, restartApp, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file
 }

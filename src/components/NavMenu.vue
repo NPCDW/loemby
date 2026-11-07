@@ -393,7 +393,7 @@ import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox, ScrollbarInstance } from "element-plus";
 import { generateGuid } from "../util/uuid_util";
 import _ from "lodash";
-import { Container, Draggable } from "vue3-smooth-dnd";
+import { Container, Draggable, type DropResult } from "vue3-smooth-dnd";
 import invokeApi from "../api/invokeApi";
 import { ProxyServer, useProxyServer } from "../store/db/proxyServer";
 import { ReverseProxyServer, useReverseProxyServer } from "../store/db/reverseProxyServer";
@@ -727,7 +727,10 @@ async function jumpRoute(route: string) {
     router.push(route)
 }
 
-async function onDrop({removedIndex, addedIndex}: {removedIndex: number, addedIndex: number}) {
+async function onDrop({removedIndex, addedIndex}: DropResult) {
+    if (removedIndex === null || addedIndex === null || removedIndex === addedIndex) {
+        return
+    }
     useEmbyServer().updateOrder(embyServers.value[removedIndex].id!, embyServers.value[removedIndex].order_by!, embyServers.value[addedIndex].order_by!).then(() => {
         useEventBus().emit('EmbyServerChanged', {event: 'order'})
     }).catch(e => ElMessage.error("排序失败" + e))

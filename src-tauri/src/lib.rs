@@ -18,7 +18,7 @@ use controller::global_config_ctl::{get_global_config, list_all_global_config, a
 use controller::emby_server_ctl::{get_emby_server, list_all_emby_server, add_emby_server, update_emby_server, defer_emby_server_order, update_emby_server_order, delete_emby_server};
 use controller::emby_line_ctl::{get_emby_line, list_emby_server_line, list_all_emby_line, add_emby_line, update_emby_line, update_line_emby_server_name, delete_line_by_emby_server_id, delete_emby_line};
 use controller::emby_icon_library_ctl::{get_emby_icon_library, list_all_emby_icon_library, add_emby_icon_library, update_emby_icon_library, delete_emby_icon_library};
-use controller::invoke_ctl::{get_sys_info, call_player, go_trakt_auth, go_simkl_auth, open_url, updater, restart_app, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file};
+use controller::invoke_ctl::{get_sys_info, call_player, go_trakt_auth, go_simkl_auth, open_url, check_update, install_update, restart_app, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file};
 use config::app_state::AppState;
 
 use crate::service::{cache_svc, updater_svc};
@@ -36,7 +36,7 @@ pub fn run() {
             get_emby_server, list_all_emby_server, add_emby_server, update_emby_server, defer_emby_server_order, update_emby_server_order, delete_emby_server,
             get_emby_line, list_emby_server_line, list_all_emby_line, add_emby_line, update_emby_line, update_line_emby_server_name, delete_line_by_emby_server_id, delete_emby_line,
             get_emby_icon_library, list_all_emby_icon_library, add_emby_icon_library, update_emby_icon_library, delete_emby_icon_library,
-            get_sys_info, call_player, go_trakt_auth, go_simkl_auth, open_url, updater, restart_app, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file
+            get_sys_info, call_player, go_trakt_auth, go_simkl_auth, open_url, check_update, install_update, restart_app, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file
         ])
         .setup(|app| {
             let config = config::app_config::get_config(app);
@@ -98,13 +98,7 @@ pub fn run() {
                 app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap_or_else(|err| {
                     tracing::error!("Updater plugin error: {}", err)
                 });
-                let app_handle = app.app_handle().clone();
-                tauri::async_runtime::spawn(async move {
-                    let res = updater_svc::update(app_handle).await;
-                    if res.is_err() {
-                        tracing::error!("自动升级失败: {:#?}", res);
-                    }
-                });
+                app.manage(updater_svc::UpdaterState::default());
             }
 
             Ok(())

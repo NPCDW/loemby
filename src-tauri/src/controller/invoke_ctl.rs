@@ -61,12 +61,13 @@ pub async fn open_url(url: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn updater(app_handle: tauri::AppHandle) -> Result<bool, String> {
-    let res = updater_svc::update(app_handle).await;
-    if let Err(err) = res {
-        return Err(format!("更新失败: {} ", err.to_string()));
-    }
-    Ok(res.unwrap())
+pub async fn check_update(app_handle: tauri::AppHandle) -> Result<Option<updater_svc::UpdateInfo>, String> {
+    updater_svc::check(app_handle).await
+}
+
+#[tauri::command]
+pub async fn install_update(app_handle: tauri::AppHandle, version: String) -> Result<(), String> {
+    updater_svc::install(app_handle, version).await
 }
 
 #[tauri::command]
