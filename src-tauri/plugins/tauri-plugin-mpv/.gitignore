@@ -1,0 +1,5 @@
+/android/.tauri/
+/android/build/
+/android/.cxx/
+/target/
+/native/

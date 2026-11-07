@@ -1,0 +1,6 @@
+-keep class com.loemby.mpv.MpvPlugin { *; }
+-keep class com.loemby.mpv.MpvNative { *; }
+-keep class com.loemby.mpv.PrepareArgs { *; }
+-keep class com.loemby.mpv.NativeOptions { *; }
+-keep class com.loemby.mpv.CloseArgs { *; }
+-keepclasseswithmembernames class * { native <methods>; }

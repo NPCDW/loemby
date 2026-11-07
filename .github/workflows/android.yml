@@ -1,0 +1,105 @@
+name: Android arm64 verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_apk:
+        description: Also compile debug and release APKs (release is unsigned without a local keystore)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      CARGO_TERM_COLOR: always
+      CMAKE_GENERATOR: Ninja
+      LOEMBY_MPV_NATIVE_DIR: ${{ github.workspace }}/src-tauri/plugins/tauri-plugin-mpv/native
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - uses: android-actions/setup-android@v3
+      - name: Install fixed Android and host toolchain
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.2.12479018'
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool ninja-build pkg-config gperf nasm python3-venv cmake
+          rustup target add aarch64-linux-android
+          python3 -I -m venv /tmp/loemby-mpv-tools
+          /tmp/loemby-mpv-tools/bin/python3 -I -m pip download --no-deps meson==1.11.0 -d /tmp/loemby-mpv-tools-download
+          printf '%s  %s\n' 9774eb62bbf2cb8043aa3feb771c09b510d112c0c382221e29aea7453ecce753 /tmp/loemby-mpv-tools-download/meson-1.11.0-py3-none-any.whl | sha256sum -c -
+          /tmp/loemby-mpv-tools/bin/python3 -I -m pip install --no-deps /tmp/loemby-mpv-tools-download/meson-1.11.0-py3-none-any.whl
+          printf '%s\n' /tmp/loemby-mpv-tools/bin >> "$GITHUB_PATH"
+          ndk="$ANDROID_HOME/ndk/27.2.12479018"
+          toolchain="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          {
+            printf 'ANDROID_NDK_ROOT=%s\nANDROID_NDK_HOME=%s\nNDK_HOME=%s\n' "$ndk" "$ndk" "$ndk"
+            printf 'CC_aarch64_linux_android=%s/aarch64-linux-android24-clang\n' "$toolchain"
+            printf 'CXX_aarch64_linux_android=%s/aarch64-linux-android24-clang++\n' "$toolchain"
+            printf 'AR_aarch64_linux_android=%s/llvm-ar\n' "$toolchain"
+            printf 'CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=%s/aarch64-linux-android24-clang\n' "$toolchain"
+            printf 'RUSTFLAGS=-C link-arg=-Wl,-z,max-page-size=16384 -C link-arg=-Wl,-z,common-page-size=16384\n'
+          } >> "$GITHUB_ENV"
+          printf '%s\n' "$toolchain" >> "$GITHUB_PATH"
+      - name: sign
+        run: |
+          cd src-tauri/gen/android
+          echo "keyAlias=${ANDROID_KEY_ALIAS}" > keystore.properties
+          echo "password=${ANDROID_KEY_PASSWORD}" >> keystore.properties
+          echo "${ANDROID_KEY_BASE64}" | base64 -d > /root/keystore.jks
+          echo "storeFile=/root/keystore.jks" >> keystore.properties
+      - name: Fetch and inspect pinned official recipes
+        run: |
+          python3 -I scripts/android-mpv.py fetch
+          python3 -I scripts/android-mpv.py audit --print-recipes
+      - name: Build native arm64 bundle
+        run: python3 -I scripts/android-mpv.py build --accept-reviewed-recipes 2>&1 | tee /tmp/android-mpv-build.log
+      - name: Verify native bundle
+        run: python3 -I scripts/android-mpv.py check --abi arm64-v8a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-mpv-arm64-native
+          path: src-tauri/plugins/tauri-plugin-mpv/native/
+          if-no-files-found: error
+      - name: Install locked application dependencies
+        if: inputs.build_apk
+        run: |
+          npm install -g pnpm@10.21.0
+          pnpm install --frozen-lockfile
+          cargo fetch --locked --manifest-path src-tauri/Cargo.toml
+      - name: Compile debug and release APKs
+        if: inputs.build_apk
+        run: |
+          pnpm tauri android build --target aarch64 --apk --debug
+          pnpm tauri android build --target aarch64 --apk
+      - name: Check APK native closure and 16KB alignment
+        if: inputs.build_apk
+        run: |
+          find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -print0 | while IFS= read -r -d '' apk; do
+            python3 -I scripts/android-mpv.py check-apk --apk "$apk"
+          done
+      - uses: actions/upload-artifact@v4
+        if: inputs.build_apk
+        with:
+          name: loemby-android-arm64-apks
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-native-build-logs
+          path: |
+            /tmp/android-mpv-build.log
+            /tmp/loemby-android-mpv-build/build-*/meson-logs/meson-log.txt
+            /tmp/loemby-android-mpv-build/build-ffmpeg/ffbuild/config.log
+          if-no-files-found: ignore

@@ -34,7 +34,11 @@ pub async fn init_axum_svc(axum_app_state: Arc<RwLock<Option<AxumAppState>>>, ap
         .route("/play_media/{id}/{media_source_select}", get(play_media))
         .with_state(axum_app_state);
 
-    axum::serve(listener, router).await?;
+    tauri::async_runtime::spawn(async move {
+        if let Err(err) = axum::serve(listener, router).await {
+            tracing::error!("本地 HTTP 服务异常退出: {:#?}", err);
+        }
+    });
 
     anyhow::Ok(())
 }
@@ -94,11 +98,14 @@ async fn trakt_auth(headers: axum::http::HeaderMap, State(axum_app_state): State
         tracing::error!("trakt_auth: 向前台发送事件失败 {}", err);
         return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>trakt_auth: 向前台发送事件失败 {}</body></html>", err)).into_response();
     }
-    let window = app_handle.webview_windows();
-    let window = window.values().next().expect("Sorry, no window found");
-    window.unminimize().expect("Sorry, no window unminimize");
-    window.show().expect("Sorry, no window show");
-    window.set_focus().expect("Can't Bring Window to Focus");
+    #[cfg(desktop)]
+    {
+        let window = app_handle.webview_windows();
+        let window = window.values().next().expect("Sorry, no window found");
+        window.unminimize().expect("Sorry, no window unminimize");
+        window.show().expect("Sorry, no window show");
+        window.set_focus().expect("Can't Bring Window to Focus");
+    }
     axum::response::Html("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>授权成功，您可以关闭网页，并返回应用了</body></html>").into_response()
 }
 
@@ -136,11 +143,14 @@ async fn simkl_auth(headers: axum::http::HeaderMap, State(axum_app_state): State
         tracing::error!("simkl_auth: 向前台发送事件失败 {}", err);
         return axum::response::Html(format!("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>simkl_auth: 向前台发送事件失败 {}</body></html>", err)).into_response();
     }
-    let window = app_handle.webview_windows();
-    let window = window.values().next().expect("Sorry, no window found");
-    window.unminimize().expect("Sorry, no window unminimize");
-    window.show().expect("Sorry, no window show");
-    window.set_focus().expect("Can't Bring Window to Focus");
+    #[cfg(desktop)]
+    {
+        let window = app_handle.webview_windows();
+        let window = window.values().next().expect("Sorry, no window found");
+        window.unminimize().expect("Sorry, no window unminimize");
+        window.show().expect("Sorry, no window show");
+        window.set_focus().expect("Can't Bring Window to Focus");
+    }
     axum::response::Html("<html><body style='background-color: #1D1E1F; color: #FFFFFF'>授权成功，您可以关闭网页，并返回应用了</body></html>").into_response()
 }
 

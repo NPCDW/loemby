@@ -16,18 +16,16 @@ pub struct Config {
 }
 
 const APP_CONFIG_PATH: &'static str = "config/app-config.json";
-const RESOURCES_CONFIG_PATH: &'static str = "resources/config/app-config.default.json";
 
 pub fn get_config(app: &tauri::App) -> anyhow::Result<Config> {
     let config_dir = app.path().resolve("", tauri::path::BaseDirectory::AppConfig)?;
     let config_path = config_dir.join(APP_CONFIG_PATH);
     if !config_path.exists() {
         file_util::mkdir(config_path.parent().unwrap())?;
-        let resource_path = app.path().resolve(
-            RESOURCES_CONFIG_PATH,
-            tauri::path::BaseDirectory::Resource,
+        std::fs::write(
+            &config_path,
+            include_str!("../../resources/config/app-config.default.json"),
         )?;
-        file_util::copy(&resource_path, &config_path)?;
     }
     let content = file_util::read_file(&config_path)?;
     anyhow::Ok(serde_json::from_str(&content)?)

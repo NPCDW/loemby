@@ -2430,6 +2430,7 @@ dependencies = [
  "reqwest-middleware",
  "reqwest-retry",
  "rust_decimal",
+ "rustls-platform-verifier",
  "serde",
  "serde-inline-default",
  "serde_json",
@@ -2438,6 +2439,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin",
+ "tauri-plugin-mpv",
  "tauri-plugin-updater",
  "time",
  "tokio",
@@ -4677,6 +4679,16 @@ dependencies = [
  "serde_json",
  "tauri-utils",
  "walkdir",
+]
+
+[[package]]
+name = "tauri-plugin-mpv"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
 ]
 
 [[package]]

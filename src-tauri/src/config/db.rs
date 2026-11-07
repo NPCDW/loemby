@@ -14,7 +14,7 @@ pub async fn init(app: &tauri::App, config: &Config) -> anyhow::Result<DbPool> {
 
     let pool = match config.database_type.as_str() {
         "postgres" => {
-            tracing::debug!("Initializing PostgreSQL pool with URL: {}", config.database_url);
+            tracing::debug!("Initializing PostgreSQL pool");
 
             let pool = PgPoolOptions::new()
                 .max_connections(5)

@@ -1,3 +1,24 @@
+android:
+  vscode:
+    - docker:
+        image: docker.cnb.cool/my-codespace/dev-image-build/android:latest
+      runner:
+        cpus: 16
+      services:
+        - vscode
+        - docker
+      imports: https://cnb.cool/my-codespace/envs/-/blob/main/loemby-updater.yml
+      # 开发环境启动后会执行的任务
+      stages:
+        # 配置签名
+        - name: database
+          script: |
+            cd /workspace/src-tauri/gen/android
+            echo "keyAlias=${ANDROID_KEY_ALIAS}" > keystore.properties
+            echo "password=${ANDROID_KEY_PASSWORD}" >> keystore.properties
+            echo "${ANDROID_KEY_BASE64}" | base64 -d > /root/keystore.jks
+            echo "storeFile=/root/keystore.jks" >> keystore.properties
+
 $:
   vscode:
     - docker:

@@ -1,5 +1,6 @@
 /target/
 .Trash-0
+src-tauri/gen/android/keystore.properties
 
 # Logs
 logs
@@ -27,3 +28,8 @@ dist-ssr
 *.sw?
 
 .pnpm-store
+
+# Locally prepared Android mpv headers, libraries, manifests and build caches
+/src-tauri/plugins/tauri-plugin-mpv/native/
+/.android-mpv/
+/scripts/__pycache__/

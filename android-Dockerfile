@@ -1,0 +1,145 @@
+FROM debian:trixie-slim
+
+RUN sed -i "s@http://deb.debian.org/debian@http://mirrors.cloud.tencent.com/debian@g" /etc/apt/sources.list.d/debian.sources \
+    && printf 'Acquire::Check-Valid-Until "false";\nAcquire::Check-Date "false";\n' > /etc/apt/apt.conf.d/99no-valid-until \
+    && apt-mark hold tzdata && apt-get update && apt-get install -y curl wget unzip openssh-server git \
+    && apt-get install -y libwebkit2gtk-4.1-dev build-essential file libxdo-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev \
+    && apt-get install -y sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN test "$(uname -m)" = "x86_64" \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        unzip \
+        xz-utils \
+        git \
+        file \
+        build-essential \
+        cmake \
+        ninja-build \
+        pkg-config \
+        python3 \
+        python3-venv \
+        autoconf \
+        automake \
+        libtool \
+        gperf \
+        nasm \
+        libssl-dev \
+        libc++1 \
+        openjdk-21-jdk-headless \
+        openssh-client \
+        openssh-server \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/ssh/ssh_host_*
+
+# Native libmpv host tools: keep the interpreter/tool environment separate from sources.
+# Version and wheel SHA256 match scripts/android-mpv.lock.json.
+ARG MESON_VERSION=1.11.0
+ARG MESON_SHA256=9774eb62bbf2cb8043aa3feb771c09b510d112c0c382221e29aea7453ecce753
+RUN python3 -I -m venv /opt/loemby-mpv-tools \
+    && download_dir="$(mktemp -d /tmp/loemby-meson-download.XXXXXX)" \
+    && /opt/loemby-mpv-tools/bin/python3 -I -m pip download --no-deps "meson==${MESON_VERSION}" -d "${download_dir}" \
+    && printf '%s  %s\n' "${MESON_SHA256}" "${download_dir}/meson-${MESON_VERSION}-py3-none-any.whl" | sha256sum -c - \
+    && /opt/loemby-mpv-tools/bin/python3 -I -m pip install --no-deps --no-index "${download_dir}/meson-${MESON_VERSION}-py3-none-any.whl" \
+    && rm -rf "${download_dir}"
+ENV PATH=/opt/loemby-mpv-tools/bin:${PATH}
+
+ENV LANG=C.UTF-8
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+ENV CARGO_HOME=/root/.cargo
+ENV RUSTUP_HOME=/root/.rustup
+ARG ANDROID_NDK_VERSION=27.2.12479018
+ENV NDK_HOME=${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}
+# Tauri 使用 NDK_HOME；aws-lc-sys / CMake 通过以下变量定位 Android NDK。
+ENV ANDROID_NDK_HOME=${NDK_HOME}
+ENV ANDROID_NDK_ROOT=${NDK_HOME}
+ENV ANDROID_NDK=${NDK_HOME}
+ENV PATH=${CARGO_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}
+
+# 安装 vscode
+RUN curl -fsSL https://code-server.dev/install.sh | sh \
+    && wget https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-linux-x64.vsix \
+    && code-server --install-extension cnbcool.cnb-welcome --force \
+    && code-server --install-extension rust-analyzer-linux-x64.vsix \
+    && code-server --install-extension tamasfe.even-better-toml --force \
+    && code-server --install-extension fill-labs.dependi --force \
+    && code-server --install-extension Vue.volar --force \
+    && code-server --install-extension Tencent-Cloud.coding-copilot --force \
+    && code-server --install-extension donjayamanne.githistory --force \
+    && code-server --install-extension tauri-apps.tauri-vscode --force \
+    && code-server --install-extension dbcode.dbcode --force
+
+# 安装 Node.js，避免 Debian npm 包引入额外工具。
+ARG NODE_VERSION=24.22.2
+ARG NODE_SHA256=48cc0e21e048790e54c0cf5749c2725005313d652651c40b7a21feb9697aaf75
+RUN mkdir -p /tmp/node-download \
+    && curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz -o /tmp/node-download/node.tar.xz \
+    && printf '%s  %s\n' "${NODE_SHA256}" /tmp/node-download/node.tar.xz | sha256sum -c - \
+    && tar -xJf /tmp/node-download/node.tar.xz -C /usr/local --strip-components=1 \
+    && rm -rf /tmp/node-download
+
+# 安装 Android / Tauri 编译工具链，不依赖桌面环境。
+ARG RUST_VERSION=stable
+ARG PNPM_VERSION=10
+ARG TAURI_CLI_VERSION=2.12.4
+RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs -o /tmp/rustup-init.sh \
+    && sh /tmp/rustup-init.sh -y --no-modify-path --profile minimal --default-toolchain ${RUST_VERSION} \
+    && rustup target add aarch64-linux-android x86_64-linux-android \
+    && npm install -g "pnpm@${PNPM_VERSION}" "@tauri-apps/cli@${TAURI_CLI_VERSION}" \
+    && npm cache clean --force \
+    && rm /tmp/rustup-init.sh
+
+ARG ANDROID_COMMAND_LINE_TOOLS_VERSION=11076708
+ARG ANDROID_PLATFORM=android-36
+ARG ANDROID_BUILD_TOOLS=36.0.0
+# 项目锁定的 Tauri CLI 2.2.7 生成 SDK 34 工程，与 SDK 36 并存。
+ARG ANDROID_COMPAT_PLATFORM=android-34
+ARG ANDROID_COMPAT_BUILD_TOOLS=34.0.0
+RUN mkdir -p ${ANDROID_HOME}/cmdline-tools \
+    && curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_COMMAND_LINE_TOOLS_VERSION}_latest.zip -o /tmp/android-commandlinetools.zip \
+    && unzip -q /tmp/android-commandlinetools.zip -d /tmp/android-commandlinetools \
+    && mv /tmp/android-commandlinetools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest \
+    && yes | sdkmanager --sdk_root=${ANDROID_HOME} --licenses >/dev/null \
+    && sdkmanager --sdk_root=${ANDROID_HOME} \
+        platform-tools \
+        "platforms;${ANDROID_PLATFORM}" \
+        "build-tools;${ANDROID_BUILD_TOOLS}" \
+        "platforms;${ANDROID_COMPAT_PLATFORM}" \
+        "build-tools;${ANDROID_COMPAT_BUILD_TOOLS}" \
+        "ndk;${ANDROID_NDK_VERSION}" \
+    && rm -rf /tmp/android-commandlinetools /tmp/android-commandlinetools.zip
+
+COPY gradle-mirrors.init.gradle /root/.gradle/init.d/mirrors.gradle
+
+RUN file ${ANDROID_HOME}/platform-tools/adb | grep -q 'ELF 64-bit.*x86-64' \
+    && java -version \
+    && rustc --version \
+    && cargo --version \
+    && cmake --version \
+    && make --version \
+    && ninja --version \
+    && python3 -I --version \
+    && test "$(meson --version)" = "${MESON_VERSION}" \
+    && autoconf --version \
+    && automake --version \
+    && libtoolize --version \
+    && gperf --version \
+    && nasm -v \
+    && node --version \
+    && pnpm --version \
+    && tauri --version \
+    && adb version \
+    && test -f ${ANDROID_HOME}/platforms/${ANDROID_PLATFORM}/android.jar \
+    && test -f ${ANDROID_HOME}/platforms/${ANDROID_COMPAT_PLATFORM}/android.jar \
+    && ${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}/aapt2 version \
+    && ${ANDROID_HOME}/build-tools/${ANDROID_COMPAT_BUILD_TOOLS}/aapt2 version \
+    && test -f ${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake \
+    && ${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --version
+
+WORKDIR /workspace
+CMD ["bash"]

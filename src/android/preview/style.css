@@ -1,0 +1,11 @@
+html, body, #app { margin: 0; min-width: 0; min-height: 100%; background: var(--el-bg-color-page); color: var(--el-text-color-primary); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.preview-tools { padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left)); background: var(--el-bg-color-overlay); border-bottom: 1px solid var(--el-border-color); font-size: 12px; overflow-wrap: anywhere; }
+.preview-tools summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--el-text-color-primary); font-weight: 600; }
+.preview-tools summary::before { content: '▸'; margin-right: 8px; }
+.preview-tools details[open] summary::before { content: '▾'; }
+.preview-tools p { line-height: 1.6; color: var(--el-text-color-regular); }
+.preview-controls { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.preview-controls label { display: flex; align-items: center; min-height: 44px; gap: 6px; cursor: pointer; }
+.preview-tools button, .preview-detail a { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-height: 44px; padding: 10px 14px; background: var(--el-bg-color-overlay); border: 1px solid var(--el-border-color); border-radius: 8px; color: var(--el-text-color-primary); text-decoration: none; cursor: pointer; }
+.preview-detail { max-width: 720px; padding: 24px 16px; margin: auto; overflow-wrap: anywhere; }
+.preview-detail code { display: block; margin: 20px 0; }

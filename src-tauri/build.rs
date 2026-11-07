@@ -4,6 +4,9 @@ const VERSION: &'static str = "0.45.3";
 
 fn main() {
     modify_version();
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("android") {
+        println!("cargo:rustc-link-arg=-Wl,-z,max-page-size=16384");
+    }
     tauri_build::build()
 }
 

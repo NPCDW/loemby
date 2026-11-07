@@ -19,13 +19,42 @@ use controller::emby_server_ctl::{get_emby_server, list_all_emby_server, add_emb
 use controller::emby_line_ctl::{get_emby_line, list_emby_server_line, list_all_emby_line, add_emby_line, update_emby_line, update_line_emby_server_name, delete_line_by_emby_server_id, delete_emby_line};
 use controller::emby_icon_library_ctl::{get_emby_icon_library, list_all_emby_icon_library, add_emby_icon_library, update_emby_icon_library, delete_emby_icon_library};
 use controller::invoke_ctl::{get_sys_info, call_player, go_trakt_auth, go_simkl_auth, open_url, updater, restart_app, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file};
-use config::app_state::AppState;
+use config::app_state::{AppState, StartupState};
 
-use crate::service::{cache_svc, updater_svc};
+use crate::service::cache_svc;
+#[cfg(desktop)]
+use crate::service::updater_svc;
+
+#[cfg(target_os = "android")]
+fn init_android_tls(app: &tauri::App) -> anyhow::Result<()> {
+    let window = app.get_webview_window("main")
+        .ok_or_else(|| anyhow::anyhow!("main webview missing"))?;
+    let (tx, rx) = std::sync::mpsc::channel();
+    window.with_webview(move |webview| {
+        webview.jni_handle().exec(move |env, activity, _| {
+            let result = (|| {
+                let context = env.call_method(
+                    activity,
+                    "getApplicationContext",
+                    "()Landroid/content/Context;",
+                    &[],
+                )?.l()?;
+                rustls_platform_verifier::android::init_with_env(env, context)
+            })().map_err(|error| error.to_string());
+            let _ = tx.send(result);
+        });
+    })?;
+    // JNI 初始化完成后再允许后台请求使用 Android 系统证书校验器。
+    rx.recv_timeout(std::time::Duration::from_secs(15))?
+        .map_err(anyhow::Error::msg)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default().manage(StartupState::default());
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(tauri_plugin_mpv::init());
+    builder
         .invoke_handler(tauri::generate_handler![
             app_http_get_proxy_location, app_http_get_reverse_proxy_location, app_http_get_emby_icon_library,
             emby_get_server_info, emby_authenticate_by_name, emby_logout, emby_search, emby_get_continue_play_list, emby_get_favorite_list, emby_next_up, emby_get_media_library_list, emby_get_media_library_child_latest, emby_get_media_library_child, emby_count, emby_items, emby_seasons, emby_episodes, emby_playback_info, emby_star, emby_unstar, emby_played, emby_unplayed, emby_hide_from_resume,
@@ -39,74 +68,91 @@ pub fn run() {
             get_sys_info, call_player, go_trakt_auth, go_simkl_auth, open_url, updater, restart_app, get_runtime_config, clean_emby_image_cache, clean_icon_cache, open_folder, open_file
         ])
         .setup(|app| {
-            let config = config::app_config::get_config(app);
-            if config.is_err() {
-                panic!("Read Config error: {}", config.unwrap_err())
-            }
-            let config = config.unwrap();
-            println!("Read Config: {:?}", &config);
+            let startup = app.state::<StartupState>();
+            let mut stage = "系统服务";
+            let initialized = (|| -> anyhow::Result<()> {
+                #[cfg(target_os = "android")]
+                {
+                    init_android_tls(app)?;
+                }
 
-            config::log::init(app, &config.log_level);
+                service::player_svc::init_player(app.app_handle());
 
-            let db_pool = tauri::async_runtime::block_on(config::db::init(app, &config))?;
+                stage = "配置文件";
+                let config = config::app_config::get_config(app)?;
+                stage = "日志服务";
+                config::log::init(app, &config.log_level)?;
+
+                stage = "数据库";
+                let db_pool = tauri::async_runtime::block_on(config::db::init(app, &config))?;
             
-            let axum_app_state = Arc::new(RwLock::new(None));
-            let axum_app_state_clone = axum_app_state.clone();
-            let app_handle = app.app_handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let res = axum_svc::init_axum_svc(axum_app_state_clone, app_handle).await;
-                if res.is_err() {
-                    tracing::error!("{:#?}", res);
-                }
-            });
+                let axum_app_state = Arc::new(RwLock::new(None));
 
-            app.manage(AppState {
-                app_handle: app.app_handle().clone(),
-                app_config: config,
-                auxm_app_state: axum_app_state,
-                api_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
-                image_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
-                stream_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
-                emby_server_cache: Arc::new(RwLock::new(HashMap::new())),
-                global_config_cache: Arc::new(RwLock::new(HashMap::new())),
-                proxy_server_cache: Arc::new(RwLock::new(HashMap::new())),
-                reverse_proxy_server_cache: Arc::new(RwLock::new(HashMap::new())),
-                emby_http_cache: Arc::new(RwLock::new(HashMap::new())),
-                db_pool,
-            });
-
-            tauri::async_runtime::block_on(mapper::global_config_mapper::load_cache(&app.state()))?;
-            tauri::async_runtime::block_on(mapper::proxy_server_mapper::load_cache(&app.state()))?;
-            // 反代服务器缓存需在 emby_server 缓存之前加载，因为 emby_server 的 base_url 需要拼接反代地址
-            tauri::async_runtime::block_on(mapper::reverse_proxy_server_mapper::load_cache(&app.state()))?;
-            tauri::async_runtime::block_on(mapper::emby_server_mapper::load_cache(&app.state()))?;
-            
-            let app_handle = app.app_handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let res = cache_svc::init(&app_handle).await;
-                if res.is_err() {
-                    tracing::error!("缓存初始化失败: {:#?}", res);
-                }
-                let res = cache_svc::clean_plan(&app_handle).await;
-                if res.is_err() {
-                    tracing::error!("清理缓存计划失败: {:#?}", res);
-                }
-            });
-
-            #[cfg(desktop)]
-            {
-                app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap_or_else(|err| {
-                    tracing::error!("Updater plugin error: {}", err)
+                app.manage(AppState {
+                    app_handle: app.app_handle().clone(),
+                    app_config: config,
+                    auxm_app_state: axum_app_state.clone(),
+                    api_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
+                    image_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
+                    stream_reqwest_pool: Arc::new(RwLock::new(HashMap::new())),
+                    emby_server_cache: Arc::new(RwLock::new(HashMap::new())),
+                    global_config_cache: Arc::new(RwLock::new(HashMap::new())),
+                    proxy_server_cache: Arc::new(RwLock::new(HashMap::new())),
+                    reverse_proxy_server_cache: Arc::new(RwLock::new(HashMap::new())),
+                    emby_http_cache: Arc::new(RwLock::new(HashMap::new())),
+                    db_pool,
                 });
+
+                stage = "本地媒体服务";
+                tauri::async_runtime::block_on(axum_svc::init_axum_svc(
+                    axum_app_state,
+                    app.app_handle().clone(),
+                ))?;
+                stage = "服务器配置缓存";
+                tauri::async_runtime::block_on(mapper::global_config_mapper::load_cache(&app.state()))?;
+                tauri::async_runtime::block_on(mapper::proxy_server_mapper::load_cache(&app.state()))?;
+                // 反代服务器缓存需在 emby_server 缓存之前加载，因为 emby_server 的 base_url 需要拼接反代地址
+                tauri::async_runtime::block_on(mapper::reverse_proxy_server_mapper::load_cache(&app.state()))?;
+                tauri::async_runtime::block_on(mapper::emby_server_mapper::load_cache(&app.state()))?;
+            
+                stage = "缓存目录";
+                tauri::async_runtime::block_on(cache_svc::init(app.app_handle()))?;
                 let app_handle = app.app_handle().clone();
                 tauri::async_runtime::spawn(async move {
-                    let res = updater_svc::update(app_handle).await;
+                    let res = cache_svc::clean_plan(&app_handle).await;
                     if res.is_err() {
-                        tracing::error!("自动升级失败: {:#?}", res);
+                        tracing::error!("清理缓存计划失败: {:#?}", res);
                     }
                 });
-            }
 
+                #[cfg(desktop)]
+                {
+                    app.handle().plugin(tauri_plugin_updater::Builder::new().build()).unwrap_or_else(|err| {
+                        tracing::error!("Updater plugin error: {}", err)
+                    });
+                    let app_handle = app.app_handle().clone();
+                    tauri::async_runtime::spawn(async move {
+                        let res = updater_svc::update(app_handle).await;
+                        if res.is_err() {
+                            tracing::error!("自动升级失败: {:#?}", res);
+                        }
+                    });
+                }
+
+                Ok(())
+            })();
+            match initialized {
+                Ok(()) => {
+                    startup.ready();
+                    tracing::info!("应用初始化完成");
+                }
+                Err(_) => {
+                    let message = format!("{}初始化失败，请检查配置后重启应用", stage);
+                    eprintln!("{}", message);
+                    tracing::error!("{}", message);
+                    startup.fail(message);
+                }
+            }
             Ok(())
         })
         .build(tauri::generate_context!())

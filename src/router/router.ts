@@ -9,9 +9,13 @@ import EmbySeries from '../page/emby/Series.vue'
 import EmbyMediaLibrary from '../page/emby/MediaLibrary.vue'
 import EmbyMediaLibraryItems from '../page/emby/MediaLibraryItems.vue'
 import EmbySearch from '../page/emby/Search.vue'
+import { isAndroidPlatform } from '../android/platform'
+import { androidRoutes } from '../android/routes'
 
+const android = isAndroidPlatform()
 const routes = [
     { path: '/', redirect: '/nav/history' },
+    ...(android ? androidRoutes : []),
     {
         path: '/nav',
         component: NavMenu,
@@ -67,7 +71,7 @@ const routes = [
                     keepAlive: true,
                 }
             },
-        ],
+        ].filter(route => !android || ['search', 'setting', 'emby/:embyId/search'].includes(route.path)),
     },
     // { path: '/screenshot', component: Screenshot },
 ]

@@ -68,7 +68,7 @@ export const useNotifyCenter = defineStore('notifyCenter', () => {
     
     async function listen_tauri_notify() {
         initMessages()
-        listen<TauriNotify>('tauri_notify', (event) => {
+        return listen<TauriNotify>('tauri_notify', (event) => {
             console.log("tauri tauri_notify event", event)
             const payload = event.payload;
             payload.datetime = dayjs().locale('zh-cn').format("HH:mm:ss")

@@ -10,7 +10,7 @@ import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig({
   plugins: [
     vue(),
     AutoImport({
@@ -58,6 +58,7 @@ export default defineConfig(async () => ({
   clearScreen: false,
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
+    allowedHosts: true,
     port: 3420,
     strictPort: true,
     host: "0.0.0.0",
@@ -73,8 +74,8 @@ export default defineConfig(async () => ({
     target: 'chrome130',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
+        main: resolve(import.meta.dirname, 'index.html'),
       },
     },
   },
-}));
+});

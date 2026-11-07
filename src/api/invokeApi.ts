@@ -5,7 +5,7 @@ async function getSysInfo(): Promise<string> {
     return invoke('get_sys_info');
 }
 
-interface PlayVideoParam {
+export interface PlayVideoParam {
     emby_server_id: string,
     series_id?: string,
     item_id: string,
@@ -19,7 +19,7 @@ interface PlayVideoParam {
     download?: boolean,
 }
 
-async function call_player(param: PlayVideoParam): Promise<string> {
+async function call_player(param: PlayVideoParam): Promise<void> {
     return invoke('call_player', {body: param});
 }
 

@@ -1,15 +1,9 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
 import invokeApi from "../api/invokeApi.ts";
+import { createRuntimeStartup } from '../util/startup';
 
 export const useRuntimeConfig = defineStore('runtimeConfig', () => {
-    const runtimeConfig = ref<RuntimeConfig>()
-
-    async function getRuntimeConfig() {
-        runtimeConfig.value = await invokeApi.get_runtime_config();
-    }
-
-    return { getRuntimeConfig, runtimeConfig }
+    return createRuntimeStartup(() => invokeApi.get_runtime_config());
 })
 
 export interface RuntimeConfig {

@@ -33,6 +33,8 @@ pnpm run tauri dev --config src-tauri/tauri.beta.conf.json
 pnpm run tauri dev
 # 生产打包
 pnpm run tauri build
+# 安卓端打包
+pnpm tauri android build --apk --target aarch64 --split-per-abi
 ```
 
 ## 生成图标

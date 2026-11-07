@@ -35,27 +35,28 @@ export const useImage = defineStore('image', () => {
         if (images.value[imageKey]) {
             return images.value[imageKey];
         }
-        let loaded = true;
+        let loaded = false;
         if (item.ImageTags) {
+            loaded = true;
             if (item.ImageTags.Primary) {
-                loadImage(imageKey, embyServerId, item.Id, 'Primary')
+                await loadImage(imageKey, embyServerId, item.Id, 'Primary')
             } else if (item.ImageTags.Thumb) {
-                loadImage(imageKey, embyServerId, item.Id, 'Thumb')
+                await loadImage(imageKey, embyServerId, item.Id, 'Thumb')
             } else if (item.ImageTags.Art) {
-                loadImage(imageKey, embyServerId, item.Id, 'Art')
+                await loadImage(imageKey, embyServerId, item.Id, 'Art')
             } else if (item.ImageTags.Banner) {
-                loadImage(imageKey, embyServerId, item.Id, 'Banner')
+                await loadImage(imageKey, embyServerId, item.Id, 'Banner')
             } else if (item.ImageTags.Logo) {
-                loadImage(imageKey, embyServerId, item.Id, 'Logo')
+                await loadImage(imageKey, embyServerId, item.Id, 'Logo')
             } else {
                 loaded = false;
             }
         }
         if (!loaded) {
             if ((item as EpisodeItem).SeriesPrimaryImageTag) {
-                loadImage(imageKey, embyServerId, (item as EpisodeItem).SeriesId, 'Primary')
+                await loadImage(imageKey, embyServerId, (item as EpisodeItem).SeriesId, 'Primary')
             } else if ((item as EpisodeItem).ParentThumbItemId) {
-                loadImage(imageKey, embyServerId, (item as EpisodeItem).ParentThumbItemId, 'Thumb')
+                await loadImage(imageKey, embyServerId, (item as EpisodeItem).ParentThumbItemId, 'Thumb')
             }
         }
     }

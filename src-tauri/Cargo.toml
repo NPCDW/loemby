@@ -21,6 +21,10 @@ regex = "1.13.1"
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-updater = "2.14.0"
 
+[target.'cfg(target_os = "android")'.dependencies]
+rustls-platform-verifier = "=0.6.2"
+tauri-plugin-mpv = { path = "plugins/tauri-plugin-mpv" }
+
 [dependencies]
 tauri = { version = "2.12.5", features = [] }
 tauri-plugin = "2.7.2"

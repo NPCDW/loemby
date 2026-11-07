@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use crate::config::app_state::AppState;
 use crate::config::runtime_config;
-use crate::service::{cache_svc, player_svc, simkl_http_svc, trakt_http_svc, updater_svc};
+use crate::service::{cache_svc, player_svc, simkl_http_svc, trakt_http_svc};
+#[cfg(desktop)]
+use crate::service::updater_svc;
 use tauri::Manager;
 
 #[tauri::command]
@@ -60,6 +62,7 @@ pub async fn open_url(url: String) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(desktop)]
 #[tauri::command]
 pub async fn updater(app_handle: tauri::AppHandle) -> Result<bool, String> {
     let res = updater_svc::update(app_handle).await;
@@ -69,14 +72,20 @@ pub async fn updater(app_handle: tauri::AppHandle) -> Result<bool, String> {
     Ok(res.unwrap())
 }
 
+#[cfg(mobile)]
+#[tauri::command]
+pub async fn updater(_app_handle: tauri::AppHandle) -> Result<bool, String> {
+    Err("移动端暂不支持桌面自动更新，请手动安装新版本".to_string())
+}
+
 #[tauri::command]
 pub async fn restart_app(app_handle: tauri::AppHandle) {
     app_handle.restart()
 }
 
 #[tauri::command]
-pub async fn get_runtime_config(state: tauri::State<'_, AppState>) -> Result<runtime_config::RuntimeConfig, ()> {
-    runtime_config::get_runtime_config(state).await
+pub async fn get_runtime_config(app_handle: tauri::AppHandle) -> Result<runtime_config::RuntimeConfig, String> {
+    runtime_config::get_runtime_config(app_handle).await
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

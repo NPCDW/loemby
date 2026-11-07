@@ -4,8 +4,9 @@ use tauri::Manager;
 use time::UtcOffset;
 use tracing_subscriber::{filter::LevelFilter, fmt::time::OffsetTime, prelude::*, Layer};
 
-pub fn init(app: &tauri::App, log_level: &str) {
-    let local_data_dir = app.path().resolve("", tauri::path::BaseDirectory::AppLocalData).unwrap();
+pub fn init(app: &tauri::App, log_level: &str) -> anyhow::Result<()> {
+    let local_data_dir = app.path().resolve("", tauri::path::BaseDirectory::AppLocalData)?;
+    let level = LevelFilter::from_str(log_level)?;
     let logs_dir = local_data_dir.join("logs/");
     let file_appender = tracing_appender::rolling::daily(logs_dir, "loemby.log");
     let local_time = OffsetTime::new(
@@ -16,8 +17,8 @@ pub fn init(app: &tauri::App, log_level: &str) {
         .unwrap(),
     );
     let filter = tracing_subscriber::filter::Targets::new()
-        .with_target("sqlx", LevelFilter::from_str(log_level).unwrap())
-        .with_target("loemby_lib", LevelFilter::from_str(log_level).unwrap())
+        .with_target("sqlx", level)
+        .with_target("loemby_lib", level)
         .with_target("", LevelFilter::INFO);
     tracing_subscriber::registry()
         .with(
@@ -44,5 +45,6 @@ pub fn init(app: &tauri::App, log_level: &str) {
                 .log_internal_errors(true)
                 .with_filter(filter),
         )
-        .init();
+        .try_init()?;
+    Ok(())
 }
