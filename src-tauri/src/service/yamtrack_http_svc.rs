@@ -14,6 +14,7 @@ pub async fn track(param: &YamTrackParam, state: &tauri::State<'_, AppState>) ->
     let proxy_url = proxy_server_mapper::get_app_proxy_url(yamtrack_proxy_id, state).await;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&format!("loemby/{}", env!("CARGO_PKG_VERSION"))).unwrap());
+    headers.insert(reqwest::header::CONTENT_TYPE, HeaderValue::from_str("application/json; charset=UTF-8").unwrap());
 
     let body_str = serde_json::to_string(param)?;
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
