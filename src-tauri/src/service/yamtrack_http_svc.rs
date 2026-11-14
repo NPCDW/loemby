@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use axum::http::{HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
 
-use crate::{config::{app_state::AppState, http_pool}, mapper::{global_config_mapper, proxy_server_mapper}, service::{emby_http_svc::{EpisodeItem, SeriesItem}, trakt_http_svc}};
+use crate::{config::{app_state::AppState, http_pool}, mapper::{global_config_mapper, proxy_server_mapper, reverse_proxy_server_mapper}, service::{emby_http_svc::{EpisodeItem, SeriesItem}, trakt_http_svc}};
 
 pub async fn track(param: &YamTrackParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
     let yamtrack_sync_url = global_config_mapper::get_cache("yamtrack_sync_url", state).await;
@@ -17,8 +17,10 @@ pub async fn track(param: &YamTrackParam, state: &tauri::State<'_, AppState>) ->
 
     let body_str = serde_json::to_string(param)?;
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
+    let yamtrack_reverse_proxy_id = global_config_mapper::get_cache("yamtrack_reverse_proxy_id", state).await;
+    let url = reverse_proxy_server_mapper::resolve_reverse_url(&yamtrack_sync_url.unwrap(), yamtrack_reverse_proxy_id, state).await;
     let builder = client
-        .post(yamtrack_sync_url.unwrap())
+        .post(url)
         .headers(headers)
         .body(body_str.clone());
     let builder_print = format!("{:?} {}", &builder, body_str);

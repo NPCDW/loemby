@@ -493,7 +493,8 @@ async fn image_icon(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>
     let app_proxy_id = global_config_mapper::get_cache("app_proxy_id", &state).await;
     let proxy_url = proxy_server_mapper::get_app_proxy_url(app_proxy_id, &state).await;
     let user_agent = format!("loemby/{}", env!("CARGO_PKG_VERSION"));
-    let image_url = param.image_url.clone();
+    let app_reverse_proxy_id = global_config_mapper::get_cache("app_reverse_proxy_id", &state).await;
+    let image_url = reverse_proxy_server_mapper::resolve_reverse_url(&param.image_url, app_reverse_proxy_id, &state).await;
     let cache_prefix = "icon".to_string();
 
     image(axum_app_state, ImageParam {

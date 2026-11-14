@@ -55,12 +55,14 @@ pub async fn get_reverse_proxy_location(param: AppHttpGetReverseProxyLocationPar
 pub async fn get_emby_icon_library(param: AppHttpGetEmbyIconLibraryParam, state: &tauri::State<'_, AppState>) -> anyhow::Result<String> {
     let app_proxy_id = global_config_mapper::get_cache("app_proxy_id", state).await;
     let proxy_url = proxy_server_mapper::get_app_proxy_url(app_proxy_id, state).await;
+    let app_reverse_proxy_id = global_config_mapper::get_cache("app_reverse_proxy_id", state).await;
+    let url = reverse_proxy_server_mapper::resolve_reverse_url(&param.url, app_reverse_proxy_id, state).await;
     let mut headers = HeaderMap::new();
     headers.insert(reqwest::header::USER_AGENT, HeaderValue::from_str(&format!("loemby/{}", env!("CARGO_PKG_VERSION"))).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
     let builder = client
-        .get(param.url)
+        .get(url)
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;

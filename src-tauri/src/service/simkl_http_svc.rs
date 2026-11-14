@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 
 use crate::{
-    config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{global_config_mapper::{self, GlobalConfig}, proxy_server_mapper}, service::trakt_http_svc::TraktScrobbleParam
+    config::{app_state::{AppState, TauriNotify}, http_pool}, mapper::{global_config_mapper::{self, GlobalConfig}, proxy_server_mapper, reverse_proxy_server_mapper}, service::trakt_http_svc::TraktScrobbleParam
 };
 
 static SIMKL_WEBSITE_BASE_URL: &str = "https://simkl.com";
@@ -66,8 +66,9 @@ pub async fn token(param: SimklHttpTokenParam, state: &tauri::State<'_, AppState
             "code": param.code,
             "redirect_uri": param.redirect_uri,
         }).to_string();
+    let url = resolve_url(SIMKL_TOKEN_EXCHANGE_URL, state).await;
     let builder = client
-        .post(SIMKL_TOKEN_EXCHANGE_URL)
+        .post(url)
         .headers(headers)
         .body(body.clone());
     let builder_print = format!("{:?} {}", &builder, body);
@@ -112,8 +113,9 @@ pub async fn get_user_info(state: &tauri::State<'_, AppState>) -> anyhow::Result
     headers.insert(HeaderName::from_str("simkl-api-key").unwrap(), HeaderValue::from_str(SIMKL_CLIENT_ID).unwrap());
 
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
+    let url = resolve_url(&format!("{}/users/settings", SIMKL_API_BASE_URL), state).await;
     let builder = client
-        .get(format!("{}/users/settings", SIMKL_API_BASE_URL))
+        .get(url)
         .headers(headers);
     let builder_print = format!("{:?}", &builder);
     let response = builder.send().await;
@@ -139,8 +141,9 @@ pub async fn start(body: &TraktScrobbleParam, state: &tauri::State<'_, AppState>
 
     let body_str = serde_json::to_string(body)?;
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
+    let url = resolve_url(&format!("{}/scrobble/start", SIMKL_API_BASE_URL), state).await;
     let builder = client
-        .post(format!("{}/scrobble/start", SIMKL_API_BASE_URL))
+        .post(url)
         .headers(headers)
         .body(body_str.clone());
     let builder_print = format!("{:?} {}", &builder, body_str);
@@ -175,8 +178,9 @@ pub async fn stop(body: &TraktScrobbleParam, state: &tauri::State<'_, AppState>,
 
     let body_str = serde_json::to_string(body)?;
     let client = http_pool::get_api_http_client(proxy_url, state).await?;
+    let url = resolve_url(&format!("{}/scrobble/{}", SIMKL_API_BASE_URL, if body.progress < 80.0 { "pause" } else { "stop" }), state).await;
     let builder = client
-        .post(format!("{}/scrobble/{}", SIMKL_API_BASE_URL, if body.progress < 80.0 { "pause" } else { "stop" }))
+        .post(url)
         .headers(headers)
         .body(body_str.clone());
     let builder_print = format!("{:?} {}", &builder, body_str);
@@ -197,6 +201,11 @@ pub async fn stop(body: &TraktScrobbleParam, state: &tauri::State<'_, AppState>,
     let text = response.text().await?;
     tracing::debug!("simkl停止播放 response text {}", text);
     Ok(text)
+}
+
+async fn resolve_url(target_url: &str, state: &tauri::State<'_, AppState>) -> String {
+    let reverse_proxy_id = global_config_mapper::get_cache("simkl_reverse_proxy_id", state).await;
+    reverse_proxy_server_mapper::resolve_reverse_url(target_url, reverse_proxy_id, state).await
 }
 
 pub async fn go_simkl_auth(state: &tauri::State<'_, AppState>) -> anyhow::Result<()> {

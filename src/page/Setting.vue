@@ -293,7 +293,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <div class="setting-row">
                                     <div class="setting-info">
                                         <div class="setting-label">Trakt 授权</div>
-                                        <div class="setting-desc">绑定您的 Trakt.tv 账号授权信息</div>
+                                        <div class="setting-desc">绑定您的 Trakt.tv 账号授权信息；系统浏览器中的授权页面不受应用代理设置控制</div>
                                     </div>
                                     <div class="setting-controls">
                                         <div v-if="trakt_username" class="user-auth-badge">
@@ -305,18 +305,33 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 </div>
                                 <div class="setting-row">
                                     <div class="setting-info">
-                                        <div class="setting-label">Trakt 代理</div>
-                                        <div class="setting-desc">Trakt API 通讯出站节点配置</div>
+                                        <div class="setting-label">Trakt 正向代理</div>
+                                        <div class="setting-desc">Trakt API 请求的出站代理；与反代独立配置，选择反代不会重置此设置</div>
                                     </div>
                                     <div class="setting-controls">
                                         <el-select
                                             v-model="trakt_proxy_id"
-                                            @change="configValueChange('trakt_proxy_id', trakt_proxy_id + '', getTraktProxy, 'Trakt代理')"
+                                            @change="configValueChange('trakt_proxy_id', trakt_proxy_id + '', getTraktProxy, 'Trakt正向代理')"
                                             style="width: 280px;">
                                             <el-option key="no" label="不使用代理" value="no"/>
                                             <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
                                             <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
                                             <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                                        </el-select>
+                                    </div>
+                                </div>
+                                <div class="setting-row">
+                                    <div class="setting-info">
+                                        <div class="setting-label">Trakt 反代服务器</div>
+                                        <div class="setting-desc">Trakt API 请求经所选反代转发；仅使用可信反代，授权令牌等敏感信息会经过该服务器</div>
+                                    </div>
+                                    <div class="setting-controls">
+                                        <el-select
+                                            v-model="trakt_reverse_proxy_id"
+                                            @change="configValueChange('trakt_reverse_proxy_id', trakt_reverse_proxy_id + '', getTraktReverseProxy, 'Trakt反代服务器')"
+                                            style="width: 280px;">
+                                            <el-option key="no" label="不使用反代" value="no"/>
+                                            <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
                                         </el-select>
                                     </div>
                                 </div>
@@ -339,7 +354,7 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 <div class="setting-row">
                                     <div class="setting-info">
                                         <div class="setting-label">Simkl 授权</div>
-                                        <div class="setting-desc">绑定您的 Simkl 账号授权信息</div>
+                                        <div class="setting-desc">绑定您的 Simkl 账号授权信息；系统浏览器中的授权页面不受应用代理设置控制</div>
                                     </div>
                                     <div class="setting-controls">
                                         <div v-if="simkl_username" class="user-auth-badge">
@@ -351,18 +366,33 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 </div>
                                 <div class="setting-row">
                                     <div class="setting-info">
-                                        <div class="setting-label">Simkl 代理</div>
-                                        <div class="setting-desc">Simkl API 通讯出站节点配置</div>
+                                        <div class="setting-label">Simkl 正向代理</div>
+                                        <div class="setting-desc">Simkl API 请求的出站代理；与反代独立配置，选择反代不会重置此设置</div>
                                     </div>
                                     <div class="setting-controls">
                                         <el-select
                                             v-model="simkl_proxy_id"
-                                            @change="configValueChange('simkl_proxy_id', simkl_proxy_id + '', getSimklProxy, 'Simkl代理')"
+                                            @change="configValueChange('simkl_proxy_id', simkl_proxy_id + '', getSimklProxy, 'Simkl正向代理')"
                                             style="width: 280px;">
                                             <el-option key="no" label="不使用代理" value="no"/>
                                             <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
                                             <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
                                             <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                                        </el-select>
+                                    </div>
+                                </div>
+                                <div class="setting-row">
+                                    <div class="setting-info">
+                                        <div class="setting-label">Simkl 反代服务器</div>
+                                        <div class="setting-desc">Simkl API 请求经所选反代转发；仅使用可信反代，授权令牌等敏感信息会经过该服务器</div>
+                                    </div>
+                                    <div class="setting-controls">
+                                        <el-select
+                                            v-model="simkl_reverse_proxy_id"
+                                            @change="configValueChange('simkl_reverse_proxy_id', simkl_reverse_proxy_id + '', getSimklReverseProxy, 'Simkl反代服务器')"
+                                            style="width: 280px;">
+                                            <el-option key="no" label="不使用反代" value="no"/>
+                                            <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
                                         </el-select>
                                     </div>
                                 </div>
@@ -396,18 +426,33 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                 </div>
                                 <div class="setting-row">
                                     <div class="setting-info">
-                                        <div class="setting-label">YamTrack 代理</div>
-                                        <div class="setting-desc">YamTrack Webhook 请求出站代理节点配置</div>
+                                        <div class="setting-label">YamTrack 正向代理</div>
+                                        <div class="setting-desc">YamTrack Webhook 请求的出站代理；与反代独立配置，选择反代不会重置此设置</div>
                                     </div>
                                     <div class="setting-controls">
                                         <el-select
                                             v-model="yamtrack_proxy_id"
-                                            @change="configValueChange('yamtrack_proxy_id', yamtrack_proxy_id + '', getYamTrackProxy, 'YamTrack代理')"
+                                            @change="configValueChange('yamtrack_proxy_id', yamtrack_proxy_id + '', getYamTrackProxy, 'YamTrack正向代理')"
                                             style="width: 280px;">
                                             <el-option key="no" label="不使用代理" value="no"/>
                                             <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
                                             <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
                                             <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                                        </el-select>
+                                    </div>
+                                </div>
+                                <div class="setting-row">
+                                    <div class="setting-info">
+                                        <div class="setting-label">YamTrack 反代服务器</div>
+                                        <div class="setting-desc">Webhook 请求经所选反代转发；仅使用可信反代，Webhook 地址、密钥和同步数据会经过该服务器</div>
+                                    </div>
+                                    <div class="setting-controls">
+                                        <el-select
+                                            v-model="yamtrack_reverse_proxy_id"
+                                            @change="configValueChange('yamtrack_reverse_proxy_id', yamtrack_reverse_proxy_id + '', getYamTrackReverseProxy, 'YamTrack反代服务器')"
+                                            style="width: 280px;">
+                                            <el-option key="no" label="不使用反代" value="no"/>
+                                            <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
                                         </el-select>
                                     </div>
                                 </div>
@@ -601,16 +646,39 @@ C:\App\mpv_config-2024.12.04\mpv.exe
                                     <span class="card-title">应用数据代理</span>
                                     <span class="card-desc">拉取远程图标、应用自动更新等后台请求使用的代理网络</span>
                                 </div>
-                                <div class="setting-controls">
-                                    <el-select
-                                        v-model="app_proxy_id"
-                                        @change="configValueChange('app_proxy_id', app_proxy_id + '', getAppProxy, '应用数据代理')"
-                                        style="width: 280px;">
-                                        <el-option key="no" label="不使用代理" value="no"/>
-                                        <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
-                                        <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
-                                        <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
-                                    </el-select>
+                            </div>
+                            <div class="setting-card-body">
+                                <div class="setting-row">
+                                    <div class="setting-info">
+                                        <div class="setting-label">应用数据正向代理</div>
+                                        <div class="setting-desc">应用数据请求的出站代理；与反代独立配置，选择反代不会重置此设置</div>
+                                    </div>
+                                    <div class="setting-controls">
+                                        <el-select
+                                            v-model="app_proxy_id"
+                                            @change="configValueChange('app_proxy_id', app_proxy_id + '', getAppProxy, '应用数据正向代理')"
+                                            style="width: 280px;">
+                                            <el-option key="no" label="不使用代理" value="no"/>
+                                            <el-option key="followBrowse" :label="'跟随全局媒体库浏览代理(' + global_browse_proxy_name + ')'" value="followBrowse"/>
+                                            <el-option key="followPlay" :label="'跟随全局媒体流播放代理(' + global_play_proxy_name + ')'" value="followPlay"/>
+                                            <el-option v-for="proxyServer in proxyServers" :key="proxyServer.id" :label="proxyServer.name" :value="proxyServer.id"/>
+                                        </el-select>
+                                    </div>
+                                </div>
+                                <div class="setting-row">
+                                    <div class="setting-info">
+                                        <div class="setting-label">应用数据反代服务器</div>
+                                        <div class="setting-desc">应用数据请求经所选反代转发；仅使用可信反代，请求地址与数据会经过该服务器</div>
+                                    </div>
+                                    <div class="setting-controls">
+                                        <el-select
+                                            v-model="app_reverse_proxy_id"
+                                            @change="configValueChange('app_reverse_proxy_id', app_reverse_proxy_id + '', getAppReverseProxy, '应用数据反代服务器')"
+                                            style="width: 280px;">
+                                            <el-option key="no" label="不使用反代" value="no"/>
+                                            <el-option v-for="reverseProxyServer in reverseProxyServers" :key="reverseProxyServer.id" :label="reverseProxyServer.name" :value="reverseProxyServer.id"/>
+                                        </el-select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1284,25 +1352,49 @@ const yamtrack_proxy_id = ref<string>('followBrowse');
 function getYamTrackProxy() {
     useGlobalConfig().getGlobalConfigValue("yamtrack_proxy_id").then(value => {
         yamtrack_proxy_id.value = value ? value : "followBrowse";
-    }).catch(e => ElMessage.error('获取YamTrack代理失败' + e))
+    }).catch(e => ElMessage.error('获取YamTrack正向代理失败' + e))
+}
+const yamtrack_reverse_proxy_id = ref<string>('no');
+function getYamTrackReverseProxy() {
+    return useGlobalConfig().getGlobalConfigValue("yamtrack_reverse_proxy_id").then(value => {
+        yamtrack_reverse_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取YamTrack反代服务器失败' + e))
 }
 const trakt_proxy_id = ref<string>('followBrowse');
 function getTraktProxy() {
     useGlobalConfig().getGlobalConfigValue("trakt_proxy_id").then(value => {
         trakt_proxy_id.value = value ? value : "followBrowse";
-    }).catch(e => ElMessage.error('获取Trakt代理失败' + e))
+    }).catch(e => ElMessage.error('获取Trakt正向代理失败' + e))
+}
+const trakt_reverse_proxy_id = ref<string>('no');
+function getTraktReverseProxy() {
+    return useGlobalConfig().getGlobalConfigValue("trakt_reverse_proxy_id").then(value => {
+        trakt_reverse_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取Trakt反代服务器失败' + e))
 }
 const simkl_proxy_id = ref<string>('followBrowse');
 function getSimklProxy() {
     useGlobalConfig().getGlobalConfigValue("simkl_proxy_id").then(value => {
         simkl_proxy_id.value = value ? value : "followBrowse";
-    }).catch(e => ElMessage.error('获取Simkl代理失败' + e))
+    }).catch(e => ElMessage.error('获取Simkl正向代理失败' + e))
+}
+const simkl_reverse_proxy_id = ref<string>('no');
+function getSimklReverseProxy() {
+    return useGlobalConfig().getGlobalConfigValue("simkl_reverse_proxy_id").then(value => {
+        simkl_reverse_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取Simkl反代服务器失败' + e))
 }
 const app_proxy_id = ref<string>('followBrowse');
 function getAppProxy() {
     useGlobalConfig().getGlobalConfigValue("app_proxy_id").then(value => {
         app_proxy_id.value = value ? value : "followBrowse";
-    }).catch(e => ElMessage.error('获取App代理失败' + e))
+    }).catch(e => ElMessage.error('获取应用数据正向代理失败' + e))
+}
+const app_reverse_proxy_id = ref<string>('no');
+function getAppReverseProxy() {
+    return useGlobalConfig().getGlobalConfigValue("app_reverse_proxy_id").then(value => {
+        app_reverse_proxy_id.value = value ? value : "no";
+    }).catch(e => ElMessage.error('获取应用数据反代服务器失败' + e))
 }
 const global_browse_proxy_id = ref<string>('no');
 const global_browse_proxy_name = ref<string>('不使用代理');
@@ -1549,12 +1641,15 @@ function handlePaneChange() {
         getTraktInfo()
         getTraktSyncSwitch()
         getTraktProxy()
+        getTraktReverseProxy()
         getSimklInfo()
         getSimklSyncSwitch()
         getSimklProxy()
+        getSimklReverseProxy()
         getYamTrackSyncUrl()
         getYamTrackSyncSwitch()
         getYamTrackProxy()
+        getYamTrackReverseProxy()
     } else if (activePane.value == 'ProxyServer') {
     } else if (activePane.value == 'ReverseProxyServer') {
         listAllReverseProxyServer()
@@ -1562,6 +1657,7 @@ function handlePaneChange() {
         listAllEmbyLine()
     } else if (activePane.value == 'EmbyIconLibrary') {
         getAppProxy()
+        getAppReverseProxy()
         listAllEmbyIconLibrary()
     } else if (activePane.value == 'CacheAndLog') {
         getLogStoredDays()
