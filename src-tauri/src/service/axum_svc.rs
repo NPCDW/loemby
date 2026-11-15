@@ -311,6 +311,8 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     if response_content_type.starts_with("application/vnd.apple.mpegurl") || response_content_type.starts_with("application/x-mpegurl")
         || response_content_type.starts_with("application/mpegurl") || response_content_type.starts_with("audio/mpegurl") {
         let status = response.status();
+        // 相对路径分片要以播放列表的实际地址为基准解析，手动重定向后的最终地址才是它的真实位置
+        let base_url = response.url().clone();
         // 不能复用上游响应头：m3u8 内容被改写后长度与上游 content-length 不一致，没有这个头，出现了 transfer-encoding: chunked 这个头也有问题，
         // hyper 在 debug 构建下会直接 assert panic（连接被关闭，客户端收到空响应）。
         // 这里只保留 content-type，其余由 axum/hyper 重新生成。
@@ -336,11 +338,25 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
                 let link = mat.as_str();
                 let uuid = uuid::Uuid::new_v4().to_string();
                 request_guard.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
-                    stream_url: format!("{}{}", reverse_proxy_url.as_ref().unwrap_or(&"".to_string()), link),
+                    stream_url: reverse_proxy_server_mapper::apply_reverse_proxy_url(&link, reverse_proxy_url.as_deref()),
                     emby_server_id: emby_server.id.clone().unwrap(),
                 });
                 let local_url = format!("http://127.0.0.1:{}/stream/m3u8/{}", axum_app_state.port, uuid);
                 res = res.replace(link, &local_url);
+            }
+            // 非标签行且未被替换为本地链接时，是相对路径分片（video0.jpeg、../seg.ts、/seg.ts 等），
+            // 以播放列表地址为基准解析成完整 http 链接，再交给本地代理
+            if !res.is_empty() && !res.starts_with("#") && !res.starts_with("http:") && !res.starts_with("https:") {
+                let link = base_url.join(res.trim())
+                    .map(|url| url.to_string())
+                    .unwrap_or_else(|_| res.trim().to_string());
+                let uuid = uuid::Uuid::new_v4().to_string();
+                request_guard.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
+                    // 播放列表本身可能已通过反代访问，避免重复拼接反代前缀
+                    stream_url: reverse_proxy_server_mapper::apply_reverse_proxy_url(&link, reverse_proxy_url.as_deref()),
+                    emby_server_id: emby_server.id.clone().unwrap(),
+                });
+                res = format!("http://127.0.0.1:{}/stream/m3u8/{}", axum_app_state.port, uuid);
             }
             res_lines.push(res);
         }
