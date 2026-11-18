@@ -106,6 +106,3 @@ async function singleEmbySearch(embyServer: EmbyServer) {
     })
 }
 </script>
-
-<style scoped>
-</style>

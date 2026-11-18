@@ -21,10 +21,12 @@ body,
     min-height: 100vh;
 }
 
-/* Element Plus 弹层/下拉与页面底色对齐，避免纯黑块 */
+/* Element Plus 深色主题：统一容器、组件与弹层背景为应用主背景色 */
 html.dark {
     --el-bg-color-page: var(--loemby-surface-color);
     --el-bg-color: var(--loemby-surface-color);
+    --el-bg-color-overlay: var(--loemby-surface-color);
+    --el-fill-color-blank: var(--loemby-surface-color);
 }
 
 /* ============================================================
@@ -175,7 +177,7 @@ img[lazy=loading]::before {
 }
 
 /* 骨架用的 el-card：与 ItemCard 的 .item-card 同尺寸同配色，
- * 否则占位卡片比真实卡片更暗（深色主题 --el-fill-color-blank 为透明，会露出页面底色）。
+ * 否则占位卡片与真实卡片配色不一致。
  * 各页面仍可自行加 .item-card-skeleton / .favorite-skeleton-card 等类，
  * 这里用并列选择器兜住，不依赖加载顺序。 */
 .el-skeleton .el-card,
