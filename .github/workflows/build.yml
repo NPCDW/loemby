@@ -73,12 +73,14 @@ jobs:
           curl -L -O "$ASSET_URL"
           7z x mpv-x86_64-*.7z && rm -rf mpv-x86_64-*.7z
           mv ./* ../src-tauri/resources/mpv
+          mv ../src-tauri/resources/only-windows/mpv/scripts/* ../src-tauri/resources/mpv/portable_config/scripts/
         elif [ "${{ matrix.build }}" = "windows-arm" ]; then
           ASSET_URL=$(curl -s https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest | grep -o '"browser_download_url": *"[^"]*mpv-aarch64-20[^"]*\.7z"' | head -1 | cut -d'"' -f4)
           echo "Downloading MPV from: $ASSET_URL"
           curl -L -O "$ASSET_URL"
           7z x mpv-aarch64-*.7z && rm -rf mpv-aarch64-*.7z
           mv ./* ../src-tauri/resources/mpv
+          mv ../src-tauri/resources/only-windows/mpv/scripts/* ../src-tauri/resources/mpv/portable_config/scripts/
         elif [ "${{ matrix.build }}" = "linux-x86" ]; then
           ASSET_URL=$(curl -s https://api.github.com/repos/pkgforge-dev/mpv-AppImage/releases/latest | grep -o '"browser_download_url": *"[^"]*anylinux-x86_64\.AppImage"' | head -1 | cut -d'"' -f4)
           echo "Downloading MPV from: $ASSET_URL"
