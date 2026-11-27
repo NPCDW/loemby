@@ -206,9 +206,9 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
     request_headers.insert("X-Emby-Device-Id", HeaderValue::from_str(emby_server.device_id.as_ref().unwrap()).unwrap());
     request_headers.insert("X-Emby-Client-Version", HeaderValue::from_str(emby_server.client_version.as_ref().unwrap()).unwrap());
     let mut url = request.stream_url.clone();
-    if !url.starts_with("http") {
-        url = format!("{}{}", emby_server.reverse_base_url.as_ref().unwrap(), url);
-    }
+    // 若配置了反代服务器，链接指向原始地址时需要拼接反代服务器前缀
+    let reverse_proxy_url = reverse_proxy_server_mapper::get_reverse_proxy_url(emby_server.reverse_proxy_id.clone(), &app_state).await;
+    url = reverse_proxy_server_mapper::apply_reverse_proxy_url(&url, reverse_proxy_url.as_deref());
     // 处理错误和手动重定向
     let mut redirect_count = 0u8;
     let response = loop {
@@ -327,8 +327,6 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         let text = String::from_utf8_lossy(&bytes);
         tracing::debug!("stream: {} {} m3u8 文件下载完成，开始解析链接", types, &id);
         // 将 m3u8 文件中的链接替换为本地链接
-        // 若配置了反代服务器，链接指向原始地址时需要拼接反代服务器前缀
-        let reverse_proxy_url = reverse_proxy_server_mapper::get_reverse_proxy_url(emby_server.reverse_proxy_id.clone(), &app_state).await;
         let mut res_lines = Vec::new();
         let re = regex::Regex::new(r#"https?://[^\s<>\"']+"#).unwrap();
         let mut request_guard = axum_app_state.request.write().await;
@@ -338,7 +336,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
                 let link = mat.as_str();
                 let uuid = uuid::Uuid::new_v4().to_string();
                 request_guard.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
-                    stream_url: reverse_proxy_server_mapper::apply_reverse_proxy_url(&link, reverse_proxy_url.as_deref()),
+                    stream_url: link.to_string(),
                     emby_server_id: emby_server.id.clone().unwrap(),
                 });
                 let local_url = format!("http://127.0.0.1:{}/stream/m3u8/{}", axum_app_state.port, uuid);
@@ -353,7 +351,7 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
                 let uuid = uuid::Uuid::new_v4().to_string();
                 request_guard.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
                     // 播放列表本身可能已通过反代访问，避免重复拼接反代前缀
-                    stream_url: reverse_proxy_server_mapper::apply_reverse_proxy_url(&link, reverse_proxy_url.as_deref()),
+                    stream_url: link,
                     emby_server_id: emby_server.id.clone().unwrap(),
                 });
                 res = format!("http://127.0.0.1:{}/stream/m3u8/{}", axum_app_state.port, uuid);
@@ -401,9 +399,6 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
     };
 
     let mut url = request.stream_url.clone();
-    if !url.starts_with("http") {
-        url = format!("{}{}", emby_server.reverse_base_url.as_ref().unwrap(), url);
-    }
     let cache_digest = sha256::digest(&url);
     let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/subtitle/{}.ass", cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
     if cache_file_path.exists() {
@@ -424,6 +419,9 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
         ).into_response();
     }
 
+    // 若配置了反代服务器，链接指向原始地址时需要拼接反代服务器前缀
+    let reverse_proxy_url = reverse_proxy_server_mapper::get_reverse_proxy_url(emby_server.reverse_proxy_id.clone(), &app_state).await;
+    url = reverse_proxy_server_mapper::apply_reverse_proxy_url(&url, reverse_proxy_url.as_deref());
     let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id, &app_state).await;
     let client = match http_pool::get_image_http_client(proxy_url, &app_state).await {
         Ok(client) => client,

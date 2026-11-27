@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, sync::RwLock};
 use tokio_stream::StreamExt;
 
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateEmbyStreamRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateEmbyStreamRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
 
 pub async fn call_player(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let emby_server = match emby_server_mapper::get_cache(&body.emby_server_id, state).await {
@@ -266,14 +266,18 @@ pub async fn play_media(axum_app_state: &AxumAppState, id: &str, media_source_se
     let mut video_url = if params.use_direct_link && support_direct_link {
         media_source.path.clone().unwrap()
     } else if let Some(direct_stream_url) = media_source.direct_stream_url.clone() {
-        emby_http_svc::get_half_direct_stream_url(direct_stream_url)
+        emby_http_svc::get_direct_stream_url(EmbyGetDirectStreamUrlParam {
+            emby_server_id: params.emby_server_id.clone(),
+            direct_stream_url: direct_stream_url,
+        }, &app_state).await?
     } else {
-        emby_http_svc::get_half_video_stream_url(EmbyGetVideoStreamUrlParam {
+        emby_http_svc::get_video_stream_url(EmbyGetVideoStreamUrlParam {
+            emby_server_id: params.emby_server_id.clone(),
             item_id: params.item_id.clone(),
             container: media_source.container.clone(),
             media_source_id: media_source.id.clone(),
             play_session_id: playback_info.play_session_id.clone(),
-        })
+        }, &app_state).await?
     };
     let uuid = uuid::Uuid::new_v4().to_string();
     axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
@@ -346,21 +350,22 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
     // 缓存字幕，作用不止于此，播放前和播放后，获取到的媒体元数据信息不一致（主要是字幕的索引位置变化），导致字幕无法正常显示，所以这里缓存字幕
     for media_stream in &media_source.media_streams {
         if media_stream.type_ == "Subtitle" && media_stream.is_external == Some(true) {
-            let subtitle_url = emby_http_svc::get_half_subtitle_stream_url(EmbyGetSubtitleStreamUrlParam {
+            let subtitle_url = emby_http_svc::get_subtitle_stream_url(EmbyGetSubtitleStreamUrlParam {
+                emby_server_id: params.emby_server_id.clone(),
                 item_id: params.item_id.clone(),
                 media_source_id: media_source.id.clone(),
                 media_source_item_id: media_source.item_id.clone(),
                 media_streams_codec: media_stream.codec.clone(),
                 media_streams_index: media_stream.index,
                 media_streams_is_external: true,
-            })?;
-            let subtitle_url = format!("{}{}", emby_server.reverse_base_url.as_ref().unwrap(), subtitle_url);
+            }, &app_state).await?;
             let cache_digest = sha256::digest(subtitle_url.clone());
             let cache_file_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass", cache_digest), tauri::path::BaseDirectory::AppLocalData)?;
             if cache_file_path.exists() {
                 tracing::debug!("cache subtitle file exists: {}", cache_file_path.display());
                 continue;
             }
+            let subtitle_url = format!("{}{}", emby_server.reverse_base_url.as_ref().unwrap(), subtitle_url);
             let cache_file_tmp_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass.tmp", cache_digest), tauri::path::BaseDirectory::AppLocalData)?;
             let (play_proxy_url, app_handle, emby_server) = (play_proxy_url.clone(), app_handle.clone(), emby_server.clone(),);
             tokio::spawn(async move {
@@ -682,13 +687,14 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
             continue;
         }
         if media_stream.type_ == "Audio" {
-            let mut audio_url = emby_http_svc::get_half_audio_stream_url(EmbyGetAudioStreamUrlParam {
+            let mut audio_url = emby_http_svc::get_audio_stream_url(EmbyGetAudioStreamUrlParam {
+                emby_server_id: params.emby_server_id.clone(),
                 item_id: params.item_id.clone(),
                 media_source_item_id: media_source.item_id.clone(),
                 media_streams_codec: media_stream.codec.clone(),
                 media_streams_index: media_stream.index,
                 media_streams_is_external: true,
-            })?;
+            }, &app_state).await?;
             let uuid = uuid::Uuid::new_v4().to_string();
             axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
                 stream_url: audio_url,
@@ -700,14 +706,15 @@ async fn play_info_init(playback_process_param: &PlaybackProcessParam) -> anyhow
             sender.write().await.flush().await?;
             tracing::debug!("MPV IPC Command audio-add: {}", command);
         } else if media_stream.type_ == "Subtitle" {
-            let mut subtitle_url = emby_http_svc::get_half_subtitle_stream_url(EmbyGetSubtitleStreamUrlParam {
+            let mut subtitle_url = emby_http_svc::get_subtitle_stream_url(EmbyGetSubtitleStreamUrlParam {
+                emby_server_id: params.emby_server_id.clone(),
                 item_id: params.item_id.clone(),
                 media_source_id: media_source.id.clone(),
                 media_source_item_id: media_source.item_id.clone(),
                 media_streams_codec: media_stream.codec.clone(),
                 media_streams_index: media_stream.index,
                 media_streams_is_external: true,
-            })?;
+            }, &app_state).await?;
             let uuid = uuid::Uuid::new_v4().to_string();
             axum_app_state.request.write().await.insert(uuid.clone(), AxumAppStateEmbyStreamRequest {
                 stream_url: subtitle_url,

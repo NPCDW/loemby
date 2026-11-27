@@ -36,7 +36,7 @@ pub async fn clean_subtitle(force_clean: bool, app_handle: &tauri::AppHandle) ->
         let clean_logs_config = global_config_mapper::get_cache("lastCleanSubtitleTime", &state).await;
         if clean_logs_config.is_some() {
             let last_clean_logs_time = clean_logs_config.unwrap().parse::<i64>().unwrap();
-            if chrono::Local::now().timestamp() - last_clean_logs_time < 24 * 60 * 60 {
+            if chrono::Local::now().timestamp() - last_clean_logs_time < 72 * 60 * 60 {
                 tracing::info!("字幕清理被强制忽略，最后一次执行时间：{}", chrono::DateTime::from_timestamp_secs(last_clean_logs_time).unwrap().with_timezone(&chrono::Local::now().timezone()).format("%Y-%m-%d %H:%M:%S").to_string());
                 return anyhow::Ok(());
             }
