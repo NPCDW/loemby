@@ -7,7 +7,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, sync::RwLock};
 use tokio_stream::StreamExt;
 
-use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateEmbyStreamRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
+use crate::{config::{app_state::{AppState, TauriNotify}, http_pool}, controller::{emby_http_ctl::{EmbyEpisodesParam, EmbyItemsParam, EmbyPlaybackInfoParam}, invoke_ctl::PlayVideoParam}, mapper::{emby_server_mapper::{self, EmbyServer}, global_config_mapper::{self, GlobalConfig}, play_history_mapper::{self, PlayHistory}, proxy_server_mapper, reverse_proxy_server_mapper}, service::{axum_svc::{AxumAppState, AxumAppStateEmbyStreamRequest, MediaPlaylistParam}, emby_http_svc::{self, EmbyGetAudioStreamUrlParam, EmbyGetDirectStreamUrlParam, EmbyGetSubtitleStreamUrlParam, EmbyGetVideoStreamUrlParam, EmbyPageList, EmbyPlayingParam, EmbyPlayingProgressParam, EmbyPlayingStoppedParam, EpisodeItem, MediaSource, PlaybackInfo, SeriesItem}, simkl_http_svc, trakt_http_svc::{self, TraktScrobbleParam}, yamtrack_http_svc::{self, YamTrackParam}}, util::{file_util, media_source_util}};
 
 pub async fn call_player(body: PlayVideoParam, state: &tauri::State<'_, AppState>, app_handle: tauri::AppHandle) -> Result<(), String> {
     let emby_server = match emby_server_mapper::get_cache(&body.emby_server_id, state).await {
@@ -365,7 +365,7 @@ async fn playback_process(mut playback_process_param: PlaybackProcessParam) -> a
                 tracing::debug!("cache subtitle file exists: {}", cache_file_path.display());
                 continue;
             }
-            let subtitle_url = format!("{}{}", emby_server.reverse_base_url.as_ref().unwrap(), subtitle_url);
+            let subtitle_url = reverse_proxy_server_mapper::resolve_reverse_url(&subtitle_url, emby_server.reverse_proxy_id.clone(), &app_state).await;
             let cache_file_tmp_path = app_handle.path().resolve(&format!("cache/subtitle/{}.ass.tmp", cache_digest), tauri::path::BaseDirectory::AppLocalData)?;
             let (play_proxy_url, app_handle, emby_server) = (play_proxy_url.clone(), app_handle.clone(), emby_server.clone(),);
             tokio::spawn(async move {

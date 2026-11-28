@@ -312,7 +312,19 @@ async fn stream(headers: axum::http::HeaderMap, State(axum_app_state): State<Arc
         || response_content_type.starts_with("application/mpegurl") || response_content_type.starts_with("audio/mpegurl") {
         let status = response.status();
         // 相对路径分片要以播放列表的实际地址为基准解析，手动重定向后的最终地址才是它的真实位置
-        let base_url = response.url().clone();
+        let base_url = match url::Url::parse(response.url().as_str().trim_prefix(&reverse_proxy_url.unwrap_or("".to_string()))) {
+            Ok(url) => url,
+            Err(_) => {
+                tracing::error!("stream: {} {} {:?} 媒体流响应 base_url 解析错误: {}", types, &id, request_headers, response.url());
+                axum_app_state.app.emit("tauri_notify", TauriNotify {
+                    event_type: "ElMessage".to_string(),
+                    message_type: "error".to_string(),
+                    title: None,
+                    message: format!("媒体流响应 base_url 解析错误: {} {} {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown"), response.url()),
+                }).unwrap();
+                return (status, response_headers).into_response();
+            },
+        };
         // 不能复用上游响应头：m3u8 内容被改写后长度与上游 content-length 不一致，没有这个头，出现了 transfer-encoding: chunked 这个头也有问题，
         // hyper 在 debug 构建下会直接 assert panic（连接被关闭，客户端收到空响应）。
         // 这里只保留 content-type，其余由 axum/hyper 重新生成。
@@ -420,8 +432,7 @@ async fn subtitle(headers: axum::http::HeaderMap, State(axum_app_state): State<A
     }
 
     // 若配置了反代服务器，链接指向原始地址时需要拼接反代服务器前缀
-    let reverse_proxy_url = reverse_proxy_server_mapper::get_reverse_proxy_url(emby_server.reverse_proxy_id.clone(), &app_state).await;
-    url = reverse_proxy_server_mapper::apply_reverse_proxy_url(&url, reverse_proxy_url.as_deref());
+    url = reverse_proxy_server_mapper::resolve_reverse_url(&url, emby_server.reverse_proxy_id.clone(), &app_state).await;
     let proxy_url = proxy_server_mapper::get_play_proxy_url(emby_server.play_proxy_id, &app_state).await;
     let client = match http_pool::get_image_http_client(proxy_url, &app_state).await {
         Ok(client) => client,
@@ -483,15 +494,24 @@ async fn image_emby(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>
     };
     let proxy_url = proxy_server_mapper::get_browse_proxy_url(emby_server.browse_proxy_id, &state).await;
     let user_agent = emby_server.user_agent.unwrap();
-    let image_url = emby_http_svc::get_image_url(&emby_server.reverse_base_url.unwrap(), &param.item_id, &param.image_type);
-    let cache_prefix = format!("image/{}/{}", param.emby_server_id, param.image_type);
+    let image_url = match emby_http_svc::get_image_url(&param.emby_server_id, &param.item_id, &param.image_type, &state).await {
+        Ok(url) => url,
+        Err(_) => return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            axum::http::HeaderMap::new(),
+            axum::body::Body::new(format!("image url error"))
+        ).into_response(),
+    };
+    let cache_key = sha256::digest(&image_url);
+    let cache_key = format!("image/{}/{}/{}.png", param.emby_server_id, param.image_type, cache_key);
+    let image_url = reverse_proxy_server_mapper::resolve_reverse_url(&image_url, emby_server.reverse_proxy_id.clone(), &state).await;
     
     image(axum_app_state, ImageParam {
         token: emby_server.auth_token.clone(),
         proxy_url: proxy_url,
         user_agent: user_agent,
         image_url: image_url,
-        cache_prefix: cache_prefix
+        cache_key: cache_key
     }).await
 }
 
@@ -508,15 +528,16 @@ async fn image_icon(State(axum_app_state): State<Arc<RwLock<Option<AxumAppState>
     let proxy_url = proxy_server_mapper::get_app_proxy_url(app_proxy_id, &state).await;
     let user_agent = format!("loemby/{}", env!("CARGO_PKG_VERSION"));
     let app_reverse_proxy_id = global_config_mapper::get_cache("app_reverse_proxy_id", &state).await;
+    let cache_key = sha256::digest(&param.image_url);
+    let cache_key = format!("icon/{}.png", cache_key);
     let image_url = reverse_proxy_server_mapper::resolve_reverse_url(&param.image_url, app_reverse_proxy_id, &state).await;
-    let cache_prefix = "icon".to_string();
 
     image(axum_app_state, ImageParam {
         token: None,
         proxy_url: proxy_url,
         user_agent: user_agent,
         image_url: image_url,
-        cache_prefix: cache_prefix
+        cache_key: cache_key
     }).await
 }
 
@@ -526,7 +547,7 @@ pub struct ImageParam {
     pub proxy_url: Option<String>,
     pub user_agent: String,
     pub image_url: String,
-    pub cache_prefix: String,
+    pub cache_key: String,
 }
 
 async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::response::Response {
@@ -534,9 +555,7 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
     let state = axum_app_state.app.state::<AppState>().clone();
     let disabled_image_cache = global_config_mapper::get_cache("disabled_image_cache", &state).await.unwrap_or("off".to_string()) == "on";
 
-    let cache_digest = sha256::digest(&param.image_url);
-    let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.png", param.cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
-    let metadata_file_path = axum_app_state.app.path().resolve(&format!("cache/{}/{}.metadata", param.cache_prefix, cache_digest), tauri::path::BaseDirectory::AppLocalData).unwrap();
+    let cache_file_path = axum_app_state.app.path().resolve(&format!("cache/{}", param.cache_key), tauri::path::BaseDirectory::AppLocalData).unwrap();
     if cache_file_path.exists() && !disabled_image_cache {
         tracing::debug!("image: {:?} {:?} 从缓存读取", cache_file_path, param);
         let file = match tokio::fs::File::open(&cache_file_path).await {
@@ -548,25 +567,8 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
             ).into_response(),
         };
 
-        // 从 .metadata 文件中读取元数据
-        let mut headers = axum::http::HeaderMap::new();
-        if let Ok(metadata_content) = tokio::fs::read_to_string(&metadata_file_path).await {
-            if let Ok(metadata) = serde_json::from_str::<serde_json::Value>(&metadata_content) {
-                if let Some(content_type) = metadata["content_type"].as_str() {
-                    headers.insert("content-type", content_type.parse().unwrap());
-                }
-                if let Some(content_length) = metadata["content_length"].as_str() {
-                    headers.insert("content-length", content_length.parse().unwrap());
-                }
-                if let Some(content_encoding) = metadata["content_encoding"].as_str() {
-                    headers.insert("content-encoding", content_encoding.parse().unwrap());
-                }
-            }
-        }
-
         return (
             axum::http::StatusCode::OK,
-            headers,
             axum::body::Body::from_stream(FramedRead::new(file, BytesCodec::new()))
         ).into_response();
     }
@@ -620,17 +622,6 @@ async fn image(axum_app_state: AxumAppState, param: ImageParam) -> axum::respons
     }
     cache_file.flush().await.unwrap();
     drop(cache_file);
-
-    // 保存元数据到 .metadata 文件
-    let mut metadata_file = File::create(&metadata_file_path).await.unwrap();
-    let metadata = serde_json::json!({
-        "content_type": response_headers.get("content-type").map(|v| v.to_str().unwrap().to_string()),
-        "content_length": response_headers.get("content-length").map(|v| v.to_str().unwrap().to_string()),
-        "content_encoding": response_headers.get("content-encoding").map(|v| v.to_str().unwrap().to_string()),
-    });
-    metadata_file.write_all(metadata.to_string().as_bytes()).await.unwrap();
-    metadata_file.flush().await.unwrap();
-    drop(metadata_file);
 
     let file = match tokio::fs::File::open(&cache_file_path).await {
         Ok(file) => file,

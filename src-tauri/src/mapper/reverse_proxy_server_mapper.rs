@@ -86,10 +86,7 @@ pub fn apply_reverse_proxy_url(target_url: &str, reverse_proxy_url: Option<&str>
     if reverse_proxy_url.is_empty() || target_url.starts_with(&reverse_proxy_url) {
         return target_url.to_string();
     }
-    match url::Url::parse(target_url) {
-        Ok(url) if matches!(url.scheme(), "http" | "https") => format!("{}{}", reverse_proxy_url, target_url),
-        _ => target_url.to_string(),
-    }
+    format!("{}/{}", reverse_proxy_url.trim_suffix("/"), target_url.trim_prefix("/"))
 }
 
 pub async fn resolve_reverse_url(
