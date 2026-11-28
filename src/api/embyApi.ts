@@ -179,50 +179,6 @@ async function playbackInfo(emby_server_id: string, item_id: string): Promise<st
 }
 
 /**
- * 组装直连视频流地址
- * @returns
- */
-function getDirectStreamUrl(directStreamUrl: string) {
-    if (!directStreamUrl) {
-        return null;
-    }
-    return "/emby" + directStreamUrl;
-}
-
-/**
- * 组装视频流地址
- * @returns
- */
-function getVideoStreamUrl(item: EpisodeItem, mediaSource: MediaSource, playSessionId: string) {
-    if (!item || !mediaSource) {
-        return null;
-    }
-    return `/emby/Videos/${item.Id}/stream.${mediaSource.Container}?Static=true&mediaSourceId=${mediaSource.Id}&playSessionId=${playSessionId}`;
-}
-
-/**
- * 组装音频流地址，请确保音频流支持外部流，否则会加载整个视频
- * @returns
- */
-function getAudioStreamUrl(item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
-    if (!mediaStreams.IsExternal) {
-        return null;
-    }
-    return `/emby/Audio/${mediaSource.ItemId || item.Id}/stream.${mediaStreams.Codec}?AudioStreamIndex=${mediaStreams.Index}&Static=true`;
-}
-
-/**
- * 组装字幕流地址，请确保字幕流支持外部流
- * @returns
- */
-function getSubtitleStreamUrl(item: EpisodeItem, mediaSource: MediaSource, mediaStreams: MediaStream) {
-    if (!mediaStreams.IsExternal) {
-        return null;
-    }
-    return `/emby/Videos/${mediaSource.ItemId || item.Id}/${mediaSource.Id}/Subtitles/${mediaStreams.Index}/Stream.${mediaStreams.Codec}`;
-}
-
-/**
  * 收藏
  * @returns
  */
@@ -280,7 +236,7 @@ async function hideFromResume(emby_server_id: string, item_id: string, hide: boo
 
 export default {
     getServerInfo, authenticateByName, logout, search, items, seasons, episodes, playbackInfo, getContinuePlayList, nextUp,
-    getFavoriteList, getDirectStreamUrl, getVideoStreamUrl, getAudioStreamUrl, getSubtitleStreamUrl, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
+    getFavoriteList, star, unstar, played, unplayed, getMediaLibraryList, getMediaLibraryChildLatest,
     count, hideFromResume, getMediaLibraryChild, 
 }
 

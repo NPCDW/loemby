@@ -86,7 +86,7 @@ pub fn apply_reverse_proxy_url(target_url: &str, reverse_proxy_url: Option<&str>
     if reverse_proxy_url.is_empty() || target_url.starts_with(&reverse_proxy_url) {
         return target_url.to_string();
     }
-    format!("{}/{}", reverse_proxy_url.trim_suffix("/"), target_url.trim_prefix("/"))
+    format!("{}/{}", reverse_proxy_url.trim_end_matches("/"), target_url.trim_start_matches("/"))
 }
 
 pub async fn resolve_reverse_url(

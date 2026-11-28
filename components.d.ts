@@ -54,6 +54,7 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElText: typeof import('element-plus/es')['ElText']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    EmbyAddressInput: typeof import('./src/components/EmbyAddressInput.vue')['default']
     IEpArrowDownBold: typeof import('~icons/ep/arrow-down-bold')['default']
     IEpArrowUpBold: typeof import('~icons/ep/arrow-up-bold')['default']
     IEpBellFilled: typeof import('~icons/ep/bell-filled')['default']

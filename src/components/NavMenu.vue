@@ -197,7 +197,7 @@
     <div v-if="stepActive == 1" style="width: 60%; margin: 25px auto;">
         <el-form label-position="top">
             <el-form-item label="服务器地址">
-                <el-input v-model="dialogEmbyServer.base_url" placeholder="Please input" />
+                <EmbyAddressInput v-model="serverAddress" />
             </el-form-item>
             <el-form-item label="反代服务器">
                 <el-select v-model="dialogEmbyServer.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServer)">
@@ -259,7 +259,7 @@
   <el-dialog v-model="dialogEditEmbyServerVisible" title="Emby Server" width="800">
     <el-form label-position="top" style="width: 60%; margin: 25px auto;">
         <el-form-item label="服务器地址">
-            <el-input v-model="dialogEmbyServer.base_url" placeholder="Please input" />
+            <EmbyAddressInput v-model="serverAddress" />
         </el-form-item>
         <el-form-item label="服务器名称">
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -331,7 +331,7 @@
             <el-input v-model="dialogEmbyServerAddLine.name" placeholder="Please input" />
         </el-form-item>
         <el-form-item label="线路地址">
-            <el-input v-model="dialogEmbyServerAddLine.base_url" placeholder="Please input" />
+            <EmbyAddressInput v-model="lineAddress" />
         </el-form-item>
         <el-form-item label="反代服务器">
             <el-select v-model="dialogEmbyServerAddLine.reverse_proxy_id" @change="reverseProxyChange(dialogEmbyServerAddLine)">
@@ -392,6 +392,8 @@ import { useRoute, useRouter } from 'vue-router'
 import embyApi from '../api/embyApi'
 import { ElMessage, ElMessageBox, ScrollbarInstance } from "element-plus";
 import { generateGuid } from "../util/uuid_util";
+import { formatEmbyAddress, newEmbyAddress, parseEmbyAddress, type EmbyAddress } from "../util/emby_address";
+import EmbyAddressInput from "./EmbyAddressInput.vue";
 import _ from "lodash";
 import { Container, Draggable, type DropResult } from "vue3-smooth-dnd";
 import invokeApi from "../api/invokeApi";
@@ -526,11 +528,20 @@ async function updateEmbyLineServerName(embyId: string, embyName: string) {
     }).catch(e => ElMessage.error('更新Emby线路服务器名称失败' + e))
 }
 
+function validatedEmbyAddress(address: EmbyAddress) {
+    const url = formatEmbyAddress(address)
+    if (!url) ElMessage.error('请输入有效的域名、端口和路径')
+    return url
+}
+
 const stepActive = ref(1)
 const dialogAddEmbyServerVisible = ref(false)
 const dialogEmbyServer = ref<EmbyServer>({})
+const serverAddress = ref(newEmbyAddress())
 function addEmbyServer() {
     stepActive.value = 1;
+    serverAddress.value = newEmbyAddress()
+    dialogEmbyServer.value = {}
     dialogAddEmbyServerVisible.value = true
     invokeApi.getSysInfo().then(hostname => {
         const client = "loemby";
@@ -561,8 +572,9 @@ function addEmbyServer() {
 }
 const dialogEditEmbyServerVisible = ref(false)
 function editEmbyServer(embyServer: EmbyServer) {
-    dialogEditEmbyServerVisible.value = true
     dialogEmbyServer.value = _.clone(embyServer)
+    serverAddress.value = parseEmbyAddress(embyServer.base_url ?? '') ?? newEmbyAddress()
+    dialogEditEmbyServerVisible.value = true
 }
 async function enabledEmbyServer(embyServer: EmbyServer) {
     if (!embyServer.auth_token && embyServer.disabled) {
@@ -617,35 +629,45 @@ function delEmbyServer(tmp: EmbyServer) {
 
 const addEmbyServerAddrLoading = ref(false)
 async function addEmbyServerAddr() {
+    const baseUrl = validatedEmbyAddress(serverAddress.value)
+    const server = dialogEmbyServer.value
+    if (!baseUrl || !server.id) return
+
     addEmbyServerAddrLoading.value = true
-    if (!dialogEmbyServer || !dialogEmbyServer.value?.base_url) {
-        return
-    }
-    let embyServer = await useEmbyServer().getEmbyServer(dialogEmbyServer.value.id!)
-    if (!embyServer) {
-        let line = {
-            id: generateGuid(),
-            name: '线路一',
-            base_url: dialogEmbyServer.value!.base_url,
-            emby_server_id: dialogEmbyServer.value.id!,
-            emby_server_name: dialogEmbyServer.value.server_name,
-            in_use: 1,
-            reverse_proxy_id: dialogEmbyServer.value!.reverse_proxy_id,
-            browse_proxy_id: dialogEmbyServer.value!.browse_proxy_id,
-            play_proxy_id: dialogEmbyServer.value!.play_proxy_id
+    try {
+        server.base_url = baseUrl
+        const savedServer = await useEmbyServer().getEmbyServer(server.id)
+        if (!savedServer) {
+            let line = {
+                id: generateGuid(),
+                name: '线路一',
+                base_url: baseUrl,
+                emby_server_id: server.id,
+                emby_server_name: server.server_name,
+                in_use: 1,
+                reverse_proxy_id: server.reverse_proxy_id,
+                browse_proxy_id: server.browse_proxy_id,
+                play_proxy_id: server.play_proxy_id
+            }
+            await addEmbyLineDb(line)
+            server.line_id = line.id
+            await addEmbyServerDb(server)
+        } else if (savedServer.base_url !== baseUrl) {
+            await updateEmbyLineDb({id: server.line_id, base_url: baseUrl})
+            await updateEmbyServerDb(server)
         }
-        await addEmbyLineDb(line)
-        dialogEmbyServer.value.line_id = line.id
-        await addEmbyServerDb(dialogEmbyServer.value);
-    }
-    embyApi.getServerInfo(dialogEmbyServer.value!.id!).then(async response => {
+        const response = await embyApi.getServerInfo(server.id)
         let json: {ServerName: string, Id: string} = JSON.parse(response);
-        dialogEmbyServer.value!.server_name = json['ServerName']
-        dialogEmbyServer.value!.server_id = json['Id']
-        await updateEmbyServerDb(dialogEmbyServer.value);
-        updateEmbyLineServerName(dialogEmbyServer.value!.id!, dialogEmbyServer.value!.server_name!);
+        server.server_name = json['ServerName']
+        server.server_id = json['Id']
+        await updateEmbyServerDb(server);
+        updateEmbyLineServerName(server.id, server.server_name);
         stepActive.value = stepActive.value + 1;
-    }).catch(e => ElMessage.error(e)).finally(() => addEmbyServerAddrLoading.value = false)
+    } catch (e) {
+        ElMessage.error(String(e))
+    } finally {
+        addEmbyServerAddrLoading.value = false
+    }
 }
 const serverInfoLoading = ref(false)
 function getServerInfo(embyServer: EmbyServer) {
@@ -700,6 +722,9 @@ async function login(embyServerConfig: EmbyServer) {
     }).catch(e => ElMessage.error('登录失败 ' + e))
 }
 async function saveEditEmbyServer() {
+    const baseUrl = validatedEmbyAddress(serverAddress.value)
+    if (!baseUrl) return
+    dialogEmbyServer.value.base_url = baseUrl
     await useEmbyLine().getEmbyLine(dialogEmbyServer.value!.line_id!).then(async line => {
         if (!line) {
             ElMessage.error('获取正在使用的线路失败')
@@ -748,7 +773,9 @@ function configLine(embyServer: EmbyServer) {
 }
 const dialogAddLineVisible = ref(false)
 const dialogEmbyServerAddLine = ref<EmbyLine>({})
+const lineAddress = ref(newEmbyAddress())
 function addLine() {
+    lineAddress.value = newEmbyAddress()
     dialogEmbyServerAddLine.value = {
         emby_server_id: dialogEmbyServer.value.id!,
         emby_server_name: dialogEmbyServer.value.server_name,
@@ -760,6 +787,7 @@ function addLine() {
 }
 function editLine(line: EmbyLine) {
     dialogEmbyServerAddLine.value = _.clone(line)
+    lineAddress.value = parseEmbyAddress(line.base_url ?? '') ?? newEmbyAddress()
     dialogAddLineVisible.value = true
 }
 function delLine(line: EmbyLine) {
@@ -785,6 +813,9 @@ function delLine(line: EmbyLine) {
     })
 }
 async function savedialogEmbyServerAddLine() {
+    const baseUrl = validatedEmbyAddress(lineAddress.value)
+    if (!baseUrl) return
+    dialogEmbyServerAddLine.value.base_url = baseUrl
     let savePromise
     if (dialogEmbyServerAddLine.value.id) {
         savePromise = updateEmbyLineDb(dialogEmbyServerAddLine.value)
